@@ -18,13 +18,13 @@ from functions import NGS
 
 # ========================================= User Inputs =========================================
 # Input 1: File Location
-inBaseFilePath = '/Users/ca34522/Documents/Research/NGS/Mpro2'
+inBaseFilePath = 'path/folder'
 inFilePath = os.path.join(inBaseFilePath, 'Fastq') # Define file pathway
-inFileName = ['Mpro2-R4_S3_L001_R2_001'] # Define file name(s)
-inFileType = 'fastq' # Define the type of file that contains your data
+inFileName = ['Mpro2-R4_S3_L001_R1_001', 'Mpro2-R4_S3_L001_R2_001'] # Define file name(s)
+inFileType = 'fastq'
 inSavePath = os.path.join(inBaseFilePath, 'Extracted Data')
 inSaveFileName = 'Mpro2-R4_S3_L001'
-inAlertPath = '/Users/PickMe/Documents/Python/Sounds/Bells.mp3'
+inAlertPath = 'path/sound.mp3' # Optional input to play a sound when done
 
 # Input 2: Substrate Parameters
 inEnzymeName = inSaveFileName.split('-')[0]
