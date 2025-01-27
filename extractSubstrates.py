@@ -10,6 +10,7 @@
         # correctly define "fileType"
 
 
+
 import os
 import pickle as pk
 from functions import NGS
