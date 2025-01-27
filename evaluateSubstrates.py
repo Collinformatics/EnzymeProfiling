@@ -14,10 +14,9 @@ from functions import filePaths, NGS
 
 
 
-# ========================================== User Inputs =========================================
-# Input 1: File Location
+# ===================================== User Inputs ======================================
 inEnzymeName = 'Mpro2'
-inBaseFilePath = 'path/folder'
+inBaseFilePath = '/path/folder'
 inFilePath = f'{inBaseFilePath}/{inEnzymeName}/Extracted Data'
 inSavePath = inFilePath
 inSavePathFigures = f'{inBaseFilePath}/{inEnzymeName}/Figures'
@@ -49,11 +48,11 @@ inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabiliti
 
 # Input 3: Computational Parameters
 inFixResidues = False # True: fix AAs in the substrate, False: Don't fix AAs, plot raw the data
-inFixedResidue = ['Q'] # ['L','M'],['L','F','W','Y'],
+inFixedResidue = ['Q']
 inFixedPosition = [5]
 inExcludeResidues = False # Do you want to remove any AAs from your collection of substrate
-inExcludedResidue = ['A','A']
-inExcludedPosition = [9,10]
+inExcludedResidue = ['Q']
+inExcludedPosition = [8]
 inMinDeltaS = 0.45
 inFixEntireSubstrateFrame = True
 inMinimumSubstrateCount = 10
@@ -127,7 +126,7 @@ inCompairYMin = 0.0
 
 
 
-# ======================================= Setup Parameters =======================================
+# =================================== Setup Parameters ===================================
 startTime = time.time()
 if inShowEnrichmentAsSquares:
     # Set figure dimension when plotting EM plots as squares
@@ -179,14 +178,14 @@ resetColor = '\033[0m'
 
 
 
-# ======================================= Initialize Class =======================================
+# =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           minCounts=inMinimumSubstrateCount, colorsCounts=inCountsColorMap,
-          colorStDev=inStDevColorMap, colorsEM=inEnrichmentColorMap, 
-          colorsMotif=inLetterColors, xAxisLabels=inAAPositions, 
-          xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap, 
-          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize, 
-          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber, 
-          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inSavePath, 
+          colorStDev=inStDevColorMap, colorsEM=inEnrichmentColorMap,
+          colorsMotif=inLetterColors, xAxisLabels=inAAPositions,
+          xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
+          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
+          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
+          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inSavePath,
           savePathFigs=inSavePathFigures, setFigureTimer=None)
