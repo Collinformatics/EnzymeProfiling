@@ -10,6 +10,8 @@ Recommend: make a folder for each unique enzyme that contains the folders "Fastq
 - inFileName: select files you want to process.
 Important: do not mix files from the intial and final sorts, these must be processed separatly. Files witin the same set can be processed in one batch, or individually, it is up to you how to do this, but I recommend at minimum combining the forward (R1) and reverse reads (R2).
 
+- inSaveFileName: define the name of your saved files
+- inAlertPath: an optional input to play a sound then the script has finished processing the files
 
 **Evaluate Substrates**
 
