@@ -42,6 +42,11 @@ Input #3:
 - inStartSeqR1, inStartSeqR2: what DNA sequences do you expect to see to the left of your substrate
 - inEndSeqR1, inEndSeqR2: what DNA sequences do you expect to see to the right of your substrate
 
+Input #4:
+- inPrintCounts: do you want to print the AA counts
+- inPlotCounts: do you want to plot the AA counts
+
+
 Evaluate Substrates
 -
 
