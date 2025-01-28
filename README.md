@@ -45,6 +45,11 @@ Input #3:
 Input #4:
 - inPrintCounts: do you want to print the AA counts
 - inPlotCounts: do you want to plot the AA counts
+- inCountMapYLabel: select how the residue names are displayed in the figure
+
+        inCountMapYLabel = 0 # for Alanine
+        inCountMapYLabel = 1 # for Ala
+        inCountMapYLabel = 2 # for A
 
 
 Evaluate Substrates
