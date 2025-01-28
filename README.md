@@ -1,9 +1,9 @@
-**Express DNA:**
+Express DNA
+-
 
 Run extractSubstrates.py to express DNA sequneces, and extract the protein substrates.
 
-Input #1: 
-
+Input #1:
 - inBaseFilePath: define the path to the folder for the enzyme you intend on working with.
 Recommend: make a folder for each unique enzyme that contains the folders "Fastq", "Extracted Data", and "Figures"
 
@@ -13,7 +13,16 @@ Important: do not mix files from the intial and final sorts, these must be proce
 - inSaveFileName: define the name of your saved files
 - inAlertPath: an optional input to play a sound then the script has finished processing the files
 
-**Evaluate Substrates**
+Input #2:
+- inAAPositions: define the residues of your substrate
+- inCodonSequence: define the type of degenerate codon you are working with
+
+Input #3:
+- inFixedLibrary: are any of the residues in your substrate not randomized
+- inFixedResidue: 
+
+Evaluate Substrates
+-
 
 Run evaluateSubstrates.py to load all processed protein substrate files and evaluate enrichment.
 
