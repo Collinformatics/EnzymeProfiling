@@ -3,6 +3,8 @@ Express DNA
 
 Run extractSubstrates.py to express DNA sequneces, and extract the protein substrates.
 
+User inputs you will need to know include:
+
 Input #1:
 - inBaseFilePath: define the path to the folder for the enzyme you intend on working with.
 Recommend: make a folder for each unique enzyme that contains the folders "Fastq", "Extracted Data", and "Figures"
@@ -19,7 +21,14 @@ Input #2:
 
 Input #3:
 - inFixedLibrary: are any of the residues in your substrate not randomized
-- inFixedResidue: 
+- inFixedResidue: make a list of what residue(s) should always be in the substrate
+- inFixedPosition: where are these AAs expected to be
+
+    If you put an Luecine and Glutamine at the 4th and 5th position (NNNLQNNN) then define these inputs as:
+    - inFixedLibrary = True
+    - inFixedResidue = ['L', 'Q']
+    - inFixedPosition = [4, 5]
+  
 
 Evaluate Substrates
 -
