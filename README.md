@@ -17,6 +17,8 @@ Important: do not mix files from the intial and final sorts, these must be proce
 
 Input #2:
 - inAAPositions: define the residues of your substrate
+    - For a 8 residue substrate (NNNNNNNN), you could define this input as
+        - inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
 - inCodonSequence: define the type of degenerate codon you are working with
 
 Input #3:
@@ -24,11 +26,13 @@ Input #3:
 - inFixedResidue: make a list of what residue(s) should always be in the substrate
 - inFixedPosition: where are these AAs expected to be
 
-    If you put an Luecine and Glutamine at the 4th and 5th position (NNNLQNNN) then define these inputs as:
+    If your substrate is NNNLQNNN, where Luecine and Glutamine at the 4th and 5th position then define the inputs as:
     - inFixedLibrary = True
     - inFixedResidue = ['L', 'Q']
     - inFixedPosition = [4, 5]
-  
+    If you have multiple AAs at the same position such as NNN(L/M/F/Y)NNNN, put these residues in a list within the list:
+        - inFixedResidue = [['L', 'M', 'F', 'Y']]
+        - inFixedPosition = [4]
 
 Evaluate Substrates
 -
