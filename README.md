@@ -38,6 +38,9 @@ Input #3:
   
         inFixedResidue = [['L', 'M', 'F', 'Y']]
         inFixedPosition = [4]
+- inPrintNumber: how many expressed & extracted do you want to print to inspect how the script is performing with your input parameters
+- inStartSeqR1, inStartSeqR2: what DNA sequences do you expect to see to the left of your substrate
+- inEndSeqR1, inEndSeqR2: what DNA sequences do you expect to see to the right of your substrate
 
 Evaluate Substrates
 -
