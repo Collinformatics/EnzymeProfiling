@@ -19,8 +19,7 @@ Input #2:
 - inAAPositions: define the residues of your substrate
     - For a 8 residue substrate (NNNNNNNN), you could define this input as
 
-
-      inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+          inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
   
 - inCodonSequence: define the type of degenerate codon you are working with
 
