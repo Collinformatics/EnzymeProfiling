@@ -15,6 +15,7 @@ from functions import filePaths, NGS
 
 
 # ===================================== User Inputs ======================================
+# Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inBaseFilePath = '/path/folder'
 inFilePath = f'{inBaseFilePath}/{inEnzymeName}/Extracted Data'
