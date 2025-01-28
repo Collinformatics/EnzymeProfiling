@@ -3,7 +3,7 @@ Express DNA
 
 Run extractSubstrates.py to express DNA sequneces, and extract the protein substrates.
 
-User inputs you will need to know include:
+Input parameters you will need to know include:
 
 Input #1:
 - inBaseFilePath: define the path to the folder for the enzyme you intend on working with.
@@ -56,4 +56,6 @@ Evaluate Substrates
 -
 
 Run evaluateSubstrates.py to load all processed protein substrate files and evaluate enrichment.
+
+
 
