@@ -10,22 +10,21 @@
         # correctly define "fileType"
 
 
-
 import os
 import pickle as pk
 from functions import NGS
 
 
 
-# ========================================= User Inputs =========================================
+# ===================================== User Inputs ======================================
 # Input 1: File Location
-inBaseFilePath = 'path/folder'
+inBaseFilePath = '/Users/ca34522/Documents/Research/NGS/Mpro2'
 inFilePath = os.path.join(inBaseFilePath, 'Fastq') # Define file pathway
 inFileName = ['Mpro2-R4_S3_L001_R1_001', 'Mpro2-R4_S3_L001_R2_001'] # Define file name(s)
-inFileType = 'fastq'
+inFileType = 'fastq' # Define the type of file that contains your data
 inSavePath = os.path.join(inBaseFilePath, 'Extracted Data')
 inSaveFileName = 'Mpro2-R4_S3_L001'
-inAlertPath = 'path/sound.mp3' # Optional input to play a sound when done
+inAlertPath = '/Users/PickMe/Documents/Python/Sounds/Bells.mp3'
 
 # Input 2: Substrate Parameters
 inEnzymeName = inSaveFileName.split('-')[0]
@@ -34,7 +33,7 @@ inShowSampleSize = True # Include the sample size in your figures
 inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
 
 # Input 3: Define Variables Used To Extract The Substrates
-inFixedLibary = False
+inFixedLibrary = False
 inFixedResidue = []
 inFixedPosition = []
 inPrintNumber = 10 # Print peptide sequences to validate substrate extraction
@@ -52,15 +51,8 @@ inCountsColorMap = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD
 inFigureTitleSize = 18
 inFigureLabelSize = 16
 inFigureTickSize = 13
-
-# Input 5: Figure Dimensions
 inFigureSize = (10, 8) # (width, height)
 inFigureBorders = [0.882, 0.075, 0.18, 1] # Top, bottom, left, right
-
-# Input 6: Evaluate Positional Probability Distributions
-inEvaluatePositionRFDist = True
-inLetterColors = ['darkgreen','firebrick','deepskyblue','pink','navy','black','gold']
-                  # Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
 
 
@@ -90,13 +82,13 @@ substratesR2 = {}
 for fileName in inFileName:
     if '_R1_' in fileName:
         substratesR1 = ngs.loadAndTranslate(filePath=inFilePath, fileName=fileName,
-                                            fileType=inFileType, fixedSubs=inFixedLibary,
+                                            fileType=inFileType, fixedSubs=inFixedLibrary,
                                             startSeq=inStartSeqR1, endSeq=inEndSeqR1,
                                             printQS=inPrintQualityScores)
         loadR1 = True
     elif '_R2_' in fileName:
         substratesR2 = ngs.loadAndTranslate(filePath=inFilePath, fileName=fileName,
-                                            fileType=inFileType, fixedSubs=inFixedLibary,
+                                            fileType=inFileType, fixedSubs=inFixedLibrary,
                                             startSeq=inStartSeqR2, endSeq=inEndSeqR2,
                                             printQS=inPrintQualityScores)
         loadR2 = True
@@ -144,10 +136,6 @@ else:
 with open(savePathSubstrate, 'wb') as file:
     pk.dump(substrates, file)
 counts.to_csv(savePathCounts)
-
-
-
-# Print saved file locations
 print('================================ Saving The Data ================================')
 print(f'Data saved at:\n'
       f'    {savePathSubstrate}\n'
