@@ -39,7 +39,7 @@ inFixedPosition = []
 inPrintNumber = 10 # Print peptide sequences to validate substrate extraction
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
-inStartSeqR2 = 'AAAGGCAGT' # KGS: AAAGGCAG
+inStartSeqR2 = 'AAAGGCAGT' # KGS: AAAGGCAGT
 inEndSeqR2 = 'GGTGGAAGT' # GGS: GGTGGAAGT
 inPrintQualityScores = False # QSs are "phred quality" scores
 
