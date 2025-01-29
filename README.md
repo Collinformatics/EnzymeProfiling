@@ -59,5 +59,16 @@ Evaluate Substrates
 
 Run evaluateSubstrates.py to load all processed protein substrate files and evaluate enrichment.
 
+- Don't run this script until you have processed all of your fastq/fasta files with extractSubstrates.py
+
+If you are ready to process the extracted data, find the "filePaths" function in functions.py:
+- Create a conditional for your enzyme that inclues the names you used to save the extracted substrates, and the lables for the AA positions:
+
+        def filePaths(enzyme):
+             if enzyme == 'enzymeName':
+                  inFileNamesInitialSort = ['fileNameA', 'fileNameB']
+                  inFileNamesFinalSort = ['fileName1', 'fileName2'] 
+                  inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+
 
 
