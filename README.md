@@ -81,11 +81,6 @@ If you are ready to process the extracted data, find the "filePaths" function in
                     inFileNamesInitialSort = ['fileNamC', 'fileNameD']
                     inFileNamesFinalSort = ['fileName3', 'fileName4']
                     inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-               else:
-                    print(f'{orange}ERROR: There are no file names for {cyan}{enzyme}{orange}\n'
-                          f'       Add information to the "filePaths" function in '
-                          f'{os.path.basename(__file__)}\n')
-                    sys.exit()
 
 Input parameters you will need to know include:
 
