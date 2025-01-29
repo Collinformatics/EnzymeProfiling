@@ -18,16 +18,16 @@ from functions import NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location
-inBaseFilePath = '/path/enzymeFolder'
+inFileName = ['enzymeName-fileNameR1', 'enzymeName-fileNameR2'] # Define file name(s)
+inEnzymeName = inFileName[0].split('-')[0]
+inBaseFilePath = f'path/{inEnzymeName}'
 inFilePath = os.path.join(inBaseFilePath, 'Fastq') # Define the fastq folder pathway
-inFileName = ['filaNameA', 'filaNameB'] # Define file name(s)
 inFileType = 'fastq' # Define the file type
 inSavePath = os.path.join(inBaseFilePath, 'Extracted Data')
-inSaveFileName = 'filaNameCombindedSet'
-inAlertPath = '/path/alertSound.mp3'
+inSaveFileName = 'enzymeName-fileName'
+inAlertPath = '/path/alertSound.mp3' # Optional input
 
 # Input 2: Substrate Parameters
-inEnzymeName = inSaveFileName.split('-')[0]
 inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
 inShowSampleSize = True # Include the sample size in your figures
 inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
