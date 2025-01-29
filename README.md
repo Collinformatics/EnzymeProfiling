@@ -32,7 +32,7 @@ Input 3:
 
     If your substrate is NNNLQNNN, where Luecine and Glutamine at the 4th and 5th position then define the inputs as:
 
-      inFixedResidue = True
+      inFixedLibrary = True
       inFixedResidue = ['L', 'Q']
       inFixedPosition = [4, 5]
     
@@ -100,4 +100,10 @@ Input 2:
 
 Input 3:
 - inFilterSubstrates: do you want to select substrates with specific residue(s) in the substrate
+- inFixedResidue: make a list of what residue(s) should always be in the substrate
+- inFixedPosition: where are these AAs expected to be
+- inExcludeResidues: do you want to select substrates without specific residue(s) in the substrate
+- inExcludedResidue: define excluded AAs
+- inExcludedPosition: define positions to exclude the AAs
+- inMinimumSubstrateCount: exclude substrates with less than this value
 
