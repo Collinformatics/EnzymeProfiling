@@ -5,7 +5,7 @@ Run extractSubstrates.py to express DNA sequneces, and extract the protein subst
 
 Input parameters you will need to know include:
 
-Input #1:
+Input 1:
 - inFileName: select files you want to process.
 Important: do not mix files from the intial and final sorts, these must be processed separatly. Files witin the same set can be processed in one batch, or individually, it is up to you how to do this, but I recommend at minimum combining the forward (R1) and reverse reads (R2).
 
@@ -17,7 +17,7 @@ Important: do not mix files from the intial and final sorts, these must be proce
 - inSaveFileName: define the name of your saved files
 - inAlertPath: an optional input to play a sound then the script has finished processing the files
 
-Input #2:
+Input 2:
 - inAAPositions: define the residues of your substrate
     - For a 8 residue substrate, it is recommened to name positions R1 to R8:
 
@@ -25,7 +25,7 @@ Input #2:
   
 - inCodonSequence: define the type of degenerate codon you are working with
 
-Input #3:
+Input 3:
 - inFixedLibrary: are any of the residues in your substrate not randomized
 - inFixedResidue: make a list of what residue(s) should always be in the substrate
 - inFixedPosition: where are these AAs expected to be
@@ -44,7 +44,7 @@ Input #3:
 - inStartSeqR1, inStartSeqR2: what DNA sequences do you expect to see to the left of your substrate
 - inEndSeqR1, inEndSeqR2: what DNA sequences do you expect to see to the right of your substrate
 
-Input #4:
+Input 4:
 - inPrintCounts: do you want to print the AA counts
 - inPlotCounts: do you want to plot the AA counts
 - inCountMapYLabel: select how the residue names are displayed in the figure
@@ -89,5 +89,15 @@ If you are ready to process the extracted data, find the "filePaths" function in
 
 Input parameters you will need to know include:
 
-Input #1:
+Input 1:
 - inEnzymeName: select the enzyme you are working with
+- inFilePath: define path to the folder with your extracted data
+- inSavePathFigures: define path to the folder used to store your figures
+- inSaveFigures: Set as True to automatically save your figures, Set as False to not automatically save the figures (this will not overwrite previously saved figures)
+
+Input 2:
+- Select which figure you want to plot
+
+Input 3:
+- inFilterSubstrates: do you want to select substrates with specific residue(s) in the substrate
+
