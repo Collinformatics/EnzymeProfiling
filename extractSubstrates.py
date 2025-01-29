@@ -19,9 +19,9 @@ from functions import NGS
 # ===================================== User Inputs ======================================
 # Input 1: File Location
 inBaseFilePath = '/path/ezymeFolder'
-inFilePath = os.path.join(inBaseFilePath, 'Fastq') # Define file pathway
+inFilePath = os.path.join(inBaseFilePath, 'Fastq') # Define the fastq folder pathway
 inFileName = ['filaNameA', 'filaNameB'] # Define file name(s)
-inFileType = 'fastq' # Define the type of file that contains your data
+inFileType = 'fastq' # Define the file type
 inSavePath = os.path.join(inBaseFilePath, 'Extracted Data')
 inSaveFileName = 'filaNameCombindedSet'
 inAlertPath = '/path/alertSound.mp3'
