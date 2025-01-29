@@ -87,4 +87,7 @@ If you are ready to process the extracted data, find the "filePaths" function in
                           f'{os.path.basename(__file__)}\n')
                     sys.exit()
 
+Input parameters you will need to know include:
 
+Input #1:
+- inEnzymeName: select the enzyme you are working with
