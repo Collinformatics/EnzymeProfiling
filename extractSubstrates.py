@@ -125,7 +125,6 @@ counts, totalSubs = ngs.countResidues(substrates=substrates,
 # Notification: Finish analysis
 ngs.alert(soundPath=inAlertPath)
 
-
 # Save the data
 if '/' in inFilePath:
     savePathSubstrate = inSavePath+'/substrates_'+inSaveFileName
@@ -147,5 +146,4 @@ ngs.extractionEffiency(files=inFileName)
 # Plot the data
 if inPlotCounts:
     ngs.plotCounts(countedData=counts, totalCounts=totalSubs,
-                   title=f'{inEnzymeName}\n{inSaveFileName}', figSize=inFigureSize,
-                   figBorders=inFigureBorders)
+                   title=f'{inEnzymeName}\n{inSaveFileName}', figSize=inFigureSize)
