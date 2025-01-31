@@ -9,12 +9,12 @@ Input 1:
 - inFileName: select files you want to process.
 Important: do not mix files from the intial and final sorts, these must be processed separatly. Files witin the same set can be processed in one batch, or individually, it is up to you how to do this, but I recommend at minimum combining the forward (R1) and reverse reads (R2).
 
-- inBaseFilePath: define the path to the folder for the enzyme you intend on working with.
+- inBasePath: define the path to the folder for the enzyme you intend on working with.
 
         Recommend: make a folder for each unique enzyme that contains the folders "Fastq", "Extracted Data", and "Figures"
 - inFilePath: define path to the folder with your fastq data
 - inSavePath: define path to the folder used to store the extracted data
-- inSaveFileName: define the name of your saved files
+- inSaveFileName: define the name of your saved files (This should be related to the input files)
 - inAlertPath: an optional input to play a sound then the script has finished processing the files
 
 Input 2:
