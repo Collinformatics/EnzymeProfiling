@@ -18,9 +18,8 @@ from functions import filePaths, NGS
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inBasePath = f'/path/folder/{inEnzymeName}'
-inFilePath = f'{inBaseFilePath}/Extracted Data'
-inSavePath = inFilePath
-inSavePathFigures = f'{inBaseFilePath}/Figures'
+inFilePath = os.path.join(inBasePath, 'Extracted Data')
+inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = filePaths(enzyme=inEnzymeName)
 inSaveFigures = True
 
@@ -180,7 +179,7 @@ resetColor = '\033[0m'
 
 
 # =================================== Initialize Class ===================================
-ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
+ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           minCounts=inMinimumSubstrateCount, colorsCounts=inCountsColorMap,
           colorStDev=inStDevColorMap, colorsEM=inEnrichmentColorMap,
@@ -188,5 +187,5 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
           titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
           tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inSavePath,
+          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inFilePath,
           savePathFigs=inSavePathFigures, setFigureTimer=None)
