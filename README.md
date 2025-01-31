@@ -1,7 +1,9 @@
 General Information
 -
 
-These scripts are designed to extact a substrate sequence from a longer DNA sequence. The extracted sequences are grouped into two catagories, the unfilteded (or initial) and filtered (or final) sorts.
+These scripts are designed to extact a substrate sequence from a longer DNA sequence. The extracted sequences are grouped into two catagories, the Unfilteded (or Initial) and Filtered (or Final) sorts.
+- Unfiltered: contains the background data consisting of randomized substrate sequnces
+- Filtered: contains the set of substrates were initially in the Unsorted set, and that were found to be active, then colleced with Fluorescence Activated Cell Sorting (FACS).
 
 Express DNA
 -
