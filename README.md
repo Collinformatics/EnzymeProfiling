@@ -5,9 +5,9 @@ These scripts are designed to extact a protein substrate sequence from a longer 
 
 The extracted sequences are grouped into two catagories, the Unfilteded (or Initial) and Filtered (or Final) sorts.
 - Unfiltered: contains the background data consisting of randomized substrate sequnces
-- Filtered: contains the set of substrates were initially in the Unsorted set, and that were found to be active, then colleced with Fluorescence Activated Cell Sorting (FACS)
+- Filtered: contains the set of substrates were initially in the Unsorted set, and that were found to be active, then colleced with Fluorescence Activated Cell Sorting
 
-The specificity of the enzyme is evaluated by calculating the enrichment score of each amino acid (AA).
+The specificity of the enzyme is evaluated by calculating the Enrichment Score of each amino acid (AA).
 - The enrichment score compairs the frequency of the AAs in the Filtered dataset to the Unfiltered set
 
 Express DNA
