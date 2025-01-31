@@ -18,7 +18,7 @@ from functions import NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location
-inFileName = ['enzymeName-fileNameR1', 'enzymeName-fileNameR2'] # Define file name(s)
+inFileName = ['enzymeName-fileName_R1', 'enzymeName-fileName_R2'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
 inBaseFilePath = f'path/{inEnzymeName}'
 inFilePath = os.path.join(inBaseFilePath, 'Fastq') # Define the fastq folder pathway
