@@ -17,10 +17,10 @@ from functions import filePaths, NGS
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBaseFilePath = '/path/folder'
-inFilePath = f'{inBaseFilePath}/{inEnzymeName}/Extracted Data'
+inBasePath = f'/path/folder/{inEnzymeName}'
+inFilePath = f'{inBaseFilePath}/Extracted Data'
 inSavePath = inFilePath
-inSavePathFigures = f'{inBaseFilePath}/{inEnzymeName}/Figures'
+inSavePathFigures = f'{inBaseFilePath}/Figures'
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = filePaths(enzyme=inEnzymeName)
 inSaveFigures = True
 
