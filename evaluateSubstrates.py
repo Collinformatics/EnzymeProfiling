@@ -69,10 +69,10 @@ inSubstrateLength = len(inAAPositions)
 inRunPCA = False
 inBinSubsPCA = False
 inIndexNTerminus = 2 # Define bounds for binned substrate
-inBinnedSubstrateLenght = 5 # Define the length of you substrate
-inFramePositons = [inIndexNTerminus-1,
-                   inIndexNTerminus+inBinnedSubstrateLenght-1]
-inAAPositionsBinned = inAAPositions[inFramePositons[0]:inFramePositons[-1]]
+inBinnedSubstrateLength = 5 # Define the length of you substrate
+inFramePositions = [inIndexNTerminus - 1,
+                    inIndexNTerminus + inBinnedSubstrateLength - 1]
+inAAPositionsBinned = inAAPositions[inFramePositions[0]:inFramePositions[-1]]
 inNumberOfPCs = 2
 inTotalSubsPCA = int(10000)
 inEncludeSubstrateCounts = False
@@ -80,10 +80,14 @@ inExtractPopulations = False
 inPlotPositionalEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
 
-# Input 5: Probability Distributions
+# Input 5: Optimal Substrates
+inEvaluateOS = True
+inMaxResidueCount = 4
+
+# Input 6: Probability Distributions
 inDFDistMaxY = 0.35
 
-# Input 6: Plot Heatmap
+# Input 7: Plot Heatmap
 inShowEnrichmentScores = True
 inShowEnrichmentAsSquares = False
 inTitleEnrichmentMap = inEnzymeName
@@ -99,7 +103,7 @@ inFigureBordersAsSquares = [0.882, 0.075, 0.075, 0.943]
 inEnrichmentColorMap = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
                         'lightcoral','red','firebrick','darkred']
 
-# Input 7: Plot Sequence Motif
+# Input 8: Plot Sequence Motif
 inNormLetters = True # Normalize fixed letter heights
 inShowWeblogoYTicks = True
 inAddHorizontalLines = False
@@ -112,16 +116,16 @@ inFigureBordersEnrichmentMotif = [0.882, 0.075, 0.138, 0.98]
 inLetterColors = ['darkgreen','firebrick','deepskyblue','pink','navy','black','gold']
                   # Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
-# Input 8: Evaluate Substrate Enrichment
+# Input 9: Evaluate Substrate Enrichment
 inEvaluateSubstrateEnrichment = False
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
-# Input 9: Evaluate Specificity
+# Input 10: Evaluate Specificity
 inPlotShannonEntropy = False
-inCompairRF = False # Plot RF distirbutions of a given AA
+inCompairRF = False # Plot RF distributions of a given AA
 inCompairAA = 'V' # Select the AA of interest
-inCompairYMax = 0.4 # Set the y-axis for the RF compairson figure
+inCompairYMax = 0.4 # Set the y-axis for the RF comparison figure
 inCompairYMin = 0.0
 
 
