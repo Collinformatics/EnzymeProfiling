@@ -18,14 +18,14 @@ from functions import NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location
-inFileName = ['enzymeName-fileName_R1', 'enzymeName-fileName_R2'] # Define file name(s)
+inFileName = ['Src-F_S2_L001_R1_001', 'Src-F_S2_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inBaseFilePath = f'path/{inEnzymeName}'
-inFilePath = os.path.join(inBaseFilePath, 'Fastq') # Define the fastq folder pathway
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inFilePath = os.path.join(inBasePath, 'Fastq') # Define the fastq folder pathway
 inFileType = 'fastq' # Define the file type
-inSavePath = os.path.join(inBaseFilePath, 'Extracted Data')
-inSaveFileName = 'enzymeName-fileName'
-inAlertPath = '/path/alertSound.mp3' # Optional input
+inSavePath = os.path.join(inBasePath, 'Extracted Data')
+inSaveFileName = 'Src-F_S2_L001'
+inAlertPath = '/Users/ca34522/Documents/Python/Sounds/Bells.mp3'
 
 # Input 2: Substrate Parameters
 inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
