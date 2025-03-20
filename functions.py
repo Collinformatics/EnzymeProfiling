@@ -4012,9 +4012,9 @@ class NGS:
         print('================================= Extract Motif '
               '=================================')
         if datasetTag is None:
-            print(f'\nDataset: {self.enzymeName} - Unfixed\n\n')
+            print(f'Dataset: {self.enzymeName} - Unfixed\n')
         else:
-            print(f'\nDataset: {self.enzymeName} - {datasetTag}\n\n')
+            print(f'Dataset: {self.enzymeName} - {datasetTag}\n')
         motifs = {}
         indexStart = min(indexSubFrame)
         indexEnd = max(indexSubFrame)
@@ -4070,9 +4070,6 @@ class NGS:
         inScaleY = 1
 
         def printTrie(node, level=0, path=""):
-            if level == 0:
-                print("Trie Structure:")
-
             # Recursively print the Trie structure
             if node is None:
                 return
@@ -4139,6 +4136,7 @@ class NGS:
 
         # Evaluate the trie
         printTrie(trie.root)
+        print('\n')
         graph = nx.DiGraph()
         pos = addNodesToGraph(trie.root, graph,
                               scaleX=inScaleX,
