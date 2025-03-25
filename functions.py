@@ -4047,14 +4047,9 @@ class NGS:
         print(f'Extracted Motifs: {len(motifs.keys())}')
         for motif, counts in motifs.items():
             iteration += 1
-            # if iteration > 25:
             print(f'{iteration}:{yellow} {motif}{resetColor} '
                   f'Count:{red} {counts:,}{resetColor}')
-            # if iteration >= self.printNumber:
-            #     break
         print('\n')
-
-        # sys.exit()
 
         return motifs
 
@@ -4069,17 +4064,6 @@ class NGS:
         inScaleX = 2
         inScaleY = 1
 
-        def printTrie(node, level=0, path=""):
-            # Recursively print the Trie structure
-            if node is None:
-                return
-
-            # Print the current node's path and level
-            print("  " * level + f"Level {level}: {path}")
-
-            # Recursively print all children of the current node
-            for char, nodeChild in node.children.items():
-                printTrie(nodeChild, level + 1, path + char)
 
         def addNodesToGraph(node, graph, scaleX, scaleY, offset=inOffset,
                             nodeSize=inNodeSize):
@@ -4134,9 +4118,7 @@ class NGS:
 
             return pos
 
-        # Evaluate the trie
-        printTrie(trie.root)
-        print('\n')
+        # Graph the trie
         graph = nx.DiGraph()
         pos = addNodesToGraph(trie.root, graph,
                               scaleX=inScaleX,
@@ -4184,9 +4166,63 @@ class NGS:
 
 
 
+    def evaluateSubtrees(self, trie, motifDict):
+        print('============================= Evaluate Suffix Tree '
+              '==============================')
+        motifsTotal = 0
+        for motif, count in motifDict.items():
+            motifsTotal += count
+        print(f'Total Motifs: {motifsTotal:,}\n')
+
+        # Evaluate: Partial sequence counts
+        subtreeCount = {}
+        motifLenght = len(next(iter(motifDict)))
+        for index in range(motifLenght):
+            for motif, count in motifDict.items():
+                subSeq = motif[0:index+1]
+                if subSeq in subtreeCount.keys():
+                    subtreeCount[subSeq] += count
+                else:
+                    subtreeCount[subSeq] = count
+
+        # Evaluate: Partial sequence frequency
+        subtreeFreq = {}
+        for subSeq, count in subtreeCount.items():
+            subtreeFreq[subSeq] = count / motifsTotal
+        print(f'AA Frequency:')
+        prevSeqLen = 1
+        for subSeq, count in subtreeFreq.items():
+            if len(subSeq) != prevSeqLen:
+                prevSeqLen = len(subSeq)
+                print('')
+            print(f'{subSeq}, {round(count, 5)}')
+        print('\n')
+
+        sys.exit()
+
+
+        def printTrie(node, level=0, path=""):
+            # Recursively print the Trie structure
+            if node is None:
+                return
+
+            # Print the current node's path and level
+            print("  " * level + f"Level {level}: {path}")
+
+            # Recursively print all children of the current node
+            for char, nodeChild in node.children.items():
+                printTrie(nodeChild, level + 1, path + char)
+
+        # Evaluate the trie
+        printTrie(trie.root)
+        print('\n')
+        print(f'')
+
+
+
+
     def suffixTree(self, substrates, N, entropySubFrame, indexSubFrame, entropyMin,
                    title, datasetTag, dataType, figSize):
-
         from Trie import Trie
 
         motifs = NGS.extractMotif(self, substrates=substrates, N=N,
@@ -4194,7 +4230,7 @@ class NGS:
 
         print('================================== Suffix Tree '
               '==================================')
-        print(f'Dataset:{purple} {self.enzymeName} {dataType} {datasetTag}{resetColor}')
+        print(f'Dataset:{purple} {self.enzymeName} {dataType} {datasetTag}{resetColor}\n')
         trie = Trie()  # Initialize Trie
 
         # Find motif positions based on entropy threshold
@@ -4205,15 +4241,50 @@ class NGS:
                 indexPos.append(int(index.replace('R', '')) - 1)
 
         # Make the trie
-        motifTrie = set()  # Use a set to avoid duplicate motifs
+        motifDict = {}
         countsMotif = 0
-        for seq in motifs.keys():
+        for seq, count in motifs.items():
             # Extract important AAs from the motif
             motif = ''.join(seq[index] for index in indexPos)
-            motifTrie.add(motif)
-            trie.insert(motif)
+            if motif in motifDict.keys():
+                motifDict[motif] += count
+            else:
+                motifDict[motif] = count
+                trie.insert(motif)
             countsMotif += 1
+
+
+        print(f'Extracted Trie:')
+        for sub, count in motifDict.items():
+            print(f'{sub}, {count:,}')
+        print('\n')
+
+        NGS.evaluateSubtrees(self, trie=trie, motifDict=motifDict)
 
         # Plot the Trie
         NGS.plotTrie(self, trie=trie, title=title, countsMotif=countsMotif,
                      datasetTag=datasetTag, figSize=figSize)
+
+
+
+        from scipy.cluster.hierarchy import linkage, dendrogram
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from Levenshtein import distance
+
+        # Compute pairwise Levenshtein distances
+        motifList = list(motifs.keys())
+        distanceMatrix = np.array(
+            [[distance(m1, m2) for m2 in motifList] for m1 in motifList])
+
+        # Perform hierarchical clustering
+        linkageMatrix = linkage(distanceMatrix, method='ward')
+
+        # Plot dendrogram
+        fig, ax = plt.subplots(figsize=(12, 6))  # Increased figure size
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        dendrogram(linkageMatrix, labels=motifList, leaf_rotation=90)
+        plt.title('Motif Clustering (Levenshtein Distance)',
+                  fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
