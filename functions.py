@@ -4008,50 +4008,108 @@ class NGS:
     #  ===================================================================================
 
 
-    def extractMotif(self, substrates, N, indexSubFrame, datasetTag):
-        print('================================= Extract Motif '
-              '=================================')
-        if datasetTag is None:
-            print(f'Dataset: {self.enzymeName} - Unfixed\n')
-        else:
-            print(f'Dataset: {self.enzymeName} - {datasetTag}\n')
-        motifs = {}
-        indexStart = min(indexSubFrame)
-        indexEnd = max(indexSubFrame)
 
-        # Print substrates
-        iteration = 0
-        for substrate, count in substrates.items():
-            iteration += 1
-            print(f'Substrate:{silver} {substrate}{resetColor}\n'
-                  f'     Count:{red} {count:,}{resetColor}')
-            if iteration >= self.printNumber:
-                break
+    def evaluateSubtrees(self, trie, motifTrie):
+        print('============================= Evaluate Suffix Tree '
+              '==============================')
+        print(f'Datapoints: {len(motifTrie.keys())}')
+
+        def formatSubtreeTable(subtreeFreq):
+            # Sort motifs by length
+            sortedMotifs = sorted(subtreeFreq.keys(), key=len)
+
+            # Organize motifs by their length and sort by frequency (highest first)
+            motifGroups = {}
+            for motif in sortedMotifs:
+                length = len(motif)
+                if length not in motifGroups:
+                    motifGroups[length] = []
+                motifGroups[length].append((motif, subtreeFreq[motif]))
+
+            # Sort motifs in each length group by frequency (descending)
+            for length in motifGroups:
+                motifGroups[length].sort(key=lambda x: x[1], reverse=True)
+
+            # Convert motifs back to formatted strings
+            for length in motifGroups:
+                motifGroups[length] = [f"{motif} ({round(freq, 5)})" for motif, freq in
+                                       motifGroups[length]]
+
+            # Find the max number of motifs in any length group
+            maxRows = max(len(motifs) for motifs in motifGroups.values())
+
+            # Construct the table row by row
+            tableData = []
+            for i in range(maxRows):
+                row = []
+                for length in sorted(motifGroups.keys()):
+                    motifs = motifGroups[length]
+                    row.append(motifs[i] if i < len(
+                        motifs) else "")  # Fill missing values with empty strings
+                tableData.append(row)
+
+            # Convert to DataFrame
+            df = pd.DataFrame(tableData, columns=[str(length) for length in
+                                                  sorted(motifGroups.keys())])
+
+            print(df)
+
+
+        motifsTotal = 0
+        for motif, count in motifTrie.items():
+            motifsTotal += count
+        print(f'Total Motifs: {motifsTotal:,}\n')
+
+        # Evaluate: Partial sequence counts
+        subtreeCount = {}
+        motifLenght = len(next(iter(motifTrie)))
+        for index in range(motifLenght):
+            for motif, count in motifTrie.items():
+                subSeq = motif[0:index+1]
+                if subSeq in subtreeCount.keys():
+                    subtreeCount[subSeq] += count
+                else:
+                    subtreeCount[subSeq] = count
+
+        # Evaluate: Partial sequence frequency
+        subtreeFreq = {}
+        for subSeq, count in subtreeCount.items():
+            subtreeFreq[subSeq] = count / motifsTotal
+        print(f'AA Frequency:')
+        prevSeqLen = 1
+        for subSeq, count in subtreeFreq.items():
+            if len(subSeq) != prevSeqLen:
+                prevSeqLen = len(subSeq)
+                print('')
+            print(f'{subSeq}, {round(count, 5)}')
         print('\n')
 
-        # Extract the motifs
-        motifCount = 0
-        for substrate, count in substrates.items():
-            motif = substrate[indexStart:indexEnd + 1]
-            if motif in motifs:
-                motifs[motif] += count
-            else:
-                motifs[motif] = count
-                motifCount += 1
-            if motifCount >= N:
-                break
-        motifs = dict(sorted(motifs.items(), key=lambda item: item[1], reverse=True))
+        formatSubtreeTable(subtreeFreq)
 
-        # Print motifs
-        iteration = 0
-        print(f'Extracted Motifs: {len(motifs.keys())}')
-        for motif, counts in motifs.items():
-            iteration += 1
-            print(f'{iteration}:{yellow} {motif}{resetColor} '
-                  f'Count:{red} {counts:,}{resetColor}')
+        sys.exit()
+
+        def printTrie(node, level=0, path=""):
+            # Recursively print the Trie structure
+            if node is None:
+                return
+
+            # Print the current node's path and level
+            print("  " * level + f"Level {level}: {path}")
+
+            # Recursively print all children of the current node
+            for char, nodeChild in node.children.items():
+                printTrie(nodeChild, level + 1, path + char)
+
+        # Evaluate the trie
+        printTrie(trie.root)
         print('\n')
+        print(f'')
 
-        return motifs
+
+
+    # ====================================================================================
+    # ====================================================================================
+    # ====================================================================================
 
 
 
@@ -4135,8 +4193,9 @@ class NGS:
         else:
             figLabel = f'Suffix Tree - {self.enzymeName} - {countsMotif} - {datasetTag}'
 
-        # Create figure and connect key event
-        fig, ax = plt.subplots(figsize=figSize)  # Increased figure size
+
+        # Plot the data
+        fig, ax = plt.subplots(figsize=figSize)
         fig.canvas.mpl_connect('key_press_event', pressKey)
 
         # Draw graph
@@ -4166,72 +4225,34 @@ class NGS:
 
 
 
-    def evaluateSubtrees(self, trie, motifDict):
-        print('============================= Evaluate Suffix Tree '
-              '==============================')
-        motifsTotal = 0
-        for motif, count in motifDict.items():
-            motifsTotal += count
-        print(f'Total Motifs: {motifsTotal:,}\n')
-
-        # Evaluate: Partial sequence counts
-        subtreeCount = {}
-        motifLenght = len(next(iter(motifDict)))
-        for index in range(motifLenght):
-            for motif, count in motifDict.items():
-                subSeq = motif[0:index+1]
-                if subSeq in subtreeCount.keys():
-                    subtreeCount[subSeq] += count
-                else:
-                    subtreeCount[subSeq] = count
-
-        # Evaluate: Partial sequence frequency
-        subtreeFreq = {}
-        for subSeq, count in subtreeCount.items():
-            subtreeFreq[subSeq] = count / motifsTotal
-        print(f'AA Frequency:')
-        prevSeqLen = 1
-        for subSeq, count in subtreeFreq.items():
-            if len(subSeq) != prevSeqLen:
-                prevSeqLen = len(subSeq)
-                print('')
-            print(f'{subSeq}, {round(count, 5)}')
-        print('\n')
-
-        sys.exit()
-
-
-        def printTrie(node, level=0, path=""):
-            # Recursively print the Trie structure
-            if node is None:
-                return
-
-            # Print the current node's path and level
-            print("  " * level + f"Level {level}: {path}")
-
-            # Recursively print all children of the current node
-            for char, nodeChild in node.children.items():
-                printTrie(nodeChild, level + 1, path + char)
-
-        # Evaluate the trie
-        printTrie(trie.root)
-        print('\n')
-        print(f'')
-
-
-
-
     def suffixTree(self, substrates, N, entropySubFrame, indexSubFrame, entropyMin,
                    title, datasetTag, dataType, figSize):
-        from Trie import Trie
-
-        motifs = NGS.extractMotif(self, substrates=substrates, N=N,
-                                  indexSubFrame=indexSubFrame, datasetTag=datasetTag)
-
         print('================================== Suffix Tree '
               '==================================')
-        print(f'Dataset:{purple} {self.enzymeName} {dataType} {datasetTag}{resetColor}\n')
-        trie = Trie()  # Initialize Trie
+        if datasetTag is None:
+            print(f'Dataset:{purple} {self.enzymeName} - Unfixed{resetColor}\n')
+        else:
+            print(f'Dataset:{purple} {self.enzymeName} {dataType} {datasetTag}'
+                  f'{resetColor}\n')
+
+
+        from Trie import Trie
+
+
+        trie = Trie() # Initialize Trie
+        motifs = {}
+        indexStart = min(indexSubFrame)
+        indexEnd = max(indexSubFrame)
+
+        # Print substrates
+        iteration = 0
+        for substrate, count in substrates.items():
+            iteration += 1
+            print(f'Substrate:{silver} {substrate}{resetColor}\n'
+                  f'     Count:{red} {count:,}{resetColor}')
+            if iteration >= self.printNumber:
+                break
+        print('\n')
 
         # Find motif positions based on entropy threshold
         indexPos = []
@@ -4240,26 +4261,56 @@ class NGS:
             if posEntropy >= entropyMin:
                 indexPos.append(int(index.replace('R', '')) - 1)
 
-        # Make the trie
-        motifDict = {}
+        motifTrie = {}
         countsMotif = 0
-        for seq, count in motifs.items():
+        def addMotif(motif, count):
             # Extract important AAs from the motif
-            motif = ''.join(seq[index] for index in indexPos)
-            if motif in motifDict.keys():
-                motifDict[motif] += count
+            motif = ''.join(motif[index] for index in indexPos)
+
+            # Add motif to the trie
+            if motif in motifTrie.keys():
+                motifTrie[motif] += count
             else:
-                motifDict[motif] = count
+                motifTrie[motif] = count
                 trie.insert(motif)
-            countsMotif += 1
 
 
-        print(f'Extracted Trie:')
-        for sub, count in motifDict.items():
-            print(f'{sub}, {count:,}')
+        # Extract the motifs
+        motifCount = 0
+        for substrate, count in substrates.items():
+            motif = substrate[indexStart:indexEnd + 1]
+            if motif in motifs:
+                motifs[motif] += count
+            else:
+                motifs[motif] = count
+                motifCount += 1
+
+            # Add the motif to the tree
+            addMotif(motif, count)
+            countsMotif = len(motifTrie.keys())
+            if countsMotif >= N:
+                break
+        motifs = dict(sorted(motifs.items(), key=lambda item: item[1], reverse=True))
+
+        # Print motifs
+        print(f'Extracted Motifs:')
+        for index, (motif, count) in enumerate(motifs.items()):
+            print(f'{index+1}:{yellow} {motif}{resetColor} '
+                  f'Count:{red} {count:,}{resetColor}')
         print('\n')
 
-        NGS.evaluateSubtrees(self, trie=trie, motifDict=motifDict)
+        # Print trie
+        print(f'Extracted Trie:')
+        for index, (seq, count) in enumerate(motifTrie.items()):
+            print(f'{index + 1}:{pink} {seq}{resetColor} '
+                  f'Count:{red} {count:,}{resetColor}')
+        print('\n')
+
+
+        sys.exit()
+
+
+        NGS.evaluateSubtrees(self, trie=trie, motifTrie=motifTrie)
 
         # Plot the Trie
         NGS.plotTrie(self, trie=trie, title=title, countsMotif=countsMotif,
@@ -4280,8 +4331,8 @@ class NGS:
         # Perform hierarchical clustering
         linkageMatrix = linkage(distanceMatrix, method='ward')
 
-        # Plot dendrogram
-        fig, ax = plt.subplots(figsize=(12, 6))  # Increased figure size
+        # Plot the data
+        fig, ax = plt.subplots(figsize=(12, 6))
         fig.canvas.mpl_connect('key_press_event', pressKey)
         dendrogram(linkageMatrix, labels=motifList, leaf_rotation=90)
         plt.title('Motif Clustering (Levenshtein Distance)',
