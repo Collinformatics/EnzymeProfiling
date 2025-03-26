@@ -4032,8 +4032,8 @@ class NGS:
 
             # Convert motifs back to formatted strings
             for length in motifGroups:
-                motifGroups[length] = [f"{motif} ({round(freq, 5)})" for motif, freq in
-                                       motifGroups[length]]
+                motifGroups[length] = [f"{motif}: {round(freq, 5)}"
+                                       for motif, freq in motifGroups[length]]
 
             # Find the max number of motifs in any length group
             maxRows = max(len(motifs) for motifs in motifGroups.values())
@@ -4049,8 +4049,10 @@ class NGS:
                 tableData.append(row)
 
             # Convert to DataFrame
-            df = pd.DataFrame(tableData, columns=[str(length) for length in
-                                                  sorted(motifGroups.keys())])
+            df = pd.DataFrame(tableData,
+                              index=range(1, len(motifTrie.keys()) + 1),
+                              columns=[str(length)
+                                       for length in sorted(motifGroups.keys())])
 
             print(df)
 
