@@ -4291,6 +4291,8 @@ class NGS:
             if countsMotif >= N:
                 break
         motifs = dict(sorted(motifs.items(), key=lambda item: item[1], reverse=True))
+        motifTrie = dict(sorted(motifTrie.items(), key=lambda item: item[1],
+                                reverse=True))
 
         # Print motifs
         print(f'Extracted Motifs:')
@@ -4306,10 +4308,7 @@ class NGS:
                   f'Count:{red} {count:,}{resetColor}')
         print('\n')
 
-
-        sys.exit()
-
-
+        # Calculate: RF
         NGS.evaluateSubtrees(self, trie=trie, motifTrie=motifTrie)
 
         # Plot the Trie
