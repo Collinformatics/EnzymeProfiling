@@ -66,48 +66,14 @@ resetColor = '\033[0m'
 
 # =================================== Define Functions ===================================
 def filePaths(enzyme):
-    if enzyme == 'ELN' or enzyme == 'hNE':
-        inFileNamesInitialSort = ['ELN-I_S1_L001', 'ELN-I_S1_L002']
-        inFileNamesFinalSort = ['ELN-R4_S2_L001', 'ELN-R4_S2_L002']
+    if enzyme == 'EnzName':
+        inFileNamesInitialSort = ['filename']
+        inFileNamesFinalSort = ['filename']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'IDE Prev':
-        inFileNamesInitialSort = ['IDE-S1_L001', 'IDE-S1_L002',
-                                  'IDE-S1_L003', 'IDE-S1_L004']
-        inFileNamesFinalSort = ['IDE-S2_L001', 'IDE-S2_L002',
-                                'IDE-S2_L003', 'IDE-S2_L004']
+    elif enzyme == 'EnzName':
+        inFileNamesInitialSort = ['filename']
+        inFileNamesFinalSort = ['filename']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7']
-    elif enzyme == 'IDE':
-        inFileNamesInitialSort = ['IDE-I_S3_L001', 'IDE-I_S3_L002']
-        inFileNamesFinalSort = ['IDE-F_S5_L001', 'IDE-F_S5_L002']
-        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'Mpro':
-        inFileNamesInitialSort = ['Mpro-I_S1_L001', 'Mpro-I_S1_L002',
-                                  'Mpro-I_S1_L003', 'Mpro-I_S1_L004']
-        inFileNamesFinalSort = ['Mpro-R4_S3_L001', 'Mpro-R4_S3_L002',
-                                'Mpro-R4_S3_L003', 'Mpro-R4_S3_L004']
-        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'Mpro2':
-        inFileNamesInitialSort = ['Mpro2-I_S1_L001', 'Mpro2-I_S1_L002',
-                                  'Mpro2-I_S1_L003', 'Mpro2-I_S1_L004']
-        inFileNamesFinalSort = ['Mpro2-R4_S3_L001', 'Mpro2-R4_S3_L002',
-                                'Mpro2-R4_S3_L003', 'Mpro2-R4_S3_L004']
-        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'MMP7':
-        inFileNamesInitialSort = ['MMP7-I_S3_L001', 'MMP7-I_S3_L002']
-        inFileNamesFinalSort = ['MMP7-R4_S4_L001', 'MMP7-R4_S4_L002']
-        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'Fyn':
-        inFileNamesInitialSort = ['Fyn-I_S6_L001', 'Fyn-I_S6_L002']
-        inFileNamesFinalSort = ['Fyn-F_S1_L001', 'Fyn-F_S1_L002']
-        inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
-    elif enzyme == 'Src':
-        inFileNamesInitialSort = ['Src-I_S4_L001', 'Src-I_S4_L002']
-        inFileNamesFinalSort = ['Src-F_S2_L001', 'Src-F_S2_L002']
-        inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
-    elif enzyme == 'VEEV':
-        inFileNamesInitialSort = ['VE-I_S1_L001']
-        inFileNamesFinalSort = ['VE-R4_S2_L001']
-        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
     else:
         print(f'{orange}ERROR: There are no file names for {cyan}{enzyme}{orange}\n'
               f'       Add information to the "filePaths" function in '
