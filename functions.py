@@ -4003,18 +4003,13 @@ class NGS:
                 fig.savefig(saveLocation, dpi=self.figureResolution)
 
 
-    #  ===================================================================================
-    #  ===================================================================================
-    #  ===================================================================================
-
-
 
     def evaluateSubtrees(self, trie, motifTrie):
         print('============================= Evaluate Suffix Tree '
               '==============================')
         print(f'Datapoints: {len(motifTrie.keys())}')
 
-        def formatSubtreeTable(subtreeFreq):
+        def subtreeTable(subtreeFreq):
             # Sort motifs by length
             sortedMotifs = sorted(subtreeFreq.keys(), key=len)
 
@@ -4049,46 +4044,12 @@ class NGS:
                 tableData.append(row)
 
             # Convert to DataFrame
-            df = pd.DataFrame(tableData,
-                              index=range(1, len(motifTrie.keys()) + 1),
-                              columns=[str(length)
-                                       for length in sorted(motifGroups.keys())])
+            motifTable = pd.DataFrame(tableData,
+                                      index=range(1, len(motifTrie.keys()) + 1),
+                                      columns=[str(length)
+                                               for length in sorted(motifGroups.keys())])
+            print(f'{motifTable}\n\n')
 
-            print(df)
-
-
-        motifsTotal = 0
-        for motif, count in motifTrie.items():
-            motifsTotal += count
-        print(f'Total Motifs: {motifsTotal:,}\n')
-
-        # Evaluate: Partial sequence counts
-        subtreeCount = {}
-        motifLenght = len(next(iter(motifTrie)))
-        for index in range(motifLenght):
-            for motif, count in motifTrie.items():
-                subSeq = motif[0:index+1]
-                if subSeq in subtreeCount.keys():
-                    subtreeCount[subSeq] += count
-                else:
-                    subtreeCount[subSeq] = count
-
-        # Evaluate: Partial sequence frequency
-        subtreeFreq = {}
-        for subSeq, count in subtreeCount.items():
-            subtreeFreq[subSeq] = count / motifsTotal
-        print(f'AA Frequency:')
-        prevSeqLen = 1
-        for subSeq, count in subtreeFreq.items():
-            if len(subSeq) != prevSeqLen:
-                prevSeqLen = len(subSeq)
-                print('')
-            print(f'{subSeq}, {round(count, 5)}')
-        print('\n')
-
-        formatSubtreeTable(subtreeFreq)
-
-        sys.exit()
 
         def printTrie(node, level=0, path=""):
             # Recursively print the Trie structure
@@ -4101,6 +4062,34 @@ class NGS:
             # Recursively print all children of the current node
             for char, nodeChild in node.children.items():
                 printTrie(nodeChild, level + 1, path + char)
+
+
+        motifsTotal = 0
+        for motif, count in motifTrie.items():
+            motifsTotal += count
+        print(f'Total Motifs: {motifsTotal:,}\n')
+
+        # Evaluate: Partial sequence counts
+        subtreeCount = {}
+        motifLength = len(next(iter(motifTrie)))
+        for index in range(motifLength):
+            for motif, count in motifTrie.items():
+                subSeq = motif[0:index+1]
+                if subSeq in subtreeCount.keys():
+                    subtreeCount[subSeq] += count
+                else:
+                    subtreeCount[subSeq] = count
+
+        # Evaluate: Partial sequence frequency
+        subtreeFreq = {}
+        for subSeq, count in subtreeCount.items():
+            subtreeFreq[subSeq] = count / motifsTotal
+        prevSeqLen = 1
+        for subSeq, count in subtreeFreq.items():
+            if len(subSeq) != prevSeqLen:
+                prevSeqLen = len(subSeq)
+        subtreeTable(subtreeFreq)
+
 
         # Evaluate the trie
         printTrie(trie.root)
