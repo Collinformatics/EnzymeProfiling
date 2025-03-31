@@ -1,10 +1,10 @@
+from functions import filePaths, NGS
 import os
 import pandas as pd
 import pickle as pk
 import sys
 import threading
 import time
-from functions import filePaths, NGS
 
 
 
