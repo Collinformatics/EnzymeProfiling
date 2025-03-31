@@ -1,3 +1,4 @@
+from functions import filePaths, NGS
 import logomaker
 import math
 import matplotlib.pyplot as plt
@@ -10,7 +11,6 @@ from sklearn.metrics import r2_score
 import sys
 import time
 import threading
-from functions import filePaths, NGS
 
 
 
