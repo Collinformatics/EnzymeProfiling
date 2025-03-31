@@ -378,9 +378,6 @@ def loadSubstratesFixedFrame():
         print('============================== Load: Fixed Frame Substrates '
               '=============================')
 
-
-
-
         # Define: File path
         frame = f'{inFixedResidue[0]}@R{inFixedPosition[index]}'
         labelTag = (f'{inEnzymeName}_FixedFrame_{frame}_'
