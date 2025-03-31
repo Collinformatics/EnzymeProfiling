@@ -41,7 +41,6 @@ inSubstratePositions = inAAPositions # ['P4', 'P3', 'P2', 'P1', 'P1\'']
 inFilterSubstrates = True
 inFixedResidue = ['L']
 inFixedPosition = [6]
-inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
 inFixEntireSubstrateFrame = False
@@ -156,6 +155,9 @@ inMatrixScaledESLabel = r'ΔS * Enrichment Scores'  # - log5()'
 
 
 # =============================== Setup Figure Parameters ================================
+# Dataset label
+inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
+
 global fixedSubSeq
 
 if inShowEnrichmentAsSquares:
