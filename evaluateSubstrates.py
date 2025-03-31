@@ -3,6 +3,7 @@
 # IMPORTANT: Process all of your data with extractSubstrates before using this script
 
 
+from functions import filePaths, NGS
 import numpy as np
 import os
 import sys
@@ -10,7 +11,6 @@ import pickle as pk
 import pandas as pd
 import threading
 import time
-from functions import filePaths, NGS
 
 
 
