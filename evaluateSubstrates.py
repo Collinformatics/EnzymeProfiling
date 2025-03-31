@@ -16,8 +16,8 @@ from functions import filePaths, NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Fyn'
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inEnzymeName = 'name'
+inBasePath = f'/path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
@@ -48,11 +48,11 @@ inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabiliti
 
 # Input 3: Computational Parameters
 inFilterSubstrates = True
-inFixedResidue = ['L','Q','C']
-inFixedPosition = [3,4,5]
+inFixedResidue = ['']
+inFixedPosition = [5]
 inExcludeResidues = False # Do you want to remove any AAs from your collection of substrate
-inExcludedResidue = ['A','A']
-inExcludedPosition = [9,10]
+inExcludedResidue = ['A']
+inExcludedPosition = [9]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inFigureTitleSize = 18
