@@ -20,12 +20,11 @@ from functions import NGS
 # Input 1: File Location
 inFileName = ['Src-F_S2_L001_R1_001', 'Src-F_S2_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inBasePath = f'/path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Fastq') # Define the fastq folder pathway
 inFileType = 'fastq' # Define the file type
 inSavePath = os.path.join(inBasePath, 'Extracted Data')
 inSaveFileName = 'Src-F_S2_L001'
-inAlertPath = '/Users/ca34522/Documents/Python/Sounds/Bells.mp3'
 
 # Input 2: Substrate Parameters
 inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
