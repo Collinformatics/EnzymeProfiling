@@ -22,7 +22,7 @@ from functions import filePaths, NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'MMP7'
 inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
@@ -31,7 +31,7 @@ inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
 inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = True
-inLoadFinalFixedFrame = False
+inLoadFinalFixedFrame = True
 
 # Input 2: Experimental Parameters
 inSubstrateLength = len(inAAPositions)
@@ -42,7 +42,7 @@ inSubstratePositions = inAAPositions # ['P4', 'P3', 'P2', 'P1', 'P1\'']
 # Input 3: Computational Parameters
 inFilterSubstrates = True
 inFixedResidue = ['L']
-inFixedPosition = [6]
+inFixedPosition = [5]
 inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
@@ -56,8 +56,6 @@ inSetMinimumESReleaseAA = -1
 inPrintFixedSubs = True
 inCombineFixedFrames = False
 inPredictSubstrateEnrichmentScores = False
-inEvaluateOS = False
-inEvaluatePCA = False
 inDuplicateFigure = True
 
 # Input 4: Processing The Data
@@ -298,12 +296,12 @@ def fixSubstrate(subs, fixedAA, fixedPosition, sortType, fixedTag, initialFix):
 
     # # Load Data
     # Define: File path
-    if '/' in inFilePath:
-        filePathFixedSubs = f'{inFilePath}/fixedSubs_{inEnzymeName}_{sortTypePathTag}_{fixedTag}'
-        filePathFixedCounts = f'{inFilePath}/counts_{inEnzymeName}_{sortTypePathTag}_{fixedTag}'
-    else:
-        filePathFixedSubs = f'{inFilePath}\\fixedSubs_{inEnzymeName}_{sortTypePathTag}_{fixedTag}'
-        filePathFixedCounts = f'{inFilePath}\\counts_{inEnzymeName}_{sortTypePathTag}_{fixedTag}'
+    filePathFixedSubs = os.path.join(inFilePath,
+                                     f'fixedSubs_{inEnzymeName}_'
+                                     f'{sortTypePathTag}_{fixedTag}')
+    filePathFixedCounts = os.path.join(inFilePath,
+                                       f'counts_{inEnzymeName}_'
+                                       f'{sortTypePathTag}_{fixedTag}')
 
     # Determine if the fixed substrate files exists
     loadFiles = False
@@ -444,7 +442,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         substrateFrameSorted = ngs.findSubstrateFrame(entropy=positionalEntropy,
                                                       minEntropy=inMinDeltaS,
                                                       fixFullFrame=
-                                                      inFixEntireSubstrateFrame)
+                                                      inFixEntireSubstrateFrame,
+                                                      getIndices=False)
 
     if inPlotPositionalEntropy:
         # Visualize: Change in Entropy
@@ -580,7 +579,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
             substrateFrameSorted = ngs.findSubstrateFrame(entropy=positionalEntropy,
                                                           minEntropy=inMinDeltaS,
                                                           fixFullFrame=
-                                                          inFixEntireSubstrateFrame)
+                                                          inFixEntireSubstrateFrame,
+                                                          getIndices=False)
             if inManualEntropy:
                 substrateFrameSorted = pd.DataFrame(1, index=inManualFrame,
                                                     columns=['ΔEntropy'])
@@ -701,7 +701,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
             substrateFrameSorted = ngs.findSubstrateFrame(entropy=positionalEntropy,
                                                           minEntropy=inMinDeltaS,
                                                           fixFullFrame=
-                                                          inFixEntireSubstrateFrame)
+                                                          inFixEntireSubstrateFrame,
+                                                          getIndices=False)
             if inManualEntropy:
                 substrateFrameSorted = pd.DataFrame(1, index=inManualFrame,
                                                     columns=['ΔEntropy'])
@@ -793,7 +794,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
             substrateFrameSorted = ngs.findSubstrateFrame(entropy=positionalEntropy,
                                                           minEntropy=inMinDeltaS,
                                                           fixFullFrame=
-                                                          inFixEntireSubstrateFrame)
+                                                          inFixEntireSubstrateFrame,
+                                                          getIndices=False)
             if inManualEntropy:
                 substrateFrameSorted = pd.DataFrame(1, index=inManualFrame,
                                                     columns=['ΔEntropy'])

@@ -16,11 +16,11 @@ from functions import filePaths, NGS
 
 # ========================================== User Inputs =========================================
 # Input 1: File Location
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'MMP7'
 inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
-inFilePath = f'{inBasePath}/Extracted Data'
+inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
-inSavePathFigures = f'{inBasePath}/Figures'
+inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
 inSaveFigures = True
@@ -38,11 +38,11 @@ inAAPositionsBinned = inAAPositions[inFramePositons[0]:inIndexNTerminus+inFixedF
 
 # Input 3: Computational Parameters
 inFixResidues = True # True: fix AAs in the substrate, False: Don't fix AAs, plot raw the data
-inFixedResidue = ['Q']
-inFixedPosition = [4, 5, 6]
-# inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
-inSubstrateFrame = (f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}-'
-                    f'R{inFixedPosition[-1]}')
+inFixedResidue = ['L']
+inFixedPosition = [5]
+inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
+# inSubstrateFrame = (f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}-'
+#                     f'R{inFixedPosition[-1]}')
 # inSubstrateFrame = (f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}-'
 #                     f'R{inFixedPosition[1]}, R{inFixedPosition[-1]}')
 inPrintFixedSubs = True
@@ -52,19 +52,11 @@ inFigureTickSize = 13
 inLineThickness = 1.5
 inTickLength = 4
 
-# Input 4: PCA
-inNumberOfPCs = 2
-inTotalSubsPCA = int(5*10**6)
-inEncludeSubstrateCounts = False
-inExtractPopulations = False
-inPlotPositionalEntropyPCAPopulations = False
-inAdjustZeroCounts = True # Prevent counts of 0 in PCA EM & Motif
-
-# Input 5: Processing The Data
-inPlotEnrichmentMap = True
-inPlotEnrichmentMotif = True
-inPCAFixedFrameIndividual = False
-inPCAFixedFrameCompined = True
+# Input 4: Processing The Data
+inPlotEnrichmentMap = False
+inPlotEnrichmentMotif = False
+inPCAIndividual = True # PCA plot of an individual fixed frame
+# inPCACombined = True
 inPlotEnrichmentMapPCA = True
 inPlotEnrichmentMotifPCA = inPlotEnrichmentMapPCA
 inPlotWeblogoMotif = False
@@ -81,13 +73,21 @@ inCountsColorMap = ['white', 'white', 'lightcoral', 'red', 'firebrick', 'darkred
 inStDevColorMap = ['white', 'white', '#FF76FA', '#FF50F9', '#FF00F2', '#CA00DF', '#BD16FF']
 inShowSampleSize = False # Include the sample size in your figures
 
+# Input 5: PCA
+inNumberOfPCs = 2
+inTotalSubsPCA = int(5*10**3)
+inEncludeSubstrateCounts = False
+inExtractPopulations = False
+inPlotPositionalEntropyPCAPopulations = False
+inAdjustZeroCounts = True # Prevent counts of 0 in PCA EM & Motif
+
 # Input 6: Printing The Data
 inPrintLoadedSubs = True
 inPrintSampleSize = True
 inPrintCounts = True
 inPrintRF = True
 inPrintES = True
-inPrintEntopy = True
+inPrintEntropy = True
 inPrintMotifData = True
 inPrintNumber = 10
 inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
@@ -233,7 +233,7 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 # ======================================= Initialize Class =======================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
-          minCounts=None, colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
+          minCounts=, colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
           colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
           xAxisLabels=inAAPositions, xAxisLabelsBinned=inAAPositionsBinned,
           residueLabelType=inYLabelEnrichmentMap, titleLabelSize=inFigureTitleSize,
@@ -383,7 +383,7 @@ def loadSubstratesFixedFrame():
                 break
 
         # PCA: On a single fixed frame
-        if inPCAFixedFrameIndividual:
+        if inPCAIndividual:
             # Convert substrate data to numerical
             tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=loadedSubs,
                                                        collectionNumber=inTotalSubsPCA,
@@ -420,7 +420,8 @@ def fixInitialSubs(substrates):
 
     for substrate in substrates:
         for indexFrame in range(len(inFixedPosition)):
-            subFrame = substrate[inFramePositons[0]+indexFrame:inFramePositons[-1]+indexFrame]
+            subFrame = substrate[inFramePositons[0]+indexFrame:
+                                 inFramePositons[-1]+indexFrame]
             if subFrame in subFrameInitial:
                 subFrameInitial[subFrame] += 1
             else:
@@ -428,7 +429,8 @@ def fixInitialSubs(substrates):
             numberOfSubs += 1
 
     # Sort the substrate frames
-    subFrameInitial = dict(sorted(subFrameInitial.items(), key=lambda x: x[1], reverse=True))
+    subFrameInitial = dict(sorted(subFrameInitial.items(),
+                                  key=lambda x: x[1], reverse=True))
 
     # Print the substrat frames
     iteration = 0
@@ -449,7 +451,8 @@ def trimSubstrates():
           '================================')
     trimedSubs = {}
     for index, substrate in enumerate(inSubsPredict):
-        trimedSub = substrate[inSubsPredictStartIndex:inFixedFrameLength+inSubsPredictStartIndex]
+        trimedSub = substrate[inSubsPredictStartIndex:
+                              inFixedFrameLength+inSubsPredictStartIndex]
         print(f'Substrate:{pink} {substrate}{resetColor}\n'
               f'     Sub:{yellow} {trimedSub}{resetColor}')
         if trimedSub in trimedSubs:
@@ -1405,7 +1408,7 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
                                       fileType='Final Sort', printRF=inPrintRF)
 
     # Calculate: Positional entropy
-    positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntopy)
+    positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntropy)
     if inPlotPositionalEntropyPCAPopulations:
         # Plot: Positional entropy
         ngs.plotPositionalEntropy(entropy=positionalEntropy,
@@ -1536,7 +1539,7 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
     # Calculate: Probability & Entropy
     fixedFrameProb = ngs.calculateFixedFrameRF(countsTotal=fixedFrameCountsTotal,
                                                datasetTag=inSubstrateFrame)
-    positionalEntropy = ngs.calculateEntropy(RF=fixedFrameProb, printEntropy=inPrintEntopy)
+    positionalEntropy = ngs.calculateEntropy(RF=fixedFrameProb, printEntropy=inPrintEntropy)
 
     # Calculate: Enrichment Scores
     if (inPredictSubstrateActivity or inPlotEnrichmentMap
@@ -1594,11 +1597,12 @@ if inPlotEnrichmentMap:
                              duplicateFigure=False)
 
     # Calculate: Stats
-    ngs.fixedFrameStats(countsList=fixedFrameCounts,
-                        initialProb=initialRFAvg,
-                        substrateFrame=inFixedFramePositions,
-                        figSize=inFigureSize,
-                        datasetTag=inSubstrateFrame)
+    if len(inFixedPosition) != 1:
+        ngs.fixedFrameStats(countsList=fixedFrameCounts,
+                            initialProb=initialRFAvg,
+                            substrateFrame=inFixedFramePositions,
+                            figSize=inFigureSize,
+                            datasetTag=inSubstrateFrame)
 
     # Plot: Enrichment Map - Scaled
     ngs.plotEnrichmentScores(scores=fixedFrameESScaled.copy(),
