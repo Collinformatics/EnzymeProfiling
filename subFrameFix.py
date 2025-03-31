@@ -882,7 +882,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
     # # Finish fixing this frame & save the data
     # Define: File path
     frame = f'{inFixedResidue[0]}@R{inFixedPosition[0]}'
-    labelTag = f'{inEnzymeName}_FixedFrame_{frame} - MinCounts {inMinimumSubstrateCount}'
+    labelTag = f'{inEnzymeName}_FixedFrame_{frame}_MinCounts {inMinimumSubstrateCount}'
     filePathFixedFrameSubs = os.path.join(inFilePath,
                                           f'fixedSubs_{labelTag}')
     filePathFixedFrameCounts = os.path.join(inFilePath,
