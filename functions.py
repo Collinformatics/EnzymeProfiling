@@ -66,14 +66,48 @@ resetColor = '\033[0m'
 
 # =================================== Define Functions ===================================
 def filePaths(enzyme):
-    if enzyme == 'EnzName':
-        inFileNamesInitialSort = ['filename']
-        inFileNamesFinalSort = ['filename']
+    if enzyme == 'ELN' or enzyme == 'hNE':
+        inFileNamesInitialSort = ['ELN-I_S1_L001', 'ELN-I_S1_L002']
+        inFileNamesFinalSort = ['ELN-R4_S2_L001', 'ELN-R4_S2_L002']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'EnzName':
-        inFileNamesInitialSort = ['filename']
-        inFileNamesFinalSort = ['filename']
+    elif enzyme == 'IDE Prev':
+        inFileNamesInitialSort = ['IDE-S1_L001', 'IDE-S1_L002',
+                                  'IDE-S1_L003', 'IDE-S1_L004']
+        inFileNamesFinalSort = ['IDE-S2_L001', 'IDE-S2_L002',
+                                'IDE-S2_L003', 'IDE-S2_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7']
+    elif enzyme == 'IDE':
+        inFileNamesInitialSort = ['IDE-I_S3_L001', 'IDE-I_S3_L002']
+        inFileNamesFinalSort = ['IDE-F_S5_L001', 'IDE-F_S5_L002']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+    elif enzyme == 'Mpro':
+        inFileNamesInitialSort = ['Mpro-I_S1_L001', 'Mpro-I_S1_L002',
+                                  'Mpro-I_S1_L003', 'Mpro-I_S1_L004']
+        inFileNamesFinalSort = ['Mpro-R4_S3_L001', 'Mpro-R4_S3_L002',
+                                'Mpro-R4_S3_L003', 'Mpro-R4_S3_L004']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+    elif enzyme == 'Mpro2':
+        inFileNamesInitialSort = ['Mpro2-I_S1_L001', 'Mpro2-I_S1_L002',
+                                  'Mpro2-I_S1_L003', 'Mpro2-I_S1_L004']
+        inFileNamesFinalSort = ['Mpro2-R4_S3_L001', 'Mpro2-R4_S3_L002',
+                                'Mpro2-R4_S3_L003', 'Mpro2-R4_S3_L004']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+    elif enzyme == 'MMP7':
+        inFileNamesInitialSort = ['MMP7-I_S3_L001', 'MMP7-I_S3_L002']
+        inFileNamesFinalSort = ['MMP7-R4_S4_L001', 'MMP7-R4_S4_L002']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+    elif enzyme == 'Fyn':
+        inFileNamesInitialSort = ['Fyn-I_S6_L001', 'Fyn-I_S6_L002']
+        inFileNamesFinalSort = ['Fyn-F_S1_L001', 'Fyn-F_S1_L002']
+        inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
+    elif enzyme == 'Src':
+        inFileNamesInitialSort = ['Src-I_S4_L001', 'Src-I_S4_L002']
+        inFileNamesFinalSort = ['Src-F_S2_L001', 'Src-F_S2_L002']
+        inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
+    elif enzyme == 'VEEV':
+        inFileNamesInitialSort = ['VE-I_S1_L001']
+        inFileNamesFinalSort = ['VE-R4_S2_L001']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
     else:
         print(f'{orange}ERROR: There are no file names for {cyan}{enzyme}{orange}\n'
               f'       Add information to the "filePaths" function in '
@@ -145,6 +179,10 @@ class NGS:
 
         np.set_printoptions(suppress=True) # Prevent data from printing in scientific notation
         np.seterr(divide='ignore')
+
+        # Verify directory paths
+        os.makedirs(self.savePath, exist_ok=True)
+        os.makedirs(self.savePathFigs, exist_ok=True)
 
 
 
@@ -2393,7 +2431,7 @@ class NGS:
                              duplicateFigure, saveTag):
         print('============================ Plot: Enrichment Score '
               '=============================')
-        print(f'Dataset:{purple} {saveTag}{resetColor}\n')
+        print(f'Dataset:{purple} {saveTag}{resetColor}\n\n')
 
         # Create heatmap
         cMapCustom = NGS.createCustomColorMap(self, colorType='EM')
@@ -2794,7 +2832,7 @@ class NGS:
         print('============================= Plot: Sequence Motif '
               '==============================')
         print(f'Motif type:{purple} {motifType}{resetColor}\n'
-              f'Dataset:{purple} {saveTag}{resetColor}\n')
+              f'Dataset:{purple} {saveTag}{resetColor}\n\n')
 
 
         # Set local parameters
@@ -2882,17 +2920,20 @@ class NGS:
         # Set yticks
         if yBoundary == 0:
             yTicks = range(0, 5)
-            yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}' for tick in yTicks]
+            yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}'
+                           for tick in yTicks]
             yLimitUpper = 4.32
             yLimitLower = 0
         elif yBoundary == 1:
             yTicks = range(-4, 5)
-            yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}' for tick in yTicks]
+            yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}'
+                           for tick in yTicks]
             yLimitUpper = yMax
             yLimitLower = -4.32
         else:
             yTicks = [yMin, 0, yMax]
-            yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}' for tick in yTicks]
+            yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}'
+                           for tick in yTicks]
             yLimitUpper = yMax
             yLimitLower = yMin
         motif.ax.set_yticks(yTicks)
@@ -3002,8 +3043,10 @@ class NGS:
             print(f'Baseline Probability Distribution:\n{Q}\n\n\n'
                   f'Probability Distribution:\n{P}\n\n')
 
-        divergence = pd.DataFrame(0, columns=Q.columns, index=[fixedSeq], dtype=float)
-        divergenceMatrix = pd.DataFrame(0, columns=Q.columns, index=Q.index, dtype=float)
+        divergence = pd.DataFrame(0, columns=Q.columns,
+                                  index=[fixedSeq], dtype=float)
+        divergenceMatrix = pd.DataFrame(0, columns=Q.columns,
+                                        index=Q.index, dtype=float)
 
         for position in Q.columns:
             p = P.loc[:, position]
@@ -3017,7 +3060,8 @@ class NGS:
                 if initial == 0 or final == 0:
                     divergenceMatrix.loc[residue, position] = 0
                 else:
-                    divergenceMatrix.loc[residue, position] = final * np.log2(final / initial)
+                    divergenceMatrix.loc[residue, position] = (final *
+                                                               np.log2(final / initial))
 
         # Scale the values
         if scaler is not None:
@@ -3026,15 +3070,16 @@ class NGS:
                                                      scaler.loc[position, 'ΔEntropy'])
 
         print(f'{silver}KL Divergence:{pink} Fixed Final Sort - {fixedSeq}{resetColor}\n'
-              f'{divergence}\n\n\n{silver}Divergency Matrix:{pink} Fixed Final Sort - {fixedSeq}'
+              f'{divergence}\n\n\n{silver}Divergency Matrix:'
+              f'{pink} Fixed Final Sort - {fixedSeq}'
               f'{resetColor}\n{divergenceMatrix.round(4)}\n\n')
 
         return divergenceMatrix, divergence
 
 
 
-    def optimalWord(self, matrix, matrixType, maxResidues, fixedSeq, dropPos, printOptimalAA,
-                    normalizeValues):
+    def optimalWord(self, matrix, matrixType, maxResidues, fixedSeq, dropPos,
+                    printOptimalAA, normalizeValues):
         print('========================= Synthesize Optimal Substrates '
               '=========================')
 
@@ -3067,7 +3112,8 @@ class NGS:
 
 
         if printOptimalAA:
-            print(f'Optimal Residues:{purple} {self.enzymeName} - Fixed {fixedSeq}{resetColor}')
+            print(f'Optimal Residues:{purple} {self.enzymeName} - '
+                  f'Fixed {fixedSeq}{resetColor}')
             for index, data in enumerate(optimalAA, start=1):
                 # Determine the number of variable residues at this position
                 numberAA = len(data)
@@ -3114,14 +3160,16 @@ class NGS:
 
                 # Access the correct filtered data for the column
                 optimalAAPos = optimalAA[indexColumn]
-                # print(f'optimalAA:\n{optimalAA}\n\n     optimalAAPos:\n{optimalAAPos}\n\n')
+                # print(f'optimalAA:\n{optimalAA}\n\n'
+                #       f'     optimalAAPos:\n{optimalAAPos}\n\n')
 
                 for AA, score in optimalAAPos.items():
                     # print(f'AA: {AA}\nScore: {score}\n\n')
                     if AA != AAOS:
 
                         # Replace AAOS with AA
-                        newSubstrate = substrate[:indexColumn] + AA + substrate[indexColumn + 1:]
+                        newSubstrate = (substrate[:indexColumn] + AA +
+                                        substrate[indexColumn + 1:])
                         newES = ESMax + (score - scoreSubstrate)
                         # print(f'{silver}New Substrate{resetColor}:'
                         #       f'{whiteA} {newSubstrate}{resetColor}, '
@@ -3136,7 +3184,8 @@ class NGS:
             for newSubstrate, newES in newSubstratesList:
                 substratesOS[newSubstrate] = newES
 
-        substratesOS = dict(sorted(substratesOS.items(), key=lambda x: x[1], reverse=True))
+        substratesOS = dict(sorted(substratesOS.items(),
+                                   key=lambda x: x[1], reverse=True))
         if normalizeValues:
             _, topScore = substratesOS.popitem(last=False) # Top score
             print(f'Top Score:{red} {topScore}{resetColor}\n')
@@ -3145,7 +3194,8 @@ class NGS:
             substratesOS = {key: value / topScore for key, value in substratesOS}
             # substratesOS = sorted(substratesOS.items(), key=lambda x: x[1], reverse=True)
 
-        print(f'Top {self.printNumber} Optimal Substrates:{silver} {matrixType}{resetColor}')
+        print(f'Top {self.printNumber} Optimal Substrates:{silver} '
+              f'{matrixType}{resetColor}')
         iteration = 0
         for substrate, ES in substratesOS.items():
             print(f'     Substrate:{red} {substrate}{resetColor}, '
@@ -3156,7 +3206,6 @@ class NGS:
 
         print(f'\nNumber of synthesized substrates:'
               f'{pink} {len(substratesOS):,}{resetColor}\n\n')
-
 
         return substratesOS
 
@@ -3176,7 +3225,8 @@ class NGS:
             entropy.loc[indexColumn, 'ΔEntropy'] = entropyMax - S
 
         if printEntropy:
-            print(f'Positional Entropy:\n{entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
+            print(f'Positional Entropy:\n{entropy}\n\nMax Entropy: '
+                  f'{entropyMax.round(6)}\n\n')
 
         return entropy
 
@@ -3245,8 +3295,8 @@ class NGS:
             if totalUniqueSubstratesFinal >= self.printNumber:
                 for substrate, count in finalSubs.items():
                     if iteration <= self.printNumber:
-                        print(f'     {magenta}{substrate}{resetColor}, Counts: {red}{count:,}'
-                              f'{resetColor}')
+                        print(f'     {magenta}{substrate}{resetColor}, '
+                              f'Counts: {red}{count:,}{resetColor}')
                         iteration += 1
                         totalSubstratesFinal += count
                     else:
@@ -3257,8 +3307,8 @@ class NGS:
                       f'{orange}) is less than the number you requested to be see '
                       f'({red}{self.printNumber}{orange}){resetColor}\n')
                 for substrate, count in finalSubs.items():
-                    print(f'     {magenta}{substrate}{resetColor}, Counts: {red}{count:,}'
-                          f'{resetColor}')
+                    print(f'     {magenta}{substrate}{resetColor}, '
+                          f'Counts: {red}{count:,}{resetColor}')
                     totalSubstratesFinal += count
             iteration = 0
             # Print dataset totals
@@ -3274,8 +3324,8 @@ class NGS:
             if totalUniqueSubstratesInitial >= self.printNumber:
                 for substrate, count in initialSubs.items():
                     if iteration < self.printNumber:
-                        print(f'     {magenta}{substrate}{resetColor}, Counts: {red}{count:,}'
-                              f'{resetColor}')
+                        print(f'     {magenta}{substrate}{resetColor}, '
+                              f'Counts: {red}{count:,}{resetColor}')
                         iteration += 1
                         totalSubstratesInitial += count
                     else:
@@ -3302,8 +3352,8 @@ class NGS:
             if totalUniqueSubstratesFinal >= self.printNumber:
                 for substrate, count in finalSubs.items():
                     if iteration < self.printNumber:
-                        print(f'     {magenta}{substrate}{resetColor}, Counts: {red}{count:,}'
-                              f'{resetColor}')
+                        print(f'     {magenta}{substrate}{resetColor}, '
+                              f'Counts: {red}{count:,}{resetColor}')
                         iteration += 1
                         totalSubstratesFinal += count
                     else:
@@ -3355,13 +3405,15 @@ class NGS:
         # sys.exit()
 
         # Sort enrichment dictionary
-        enrichedSubs = dict(sorted(enrichedSubs.items(), key=lambda x: x[1], reverse=True))
+        enrichedSubs = dict(sorted(enrichedSubs.items(),
+                                   key=lambda x: x[1], reverse=True))
 
         # Print top enriched substrates
         print(f'{purple}Enriched substrates{resetColor}:')
         for substrate, score in enrichedSubs.items():
             if iteration < self.printNumber:
-                print(f'     {magenta}{substrate}{resetColor}, ES: {red}{score:.3f}{resetColor}')
+                print(f'     {magenta}{substrate}{resetColor}, '
+                      f'ES: {red}{score:.3f}{resetColor}')
                 iteration += 1
             else:
                 break
@@ -3439,7 +3491,8 @@ class NGS:
                   f'     Enriched Substrates:{red} {len(enrichedSubsDF):,}{resetColor}\n')
 
             if os.path.exists(filePathCSV):
-                print(f'{orange}The{red} {datasetType}{orange} dataset at was found at the path:'
+                print(f'{orange}The{red} {datasetType}{orange} dataset at was '
+                      f'found at the path:'
                       f'\n     {resetColor}{filePathCSV}\n\n'
                       f'{orange}The file was not overwritten{resetColor}\n\n')
             else:
@@ -3448,7 +3501,9 @@ class NGS:
 
                 # Combine the data frames
                 if datasetType == 'NNS':
-                    enrichedSubsCSV = pd.concat([initialSubsDF, finalSubsDF, enrichedSubsDF],
+                    enrichedSubsCSV = pd.concat([initialSubsDF,
+                                                 finalSubsDF,
+                                                 enrichedSubsDF],
                                                 axis=1)
                     enrichedSubsCSV.to_csv(filePathCSV, index=True)
                 else:
@@ -3468,9 +3523,6 @@ class NGS:
               f'Total unique substrates:{red} {len(substrates):,}{resetColor}\n')
 
         import esm
-        # import certifi
-        # import ssl
-        # ssl._create_default_https_context = ssl._create_unverified_context
 
         # Extract: Datapoints
         iteration = 0
@@ -3524,7 +3576,6 @@ class NGS:
             figSize, saveTag):
         print('====================================== PCA '
               '======================================')
-        print(f'{substrates}\n\nData:\n{data}\n\nIndex:\n{indices}\n\n')
         import matplotlib.patheffects as path_effects
         from matplotlib.widgets import RectangleSelector
         from sklearn.decomposition import PCA
@@ -3540,7 +3591,7 @@ class NGS:
         if fixedTag is None:
             print(f'Dataset:{purple} {self.enzymeName} - Unfiltered{resetColor}\n')
         else:
-            print(f'Dataset:{purple} {self.enzymeName} - Fixed {fixedTag}{resetColor}\n')
+            print(f'Dataset:{purple} {self.enzymeName} - {fixedTag}{resetColor}\n')
             if 'Excl' in fixedTag:
                 fixedTag = fixedTag.replace('Excl', 'Exclude')
 
@@ -3762,10 +3813,16 @@ class NGS:
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.axis('off')
-
         fig.canvas.mpl_connect('key_press_event', pressKey)
         fig.tight_layout()
-        plt.show()
+        if self.setFigureTimer:
+            plt.ion()
+            plt.show()
+            plt.pause(self.figureTimerDuration)
+            plt.close(fig)
+            plt.ioff()
+        else:
+            plt.show()
 
         datasetType = 'Words'
 
@@ -4016,6 +4073,8 @@ class NGS:
                                                for length in sorted(motifGroups.keys())])
             print(f'{motifTable}\n\n')
 
+            return motifTable
+
 
         def printTrie(node, level=0, path=""):
             # Recursively print the Trie structure
@@ -4054,91 +4113,89 @@ class NGS:
         for subSeq, count in subtreeFreq.items():
             if len(subSeq) != prevSeqLen:
                 prevSeqLen = len(subSeq)
-        subtreeTable(subtreeFreq)
+        motifTable = subtreeTable(subtreeFreq)
 
 
-        # Evaluate the trie
+        # Plot the trie
         printTrie(trie.root)
         print('\n')
-        print(f'')
+
+        return motifTable
 
 
 
-    # ====================================================================================
-    # ====================================================================================
-    # ====================================================================================
-
-
-
-    def plotTrie(self, trie, title, countsMotif, datasetTag, figSize):
+    def plotTrie(self, trie, motifTable, countsMotif, datasetTag, figSize):
         import networkx as nx
 
         inOffset = 2000
-        inNodeSize = 500
+        inNodeSizeMax = 800
+        inNodeSizeMin = 100
         inFontSize = 10
         inScaleX = 2
         inScaleY = 1
 
+        # Calculate: Node size
+        nodeSizes = pd.DataFrame('',
+                                 index=motifTable.index,
+                                 columns=motifTable.columns)
+        for col in motifTable.columns:
+            for index, entry in enumerate(motifTable[col].dropna()):
+                if ": " in entry:
+                    motif, rf = entry.split(": ")
+                    nodeSize = inNodeSizeMax - (inNodeSizeMax * (1 - float(rf)))
+                    if nodeSize < 100:
+                        nodeSize = inNodeSizeMin
+                    if len(motif) > 2:
+                        motif = motif[-2:]
+                    nodeSizes.loc[index+1, col] = f'{motif}: {nodeSize:.2f}'
+        print(f'Node Size:\n{nodeSizes}\n')
 
-        def addNodesToGraph(node, graph, scaleX, scaleY, offset=inOffset,
-                            nodeSize=inNodeSize):
-            pos = {}  # Stores node positions
-            nodeCountLevel = {}  # Track all nodes per level
-            queue = [(node, None, '', 0)]  # (node, parent, char, level)
 
-            # Pass 1: Collect nodes for each level before positioning
+
+        def addNodesToGraph(node, graph, scaleX, scaleY, offset=inOffset):
+            pos = {}
+            nodeSizes = {}
+            nodeCountLevel = {}
+
+            # (currentNode, parentID, char, fullMotif, level)
+            queue = [(node, None, '', '', 0)]
+
             while queue:
-                nodeCurrent, parent, char, level = queue.pop(0)
+                nodeCurrent, parent, char, motifSoFar, level = queue.pop(0)
                 nodeID = f"{char}-{level}-{id(nodeCurrent)}"
 
                 if level not in nodeCountLevel:
                     nodeCountLevel[level] = []
-                nodeCountLevel[level].append((nodeCurrent, parent, char, nodeID))
+                nodeCountLevel[level].append(
+                    (nodeCurrent, parent, char, nodeID, motifSoFar))
 
-                # Add children to the queue
+                fullMotif = motifSoFar + char  # Build full motif sequence
+
                 for child_char, nodeChild in nodeCurrent.children.items():
-                    queue.append((nodeChild, nodeID, child_char, level + 1))
+                    queue.append((nodeChild, nodeID, child_char, fullMotif, level + 1))
 
-            # Pass 2: Assign positions level by level
             for level, nodes in nodeCountLevel.items():
                 nodeNumber = len(nodes)
-                for i, (nodeCurrent, parent, char, nodeID) in enumerate(nodes):
+                for i, (nodeCurrent, parent, char, nodeID, fullMotif) in enumerate(nodes):
                     if parent is None:
-                        pos[nodeID] = (0, 0)  # Root node position
+                        pos[nodeID] = (0, 0)
                     else:
                         parentX, parentY = pos[parent]
-
-                        # Calculate the x position
-                        if nodeNumber % 2 == 1:
-                            # Odd number of nodes: Center one on parentX
-                            posX = parentX + (i - nodeNumber // 2) * offset
-                        else:
-                            # Even number of nodes: Spread symmetrically
-                            posX = parentX + (i - (nodeNumber / 2 - 0.5)) * offset
+                        posX = parentX + (i - nodeNumber // 2) * offset
                         pos[nodeID] = (posX, parentY - scaleY)
 
-                    # # Print: Node positions
-                    # print(f'Level: {level}, Total Nodes at Level: {nodeNumber}\n'
-                    #       f'Parent: {parent}\n'
-                    #       f'    X: {parentX if parent else "N/A"}, '
-                    #       f'Y: {parentY if parent else "N/A"}\n'
-                    #       f'Node: {nodeID}\n'
-                    #       f'    Pos: {pos[nodeID]}\n')
-
-                    # Add node and edge to graph
                     graph.add_node(nodeID, label=char)
                     if parent is not None:
-                        # graph.add_edge(parent, nodeID)
                         graph.add_edge(parent, nodeID, arrowstyle='->')
 
             return pos
 
-        # Graph the trie
+
+        # Build the graph
         graph = nx.DiGraph()
-        pos = addNodesToGraph(trie.root, graph,
-                              scaleX=inScaleX,
-                              scaleY=inScaleY,
-                              offset=inOffset)
+        pos = addNodesToGraph(trie.root, graph, scaleX=inScaleX,
+                              scaleY=inScaleY, offset=inOffset)
+
 
         # Get node labels
         labels = {node: data['label'] for node, data in graph.nodes(data=True)}
@@ -4156,7 +4213,7 @@ class NGS:
         fig.canvas.mpl_connect('key_press_event', pressKey)
 
         # Draw graph
-        nx.draw(graph, pos, with_labels=True, labels=labels, node_size=inNodeSize,
+        nx.draw(graph, pos, with_labels=True, labels=labels, node_size=nodeSizes,
                 node_color="#F18837", font_size=inFontSize, font_weight="bold",
                 edge_color="#101010", ax=ax, arrows=False)
         plt.title(f'{self.enzymeName}: {datasetTag}\nTop {countsMotif:,} Motifs',
@@ -4183,7 +4240,7 @@ class NGS:
 
 
     def suffixTree(self, substrates, N, entropySubFrame, indexSubFrame, entropyMin,
-                   title, datasetTag, dataType, figSize):
+                   datasetTag, dataType, figSize):
         print('================================== Suffix Tree '
               '==================================')
         if datasetTag is None:
@@ -4203,6 +4260,8 @@ class NGS:
 
         # Print substrates
         iteration = 0
+        substrates = dict(sorted(substrates.items(), key=lambda item: item[1],
+                                 reverse=True))
         for substrate, count in substrates.items():
             iteration += 1
             print(f'Substrate:{silver} {substrate}{resetColor}\n'
@@ -4266,32 +4325,34 @@ class NGS:
         print('\n')
 
         # Calculate: RF
-        NGS.evaluateSubtrees(self, trie=trie, motifTrie=motifTrie)
+        motifTable = NGS.evaluateSubtrees(self, trie=trie, motifTrie=motifTrie)
 
         # Plot the Trie
-        NGS.plotTrie(self, trie=trie, title=title, countsMotif=countsMotif,
+        NGS.plotTrie(self, trie=trie, motifTable=motifTable, countsMotif=countsMotif,
                      datasetTag=datasetTag, figSize=figSize)
 
 
+        def clusterLevenshtein():
+            from scipy.cluster.hierarchy import linkage, dendrogram
+            import numpy as np
+            import matplotlib.pyplot as plt
+            from Levenshtein import distance
 
-        from scipy.cluster.hierarchy import linkage, dendrogram
-        import numpy as np
-        import matplotlib.pyplot as plt
-        from Levenshtein import distance
+            # Compute pairwise Levenshtein distances
+            motifList = list(motifs.keys())
+            distanceMatrix = np.array(
+                [[distance(m1, m2) for m2 in motifList] for m1 in motifList])
 
-        # Compute pairwise Levenshtein distances
-        motifList = list(motifs.keys())
-        distanceMatrix = np.array(
-            [[distance(m1, m2) for m2 in motifList] for m1 in motifList])
+            # Perform hierarchical clustering
+            linkageMatrix = linkage(distanceMatrix, method='ward')
 
-        # Perform hierarchical clustering
-        linkageMatrix = linkage(distanceMatrix, method='ward')
+            # Plot the data
+            fig, ax = plt.subplots(figsize=(12, 6))
+            fig.canvas.mpl_connect('key_press_event', pressKey)
+            dendrogram(linkageMatrix, labels=motifList, leaf_rotation=90)
+            plt.title('Motif Cluster (Levenshtein Distance)',
+                      fontsize=16, fontweight='bold')
+            plt.tight_layout()
+            plt.show()
 
-        # Plot the data
-        fig, ax = plt.subplots(figsize=(12, 6))
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        dendrogram(linkageMatrix, labels=motifList, leaf_rotation=90)
-        plt.title('Motif Clustering (Levenshtein Distance)',
-                  fontsize=16, fontweight='bold')
-        plt.tight_layout()
-        plt.show()
+        # clusterLevenshtein()

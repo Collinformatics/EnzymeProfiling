@@ -40,11 +40,7 @@ inAAPositionsBinned = inAAPositions[inFramePositons[0]:inIndexNTerminus+inFixedF
 inFixResidues = True # True: fix AAs in the substrate, False: Don't fix AAs, plot raw the data
 inFixedResidue = ['L']
 inFixedPosition = [5]
-inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
-# inSubstrateFrame = (f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}-'
-#                     f'R{inFixedPosition[-1]}')
-# inSubstrateFrame = (f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}-'
-#                     f'R{inFixedPosition[1]}, R{inFixedPosition[-1]}')
+inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inFigureTitleSize = 18
 inFigureLabelSize = 16
@@ -199,6 +195,27 @@ inSaveBinnedSubES = False
 
 
 # ======================================== Set Parameters ========================================
+# Dataset label
+if len(inFixedPosition) == 1:
+    inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
+else:
+    inFixedPosition = sorted(inFixedPosition)
+    continuous = True
+    for index in range(len(inFixedPosition)-1):
+        pos1, pos2 = inFixedPosition[index], inFixedPosition[index + 1]
+        if pos1 == pos2 - 1 or pos1 == pos2 + 1:
+            continue
+        else:
+            continuous = False
+            break
+    if continuous:
+        inSubstrateFrame = (f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}-'
+                            f'R{inFixedPosition[-1]}')
+    else:
+        inSubstrateFrame = (f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}-'
+                            f'R{inFixedPosition[1]}, R{inFixedPosition[-1]}')
+
+# Figure parameters
 if inShowEnrichmentAsSquares:
     # Set figure dimension when plotting EM plots as squares
     figSizeEM = inFigureAsSquares
@@ -233,13 +250,13 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 # ======================================= Initialize Class =======================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
-          minCounts=, colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
-          colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
-          xAxisLabels=inAAPositions, xAxisLabelsBinned=inAAPositionsBinned,
-          residueLabelType=inYLabelEnrichmentMap, titleLabelSize=inFigureTitleSize,
-          axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize,
-          printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          saveFigures=inSaveFigures, savePath=inFilePath,
+          minCounts=inMinimumSubstrateCount, colorsCounts=inCountsColorMap,
+          colorStDev=inStDevColorMap, colorsEM=inEnrichmentColorMap,
+          colorsMotif=inLetterColors, xAxisLabels=inAAPositions,
+          xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
+          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
+          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
+          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inFilePath,
           savePathFigs=inSavePathFigures, setFigureTimer=inFigureTimer)
 
 
@@ -271,8 +288,6 @@ if inPlotEnrichedSubstrateFrame or inPlotBinnedSubstratePrediction:
                             f'@R{inFixedPosition[0]}-R{inFixedPosition[-1]}')
 
 
-
-
             if '/' in inSavePath:
                 filePathFixedFrameInitial = f'{inSavePath}/{fileNameFixedSubsInitial}'
                 filePathFixedFrameInitialTotalCounts = \
@@ -286,7 +301,8 @@ if inPlotEnrichedSubstrateFrame or inPlotBinnedSubstratePrediction:
                 filePathFixedFrameFinal = f'{inSavePath}\\{fileNameFixedSubsFinal}'
                 filePathBinnedSubsES = f'{inSavePath}\\{saveFileName}'
 
-            if (os.path.exists(filePathBinnedSubsES) or os.path.exists(filePathFixedFrameInitial)
+            if (os.path.exists(filePathBinnedSubsES)
+                    or os.path.exists(filePathFixedFrameInitial)
                     or os.path.exists(filePathFixedFrameFinal)):
                 loadInitialSubs = False
 
@@ -296,8 +312,9 @@ if inPlotEnrichedSubstrateFrame or inPlotBinnedSubstratePrediction:
 
         # Create threads for loading initial and final substrates
         threadInitial = threading.Thread(target=loadSubstrates,
-                                         args=(inFilePath, inFileNamesInitialSort, 'Initial Sort',
-                                               inPrintCounts, loadedResults))
+                                         args=(inFilePath, inFileNamesInitialSort,
+                                               'Initial Sort', inPrintCounts,
+                                               loadedResults))
 
         # Start the threads
         threadInitial.start()
@@ -360,13 +377,19 @@ def loadSubstratesFixedFrame():
     for index in range(len(inFixedPosition)):
         print('============================== Load: Fixed Frame Substrates '
               '=============================')
+
+
+
+
         # Define: File path
         frame = f'{inFixedResidue[0]}@R{inFixedPosition[index]}'
+        labelTag = (f'{inEnzymeName}_FixedFrame_{frame}_'
+                    f'MinCounts_{inMinimumSubstrateCount}')
         filePathFixedFrameSubs = os.path.join(inFilePath,
-                                              f'fixedSubs_{inEnzymeName}_'
-                                              f'FixedFrame_{frame}')
+                                              f'fixedSubs_{labelTag}')
         print(f'Loading substrates at path:\n'
               f'     {greenDark}{filePathFixedFrameSubs}{resetColor}\n')
+
 
         # Load Data: Fixed substrates
         with open(filePathFixedFrameSubs, 'rb') as file:
@@ -1209,7 +1232,8 @@ def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
     decimals = 3
     if inInspectExperimentalES:
         print(f'Inspect x-axis:{purple} {inExperimentalESUpperLimit}{resetColor} '
-              f'>= Substrate Enrichment >= {purple} {inExperimentalESLowerLimit}{resetColor}')
+              f'>= Substrate Enrichment >= '
+              f'{purple} {inExperimentalESLowerLimit}{resetColor}')
         iteration = 0
         for substrate, scores in substrates.items():
             iteration += 1
@@ -1227,7 +1251,8 @@ def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
     
     if inInspectPredictedES:
         print(f'\nInspect y-axis:{purple} {inPredictedESUpperLimit}{resetColor} '
-              f'>= Predicted Substrate Enrichment >= {purple} {inPredictedESLowerLimit}{resetColor}')
+              f'>= Predicted Substrate Enrichment >= '
+              f'{purple} {inPredictedESLowerLimit}{resetColor}')
         iteration = 0
         for substrate, scores in substrates.items():
             iteration += 1
@@ -1251,7 +1276,8 @@ def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
                  fontsize=inFigureTitleSize, fontweight='bold')
     ax.set_xlabel('Experimental Substrate Scores', fontsize=inFigureLabelSize,
                   fontweight='bold')
-    ax.set_ylabel('Predicted Substrate Scores', fontsize=inFigureLabelSize, fontweight='bold')
+    ax.set_ylabel('Predicted Substrate Scores', fontsize=inFigureLabelSize,
+                  fontweight='bold')
     ax.grid(True, color='black')
     plt.subplots_adjust(top=0.908, bottom=0.083, left=0.094, right=0.958)
 
@@ -1297,11 +1323,14 @@ def plotFACSData():
                   'VVLQIGFR', 'VVGQSGFR', 'KVLQSGFR', 'VVLQNGFR', 'VVLYSGFR']
     dataFACS = {
         '% Run 1':
-            [100.0, 100, 100.0, 100.0, 94.5, 97.3, 85.1, 89.6, 77.0, 37.0, 5.5, 0.2, 0.2, 0.4, 0.3],
+            [100.0, 100, 100.0, 100.0, 94.5, 97.3, 85.1, 89.6, 77.0, 37.0, 5.5,
+             0.2, 0.2, 0.4, 0.3],
         '% Run 2':
-            [100.0, 100, 100.0, 99.3, 100.0, 93.8, 86.1, 85.8, 68.2, 31.2, 5.2, 0.3, 0.3, 0.1, 0.1],
+            [100.0, 100, 100.0, 99.3, 100.0, 93.8, 86.1, 85.8, 68.2, 31.2, 5.2,
+             0.3, 0.3, 0.1, 0.1],
         '% Run 3':
-            [100.0, 100, 99.4, 100.0, 94.6, 93.2, 90.6, 76.2, 74.5, 42.0, 5.1, 1.1, 0.4, 0.1, 0.1]
+            [100.0, 100, 99.4, 100.0, 94.6, 93.2, 90.6, 76.2, 74.5, 42.0, 5.1,
+             1.1, 0.4, 0.1, 0.1]
     }
 
     # Convert the data into a pandas DataFrame
@@ -1374,20 +1403,20 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
                          f'{inSubstrateFrame}')
         figureTitleMotif = (f'{inTitleMotif}: PCA Population {clusterIndex + 1}\n'
                             f'{inSubstrateFrame}')
-        figureTitleWordCloud = (f'{inTitleEnrichmentMap}: PCA Population {clusterIndex + 1}\n'
+        figureTitleWordCloud = (f'{inTitleEnrichmentMap}: '
+                                f'PCA Population {clusterIndex + 1}\n'
                                 f'{inSubstrateFrame}')
         datasetTag = f'PCA Pop {clusterIndex + 1} - {inSubstrateFrame}'
 
     # Count fixed substrates
     countFullSubstrate = False
     if countFullSubstrate:
-        countsFinal, countsFinalTotal = ngs.countResiduesBinned(substrates=clusterSubs,
-                                                                positions=inAAPositions,
-                                                                printCounts=inPrintCounts)
+        countsFinal, countsFinalTotal = ngs.countResiduesBinned(
+            substrates=clusterSubs, positions=inAAPositions, printCounts=inPrintCounts)
     else:
-        countsFinal, countsFinalTotal = ngs.countResiduesBinned(substrates=clusterSubs,
-                                                                positions=inFixedFramePositions,
-                                                                printCounts=inPrintCounts)
+        countsFinal, countsFinalTotal = ngs.countResiduesBinned(
+            substrates=clusterSubs, positions=inFixedFramePositions,
+            printCounts=inPrintCounts)
     ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
                          printCounts=inPrintSampleSize, fixedTag=inSubstrateFrame)
 
@@ -1438,9 +1467,9 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
         fixedFramePCAESScaled.loc[:, positon] = (fixedFramePopES.loc[:, positon] *
                                                 positionalEntropy.loc[
                                                 positon, 'ΔEntropy'])
-        fixedFramePCAESScaledAdjusted.loc[:, positon] = (fixedFramePopESAdjusted.loc[:, positon] *
-                                                        positionalEntropy.loc[
-                                                        positon, 'ΔEntropy'])
+        fixedFramePCAESScaledAdjusted.loc[:, positon] = (
+                fixedFramePopESAdjusted.loc[:, positon] *
+                positionalEntropy.loc[positon, 'ΔEntropy'])
     print(f'Motif: Scaled\n{fixedFramePCAESScaled}\n\n')
     yMax = max(fixedFramePCAESScaled[fixedFramePopES > 0].sum())
     yMin = min(fixedFramePCAESScaled[fixedFramePopES < 0].sum())
@@ -1477,12 +1506,13 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     if inPlotEnrichmentMotifPCA:
         if inAdjustZeroCounts:
             # Plot: Sequence Motif
-            ngs.plotMotif(data=fixedFramePCAESScaled.copy(), motifType='Scaled Enrichment',
+            ngs.plotMotif(data=fixedFramePCAESScaled.copy(),
+                          motifType='Scaled Enrichment',
                           bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize, 
-                          figBorders=inFigureBordersEnrichmentMotif, title=f'{figureTitleMotif}',
-                          titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
-                          yBoundary=2, lines=inAddHorizontalLines, fixingFrame=True,
-                          initialFrame=False, duplicateFigure=False,
+                          figBorders=inFigureBordersEnrichmentMotif,
+                          title=f'{figureTitleMotif}', titleSize=inFigureTitleSize,
+                          yMax=yMax, yMin=yMin, yBoundary=2, lines=inAddHorizontalLines,
+                          fixingFrame=False, initialFrame=False, duplicateFigure=False,
                           saveTag=datasetTag)
 
     # Plot: Work cloud
@@ -1501,18 +1531,16 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
             subsPredict = trimSubstrates()
 
         # Predict: Enrichment
-        subsPredict, yMax, yMin = predictActivity(substrates=subsPredict,
-                                                  predictionMatrix=fixedFramePopESAdjusted,
-                                                  normalizeValues=inNormalizePredictions,
-                                                  matrixType='Enrichment Scores')
+        subsPredict, yMax, yMin = predictActivity(
+            substrates=subsPredict, predictionMatrix=fixedFramePopESAdjusted,
+            normalizeValues=inNormalizePredictions, matrixType='Enrichment Scores')
         plotSubstratePrediction(substrates=subsPredict, predictValues=True,
                                 scaledMatrix=False, plotdataPCA=True, popPCA=clusterIndex)
 
         # Predict: Scaled Enrichment
-        subsPredictScaled, yMax, yMin = predictActivity(substrates=subsPredict,
-                                                        predictionMatrix=fixedFramePCAESScaledAdjusted,
-                                                        normalizeValues=inNormalizePredictions,
-                                                        matrixType='Scaled Enrichment Scores')
+        subsPredictScaled, yMax, yMin = predictActivity(
+            substrates=subsPredict, predictionMatrix=fixedFramePCAESScaledAdjusted,
+            normalizeValues=inNormalizePredictions, matrixType='Scaled Enrichment Scores')
         plotSubstratePrediction(substrates=subsPredictScaled, predictValues=True,
                                 scaledMatrix=True, plotdataPCA=True, popPCA=clusterIndex)
 
@@ -1530,16 +1558,16 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
 
     # Load: Counts
     (fixedFrameCounts,
-     fixedFrameCountsTotal) = ngs.loadFixedFrameCounts(filePath=inFilePath,
-                                                       substrateFrame=inFixedFramePositions,
-                                                       substrateFrameAAPos=inAAPositionsBinned,
-                                                       frameIndicies=inFramePositons,
-                                                       datasetTag=inSubstrateFrame)
+     fixedFrameCountsTotal) = ngs.loadFixedFrameCounts(
+        filePath=inFilePath, substrateFrame=inFixedFramePositions,
+        substrateFrameAAPos=inAAPositionsBinned, frameIndicies=inFramePositons,
+        datasetTag=inSubstrateFrame)
 
     # Calculate: Probability & Entropy
     fixedFrameProb = ngs.calculateFixedFrameRF(countsTotal=fixedFrameCountsTotal,
                                                datasetTag=inSubstrateFrame)
-    positionalEntropy = ngs.calculateEntropy(RF=fixedFrameProb, printEntropy=inPrintEntropy)
+    positionalEntropy = ngs.calculateEntropy(RF=fixedFrameProb,
+                                             printEntropy=inPrintEntropy)
 
     # Calculate: Enrichment Scores
     if (inPredictSubstrateActivity or inPlotEnrichmentMap
@@ -1554,7 +1582,8 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
                                           columns=fixedFrameES.columns)
         for positon in fixedFrameES.columns:
             fixedFrameESScaled.loc[:, positon] = (fixedFrameES.loc[:, positon] *
-                                                  positionalEntropy.loc[positon, 'ΔEntropy'])
+                                                  positionalEntropy.loc[
+                                                      positon, 'ΔEntropy'])
 
         # Calculate: Test ES matrix
         fixedFrameESTest = ngs.calculateEnrichmentTest(initialSortRF=initialRFAvg,
@@ -1564,7 +1593,8 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
 
 # # Plot Data
 if inPlotEnrichmentMap:
-    # plotES = pd.DataFrame(-math.inf, index=fixedFrameES.index, columns=fixedFrameES.columns)
+    # plotES = pd.DataFrame(-math.inf, index=fixedFrameES.index,
+    #                       columns=fixedFrameES.columns)
     # addData = [3, 2, 4, 0, 1]
     # for column in addData:
     #     plotES.iloc[:, column] = fixedFrameES.iloc[:, column]
@@ -1629,7 +1659,7 @@ if inPlotEnrichmentMotif:
                   figBorders=inFigureBordersEnrichmentMotif,
                   title=f'{inTitleMotif}\n{inSubstrateFrame}',
                   titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
-                  lines=inAddHorizontalLines, fixingFrame=True, initialFrame=False,
+                  lines=inAddHorizontalLines, fixingFrame=False, initialFrame=False,
                   duplicateFigure=False, saveTag=inSubstrateFrame)
 
     # Plot: Sequence Motif
@@ -1638,15 +1668,14 @@ if inPlotEnrichmentMotif:
                   figBorders=inFigureBordersEnrichmentMotif,
                   title=f'{inTitleMotif}\n{inSubstrateFrame}',
                   titleSize=inFigureTitleSize, yMax=yMax, yMin=0, yBoundary=2,
-                  lines=inAddHorizontalLines, fixingFrame=True, initialFrame=False,
+                  lines=inAddHorizontalLines, fixingFrame=False, initialFrame=False,
                   duplicateFigure=False, saveTag=f'Y Min - {inSubstrateFrame}')
 
 
 if inPlotWeblogoMotif:
-    releasedRFscaled, fixedAA, yMax, yMin = ngs.heightsRF(counts=fixedFrameCountsTotal.copy(),
-                                                          N=fixedFrameCountsTotal,
-                                                          invertRF=False,
-                                                          printRF=inPrintMotifData)
+    releasedRFscaled, fixedAA, yMax, yMin = ngs.heightsRF(
+        counts=fixedFrameCountsTotal.copy(), N=fixedFrameCountsTotal,
+        invertRF=False, printRF=inPrintMotifData)
 
     if inShowWeblogoYTicks:
         yMax, yMin = 5, 0
@@ -1654,19 +1683,19 @@ if inPlotWeblogoMotif:
         ngs.plotMotif(data=releasedRFscaled.copy(), motifType='Weblogo',
                       bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                       figBorders=inFigureBordersEnrichmentMotif,
-                      title=f'{inTitleMotif}\n{inSubstrateFrame}', titleSize=inFigureTitleSize,
-                      yMax=yMax, yMin=yMin, yBoundary=0, lines=inAddHorizontalLines,
-                      fixingFrame=True, initialFrame=False, duplicateFigure=False,
-                      saveTag=inSubstrateFrame)
+                      title=f'{inTitleMotif}\n{inSubstrateFrame}',
+                      titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=0,
+                      lines=inAddHorizontalLines, fixingFrame=False, initialFrame=False,
+                      duplicateFigure=False, saveTag=inSubstrateFrame)
     else:
         # Plot: Sequence Motif
         ngs.plotMotif(data=releasedRFscaled.copy(), motifType='Weblogo',
                       bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                       figBorders=inFigureBordersEnrichmentMotif,
-                      title=f'{inTitleMotif}\n{inSubstrateFrame}', titleSize=inFigureTitleSize,
-                      yMax=yMax, yMin=yMin, yBoundary=2, lines=inAddHorizontalLines,
-                      fixingFrame=True, initialFrame=False, duplicateFigure=False,
-                      saveTag=inSubstrateFrame)
+                      title=f'{inTitleMotif}\n{inSubstrateFrame}',
+                      titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
+                      lines=inAddHorizontalLines, fixingFrame=False,
+                      initialFrame=False, duplicateFigure=False, saveTag=inSubstrateFrame)
 
 
 # Plot: Measured FACS activity
@@ -1774,7 +1803,7 @@ if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
                                                           substrateFrame=inFixedFramePositions,
                                                           frameIndicies=inFramePositons,
                                                           datasetTag=inSubstrateFrame)
-    sys.exit()
+
     if inPlotBinnedSubstrates:
         ngs.plotBinnedSubstrates(substrates=binnedSubs,
                                  countsTotal=frameTotalCountsFinal,
@@ -1823,8 +1852,8 @@ if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
                                  saveTag=inSubstrateFrame)
 
         # Plot: Substrate clusters
-        if (inPlotEnrichmentMapPCA or inPlotEnrichmentMotifPCA or inPredictSubstrateActivityPCA
-                or inPlotWordsPCA):
+        if (inPlotEnrichmentMapPCA or inPlotEnrichmentMotifPCA
+                or inPredictSubstrateActivityPCA or inPlotWordsPCA):
             clusterCount = len(subPopulations)
             for index, subCluster in enumerate(subPopulations):
                 # Plot data

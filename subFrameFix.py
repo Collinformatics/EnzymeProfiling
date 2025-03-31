@@ -1,5 +1,3 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import pandas as pd
 import pickle as pk
@@ -42,7 +40,7 @@ inSubstratePositions = inAAPositions # ['P4', 'P3', 'P2', 'P1', 'P1\'']
 # Input 3: Computational Parameters
 inFilterSubstrates = True
 inFixedResidue = ['L']
-inFixedPosition = [5]
+inFixedPosition = [6]
 inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
@@ -298,10 +296,12 @@ def fixSubstrate(subs, fixedAA, fixedPosition, sortType, fixedTag, initialFix):
     # Define: File path
     filePathFixedSubs = os.path.join(inFilePath,
                                      f'fixedSubs_{inEnzymeName}_'
-                                     f'{sortTypePathTag}_{fixedTag}')
+                                     f'{sortTypePathTag}_{fixedTag}_'
+                                     f'MinCounts_{inMinimumSubstrateCount}')
     filePathFixedCounts = os.path.join(inFilePath,
                                        f'counts_{inEnzymeName}_'
-                                       f'{sortTypePathTag}_{fixedTag}')
+                                       f'{sortTypePathTag}_{fixedTag}_'
+                                       f'MinCounts_{inMinimumSubstrateCount}')
 
     # Determine if the fixed substrate files exists
     loadFiles = False
@@ -741,20 +741,20 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         if inPlotEnrichmentMotif:
             # Calculate enrichment scores and scale with Shannon Entropy
             pType = 'Initial Sort'
-            heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(counts=fixedCountsFinal,
-                                                                N=countsTotalFixedFrame,
-                                                                baselineProb=initialRF,
-                                                                baselineType=pType,
-                                                                printRF=inShowMotifData,
-                                                                scaleData=True,
-                                                                normlaizeFixedScores=inNormLetters)
+            heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
+                counts=fixedCountsFinal, N=countsTotalFixedFrame, baselineProb=initialRF,
+                baselineType=pType, printRF=inShowMotifData, scaleData=True,
+                normlaizeFixedScores=inNormLetters)
+
             # Plot: Sequence Motif
             ngs.plotMotif(data=heights, bigLettersOnTop=inBigLettersOnTop,
-                          figureSize=inFigureSize, figBorders=inFigureBordersEnrichmentMotif,
+                          figureSize=inFigureSize,
+                          figBorders=inFigureBordersEnrichmentMotif,
                           title=inTitleMotif, titleSize=inFigureTitleSize,
                           yMax=yMax, yMin=yMin, yBoundary=2, lines=inAddHorizontalLines,
-                          motifType='Scaled Enrichment', fixingFrame=True, initialFrame=False,
-                          duplicateFigure=inDuplicateFigure, saveTag=saveTag)
+                          motifType='Scaled Enrichment', fixingFrame=True,
+                          initialFrame=False, duplicateFigure=inDuplicateFigure,
+                          saveTag=saveTag)
 
 
         # # Refix Dropped Position
@@ -835,25 +835,25 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         if inPlotEnrichmentMotif:
             # Calculate enrichment scores and scale with Shannon Entropy
             pType = 'Initial Sort'
-            heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(counts=fixedCountsFinal,
-                                                                N=countsTotalFixedFrame,
-                                                                baselineProb=initialRF,
-                                                                baselineType=pType,
-                                                                printRF=inShowMotifData,
-                                                                scaleData=True,
-                                                                normlaizeFixedScores=inNormLetters
-                                                                )
+            heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
+                counts=fixedCountsFinal, N=countsTotalFixedFrame,
+                baselineProb=initialRF, baselineType=pType, printRF=inShowMotifData,
+                scaleData=True, normlaizeFixedScores=inNormLetters)
+
             # Plot: Sequence Motif
             ngs.plotMotif(data=heights, bigLettersOnTop=inBigLettersOnTop,
-                          figureSize=inFigureSize, figBorders=inFigureBordersEnrichmentMotif,
+                          figureSize=inFigureSize,
+                          figBorders=inFigureBordersEnrichmentMotif,
                           title=inTitleMotif, titleSize=inFigureTitleSize,
                           yMax=yMax, yMin=yMin, yBoundary=2, lines=inAddHorizontalLines,
-                          motifType='Scaled Enrichment', fixingFrame=True, initialFrame=False,
-                          duplicateFigure=inDuplicateFigure, saveTag=saveTag)
+                          motifType='Scaled Enrichment', fixingFrame=True,
+                          initialFrame=False, duplicateFigure=inDuplicateFigure,
+                          saveTag=saveTag)
 
 
     # Initialize matrix
-    releasedRF = pd.DataFrame(0.0, index=finalFixedES.index, columns=finalFixedES.columns)
+    releasedRF = pd.DataFrame(0.0, index=finalFixedES.index,
+                              columns=finalFixedES.columns)
     releasedRFScaled = releasedRF.copy()
 
     # Fill in missing columns in the released counts matrix and calculate RF
@@ -861,7 +861,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         if position not in substrateFrameSorted.index:
             releasedCounts.loc[:, position] = fixedCountsFinal.loc[:, position]
 
-        releasedRF.loc[:, position] = releasedCounts.loc[:, position] / countsTotalFixedFrame
+        releasedRF.loc[:, position] = (releasedCounts.loc[:, position] /
+                                       countsTotalFixedFrame)
         releasedRFScaled.loc[:, position] = (releasedRF.loc[:, position] *
                                              positionalEntropy.loc[position, 'ΔEntropy'])
     print(f'Scaled RF:{purple} Fixed Frame{resetColor}\n{releasedRFScaled}\n\n')
@@ -879,13 +880,13 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
     # # Finish fixing this frame & save the data
     # Define: File path
     frame = f'{inFixedResidue[0]}@R{inFixedPosition[0]}'
+    labelTag = f'{inEnzymeName}_FixedFrame_{frame} - MinCounts {inMinimumSubstrateCount}'
     filePathFixedFrameSubs = os.path.join(inFilePath,
-                                          f'fixedSubs_{inEnzymeName}_FixedFrame_{frame}')
+                                          f'fixedSubs_{labelTag}')
     filePathFixedFrameCounts = os.path.join(inFilePath,
-                                            f'counts_{inEnzymeName}_FixedFrame_{frame}')
+                                            f'counts_{labelTag}')
     filePathFixedFrameReleasedCounts = os.path.join(inFilePath,
-                                                    f'countsReleased_{inEnzymeName}'
-                                                    f'_FixedFrame_{frame}')
+                                                    f'countsReleased_{labelTag}')
 
     # Save the data
     if inSaveData:
@@ -894,8 +895,10 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
             pk.dump(fixedSubsFinal, file)
 
         # Save the counted substrate data
-        fixedCountsFinal.to_csv(filePathFixedFrameCounts, index=True, float_format='%.0f')
-        releasedCounts.to_csv(filePathFixedFrameReleasedCounts, index=True, float_format='%.0f')
+        fixedCountsFinal.to_csv(filePathFixedFrameCounts,
+                                index=True, float_format='%.0f')
+        releasedCounts.to_csv(filePathFixedFrameReleasedCounts,
+                              index=True, float_format='%.0f')
 
         # Print the save paths
         print(f'Fixed substrate data saved at:\n'
