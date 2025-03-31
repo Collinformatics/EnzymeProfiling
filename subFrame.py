@@ -381,7 +381,7 @@ def loadSubstratesFixedFrame():
         # Define: File path
         frame = f'{inFixedResidue[0]}@R{inFixedPosition[index]}'
         labelTag = (f'{inEnzymeName}_FixedFrame_{frame}_'
-                    f'MinCounts_{inMinimumSubstrateCount}')
+                    f'MinCounts {inMinimumSubstrateCount}')
         filePathFixedFrameSubs = os.path.join(inFilePath,
                                               f'fixedSubs_{labelTag}')
         print(f'Loading substrates at path:\n'
