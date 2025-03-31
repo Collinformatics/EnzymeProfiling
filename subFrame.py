@@ -17,7 +17,7 @@ from functions import filePaths, NGS
 # ========================================== User Inputs =========================================
 # Input 1: File Location
 inEnzymeName = 'MMP7'
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inBasePath = f'path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
