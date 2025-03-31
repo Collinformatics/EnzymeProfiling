@@ -15,7 +15,7 @@ from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
-from playsound import playsound
+# from playsound import playsound
 import pandas as pd
 import pickle as pk
 import seaborn as sns
