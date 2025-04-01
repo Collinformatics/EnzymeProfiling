@@ -181,11 +181,13 @@ class NGS:
         np.seterr(divide='ignore')
 
         # Verify directory paths
-        os.makedirs(self.savePath, exist_ok=True)
-        os.makedirs(self.savePathFigs, exist_ok=True)
+        if os.path.exists(self.savePath) and self.savePath is not None:
+            os.makedirs(self.savePath, exist_ok=True)
+        if os.path.exists(self.savePathFigs) and self.savePathFigs is not None:
+            os.makedirs(self.savePathFigs, exist_ok=True)
 
 
-
+  
     def alert(self, soundPath):
         if os.path.exists(soundPath):
             threading.Thread(target=playsound, args=(soundPath,)).start()
