@@ -31,7 +31,7 @@ inFigureSizeTrie = (12, 8)
 inEnzymeName = 'name'
 inBasePath = f'/path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
-inSavePathFigures = '/Users/ca34522/Documents/Classes/Bioinformatics/Project/Figures' # os.path.join(inBasePath, 'Figures')
+inSavePathFigures = '/path/to/folder' # os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
 inSaveFigures = True
 
