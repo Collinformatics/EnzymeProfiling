@@ -14,15 +14,22 @@ from Trie import Trie
 
 
 
-inNumberOfMotifs = 25
+inNumberOfMotifs = 30
 inFigureSizeTrie = (12, 8)
 
+# Adjust size
+# Go from trie to motif, with 5 AA motif, show cut site
+# Generate questions with trie: help evaluate our data
+    # Look for not immediately apparent (find interesting trends)
+        # Why does C pop up when L is removed
+
+# Word cloud
 
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inEnzymeName = 'name'
+inBasePath = f'/path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = '/Users/ca34522/Documents/Classes/Bioinformatics/Project/Figures' # os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
@@ -67,16 +74,7 @@ inFixEntireSubstrateFrame = False
 inExcludedResidue = ['']
 inExcludedPosition = []
 
-# Input 4: PCA
-inRunPCA = False
-inBinSubsPCA = False
-inIndexNTerminus = 2 # Define bounds for binned substrate
-inBinnedSubstrateLength = 5 # Define the length of you substrate
-inFramePositions = [inIndexNTerminus - 1,
-                    inIndexNTerminus + inBinnedSubstrateLength - 1]
-inAAPositionsBinned = inAAPositions[inFramePositions[0]:inFramePositions[-1]]
-
-# Input 7: Plot Heatmap
+# Input 4: Plot Heatmap
 inTitleEnrichmentMap = inEnzymeName
 inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
 inPrintSelectedSubstrates = 1 # Set = 1, to print substrates with fixed residue
@@ -86,7 +84,7 @@ inFigureBorders = [0.882, 0.075, 0.117, 0.998]
 inEnrichmentColorMap = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
                         'lightcoral','red','firebrick','darkred']
 
-# Input 8: Plot Sequence Motif
+# Input 5: Plot Sequence Motif
 inNormLetters = True # Normalize fixed letter heights
 inShowWeblogoYTicks = True
 inAddHorizontalLines = False
@@ -99,7 +97,7 @@ inFigureBordersEnrichmentMotif = [0.882, 0.075, 0.138, 0.98]
 inLetterColors = ['darkgreen','firebrick','deepskyblue','pink','navy','black','gold']
                   # Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
-# Input _____: Figure Parameters
+# Input 6: Figure Parameters
 inFigureTitleSize = 18
 inFigureLabelSize = 16
 inFigureTickSize = 13
@@ -413,5 +411,5 @@ entropySubFrame, indexSubFrame = ngs.findSubstrateFrame(entropy=entropy,
 
 ngs.suffixTree(substrates=substratesFinal, N=inNumberOfMotifs,
                entropySubFrame=entropySubFrame, indexSubFrame=indexSubFrame,
-               entropyMin=inMinDeltaS, title=titleSuffixTree, datasetTag=datasetTag,
+               entropyMin=inMinDeltaS, datasetTag=datasetTag,
                dataType='Final Sort', figSize=inFigureSizeTrie)
