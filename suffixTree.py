@@ -15,7 +15,7 @@ import sys
     # Look for not immediately apparent (find interesting trends)
         # Why does C pop up when L is removed
 
-# Word cloud
+# ADD: Word cloud
 
 
 # ===================================== User Inputs ======================================
@@ -23,7 +23,7 @@ import sys
 inEnzymeName = 'name'
 inBasePath = f'/path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
-inSavePathFigures = '/path/to/folder' # os.path.join(inBasePath, 'Figures')
+inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
 inSaveFigures = True
 
