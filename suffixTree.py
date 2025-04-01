@@ -9,9 +9,6 @@ import sys
 
 
 
-inNumberOfMotifs = 30
-inFigureSizeTrie = (12, 8)
-
 # Adjust size
 # Go from trie to motif, with 5 AA motif, show cut site
 # Generate questions with trie: help evaluate our data
@@ -63,13 +60,12 @@ inExcludedPosition = [9,10]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inMinDeltaS = 0.6
-inManualEntropy = False # Manually select important residues in the substrate
-inManualFrame = ['R4', 'R5', 'R6', 'R2']
-inFixEntireSubstrateFrame = False
-inExcludedResidue = ['']
-inExcludedPosition = []
 
-# Input 4: Plot Heatmap
+# Input 4: Suffix Tree
+inNumberOfMotifs = 30
+inFigureSizeTrie = (12, 8)
+
+# Input 5: Plot Heatmap
 inTitleEnrichmentMap = inEnzymeName
 inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
 inPrintSelectedSubstrates = 1 # Set = 1, to print substrates with fixed residue
@@ -79,7 +75,7 @@ inFigureBorders = [0.882, 0.075, 0.117, 0.998]
 inEnrichmentColorMap = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
                         'lightcoral','red','firebrick','darkred']
 
-# Input 5: Plot Sequence Motif
+# Input 6: Plot Sequence Motif
 inNormLetters = True # Normalize fixed letter heights
 inShowWeblogoYTicks = True
 inAddHorizontalLines = False
@@ -92,7 +88,7 @@ inFigureBordersEnrichmentMotif = [0.882, 0.075, 0.138, 0.98]
 inLetterColors = ['darkgreen','firebrick','deepskyblue','pink','navy','black','gold']
                   # Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
-# Input 6: Figure Parameters
+# Input 7: Figure Parameters
 inFigureTitleSize = 18
 inFigureLabelSize = 16
 inFigureTickSize = 13
