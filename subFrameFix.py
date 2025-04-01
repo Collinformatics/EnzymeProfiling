@@ -20,8 +20,8 @@ import time
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'MMP7'
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inEnzymeName = 'name'
+inBasePath = f'/path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
@@ -38,7 +38,7 @@ inSubstratePositions = inAAPositions # ['P4', 'P3', 'P2', 'P1', 'P1\'']
 
 # Input 3: Computational Parameters
 inFilterSubstrates = True
-inFixedResidue = ['L']
+inFixedResidue = ['L'] # Only use 1 AA
 inFixedPosition = [7]
 inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
 inManualEntropy = False
