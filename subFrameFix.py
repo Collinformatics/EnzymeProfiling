@@ -20,16 +20,15 @@ import time
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'name'
-inBasePath = f'path/to/folder/{inEnzymeName}'
+inEnzymeName = 'MMP7'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
 inSaveData = True
 inSaveFigures = True
-inSetFigureTimer = True
-inLoadFinalFixedFrame = True
+inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
 inSubstrateLength = len(inAAPositions)
@@ -40,7 +39,8 @@ inSubstratePositions = inAAPositions # ['P4', 'P3', 'P2', 'P1', 'P1\'']
 # Input 3: Computational Parameters
 inFilterSubstrates = True
 inFixedResidue = ['L']
-inFixedPosition = [6]
+inFixedPosition = [7]
+inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
 inFixEntireSubstrateFrame = False
@@ -155,9 +155,6 @@ inMatrixScaledESLabel = r'ΔS * Enrichment Scores'  # - log5()'
 
 
 # =============================== Setup Figure Parameters ================================
-# Dataset label
-inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
-
 global fixedSubSeq
 
 if inShowEnrichmentAsSquares:
@@ -925,9 +922,7 @@ filePathFixedFrameCounts = os.path.join(inFilePath, f'counts_{inEnzymeName}'
                                                     f'_FixedFrame_{substrateFrame}')
 
 # Load the fixed frame if the file can be found
-if (os.path.exists(filePathFixedFrameSubs)
-        and os.path.exists(filePathFixedFrameCounts)
-        and inLoadFinalFixedFrame):
+if os.path.exists(filePathFixedFrameSubs) and os.path.exists(filePathFixedFrameCounts):
     print('============================== Load: Fixed Substrate Frame '
           '==============================')
     print(f'File found:{purple} {inSubstrateFrame}\n'
@@ -953,8 +948,10 @@ if (os.path.exists(filePathFixedFrameSubs)
     # Print loaded data
     iteration = 0
     print(f'Loaded Fixed Frame:{purple} {substrateFrame}{resetColor}\n'
-          f'Number of Total Substrates:{white} {countsTotalFixedFrame:,}{resetColor}\n'
-          f'Number of Unique Substrates:{white} {len(fixedFrameFinalSubs):,}{resetColor}\n')
+          f'Number of Total Substrates:'
+          f'{white} {countsTotalFixedFrame:,}{resetColor}\n'
+          f'Number of Unique Substrates:'
+          f'{white} {len(fixedFrameFinalSubs):,}{resetColor}\n')
     for substrate, count in fixedFrameFinalSubs.items():
         print(f'Substrate:{green} {substrate}{resetColor}\n'
               f'     Count:{pink} {count:,}{resetColor}')
