@@ -1,16 +1,11 @@
+from functions import filePaths, NGS
 import numpy as np
 import os
-import sys
 import pickle as pk
 import pandas as pd
 import threading
 import time
-from functions import filePaths, NGS
-
-import matplotlib.pyplot as plt
-import networkx as nx
 import sys
-from Trie import Trie
 
 
 
