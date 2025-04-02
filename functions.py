@@ -15,7 +15,7 @@ from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
-# from playsound import playsound
+from playsound import playsound
 import pandas as pd
 import pickle as pk
 import seaborn as sns
@@ -187,7 +187,7 @@ class NGS:
             os.makedirs(self.savePathFigs, exist_ok=True)
 
 
-  
+
     def alert(self, soundPath):
         if os.path.exists(soundPath):
             threading.Thread(target=playsound, args=(soundPath,)).start()
@@ -245,8 +245,8 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = NGS.fixSubstrateSequence(self, exclusion=False, excludedAA=[],
-                                                   excludedPosition=[])
+            fixedSubSeq = NGS.fixSubstrateSequence(self, exclusion=False, excludeAA=[],
+                                                   excludePosition=[])
             print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
 
 
@@ -531,8 +531,8 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = NGS.fixSubstrateSequence(self, exclusion=False, excludedAA=[], 
-                                                   excludedPosition=[])
+            fixedSubSeq = NGS.fixSubstrateSequence(self, exclusion=False, excludeAA=[], 
+                                                   excludePosition=[])
             print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
 
 
@@ -1315,12 +1315,12 @@ class NGS:
 
 
 
-    def fixSubstrateSequence(self, exclusion, excludedAA, excludedPosition):
+    def fixSubstrateSequence(self, exclusion, excludeAA, excludePosition):
         fixResidueList = []
         if exclusion:
             # Exclude residues
-            for index, removedAA in enumerate(excludedAA):
-                fixResidueList.append(f'Excl-{removedAA}@R{excludedPosition[index]}')
+            for index, removedAA in enumerate(excludeAA):
+                fixResidueList.append(f'Excl-{removedAA}@R{excludePosition[index]}')
 
             for index in range(len(self.fixedAA)):
                 fixResidueList.append(f'Fixed-{self.fixedAA[index]}'
@@ -1549,7 +1549,7 @@ class NGS:
 
 
 
-    def fixResidue(self, substrates, minimumCount, fixedString, exclusion, excludedAA, 
+    def fixResidue(self, substrates, minimumCount, fixedString, exclusion, excludeAA, 
                    excludePositon, printRankedSubs, sortType):
         print('==================================== Fix AA '
               '=====================================')
@@ -1571,7 +1571,7 @@ class NGS:
                     break
 
                 keepSub = True
-                for indexExclude, AAExclude in enumerate(excludedAA):
+                for indexExclude, AAExclude in enumerate(excludeAA):
                     if len(AAExclude) == 1:
                         indexRemoveAA = excludePositon[indexExclude] - 1
 
@@ -3729,7 +3729,7 @@ class NGS:
             fig.tight_layout()
             plt.show()
 
-        datasetType = 'PCA'
+        datasetType = f'PCA - {N}'
 
         # Save the Figure
         if self.saveFigures:
@@ -4153,51 +4153,57 @@ class NGS:
         print(f'Node Size:\n{nodeSizes}\n')
 
 
-
-        def addNodesToGraph(node, graph, scaleX, scaleY, offset=inOffset):
+        def addNodesToGraph(node, graph, scaleX, scaleY, offset=inOffset,
+                            nodeSizesDF=None):
             pos = {}
             nodeSizes = {}
             nodeCountLevel = {}
 
-            # (currentNode, parentID, char, fullMotif, level)
-            queue = [(node, None, '', '', 0)]
+            # Track node index separately
+            queue = [(node, None, '', '', 0,
+                      1)]  # (currentNode, parentID, char, fullMotif, level, index)
 
             while queue:
-                nodeCurrent, parent, char, motifSoFar, level = queue.pop(0)
+                nodeCurrent, parent, char, motifSoFar, level, index = queue.pop(0)
                 nodeID = f"{char}-{level}-{id(nodeCurrent)}"
 
                 if level not in nodeCountLevel:
                     nodeCountLevel[level] = []
                 nodeCountLevel[level].append(
-                    (nodeCurrent, parent, char, nodeID, motifSoFar))
+                    (nodeCurrent, parent, char, nodeID, motifSoFar, index))
 
                 fullMotif = motifSoFar + char  # Build full motif sequence
 
+                # Assign node size from nodeSizesDF if available
+                nodeSize = inNodeSizeMin  # Default size
+                if nodeSizesDF is not None and level in nodeSizesDF.columns:
+                    entry = nodeSizesDF.iloc[index - 1, level]  # Use the tracked index
+                    if isinstance(entry, str) and ": " in entry:
+                        _, size = entry.split(": ")
+                        nodeSize = float(size)
+
+                graph.add_node(nodeID, label=char, size=nodeSize)
+                nodeSizes[nodeID] = nodeSize
+
+                if parent is not None:
+                    graph.add_edge(parent, nodeID, arrowstyle='->')
+
+                # Track child nodes with incremented index
+                childIndex = 1
                 for child_char, nodeChild in nodeCurrent.children.items():
-                    queue.append((nodeChild, nodeID, child_char, fullMotif, level + 1))
+                    queue.append(
+                        (nodeChild, nodeID, child_char, fullMotif, level + 1, childIndex))
+                    childIndex += 1  # Ensure unique index for each child
 
-            for level, nodes in nodeCountLevel.items():
-                nodeNumber = len(nodes)
-                for i, (nodeCurrent, parent, char, nodeID, fullMotif) in enumerate(nodes):
-                    if parent is None:
-                        pos[nodeID] = (0, 0)
-                    else:
-                        parentX, parentY = pos[parent]
-                        posX = parentX + (i - nodeNumber // 2) * offset
-                        pos[nodeID] = (posX, parentY - scaleY)
-
-                    graph.add_node(nodeID, label=char)
-                    if parent is not None:
-                        graph.add_edge(parent, nodeID, arrowstyle='->')
-
-            return pos
+            return pos, nodeSizes
 
 
         # Build the graph
         graph = nx.DiGraph()
-        pos = addNodesToGraph(trie.root, graph, scaleX=inScaleX,
-                              scaleY=inScaleY, offset=inOffset)
-
+        pos, nodeSizes = addNodesToGraph(trie.root, graph, scaleX=inScaleX,
+                                         scaleY=inScaleY, offset=inOffset,
+                                         nodeSizesDF=nodeSizes)
+        finalNodeSizes = [graph.nodes[node]["size"] for node in graph.nodes]
 
         # Get node labels
         labels = {node: data['label'] for node, data in graph.nodes(data=True)}
@@ -4215,7 +4221,7 @@ class NGS:
         fig.canvas.mpl_connect('key_press_event', pressKey)
 
         # Draw graph
-        nx.draw(graph, pos, with_labels=True, labels=labels, node_size=nodeSizes,
+        nx.draw(graph, pos, with_labels=True, labels=labels, node_size=finalNodeSizes,
                 node_color="#F18837", font_size=inFontSize, font_weight="bold",
                 edge_color="#101010", ax=ax, arrows=False)
         plt.title(f'{self.enzymeName}: {datasetTag}\nTop {countsMotif:,} Motifs',

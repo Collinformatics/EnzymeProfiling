@@ -3,7 +3,6 @@
 # IMPORTANT: Process all of your data with extractSubstrates before using this script
 
 
-from functions import filePaths, NGS
 import numpy as np
 import os
 import sys
@@ -11,13 +10,14 @@ import pickle as pk
 import pandas as pd
 import threading
 import time
+from functions import filePaths, NGS
 
 
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'name'
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inEnzymeName = 'Fyn'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
@@ -48,11 +48,11 @@ inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabiliti
 
 # Input 3: Computational Parameters
 inFilterSubstrates = True
-inFixedResidue = ['']
-inFixedPosition = [5]
+inFixedResidue = ['L','Q','C']
+inFixedPosition = [3,4,5]
 inExcludeResidues = False # Do you want to remove any AAs from your collection of substrate
-inExcludedResidue = ['A']
-inExcludedPosition = [9]
+inExcludedResidue = ['A','A']
+inExcludedPosition = [9,10]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inFigureTitleSize = 18
@@ -378,7 +378,7 @@ def binSubstrates(substrates, datasetTag, index):
 # ================================== Evaluate The Data ===================================
 if inFilterSubstrates:
     fixedSubSeq = ngs.fixSubstrateSequence(exclusion=inExcludeResidues,
-                                           excludedAA=inExcludedResidue,
+                                           excludeAA=inExcludedResidue,
                                            excludedPosition=inExcludedPosition)
 else:
     fixedSubSeq = None
@@ -386,7 +386,7 @@ else:
 if inFilterSubstrates and inEvaluateSubstrateEnrichment:
     fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
         substrates=substratesInitial, minimumCount=inMinimumSubstrateCount,
-        exclusion=inExcludeResidues, excludedAA=inExcludedResidue,
+        exclusion=inExcludeResidues, excludeAA=inExcludedResidue,
         excludePositon=inExcludedPosition, fixedString=fixedSubSeq,
         printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
 
@@ -597,7 +597,7 @@ if loadUnfixedSubstrates:
         # Fix AA
         substratesFinal, countsFinalTotal = ngs.fixResidue(
             substrates=substratesFinal, minimumCount=inMinimumSubstrateCount,
-            exclusion=inExcludeResidues, excludedAA=inExcludedResidue,
+            exclusion=inExcludeResidues, excludeAA=inExcludedResidue,
             excludePositon=inExcludedPosition, fixedString=fixedSubSeq,
             printRankedSubs=inPrintFixedSubs, sortType='Final Sort')
 

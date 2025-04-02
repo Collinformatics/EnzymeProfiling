@@ -20,14 +20,14 @@ import time
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'name'
+inEnzymeName = 'Mpro2'
 inBasePath = f'/path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
-inSaveData = True
-inSaveFigures = True
+inSaveData = False
+inSaveFigures = False
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
@@ -38,14 +38,15 @@ inSubstratePositions = inAAPositions # ['P4', 'P3', 'P2', 'P1', 'P1\'']
 
 # Input 3: Computational Parameters
 inFilterSubstrates = True
-inFixedResidue = ['L'] # Only use 1 AA
-inFixedPosition = [7]
+inFixedResidue = ['Q'] # Only use 1 AA
+inFixedPosition = [4]
 inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
 inFixEntireSubstrateFrame = False
-inExcludedResidue = ['']
-inExcludedPosition = []
+inExcludedResidues = False
+inExcludedResidue = ['Q']
+inExcludedPosition = [8]
 inMinDeltaS = 0.6
 inMinimumSubstrateCount = 10
 inSetMinimumESFixAA = 0
@@ -74,7 +75,7 @@ inUseCodonProb = False  # If True: use "inCodonSequence" for baseline probabilit
 # Input 5: Figure Parameters
 inPlotEnrichmentMap = True
 inPlotEnrichmentMotif = False
-inPlotPositionalEntropy = True # Script not finished: Calc entropy for current set of substrates
+inPlotPositionalEntropy = True
 inPlotUnscaledScatter = False
 inPlotScaledScatter = False
 inFigureSize = (9.5, 8)  # (width, height)
@@ -183,7 +184,7 @@ resetColor = '\033[0m'
 
 
 
-# ======================================= Initialize Class =======================================
+# =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           minCounts=inMinimumSubstrateCount, colorsCounts=inCountsColorMap,
@@ -197,7 +198,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
 
 
 
-# ========================================== Load Data ===========================================
+# ====================================== Load Data =======================================
 def loadSubstrates(filePath, fileNames, fileType, printLoadedData, result):
     subsLoaded, totalSubs = ngs.loadSubstrates(filePath=filePath,
                                                fileNames=fileNames,
@@ -205,14 +206,13 @@ def loadSubstrates(filePath, fileNames, fileType, printLoadedData, result):
                                                printLoadedData=printLoadedData)
     result[fileType] = (subsLoaded, totalSubs)
 
-
 # Initialize result dictionary
 loadedResults = {}
 
 # Create threads for loading initial and final substrates
 # threadInitial = threading.Thread(target=loadSubstrates,
-#                                  args=(inFilePath, inFileNamesInitialSort, 'Initial Sort',
-#                                        inPrintCounts, loadedResults))
+#                                  args=(inFilePath, inFileNamesInitialSort,
+#                                        'Initial Sort', inPrintCounts, loadedResults))
 threadFinal = threading.Thread(target=loadSubstrates,
                                args=(inFilePath, inFileNamesFinalSort, 'Final Sort',
                                      inPrintCounts, loadedResults))
@@ -229,6 +229,7 @@ time.sleep(0.5)
 # Retrieve the loaded substrates
 # substratesInitial, totalSubsInitial = loadedResults['Initial Sort']
 substratesFinal, totalSubsFinal = loadedResults['Final Sort']
+
 
 # Load Data: Initial sort
 filePathsInitial = []
@@ -252,14 +253,15 @@ if missingFile:
     print('\033[91mERROR: File not found at path:')
     for indexMissing in indexMissingFile:
         print(f'     {filePathsInitial[indexMissing]}')
-    print(f'\nMake sure your path is correctly named, and that you have already extracted and '
-          f'counted your NGS data\n')
+    print(f'\nMake sure your path is correctly named, and that you have already '
+          f'extracted and counted your NGS data\n')
     sys.exit()
 else:
     countsInitial, totalSubsInitial = ngs.loadCounts(filePath=filePathsInitial,
                                                      files=inFileNamesInitialSort,
                                                      printLoadedData=inPrintCounts,
-                                                     fileType='Initial Sort', fixedSeq=None)
+                                                     fileType='Initial Sort',
+                                                     fixedSeq=None)
     # Calculate RF
     initialRF = ngs.calculateRF(counts=countsInitial, N=totalSubsInitial,
                                 fileType='Initial Sort', printRF=inPrintRF)
@@ -272,8 +274,9 @@ ngs.updateSampleSize(NSubs=totalSubsFinal, sortType='Final Sort',
 
 
 
-# ======================================= Define Functions =======================================
-def fixSubstrate(subs, fixedAA, fixedPosition, sortType, fixedTag, initialFix):
+# =================================== Define Functions ===================================
+def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePosition,
+                 sortType, fixedTag, initialFix):
     print('==================================== Fix Substrates '
           '=====================================')
     print(f'Substrate Dataset:'
@@ -283,6 +286,14 @@ def fixSubstrate(subs, fixedAA, fixedPosition, sortType, fixedTag, initialFix):
         AA = ', '.join(fixedAA[index])
         print(f'     {pink}{AA}{resetColor}@{pink}R{fixedPosition[index]}{resetColor}')
     print('')
+    if exclude:
+        print(f'Excluding substrates with:')
+        for index in range(len(excludeAA)):
+            AA = ', '.join(excludeAA[index])
+            print(f'     {red}{AA}{resetColor}@{red}R{excludePosition[index]}'
+                  f'{resetColor}')
+        print('')
+
 
     # Initialize data structures
     fixedSubs = {}
@@ -308,7 +319,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, sortType, fixedTag, initialFix):
         loadFiles = True
         print(f'Loading Substrates at Path:\n'
               f'     {filePathFixedSubs}\n'
-              f'     {filePathFixedCounts}\n')
+              f'     {filePathFixedCounts}\n\n')
 
         # Load Data: Fixed substrates
         with open(filePathFixedSubs, 'rb') as file:
@@ -319,39 +330,131 @@ def fixSubstrate(subs, fixedAA, fixedPosition, sortType, fixedTag, initialFix):
 
         # Calculate total counts
         fixedCountsTotal = sum(fixedCounts.iloc[:, 0])
-
-    # Fix the substrates if the files were not found
-    if not loadFiles:
+    else:
+        # Fix the substrates if the files were not found
         print(f'Fixing substrates...\n\n')
+        if exclude:
+            # Fix AA
+            if len(fixedAA) == 1:
+                for substrate, count in subs.items():
+                    keepSub = True
 
-        # Fix AA
-        if len(fixedAA) == 1:
-            for substrate, count in subs.items():
-                if substrate[fixedPosition[0] - 1] == fixedAA[0]:
-                    if count >= inMinimumSubstrateCount:
+                    # Evaluate substrate
+                    for indexExclude, AAExclude in enumerate(excludeAA):
+                        if len(AAExclude) == 1:
+                            indexRemoveAA = excludePosition[indexExclude] - 1
+
+                            # Is the AA acceptable?
+                            if substrate[indexRemoveAA] == AAExclude:
+                                keepSub = False
+                                continue
+                        else:
+                            # Remove Multiple AA at a specific position
+                            for AAExcludeMulti in AAExclude:
+                                indexRemoveAA = excludePosition[indexExclude] - 1
+                                for AAExclude in AAExcludeMulti:
+
+                                    # Is the AA acceptable?
+                                    if substrate[indexRemoveAA] == AAExclude:
+                                        keepSub = False
+                                        continue
+
+                    # If the substrate is accepted, look for the desired AA
+                    if keepSub:
+                        if len(fixedAA) == 1 and len(fixedAA[0]) == 1:
+                            # Fix only one AA
+                            if substrate[fixedPosition[0] - 1] != fixedAA[0]:
+                                keepSub = False
+                        else:
+                            for indexFixed, fixAA in enumerate(fixedAA):
+                                indexFixAA = fixedPosition[indexFixed] - 1
+                                if len(fixAA) == 1:
+                                    # Fix one AA at a given position
+                                    if substrate[indexFixAA] != fixAA:
+                                        keepSub = False
+                                        break
+                                else:
+                                    # Fix multiple AAs at a given position
+                                    if substrate[indexFixAA] not in fixAA:
+                                        keepSub = False
+                                        break
+
+                    # Select the substrate
+                    if keepSub:
                         fixedSubs[substrate] = count
                         fixedSubsTotal += count
-                        continue
+            else:
+                for substrate, count in subs.items():
+                    keepSub = False
+                    saveSeq = []
+
+                    # Evaluate substrate
+                    for indexExclude, AAExclude in enumerate(excludeAA):
+                        if len(AAExclude) == 1:
+                            indexRemoveAA = excludePosition[indexExclude] - 1
+
+                            # Is the AA acceptable?
+                            if substrate[indexRemoveAA] == AAExclude:
+                                saveSeq.append(False)
+                                continue
+                        else:
+                            # Remove Multiple AA at a specific position
+                            for AAExcludeMulti in AAExclude:
+                                indexRemoveAA = excludePosition[indexExclude] - 1
+                                for AAExclude in AAExcludeMulti:
+
+                                    # Is the AA acceptable?
+                                    if substrate[indexRemoveAA] == AAExclude:
+                                        saveSeq.append(False)
+                                        continue
+
+                    # If the substrate is accepted, look for the desired AA
+                    if False not in saveSeq:
+                        for index in range(len(fixedAA)):
+                            foundAA = False
+                            for multiAA in fixedAA[index]:
+                                if substrate[fixedPosition[index] - 1] == multiAA:
+                                    foundAA = True
+                                    break
+
+                            # Discard Substrate
+                            if not foundAA:
+                                saveSeq.append(False)
+                                break
+
+                        if False not in saveSeq:
+                            if count >= inMinimumSubstrateCount:
+                                fixedSubs[str(substrate)] = count
+                                fixedSubsTotal += count
         else:
-            for substrate, count in subs.items():
-                saveSeq = []
-                for index in range(len(fixedAA)):
-                    foundAA = False
-                    for multiAA in fixedAA[index]:
-                        if substrate[fixedPosition[index] - 1] == multiAA:
-                            foundAA = True
+            # Fix AA
+            if len(fixedAA) == 1:
+                for substrate, count in subs.items():
+                    if substrate[fixedPosition[0] - 1] == fixedAA[0]:
+                        if count >= inMinimumSubstrateCount:
+                            fixedSubs[substrate] = count
+                            fixedSubsTotal += count
+                            continue
+            else:
+                for substrate, count in subs.items():
+                    saveSeq = []
+                    for index in range(len(fixedAA)):
+                        foundAA = False
+                        for multiAA in fixedAA[index]:
+                            if substrate[fixedPosition[index] - 1] == multiAA:
+                                foundAA = True
+                                break
+
+                        # Discard Substrate
+                        if not foundAA:
+                            saveSeq.append(False)
                             break
 
-                    # Discard Substrate
-                    if not foundAA:
-                        saveSeq.append(False)
-                        break
-
-                if False not in saveSeq:
-                    if count >= inMinimumSubstrateCount:
-                        fixedSubs[str(substrate)] = count
-                        fixedSubsTotal += count
-                        continue
+                    if False not in saveSeq:
+                        if count >= inMinimumSubstrateCount:
+                            fixedSubs[str(substrate)] = count
+                            fixedSubsTotal += count
+                            continue
 
         # Print fixed substrates
         if inPrintFixedSubs:
@@ -415,14 +518,14 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
     else:
         # Make fixed seq tag
         fixedSubSeq = ngs.fixSubstrateSequence(exclusion=False,
-                                               excludedAA=[], excludedPosition=[])
+                                               excludeAA=[], excludePosition=[])
 
     # # Fix The First Set Of Substrates
-    (fixedSubsFinal,
-     fixedCountsFinal,
-     countsTotalFixedFrame) = fixSubstrate(subs=substrates, fixedAA=fixRes,
-                                           fixedPosition=fixPos, sortType='Final Sort',
-                                           fixedTag=fixedSubSeq, initialFix=True)
+    fixedSubsFinal, fixedCountsFinal, countsTotalFixedFrame = fixSubstrate(
+        subs=substrates, fixedAA=fixRes, fixedPosition=fixPos,
+        exclude=inExcludedResidues, excludeAA=inExcludedResidue,
+        excludePosition=inExcludedPosition, sortType='Final Sort',
+        fixedTag=fixedSubSeq, initialFix=True)
 
     initialFixedPos = inAAPositions[inFixedPosition[0] - 1]
 
@@ -431,7 +534,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
                                    fileType='Final Sort', printRF=inPrintRF)
 
     # Determine substrate frame
-    positionalEntropy = ngs.calculateEntropy(RF=finalFixedRF, printEntropy=inPrintEntropy)
+    positionalEntropy = ngs.calculateEntropy(RF=finalFixedRF,
+                                             printEntropy=inPrintEntropy)
     if inManualEntropy:
         substrateFrameSorted = pd.DataFrame(1, index=inManualFrame,
                                             columns=['ΔEntropy'])
@@ -480,14 +584,11 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
     if inPlotEnrichmentMotif:
         # Calculate enrichment scores and scale with Shannon Entropy
         pType = 'Initial Sort'
-        (heights, fixedAA,
-         yMax, yMin) = ngs.enrichmentMatrix(counts=fixedCountsFinal,
-                                            N=countsTotalFixedFrame,
-                                            baselineProb=initialRF,
-                                            baselineType=pType,
-                                            printRF=inShowMotifData,
-                                            scaleData=True,
-                                            normlaizeFixedScores=inNormLetters)
+        heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
+            counts=fixedCountsFinal, N=countsTotalFixedFrame, baselineProb=initialRF,
+            baselineType=pType, printRF=inShowMotifData, scaleData=True,
+            normlaizeFixedScores=inNormLetters)
+
         # Plot: Sequence Motif
         ngs.plotMotif(data=heights, bigLettersOnTop=inBigLettersOnTop,
                       figureSize=inFigureSize, figBorders=inFigureBordersEnrichmentMotif,
@@ -549,18 +650,15 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         ngs.fixedPosition = preferredPositions
 
         # Make fixed seq tag
-        fixedSubSeq = ngs.fixSubstrateSequence(exclusion=False, excludedAA=[],
-                                               excludedPosition=[])
+        fixedSubSeq = ngs.fixSubstrateSequence(exclusion=False, excludeAA=[],
+                                               excludePosition=[])
 
         # Fix Substrates
-        (fixedSubsFinal,
-         fixedCountsFinal,
-         countsTotalFixedFrame) = fixSubstrate(subs=substrates,
-                                               fixedAA=preferredResidues,
-                                               fixedPosition=preferredPositions,
-                                               sortType='Final Sort',
-                                               fixedTag=fixedSubSeq,
-                                               initialFix=False)
+        fixedSubsFinal, fixedCountsFinal, countsTotalFixedFrame = fixSubstrate(
+            subs=substrates, fixedAA=preferredResidues, fixedPosition=preferredPositions,
+            exclude=inExcludedResidues, excludeAA=inExcludedResidue,
+            excludePosition=inExcludedPosition, sortType='Final Sort',
+            fixedTag=fixedSubSeq, initialFix=False)
 
 
         # # Process Data
@@ -621,21 +719,20 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         if inPlotEnrichmentMotif:
             # Calculate enrichment scores and scale with Shannon Entropy
             pType = 'Initial Sort'
-            heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(counts=fixedCountsFinal,
-                                                                N=countsTotalFixedFrame,
-                                                                baselineProb=initialRF,
-                                                                baselineType=pType,
-                                                                printRF=inShowMotifData,
-                                                                scaleData=True,
-                                                                normlaizeFixedScores=inNormLetters
-                                                                )
+            heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
+                counts=fixedCountsFinal, N=countsTotalFixedFrame, baselineProb=initialRF,
+                baselineType=pType, printRF=inShowMotifData, scaleData=True,
+                normlaizeFixedScores=inNormLetters)
+
             # Plot: Sequence Motif
             ngs.plotMotif(data=heights, bigLettersOnTop=inBigLettersOnTop,
-                          figureSize=inFigureSize, figBorders=inFigureBordersEnrichmentMotif,
+                          figureSize=inFigureSize,
+                          figBorders=inFigureBordersEnrichmentMotif,
                           title=inTitleMotif,titleSize=inFigureTitleSize,
                           yMax=yMax, yMin=yMin, yBoundary=2, lines=inAddHorizontalLines,
-                          motifType='Scaled Enrichment', fixingFrame=True, initialFrame=False,
-                          duplicateFigure=inDuplicateFigure, saveTag=saveTag)
+                          motifType='Scaled Enrichment', fixingFrame=True,
+                          initialFrame=False, duplicateFigure=inDuplicateFigure,
+                          saveTag=saveTag)
 
 
     # # Release and fix each position
@@ -673,13 +770,15 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         # # Fix Substrates with released position
         # Make fixed seq tag
         fixedSubSeq = ngs.fixSubstrateSequence(exclusion=False,
-                                               excludedAA=[],
-                                               excludedPosition=[])
+                                               excludeAA=[],
+                                               excludePosition=[])
 
         # Fix Substrates: Release position
         fixedSubsFinal, fixedCountsFinal, countsTotalFixedFrame = fixSubstrate(
             subs=substrates, fixedAA=keepResidues, fixedPosition=keepPositions,
-            sortType='Final Sort', fixedTag=fixedSubSeq, initialFix=False)
+            exclude=inExcludedResidues, excludeAA=inExcludedResidue,
+            excludePosition=inExcludedPosition, sortType='Final Sort',
+            fixedTag=fixedSubSeq, initialFix=False)
 
 
         # Record counts at released position
@@ -769,13 +868,15 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
 
         # Make fixed seq tag
         fixedSubSeq = ngs.fixSubstrateSequence(exclusion=False,
-                                               excludedAA=[],
-                                               excludedPosition=[])
+                                               excludeAA=[],
+                                               excludePosition=[])
 
         # Fix Substrates
         fixedSubsFinal, fixedCountsFinal, countsTotalFixedFrame = fixSubstrate(
             subs=substrates, fixedAA=keepResidues, fixedPosition=keepPositions,
-            sortType='Final Sort', fixedTag=fixedSubSeq, initialFix=False)
+            exclude=inExcludedResidues, excludeAA=inExcludedResidue,
+            excludePosition=inExcludedPosition, sortType='Final Sort',
+            fixedTag=fixedSubSeq, initialFix=False)
 
 
         # # Process Data
@@ -910,7 +1011,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
 
 
 
-# ========================================= Run The Code =========================================
+# ===================================== Run The Code =====================================
 # # Fix AA at the important positions in the substrate
 fixedSubSeq = None
 
@@ -919,7 +1020,8 @@ substrateFrame = f'{inFixedResidue[0]}@R{inFixedPosition[0]}'
 filePathFixedFrameSubs = os.path.join(inFilePath, f'fixedSubs_{inEnzymeName}'
                                                   f'_FixedFrame_{substrateFrame}')
 filePathFixedFrameCounts = os.path.join(inFilePath, f'counts_{inEnzymeName}'
-                                                    f'_FixedFrame_{substrateFrame}')
+                                                    f'_FixedFrame_{substrateFrame}_'
+                                                    f'MinCounts {inMinimumSubstrateCount}')
 
 # Load the fixed frame if the file can be found
 if os.path.exists(filePathFixedFrameSubs) and os.path.exists(filePathFixedFrameCounts):
