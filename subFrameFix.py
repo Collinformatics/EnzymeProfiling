@@ -7,20 +7,13 @@ import threading
 import time
 
 
-
-# When fixing substrates in the initial sort, use substrates with counts < 10
-# Rank vs rank plot vs color coded number of observed exp. sub2
-# Try with & without fixed pos with ΔS < inMinDeltaS
-# If the fixed frame file exists, don't load the initial @ final substrates
-
-
 # Coordinate Descent & Optimization Framework
 
 
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'your name'
 inBasePath = f'/path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
