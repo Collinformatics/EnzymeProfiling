@@ -16,7 +16,7 @@ import threading
 
 # ========================================== User Inputs =========================================
 # Input 1: File Location
-inEnzymeName = 'MMP7'
+inEnzymeName = 'your name'
 inBasePath = f'path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
@@ -24,7 +24,7 @@ inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
 inSaveFigures = True
-inFigureTimer = True
+inFigureTimer = False
 
 # Input 2: Experimental Parameters
 inSubstrateLength = len(inAAPositions)
