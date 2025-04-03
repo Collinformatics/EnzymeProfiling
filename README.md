@@ -1,5 +1,10 @@
-General Information
--
+# Modules
+- You will need to install the following modules:
+
+        pip install fair-esm
+        
+
+# General Information
 
 These scripts are designed to extact a protein substrate sequence from a longer DNA sequence. 
 
@@ -10,8 +15,8 @@ The extracted sequences are grouped into two catagories, the Unfilteded (or Init
 The specificity of the enzyme is evaluated by calculating the Enrichment Score of each amino acid (AA).
 - The enrichment score compairs the frequency of the AAs in the Filtered dataset to the Unfiltered set
 
-Express DNA
--
+# Express DNA
+
 
 Run extractSubstrates.py to express DNA sequneces, and extract the protein substrates.
 
@@ -66,8 +71,7 @@ Input 4:
         inCountMapYLabel = 2 # for A
 
 
-Evaluate Substrates
--
+# Evaluate Substrates (Incomplete Section)
 
 Run evaluateSubstrates.py to load all processed protein substrate files and evaluate enrichment.
 
