@@ -379,7 +379,7 @@ def binSubstrates(substrates, datasetTag, index):
 if inFilterSubstrates:
     fixedSubSeq = ngs.fixSubstrateSequence(exclusion=inExcludeResidues,
                                            excludeAA=inExcludedResidue,
-                                           excludedPosition=inExcludedPosition)
+                                           excludePosition=inExcludedPosition)
 else:
     fixedSubSeq = None
 
