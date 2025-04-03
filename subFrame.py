@@ -49,10 +49,9 @@ inLineThickness = 1.5
 inTickLength = 4
 
 # Input 4: Processing The Data
-inPlotEnrichmentMap = False
+inPlotEnrichmentMap = True
 inPlotEnrichmentMotif = False
-inPCAIndividual = True # PCA plot of an individual fixed frame
-# inPCACombined = True
+inPCAIndividual = False # PCA plot of an individual fixed frame
 inPlotEnrichmentMapPCA = True
 inPlotEnrichmentMotifPCA = inPlotEnrichmentMapPCA
 inPlotWeblogoMotif = False
