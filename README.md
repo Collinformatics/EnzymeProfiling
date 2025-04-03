@@ -1,4 +1,4 @@
-# Modules
+# Python Modules
 - You will need to install the following modules:
 
         pip install biopython
@@ -18,30 +18,6 @@
         pip install scikit-learn
   
         pip install wordcloud
-
-extra
-
-        pip install 
-
-        pip install 
-  
-        pip install 
-
-        pip install 
-
-        pip install 
-  
-        pip install 
-  
-        pip install 
-
-        pip install 
-
-        pip install 
-
-
-  
-        
 
 # General Information
 
