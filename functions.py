@@ -3551,15 +3551,26 @@ class NGS:
             for index, seq in enumerate(evaluateSubs.keys()):
                 subs.append((f'Sub{index}', seq))
 
+
         # Step 2: Load the ESM model and batch converter
-        model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
-        # model.eval() # Set the model to evaluation mode
-        # model.to(device)
+        model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
+        # model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
+
         batch_converter = alphabet.get_batch_converter()
 
-        # Step 3: Convert substrates to ESM model format and generate embeddings
-        batchLabels, batchSubs, batchTokens = batch_converter(subs)
 
+        # Step 3: Convert substrates to ESM model format and generate embeddings
+        try:
+            batchLabels, batchSubs, batchTokens = batch_converter(subs)
+        except Exception as exc:
+            print(f'{orange}ERROR: The ESM has failed to evaluate your substrates\n\n'
+                  f'Exception:\n{exc}\n\n'
+                  f'     Try replacing: {cyan}esm.pretrained.esm2_t36_3B_UR50D()'
+                  f'{resetColor}\n'
+                  f'     With: {cyan}esm.pretrained.esm2_t33_650M_UR50D()'
+                  f'{resetColor}\n')
+            sys.exit()
+        
         print(f'Batch Tokens:{white} {batchTokens.shape}{resetColor}\n'
               f'{greenLight}{batchTokens}{resetColor}\n\n')
         slicedTokens = pd.DataFrame(batchTokens[:, 1:-1],
