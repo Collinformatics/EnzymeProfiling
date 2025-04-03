@@ -16,6 +16,8 @@
         pip install seaborn
 
         pip install scikit-learn
+
+        pip install torch
   
         pip install wordcloud
 
