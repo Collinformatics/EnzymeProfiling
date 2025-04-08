@@ -18,12 +18,14 @@ import sys
 # ADD: Word cloud
 
 
+
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'name'
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inEnzymeName = 'Mpro2'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
-inSavePathFigures = os.path.join(inBasePath, 'Figures')
+inSavePathFigures = '/Users/ca34522/Documents/Classes/Bioinformatics/Project/Figures'
+# os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
 inSaveFigures = True
 
@@ -143,14 +145,16 @@ resetColor = '\033[0m'
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
-          minCounts=inMinimumSubstrateCount, colorsCounts=inCountsColorMap,
-          colorStDev=inStDevColorMap, colorsEM=inEnrichmentColorMap,
-          colorsMotif=inLetterColors, xAxisLabels=inAAPositions,
-          xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
-          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
-          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inFilePath,
-          savePathFigs=inSavePathFigures, setFigureTimer=None)
+          excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
+          excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
+          colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
+          colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
+          xAxisLabels=inAAPositions, xAxisLabelsBinned=inAAPositionsBinned,
+          residueLabelType=inYLabelEnrichmentMap, titleLabelSize=inFigureTitleSize,
+          axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize,
+          printNumber=inPrintNumber, showNValues=inShowSampleSize,
+          saveFigures=inSaveFigures, savePath=inFilePath, savePathFigs=inSavePathFigures,
+          setFigureTimer=None)
 
 
 
@@ -209,7 +213,7 @@ if inFilterSubstrates:
         else:
             countsInitial, countsInitialTotal = ngs.loadCounts(
                 filePath=filePathsInitial, files=inFileNamesInitial,
-                printLoadedData=inPrintCounts, fileType='Initial Sort', fixedSeq=None)
+                printLoadedData=inPrintCounts, fileType='Initial Sort')
             # Calculate RF
             initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
                                         fileType='Initial Sort', printRF=inPrintRF)
@@ -313,8 +317,7 @@ if loadUnfixedSubstrates:
         countsInitial, countsInitialTotal = ngs.loadCounts(filePath=filePathsInitial,
                                                            files=inFileNamesInitial,
                                                            printLoadedData=inPrintCounts,
-                                                           fileType='Initial Sort',
-                                                           fixedSeq=None)
+                                                           fileType='Initial Sort')
         # Calculate RF
         initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
                                     fileType='Initial Sort', printRF=inPrintRF)
@@ -347,8 +350,7 @@ if loadUnfixedSubstrates:
         countsFinal, countsFinalTotal = ngs.loadCounts(filePath=filePathsFinal,
                                                        files=inFileNamesFinal,
                                                        printLoadedData=inPrintCounts,
-                                                       fileType='Final Sort',
-                                                       fixedSeq=None)
+                                                       fileType='Final Sort')
 
 # Calculate RF
 finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
@@ -379,9 +381,7 @@ if inFilterSubstrates:
 
     # Fix AA
     substratesFinal, counFinalTotal = ngs.fixResidue(
-        substrates=substratesFinal, minimumCount=inMinimumSubstrateCount,
-        exclusion=inExcludeResidues, excludedAA=inExcludedResidue,
-        excludePositon=inExcludedPosition, fixedString=fixedSubSeq,
+        substrates=substratesFinal, fixedString=fixedSubSeq,
         printRankedSubs=inPrintFixedSubs, sortType='Final Sort')
 
     # Count fixed substrates

@@ -20,11 +20,12 @@ from functions import NGS
 # Input 1: File Location
 inFileName = ['Src-F_S2_L001_R1_001', 'Src-F_S2_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Fastq') # Define the fastq folder pathway
 inFileType = 'fastq' # Define the file type
 inSavePath = os.path.join(inBasePath, 'Extracted Data')
 inSaveFileName = 'Src-F_S2_L001'
+inAlertPath = '/Users/ca34522/Documents/Python/Sounds/Bells.mp3'
 
 # Input 2: Substrate Parameters
 inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
@@ -36,10 +37,10 @@ inFixedLibrary = False
 inFixedResidue = []
 inFixedPosition = []
 inPrintNumber = 10 # Print peptide sequences to validate substrate extraction
-inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
+inStartSeqR1 = 'AAAGGCAGT' # Define DNA sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
-inStartSeqR2 = 'AAAGGCAGT' # KGS: AAAGGCAGT
-inEndSeqR2 = 'GGTGGAAGT' # GGS: GGTGGAAGT
+inStartSeqR2 = inStartSeqR1 # KGS: AAAGGCAGT
+inEndSeqR2 = inEndSeqR1 # GGS: GGTGGAAGT
 inPrintQualityScores = False # QSs are "phred quality" scores
 
 # Input 4: Plotting The Data
@@ -58,6 +59,7 @@ inFigureBorders = [0.882, 0.075, 0.18, 1] # Top, bottom, left, right
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
+          excludeAAs=None, excludeAA=None, excludePosition=None,
           minCounts=0, colorsCounts=inCountsColorMap, colorStDev=None,
           colorsEM=None, colorsMotif=None, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=None, residueLabelType=inCountMapYLabel,

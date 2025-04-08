@@ -14,10 +14,10 @@ import threading
 
 
 
-# ========================================== User Inputs =========================================
+# ====================================== User Inputs =====================================
 # Input 1: File Location
-inEnzymeName = 'your name'
-inBasePath = f'path/to/folder/{inEnzymeName}'
+inEnzymeName = 'Mpro2'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
@@ -36,10 +36,24 @@ inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 inFramePositons = [inIndexNTerminus, inIndexNTerminus+inFixedFrameLength-1]
 inAAPositionsBinned = inAAPositions[inFramePositons[0]:inIndexNTerminus+inFixedFrameLength]
 
+# ========================================================================================
+print(f'Frame ({len(inFramePositons)}): {inFramePositons}')
+print(f'Binned ({len(inAAPositionsBinned)}): {inAAPositionsBinned}\n')
+
+
+inIndexNTerminus = 1 # Define the index if the first AA in the binned substrate
+inFramePositons = [inIndexNTerminus, inIndexNTerminus+inFixedFrameLength-1]
+inAAPositionsBinned = inAAPositions[inFramePositons[0]:inIndexNTerminus+inFixedFrameLength]
+
+print(f'Frame ({len(inFramePositons)}): {inFramePositons}')
+print(f'Binned ({len(inAAPositionsBinned)}): {inAAPositionsBinned}\n')
+# ========================================================================================
+
+
 # Input 3: Computational Parameters
-inFixResidues = True # True: fix AAs in the substrate, False: Don't fix AAs, plot raw the data
-inFixedResidue = ['L']
-inFixedPosition = [5]
+inFixResidues = True
+inFixedResidue = ['Q']
+inFixedPosition = [4,5,6]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inFigureTitleSize = 18
@@ -50,8 +64,9 @@ inTickLength = 4
 
 # Input 4: Processing The Data
 inPlotEnrichmentMap = True
-inPlotEnrichmentMotif = False
+inPlotEnrichmentMotif = True
 inPCAIndividual = False # PCA plot of an individual fixed frame
+# inPCACombined = True
 inPlotEnrichmentMapPCA = True
 inPlotEnrichmentMotifPCA = inPlotEnrichmentMapPCA
 inPlotWeblogoMotif = False
@@ -59,8 +74,8 @@ inPlotActivityFACS = False
 inPredictSubstrateActivity = False
 inPredictSubstrateActivityPCA = False
 inPlotWordsPCA = True # Plot word cloud for the selected populations
-inPlotBinnedSubstrates = True
-inPlotBinnedSubstratePCA = True
+inPlotBinnedSubstrates = False
+inPlotBinnedSubstratePCA = False
 inPlotBinnedSubstrateES = False
 inPlotBinnedSubstratePrediction = False
 inPlotCounts = False
@@ -70,7 +85,7 @@ inShowSampleSize = False # Include the sample size in your figures
 
 # Input 5: PCA
 inNumberOfPCs = 2
-inTotalSubsPCA = int(5*10**3)
+inTotalSubsPCA = int(5*10**4)
 inEncludeSubstrateCounts = False
 inExtractPopulations = False
 inPlotPositionalEntropyPCAPopulations = False
@@ -249,14 +264,16 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 # ======================================= Initialize Class =======================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
-          minCounts=inMinimumSubstrateCount, colorsCounts=inCountsColorMap,
-          colorStDev=inStDevColorMap, colorsEM=inEnrichmentColorMap,
-          colorsMotif=inLetterColors, xAxisLabels=inAAPositions,
-          xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
-          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
-          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inFilePath,
-          savePathFigs=inSavePathFigures, setFigureTimer=inFigureTimer)
+          excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
+          excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
+          colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
+          colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
+          xAxisLabels=inAAPositions, xAxisLabelsBinned=inAAPositionsBinned,
+          residueLabelType=inYLabelEnrichmentMap, titleLabelSize=inFigureTitleSize,
+          axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize,
+          printNumber=inPrintNumber, showNValues=inShowSampleSize,
+          saveFigures=inSaveFigures, savePath=inFilePath, savePathFigs=inSavePathFigures,
+          setFigureTimer=inFigureTimer)
 
 
 
@@ -351,7 +368,7 @@ else:
     countsInitial, totalSubsInitial = ngs.loadCounts(filePath=filePathsInitial,
                                                      files=inFileNamesInitialSort,
                                                      printLoadedData=inPrintCounts,
-                                                     fileType='Initial Sort', fixedSeq=None)
+                                                     fileType='Initial Sort')
     # Calculate RF
     initialRF = ngs.calculateRF(counts=countsInitial, N=totalSubsInitial,
                                 fileType='Initial Sort', printRF=inPrintRF)
@@ -1444,11 +1461,9 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     # Calculate: Enrichment scores
     fixedFramePopES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
                                               finalSortRF=finalRF,
-                                              fixedSeq=inSubstrateFrame,
                                               printES=inPrintES)
     fixedFramePopESAdjusted = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
                                                       finalSortRF=finalRFAdjusted,
-                                                      fixedSeq=inSubstrateFrame,
                                                       printES=inPrintES)
 
     # Calculate: Enrichment scores scaled
@@ -1556,7 +1571,7 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
     (fixedFrameCounts,
      fixedFrameCountsTotal) = ngs.loadFixedFrameCounts(
         filePath=inFilePath, substrateFrame=inFixedFramePositions,
-        substrateFrameAAPos=inAAPositionsBinned, frameIndicies=inFramePositons,
+        substrateFrameAAPos=inAAPositionsBinned, frameIndices=inFramePositons,
         datasetTag=inSubstrateFrame)
 
     # Calculate: Probability & Entropy
@@ -1572,7 +1587,6 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
         fixedSubSeq = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
         fixedFrameES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
                                                finalSortRF=fixedFrameProb,
-                                               fixedSeq=fixedSubSeq,
                                                printES=inPrintES)
         fixedFrameESScaled = pd.DataFrame(0.0, index=fixedFrameES.index,
                                           columns=fixedFrameES.columns)
@@ -1659,7 +1673,7 @@ if inPlotEnrichmentMotif:
                   duplicateFigure=False, saveTag=inSubstrateFrame)
 
     # Plot: Sequence Motif
-    ngs.plotMotif(data=fixedFrameESScaled, motifType='Scaled Enrichment', 
+    ngs.plotMotif(data=fixedFrameESScaled.copy(), motifType='Scaled Enrichment',
                   bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                   figBorders=inFigureBordersEnrichmentMotif,
                   title=f'{inTitleMotif}\n{inSubstrateFrame}',
@@ -1795,10 +1809,9 @@ if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
         or inPredictSubstrateActivityPCA or inPlotWordsPCA):
 
     # Bin substrate frames
-    binnedSubs, frameTotalCountsFinal = ngs.binSubstrates(substrates=substratesFixedFrame,
-                                                          substrateFrame=inFixedFramePositions,
-                                                          frameIndicies=inFramePositons,
-                                                          datasetTag=inSubstrateFrame)
+    binnedSubs, frameTotalCountsFinal = ngs.binSubstrates(
+        substrates=substratesFixedFrame, substrateFrame=inFixedFramePositions,
+        frameIndicies=inFramePositons, datasetTag=inSubstrateFrame)
 
     if inPlotBinnedSubstrates:
         ngs.plotBinnedSubstrates(substrates=binnedSubs,

@@ -7,21 +7,28 @@ import threading
 import time
 
 
+
+# When fixing substrates in the initial sort, use substrates with counts < 10
+# Rank vs rank plot vs color coded number of observed exp. sub2
+# Try with & without fixed pos with ΔS < inMinDeltaS
+# If the fixed frame file exists, don't load the initial @ final substrates
+
+
 # Coordinate Descent & Optimization Framework
 
 
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'your name'
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inEnzymeName = 'Mpro2'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
-inSaveData = False
+inSaveData = True
 inSaveFigures = False
-inSetFigureTimer = False
+inSetFigureTimer = True
 
 # Input 2: Experimental Parameters
 inSubstrateLength = len(inAAPositions)
@@ -33,13 +40,13 @@ inSubstratePositions = inAAPositions # ['P4', 'P3', 'P2', 'P1', 'P1\'']
 inFilterSubstrates = True
 inFixedResidue = ['Q'] # Only use 1 AA
 inFixedPosition = [4]
+inExcludeResidues = True
+inExcludedResidue = ['Q']
+inExcludedPosition = [8]
 inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
 inFixEntireSubstrateFrame = False
-inExcludedResidues = False
-inExcludedResidue = ['Q']
-inExcludedPosition = [8]
 inMinDeltaS = 0.6
 inMinimumSubstrateCount = 10
 inSetMinimumESFixAA = 0
@@ -67,7 +74,7 @@ inUseCodonProb = False  # If True: use "inCodonSequence" for baseline probabilit
 
 # Input 5: Figure Parameters
 inPlotEnrichmentMap = True
-inPlotEnrichmentMotif = False
+inPlotEnrichmentMotif = True
 inPlotPositionalEntropy = True
 inPlotUnscaledScatter = False
 inPlotScaledScatter = False
@@ -180,9 +187,11 @@ resetColor = '\033[0m'
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
-          minCounts=inMinimumSubstrateCount, colorsCounts=inCountsColorMap,
-          colorStDev=inStDevColorMap, colorsEM=inEnrichmentColorMap,
-          colorsMotif=inLetterColors, xAxisLabels=inAAPositions, xAxisLabelsBinned=None,
+          excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
+          excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
+          colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
+          colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
+          xAxisLabels=inAAPositions, xAxisLabelsBinned=None,
           residueLabelType=inYLabelEnrichmentMap, titleLabelSize=inFigureTitleSize,
           axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize,
           printNumber=inPrintNumber, showNValues=inShowSampleSize, savePath=inFilePath,
@@ -253,8 +262,7 @@ else:
     countsInitial, totalSubsInitial = ngs.loadCounts(filePath=filePathsInitial,
                                                      files=inFileNamesInitialSort,
                                                      printLoadedData=inPrintCounts,
-                                                     fileType='Initial Sort',
-                                                     fixedSeq=None)
+                                                     fileType='Initial Sort')
     # Calculate RF
     initialRF = ngs.calculateRF(counts=countsInitial, N=totalSubsInitial,
                                 fileType='Initial Sort', printRF=inPrintRF)
@@ -510,13 +518,12 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         sys.exit()
     else:
         # Make fixed seq tag
-        fixedSubSeq = ngs.fixSubstrateSequence(exclusion=False,
-                                               excludeAA=[], excludePosition=[])
+        fixedSubSeq = ngs.fixSubstrateSequence()
 
     # # Fix The First Set Of Substrates
     fixedSubsFinal, fixedCountsFinal, countsTotalFixedFrame = fixSubstrate(
         subs=substrates, fixedAA=fixRes, fixedPosition=fixPos,
-        exclude=inExcludedResidues, excludeAA=inExcludedResidue,
+        exclude=inExcludeResidues, excludeAA=inExcludedResidue,
         excludePosition=inExcludedPosition, sortType='Final Sort',
         fixedTag=fixedSubSeq, initialFix=True)
 
@@ -555,7 +562,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
     # Calculate enrichment scores
     finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
                                            finalSortRF=finalFixedRF,
-                                           fixedSeq=fixedSubSeq,
                                            printES=inShowEnrichmentData)
 
     # Create released matrix df
@@ -638,18 +644,17 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
                   f'{resetColor}')
         print('\n')
 
-        # Update attributes
+        # Update NGS attributes
         ngs.fixedAA = preferredResidues
         ngs.fixedPosition = preferredPositions
 
         # Make fixed seq tag
-        fixedSubSeq = ngs.fixSubstrateSequence(exclusion=False, excludeAA=[],
-                                               excludePosition=[])
+        fixedSubSeq = ngs.fixSubstrateSequence()
 
         # Fix Substrates
         fixedSubsFinal, fixedCountsFinal, countsTotalFixedFrame = fixSubstrate(
             subs=substrates, fixedAA=preferredResidues, fixedPosition=preferredPositions,
-            exclude=inExcludedResidues, excludeAA=inExcludedResidue,
+            exclude=inExcludeResidues, excludeAA=inExcludedResidue,
             excludePosition=inExcludedPosition, sortType='Final Sort',
             fixedTag=fixedSubSeq, initialFix=False)
 
@@ -680,7 +685,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         # Calculate enrichment scores
         finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
                                                finalSortRF=finalFixedRF,
-                                               fixedSeq=fixedSubSeq,
                                                printES=inShowEnrichmentData)
 
         # Inspect enrichment scores 1
@@ -718,14 +722,14 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
                 normlaizeFixedScores=inNormLetters)
 
             # Plot: Sequence Motif
-            ngs.plotMotif(data=heights, bigLettersOnTop=inBigLettersOnTop,
+            ngs.plotMotif(data=finalFixedES.copy(), bigLettersOnTop=inBigLettersOnTop,
                           figureSize=inFigureSize,
                           figBorders=inFigureBordersEnrichmentMotif,
                           title=inTitleMotif,titleSize=inFigureTitleSize,
                           yMax=yMax, yMin=yMin, yBoundary=2, lines=inAddHorizontalLines,
                           motifType='Scaled Enrichment', fixingFrame=True,
                           initialFrame=False, duplicateFigure=inDuplicateFigure,
-                          saveTag=saveTag)
+                          saveTag=inSubstrateFrame)
 
 
     # # Release and fix each position
@@ -756,20 +760,19 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
                 print('\n')
                 break
 
-        # Update attributes
+        # Update NGS attributes
         ngs.fixedAA = keepResidues
         ngs.fixedPosition = keepPositions
 
+
         # # Fix Substrates with released position
         # Make fixed seq tag
-        fixedSubSeq = ngs.fixSubstrateSequence(exclusion=False,
-                                               excludeAA=[],
-                                               excludePosition=[])
+        fixedSubSeq = ngs.fixSubstrateSequence()
 
         # Fix Substrates: Release position
         fixedSubsFinal, fixedCountsFinal, countsTotalFixedFrame = fixSubstrate(
             subs=substrates, fixedAA=keepResidues, fixedPosition=keepPositions,
-            exclude=inExcludedResidues, excludeAA=inExcludedResidue,
+            exclude=inExcludeResidues, excludeAA=inExcludedResidue,
             excludePosition=inExcludedPosition, sortType='Final Sort',
             fixedTag=fixedSubSeq, initialFix=False)
 
@@ -803,7 +806,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         # Calculate enrichment scores
         finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
                                                finalSortRF=finalFixedRF,
-                                               fixedSeq=fixedSubSeq,
                                                printES=inShowEnrichmentData)
 
         # Inspect enrichment scores
@@ -845,7 +847,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
                           yMax=yMax, yMin=yMin, yBoundary=2, lines=inAddHorizontalLines,
                           motifType='Scaled Enrichment', fixingFrame=True,
                           initialFrame=False, duplicateFigure=inDuplicateFigure,
-                          saveTag=saveTag)
+                          saveTag=inSubstrateFrame)
 
 
         # # Refix Dropped Position
@@ -860,14 +862,12 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
 
 
         # Make fixed seq tag
-        fixedSubSeq = ngs.fixSubstrateSequence(exclusion=False,
-                                               excludeAA=[],
-                                               excludePosition=[])
+        fixedSubSeq = ngs.fixSubstrateSequence()
 
         # Fix Substrates
         fixedSubsFinal, fixedCountsFinal, countsTotalFixedFrame = fixSubstrate(
             subs=substrates, fixedAA=keepResidues, fixedPosition=keepPositions,
-            exclude=inExcludedResidues, excludeAA=inExcludedResidue,
+            exclude=inExcludeResidues, excludeAA=inExcludedResidue,
             excludePosition=inExcludedPosition, sortType='Final Sort',
             fixedTag=fixedSubSeq, initialFix=False)
 
@@ -898,7 +898,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
         # Calculate enrichment scores
         finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
                                                finalSortRF=finalFixedRF,
-                                               fixedSeq=fixedSubSeq,
                                                printES=inShowEnrichmentData)
 
         # Display loop status
@@ -941,7 +940,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
                           yMax=yMax, yMin=yMin, yBoundary=2, lines=inAddHorizontalLines,
                           motifType='Scaled Enrichment', fixingFrame=True,
                           initialFrame=False, duplicateFigure=inDuplicateFigure,
-                          saveTag=saveTag)
+                          saveTag=inSubstrateFrame)
 
 
     # Initialize matrix
@@ -963,7 +962,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
     # Calculate enrichment scores
     releasedES = ngs.calculateEnrichment(initialSortRF=initialRF,
                                          finalSortRF=releasedRF,
-                                         fixedSeq=fixedSubSeq,
                                          printES=inShowEnrichmentData)
     releasedESScaled = releasedES.copy()
     for position in releasedES.columns:
@@ -1007,14 +1005,29 @@ def fixFrame(substrates, fixRes, fixPos, sortType):
 # ===================================== Run The Code =====================================
 # # Fix AA at the important positions in the substrate
 fixedSubSeq = None
+fixedSubSeq = ngs.fixSubstrateSequence()
 
 # Define: File path
-substrateFrame = f'{inFixedResidue[0]}@R{inFixedPosition[0]}'
-filePathFixedFrameSubs = os.path.join(inFilePath, f'fixedSubs_{inEnzymeName}'
-                                                  f'_FixedFrame_{substrateFrame}')
-filePathFixedFrameCounts = os.path.join(inFilePath, f'counts_{inEnzymeName}'
-                                                    f'_FixedFrame_{substrateFrame}_'
-                                                    f'MinCounts {inMinimumSubstrateCount}')
+filePathFixedFrameSubs = os.path.join(inFilePath,
+                                      f'fixedSubs_{inEnzymeName}_'
+                                      f'FixedFrame_{fixedSubSeq}_'
+                                      f'MinCounts_{inMinimumSubstrateCount}')
+filePathFixedFrameCounts = os.path.join(inFilePath,
+                                        f'counts_{inEnzymeName}_'
+                                        f'FixedFrame_{fixedSubSeq}_'
+                                        f'MinCounts_{inMinimumSubstrateCount}')
+# substrateFrame = f'{inFixedResidue[0]}@R{inFixedPosition[0]}'
+# print(f'Frame: {substrateFrame}\nfixedSubSeq: {fixedSubSeq}\n')
+# filePathFixedFrameSubs = os.path.join(inFilePath,
+#                                       f'fixedSubs_{inEnzymeName}'
+#                                       f'_FixedFrame_{substrateFrame}'
+#                                       f'_MinCounts {inMinimumSubstrateCount}')
+# filePathFixedFrameCounts = os.path.join(inFilePath,
+#                                         f'counts_{inEnzymeName}'
+#                                         f'_FixedFrame_{substrateFrame}_'
+#                                         f'_MinCounts {inMinimumSubstrateCount}')
+
+
 
 # Load the fixed frame if the file can be found
 if os.path.exists(filePathFixedFrameSubs) and os.path.exists(filePathFixedFrameCounts):
@@ -1022,7 +1035,7 @@ if os.path.exists(filePathFixedFrameSubs) and os.path.exists(filePathFixedFrameC
           '==============================')
     print(f'File found:{purple} {inSubstrateFrame}\n'
           f'     {greenDark}{filePathFixedFrameSubs}\n'
-          f'     {greenDark}{filePathFixedFrameCounts}\n\n')
+          f'     {greenDark}{filePathFixedFrameCounts}{resetColor}\n\n')
 
     # Disable: Autosave figures
     if inSaveFigures:
@@ -1042,7 +1055,7 @@ if os.path.exists(filePathFixedFrameSubs) and os.path.exists(filePathFixedFrameC
 
     # Print loaded data
     iteration = 0
-    print(f'Loaded Fixed Frame:{purple} {substrateFrame}{resetColor}\n'
+    print(f'Loaded Fixed Frame:{purple} {fixedSubSeq}{resetColor}\n' # {substrateFrame}
           f'Number of Total Substrates:'
           f'{white} {countsTotalFixedFrame:,}{resetColor}\n'
           f'Number of Unique Substrates:'

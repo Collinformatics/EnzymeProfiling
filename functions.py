@@ -130,15 +130,20 @@ def includeCommas(x):
 
 
 class NGS:
-    def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, minCounts,
-                 colorsCounts, colorsEM, colorStDev, colorsMotif, xAxisLabels,
-                 xAxisLabelsBinned, residueLabelType, titleLabelSize, axisLabelSize,
-                 tickLabelSize, printNumber, showNValues, savePath, saveFigures,
-                 savePathFigs, setFigureTimer):
+    def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
+                 excludeAA, excludePosition, minCounts, colorsCounts, colorsEM,
+                 colorStDev, colorsMotif, xAxisLabels, xAxisLabelsBinned, 
+                 residueLabelType, titleLabelSize, axisLabelSize, tickLabelSize, 
+                 printNumber, showNValues, savePath, saveFigures, savePathFigs, 
+                 setFigureTimer):
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
-        self.minCounts = minCounts
+        self.excludeAAs = excludeAAs
+        self.excludeAA = excludeAA
+        self.excludePosition = excludePosition
+        self.minSubCount = minCounts
+        self.fixedSubSeq = None
         self.substrateLength = substrateLength
         self.colorSchemeCounts = colorsCounts
         self.colorSchemeEM = colorsEM
@@ -177,7 +182,7 @@ class NGS:
         self.selectedDatapoints = []
         self.rectangles = []
 
-        np.set_printoptions(suppress=True) # Prevent data from printing in scientific notation
+        np.set_printoptions(suppress=True) # Prevent data from printing in sci notation
         np.seterr(divide='ignore')
 
         # Verify directory paths
@@ -245,8 +250,7 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = NGS.fixSubstrateSequence(self, exclusion=False, excludeAA=[],
-                                                   excludePosition=[])
+            fixedSubSeq = NGS.fixSubstrateSequence(self)
             print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
 
 
@@ -531,8 +535,7 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = NGS.fixSubstrateSequence(self, exclusion=False, excludeAA=[], 
-                                                   excludePosition=[])
+            fixedSubSeq = NGS.fixSubstrateSequence(self)
             print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
 
 
@@ -818,7 +821,7 @@ class NGS:
         beginTime = time.time()
         print('============================= Calculate: AA Counts '
               '==============================')
-        print(f'Unique substrate count:{red} {len(substrates):,}{resetColor}\n')
+        print(f'Unique substrate count:{red} {len(substrates):,}{resetColor}')
 
         # Initialize the counts matrix
         countedData = pd.DataFrame(0,
@@ -976,7 +979,7 @@ class NGS:
 
 
 
-    def loadCounts(self, filePath, files, printLoadedData, fileType, fixedSeq):
+    def loadCounts(self, filePath, files, printLoadedData, fileType):
         totalSubstrateCount = 0
 
         if files is None:
@@ -989,11 +992,11 @@ class NGS:
                 # Load counted fixed counted substrate data
                 fixedCounts = pd.read_csv(filePath, index_col=0)
                 if not printLoadedData:
-                    print(f'\nCounts: {red}{fixedSeq}{resetColor}\n'
+                    print(f'\nCounts: {red}{self.fixedSubSeq}{resetColor}\n'
                           f'{silver}{fixedCounts}{resetColor}')
 
                 totalSubstrateCount = sum(fixedCounts.iloc[:, 0])
-                print(f'\nTotal substrates with {red}{fixedSeq}{resetColor}: '
+                print(f'\nTotal substrates with {red}{self.fixedSubSeq}{resetColor}: '
                       f'{red}{totalSubstrateCount:,}{resetColor}\n\n')
 
             # Record the number of substrates in this dataset
@@ -1204,18 +1207,25 @@ class NGS:
 
 
     def loadFixedFrameCounts(self, filePath, substrateFrame, substrateFrameAAPos,
-                             frameIndicies, datasetTag):
+                             frameIndices, datasetTag):
         print('=========================== Load: Fixed Frame Counts '
               '============================')
+        print(f'Frame Pos: {substrateFrameAAPos}\n'
+              f'     Index: {frameIndices}')
+        print(f'Select:\n'
+              f'     Start: {substrateFrameAAPos[0]}\n'
+              f'     Start: {substrateFrameAAPos[-1]}\n')
+
         print(f'Loading counts:{purple} {datasetTag}{resetColor}\n'
-              f'Start Position:{white} {substrateFrameAAPos[frameIndicies[0]]}'
+              f'Start Position:{white} {substrateFrameAAPos[frameIndices[0]]}'
               f'{resetColor}\n'
-              f'   Start Index:{white} {frameIndicies[0]}{resetColor}\n'
-              f'End Position:{white} {substrateFrameAAPos[frameIndicies[-1]]}'
+              f'   Start Index:{white} {frameIndices[0]}{resetColor}\n'
+              f'End Position:{white} {substrateFrameAAPos[-1]}'
               f'{resetColor}\n'
-              f'   End Index:{white} {frameIndicies[-1]}{resetColor}\n\n')
+              f'   End Index:{white} {frameIndices[-1]}{resetColor}\n\n')
         frameLength = len(substrateFrame)
         countsFixedFrameAll = []
+        # sys.exit()
 
         # Load the counts
         for index, position in enumerate(self.fixedPosition):
@@ -1227,6 +1237,8 @@ class NGS:
             else:
                 filePathFixedFrameCounts = (f'{filePath}\\countsReleased_'
                                             f'{self.enzymeName}_FixedFrame_{fileTag}')
+            print(f'Path: {filePathFixedFrameCounts}')
+            sys.exit()
 
             # Look for the file
             if os.path.exists(filePathFixedFrameCounts):
@@ -1234,7 +1246,7 @@ class NGS:
                 countsLoaded = pd.read_csv(filePathFixedFrameCounts, index_col=0)
 
                 # Define fixed frame positions & extract the data
-                startPosition = frameIndicies[0]
+                startPosition = frameIndices[0]
                 startSubPrevious = startPosition
                 if index != 0:
                     # Evaluate previous fixed frame index
@@ -1245,7 +1257,7 @@ class NGS:
                     endSub = startSub + frameLength
                 else:
                     startSub = startPosition
-                    endSub = frameIndicies[-1] + 1
+                    endSub = frameIndices[-1] + 1
                 fixedFramePos = countsLoaded.columns[startSub:endSub]
                 countsFixedFrame = countsLoaded.loc[:, fixedFramePos]
                 countsFixedFrame.columns = substrateFrame
@@ -1315,40 +1327,42 @@ class NGS:
 
 
 
-    def fixSubstrateSequence(self, exclusion, excludeAA, excludePosition):
+    def fixSubstrateSequence(self):
         fixResidueList = []
-        if exclusion:
+        if self.excludeAAs:
             # Exclude residues
-            for index, removedAA in enumerate(excludeAA):
-                fixResidueList.append(f'Excl-{removedAA}@R{excludePosition[index]}')
+            for index, removedAA in enumerate(self.excludeAA):
+                fixResidueList.append(f'Excl-{removedAA}@R{self.excludePosition[index]}')
 
             for index in range(len(self.fixedAA)):
+                print(f'Pos: {self.fixedPosition}\n'
+                      f'     Index: {index}\n')
                 fixResidueList.append(f'Fixed-{self.fixedAA[index]}'
                                       f'@R{self.fixedPosition[index]}')
 
-            fixedSeq = '_'.join([f'{seq}' for seq in fixResidueList])
+            self.fixedSubSeq = '_'.join([f'{seq}' for seq in fixResidueList])
         else:
             # Exclude residues
             for index in range(len(self.fixedAA)):
                 fixResidueList.append(f'{self.fixedAA[index]}'
                                       f'@R{self.fixedPosition[index]}')
 
-            fixedSeq = '_'.join([f'{seq}' for seq in fixResidueList])
+            self.fixedSubSeq = '_'.join([f'{seq}' for seq in fixResidueList])
 
         # Condence the string
-        if "'" in fixedSeq:
-            fixedSeq = fixedSeq.replace("'", '')
-        if " " in fixedSeq:
-            fixedSeq = fixedSeq.replace(" ", '')
+        if "'" in self.fixedSubSeq:
+            self.fixedSubSeq = self.fixedSubSeq.replace("'", '')
+        if " " in self.fixedSubSeq:
+            self.fixedSubSeq = self.fixedSubSeq.replace(" ", '')
 
         # Clean up fixed sequence tag
         removeTag = ('Excl-Y@R1_Excl-Y@R2_Excl-Y@R3_Excl-Y@R4_Excl-Y@R6_'
                     'Excl-Y@R7_Excl-Y@R8_Excl-Y@R9_Fixed-')
-        if removeTag in fixedSeq:
-            fixedSeq = fixedSeq.replace(removeTag, '')
-            fixedSeq = f'{fixedSeq} Excl Y'
+        if removeTag in self.fixedSubSeq:
+            self.fixedSubSeq = self.fixedSubSeq.replace(removeTag, '')
+            self.fixedSubSeq = f'{self.fixedSubSeq} Excl Y'
 
-        return fixedSeq
+        return self.fixedSubSeq
 
 
 
@@ -1534,7 +1548,7 @@ class NGS:
         if self.saveFigures:
             # Define: Save location
             figLabel = (f'EM - {self.enzymeName} - {dataType} - {datasetTag} - '
-                        f'MinCounts {self.minCounts}.png')
+                        f'MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
             # Save figure
@@ -1549,8 +1563,7 @@ class NGS:
 
 
 
-    def fixResidue(self, substrates, minimumCount, fixedString, exclusion, excludeAA, 
-                   excludePositon, printRankedSubs, sortType):
+    def fixResidue(self, substrates, fixedString, printRankedSubs, sortType):
         print('==================================== Fix AA '
               '=====================================')
         fixedSubs = {}
@@ -1563,17 +1576,17 @@ class NGS:
 
 
         # Select substrates that contain selected AA at a specified position in the substrate
-        if exclusion:
+        if self.excludeAAs:
             # Verify if the substrates are contain the residue(s) you wish to remove
             for substrate, count in substrates.items():
                 # Inspect substrate count
-                if count < minimumCount:
+                if count < self.minSubCount:
                     break
 
                 keepSub = True
-                for indexExclude, AAExclude in enumerate(excludeAA):
+                for indexExclude, AAExclude in enumerate(self.excludeAA):
                     if len(AAExclude) == 1:
-                        indexRemoveAA = excludePositon[indexExclude] - 1
+                        indexRemoveAA = self.excludePositon[indexExclude] - 1
 
                         # Is the AA acceptable?
                         if substrate[indexRemoveAA] == AAExclude:
@@ -1582,7 +1595,7 @@ class NGS:
                     else:
                         # Remove Multiple AA at a specific position
                         for AAExcludeMulti in AAExclude:
-                            indexRemoveAA = excludePositon[indexExclude] - 1
+                            indexRemoveAA = self.excludePositon[indexExclude] - 1
                             for AAExclude in AAExcludeMulti:
 
                                 # Is the AA acceptable?
@@ -1619,7 +1632,7 @@ class NGS:
             if len(self.fixedAA) == 1 and len(self.fixedAA[0]) == 1:
                 for substrate, count in substrates.items():
                     # Inspect substrate count
-                    if count < minimumCount:
+                    if count < self.minSubCount:
                         break
 
                     subAA = substrate[self.fixedPosition[0] - 1]
@@ -1630,7 +1643,7 @@ class NGS:
             else:
                 for substrate, count in substrates.items():
                     # Inspect substrate count
-                    if count < minimumCount:
+                    if count < self.minSubCount:
                         break
 
                     keepSub = []
@@ -1884,14 +1897,14 @@ class NGS:
             # Define: Save location
             if sortType == 'Initial Sort':
                 figLabel = (f'AA Distribution - {codonType} - Unfiltered - '
-                            f'{sortType} - MinCounts {self.minCounts}.png')
+                            f'{sortType} - MinCounts {self.minSubCount}.png')
             else:
                 if fixedTag is None:
                     figLabel = (f'AA Distribution - {codonType} - Unfiltered - '
-                                f'{sortType} - MinCounts {self.minCounts}.png')
+                                f'{sortType} - MinCounts {self.minSubCount}.png')
                 else:
                     figLabel = (f'AA Distribution - {codonType} - {fixedTag} - '
-                                f'{sortType} - MinCounts {self.minCounts}.png')
+                                f'{sortType} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
             # Save figure
@@ -2090,10 +2103,10 @@ class NGS:
             # Define: Save location
             if fixedDataset:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
-                            f'Fixed {fixedTag} - MinCounts {self.minCounts}.png')
+                            f'Fixed {fixedTag} - MinCounts {self.minSubCount}.png')
             else:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
-                            f'Unfiltered - MinCounts {self.minCounts}.png')
+                            f'Unfiltered - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
             # Save figure
@@ -2108,7 +2121,7 @@ class NGS:
 
 
 
-    def compairRF(self, initialRF, finalRF, selectAA, fixedSeq, titleSize, labelSize,
+    def compairRF(self, initialRF, finalRF, selectAA, titleSize, labelSize,
                   yMax, yMin):
         print('======================= Evaluate Specificity: Compair RF '
               '========================')
@@ -2118,7 +2131,7 @@ class NGS:
             print(f'{silver}Residue not recognized:{red} {selectAA}{silver}\n'
                   f'Please check input:{red} self.fixedAA')
             sys.exit()
-        print(f'Fixed Residues:{red} {fixedSeq}{resetColor}'
+        print(f'Fixed Residues:{red} {self.fixedSubSeq}{resetColor}'
               f'Selected Residue:{red} {residue}{resetColor}\n')
 
         initial = initialRF[initialRF.index.str.contains(selectAA)]
@@ -2144,7 +2157,7 @@ class NGS:
 
         # Adding labels and title
         ax.set_ylabel('Relative Frequency', fontsize=labelSize)
-        ax.set_title(f'{residue} RF: {self.enzymeName} Fixed {fixedSeq}',
+        ax.set_title(f'{residue} RF: {self.enzymeName} Fixed {self.fixedSubSeq}',
                      fontsize=titleSize, fontweight='bold')
         ax.legend()
         plt.subplots_adjust(top=0.907, bottom=0.083, left=0.138, right=0.971)
@@ -2168,7 +2181,7 @@ class NGS:
 
 
 
-    def boxPlotRF(self, initialRF, finalRF, selectAA, fixedSeq, fixedPos, titleSize,
+    def boxPlotRF(self, initialRF, finalRF, selectAA, fixedPos, titleSize,
                   labelSize, yMax, yMin):
         print('======================= Evaluate Specificity: RF Box Plot '
               '=======================')
@@ -2179,7 +2192,7 @@ class NGS:
                   f'Please check input:{red} self.fixedAA')
             sys.exit()
 
-        print(f'Fixed Residues:{red} {fixedSeq}{resetColor}\n'
+        print(f'Fixed Residues:{red} {self.fixedSubSeq}{resetColor}\n'
               f'Selected Residue:{red} {residue}{resetColor}\n')
 
 
@@ -2234,7 +2247,7 @@ class NGS:
         else:
             print(f'There were no{red} {residue}{resetColor} RF outliers in:'
                   f'{purple} Final Sort{resetColor} '
-                  f'fixed{red} {fixedSeq}{resetColor} \n\n')
+                  f'fixed{red} {self.fixedSubSeq}{resetColor} \n\n')
 
         # Create a figure and axes
         fig, ax = plt.subplots()
@@ -2250,7 +2263,7 @@ class NGS:
                       flierprops=dict(marker='o', markerfacecolor='#F7971F', markersize=10))
 
         # Add labels and title
-        ax.set_title(f'{self.enzymeName} - {residue} RF: Fixed {fixedSeq}',
+        ax.set_title(f'{self.enzymeName} - {residue} RF: Fixed {self.fixedSubSeq}',
                      fontsize=titleSize, fontweight='bold')
         ax.set_ylabel('Relative Frequency', fontsize=labelSize)
 
@@ -2274,7 +2287,7 @@ class NGS:
         plt.show()
 
 
-    def calculateEnrichment(self, initialSortRF, finalSortRF, fixedSeq, printES):
+    def calculateEnrichment(self, initialSortRF, finalSortRF, printES):
         if len(initialSortRF.columns) == 1:
             enrichment = pd.DataFrame(0.0, index=finalSortRF.index,
                                       columns=finalSortRF.columns)
@@ -2288,7 +2301,7 @@ class NGS:
         if printES:
             print('========================== Calculate: Enrichment Score '
                   '==========================')
-            print(f'Enrichment Score:{purple} {fixedSeq}\n'
+            print(f'Enrichment Score:{purple} {self.fixedSubSeq}\n'
                   f'{silver}{enrichment.round(3)}{resetColor}\n\n')
         else:
             print('\n')
@@ -2537,14 +2550,14 @@ class NGS:
             if fixingFrame:
                 figLabel = (f'{self.enzymeName} - {datasetType} '
                             f'{self.saveFigureIteration} - {saveTag} - '
-                            f'MinCounts {self.minCounts}.png')
+                            f'MinCounts {self.minSubCount}.png')
             else:
                 if saveTag is None:
                     figLabel = (f'{self.enzymeName} - {datasetType} - '
-                                f'Unfiltered - MinCounts {self.minCounts}.png')
+                                f'Unfiltered - MinCounts {self.minSubCount}.png')
                 else:
                     figLabel = (f'{self.enzymeName} - {datasetType} - '
-                                f'{saveTag} - MinCounts {self.minCounts}.png')
+                                f'{saveTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
             # Save the figure
@@ -2558,7 +2571,7 @@ class NGS:
                         # Define: Save location
                         figLabel = (f'{self.enzymeName} - {datasetType} '
                                     f'{copyNumber} - {saveTag} - '
-                                    f'MinCounts {self.minCounts}.png')
+                                    f'MinCounts {self.minSubCount}.png')
                         saveLocation = os.path.join(self.savePathFigs, figLabel)
 
                         if not os.path.exists(saveLocation):
@@ -2680,6 +2693,7 @@ class NGS:
         return heights, self.fixedPosition, yMax, yMin
 
 
+
     def enrichmentMatrix(self, counts, N, baselineProb, baselineType, printRF, scaleData,
                          normlaizeFixedScores):
         print('=========================== Calculate: Letter Heights '
@@ -2691,15 +2705,15 @@ class NGS:
             baselineProb.columns = counts.columns
 
 
-        self.fixedPosition = {}
+        fixedPos = {}
         for indexColumn in counts.columns:
             values = counts.loc[:, indexColumn]
             if N in values.values:
                 indexRow = values[values == N].index[0]
-                self.fixedPosition[indexColumn] = indexRow
+                fixedPos[indexColumn] = indexRow
         print(f'Fixed Residues:')
-        if self.fixedPosition:
-            for key, value in self.fixedPosition.items():
+        if fixedPos:
+            for key, value in fixedPos.items():
                 print(f'     Fixed Position: {red}{key}{resetColor}, '
                       f'Residue: {red}{value}{resetColor}')
         else:
@@ -2803,7 +2817,7 @@ class NGS:
                   f'============================================'
                   f'=============================================\n')
 
-            for key, value in self.fixedPosition.items():
+            for key, value in fixedPos.items():
                 heights.loc[value, key] = yMax
 
             print(f'Adjusted Residue Heights:{pink} log\u2082(RF Final Sort / RF '
@@ -2824,7 +2838,9 @@ class NGS:
                   f'============================================'
                   f'=============================================\n')
 
-        return heights, self.fixedPosition, yMax, yMin
+        print(f'Fixed Pos Return: {fixedPos}')
+
+        return heights, fixedPos, yMax, yMin
 
 
 
@@ -2996,14 +3012,14 @@ class NGS:
             if fixingFrame:
                 figLabel = (f'{self.enzymeName} - {datasetType} '
                             f'{self.saveFigureIteration} - {saveTag} - MinCounts '
-                            f'{self.minCounts}.png')
+                            f'{self.minSubCount}.png')
             else:
                 if saveTag is None:
                     figLabel = (f'{self.enzymeName} - {datasetType} - '
-                                f'Unfiltered - MinCounts {self.minCounts}.png')
+                                f'Unfiltered - MinCounts {self.minSubCount}.png')
                 else:
                     figLabel = (f'{self.enzymeName} - {datasetType} - '
-                                f'{saveTag} - MinCounts {self.minCounts}.png')
+                                f'{saveTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
             # Save figure
@@ -3015,7 +3031,7 @@ class NGS:
                     while fileFound:
                         # Define: Save location
                         figLabel = (f'{self.enzymeName} - {figLabel} {copyNumber} - '
-                                    f'{saveTag} - MinCounts {self.minCounts}.png')
+                                    f'{saveTag} - MinCounts {self.minSubCount}.png')
                         saveLocation = os.path.join(self.savePathFigs, figLabel)
 
                         if not os.path.exists(saveLocation):
@@ -3037,7 +3053,7 @@ class NGS:
 
 
 
-    def KLDivergence(self, P, Q, printProb, fixedSeq, scaler):
+    def KLDivergence(self, P, Q, printProb, scaler):
         print('================================= KL Divergence '
               '=================================')
         P.columns = Q.columns
@@ -3046,14 +3062,14 @@ class NGS:
                   f'Probability Distribution:\n{P}\n\n')
 
         divergence = pd.DataFrame(0, columns=Q.columns,
-                                  index=[fixedSeq], dtype=float)
+                                  index=[self.fixedSubSeq], dtype=float)
         divergenceMatrix = pd.DataFrame(0, columns=Q.columns,
                                         index=Q.index, dtype=float)
 
         for position in Q.columns:
             p = P.loc[:, position]
             q = Q.loc[:, position]
-            divergence.loc[fixedSeq, position] = (
+            divergence.loc[self.fixedSubSeq, position] = (
                 np.sum(np.where(p != 0, p * np.log2(p / q), 0)))
 
             for residue in Q.index:
@@ -3071,16 +3087,17 @@ class NGS:
                 divergenceMatrix.loc[:, position] = (divergenceMatrix.loc[:, position] *
                                                      scaler.loc[position, 'ΔEntropy'])
 
-        print(f'{silver}KL Divergence:{pink} Fixed Final Sort - {fixedSeq}{resetColor}\n'
+        print(f'{silver}KL Divergence:'
+              f'{pink} Fixed Final Sort - {self.fixedSubSeq}{resetColor}\n'
               f'{divergence}\n\n\n{silver}Divergency Matrix:'
-              f'{pink} Fixed Final Sort - {fixedSeq}'
+              f'{pink} Fixed Final Sort - {self.fixedSubSeq}'
               f'{resetColor}\n{divergenceMatrix.round(4)}\n\n')
 
         return divergenceMatrix, divergence
 
 
 
-    def optimalWord(self, matrix, matrixType, maxResidues, fixedSeq, dropPos,
+    def optimalWord(self, matrix, matrixType, maxResidues, dropPos,
                     printOptimalAA, normalizeValues):
         print('========================= Synthesize Optimal Substrates '
               '=========================')
@@ -3115,7 +3132,7 @@ class NGS:
 
         if printOptimalAA:
             print(f'Optimal Residues:{purple} {self.enzymeName} - '
-                  f'Fixed {fixedSeq}{resetColor}')
+                  f'Fixed {self.fixedSubSeq}{resetColor}')
             for index, data in enumerate(optimalAA, start=1):
                 # Determine the number of variable residues at this position
                 numberAA = len(data)
@@ -3234,14 +3251,14 @@ class NGS:
 
 
 
-    def substrateEnrichment(self, initialSubs, finalSubs, fixedSeq, saveData,
+    def substrateEnrichment(self, initialSubs, finalSubs, saveData,
                             savePath, NSubs):
         print('========================= Evaluate Substrate Enrichment '
               '=========================')
-        if fixedSeq == None:
+        if self.fixedSubSeq == None:
             datasetType = 'NNS'
         else:
-            datasetType = f'{fixedSeq}'
+            datasetType = f'{self.fixedSubSeq}'
 
         # Define headers
         headersInitial = ['Initial Subs', 'Counts']
@@ -3260,7 +3277,7 @@ class NGS:
         totalUniqueSubstratesFinal = len(finalSubs)
 
         # Evaluate the substrates
-        if fixedSeq == None:
+        if self.fixedSubSeq == None:
             # Process: initial sort
             print(f'Ranked Substrates:{purple} Initial Sort{resetColor} -'
                   f'{red} NNS{resetColor}')
@@ -3350,7 +3367,7 @@ class NGS:
 
             # Process: Final sort
             print(f'Ranked Substrates:{purple} Final Sort{resetColor} -'
-                  f'{red} Fixed {fixedSeq}{resetColor}')
+                  f'{red} Fixed {self.fixedSubSeq}{resetColor}')
             if totalUniqueSubstratesFinal >= self.printNumber:
                 for substrate, count in finalSubs.items():
                     if iteration < self.printNumber:
@@ -3380,10 +3397,9 @@ class NGS:
         enrichedSubs = {}
         setMinCountFinal = False
         if setMinCountFinal:
-            minCount = 10
-            print(f'Mininum Substrate Count:{red} {minCount}{resetColor}')
+            print(f'Mininum Substrate Count:{red} {self.minSubCount}{resetColor}')
             for substrate, count in finalSubs.items():
-                if count < minCount:
+                if count < self.minSubCount:
                     continue
 
                 if substrate in initialSubs.keys():
@@ -3748,10 +3764,10 @@ class NGS:
             # Define: Save location
             if saveTag is None:
                 figLabel = (f'{self.enzymeName} - {datasetType} - '
-                            f'Unfiltered - MinCounts {self.minCounts}.png')
+                            f'Unfiltered - MinCounts {self.minSubCount}.png')
             else:
                 figLabel = (f'{self.enzymeName} - {datasetType} - '
-                            f'{saveTag} - MinCounts {self.minCounts}.png')
+                            f'{saveTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
             # Save figure
@@ -3845,10 +3861,10 @@ class NGS:
             # Define: Save location
             if saveTag is None:
                 figLabel = (f'{self.enzymeName} - {datasetType} - '
-                            f'Unfiltered - MinCounts {self.minCounts}.png')
+                            f'Unfiltered - MinCounts {self.minSubCount}.png')
             else:
                 figLabel = (f'{self.enzymeName} - {datasetType} - '
-                            f'{saveTag} - MinCounts {self.minCounts}.png')
+                            f'{saveTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
             # Save figure
@@ -4026,7 +4042,7 @@ class NGS:
         if self.saveFigures:
             # Define: Save location
             figLabel = (f'{self.enzymeName} - Binned Substrates - {dataType} - '
-                        f'{datasetTag} - MinCounts {self.minCounts}.png')
+                        f'{datasetTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
             # Save figure

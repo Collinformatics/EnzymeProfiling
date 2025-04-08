@@ -16,8 +16,8 @@ from functions import filePaths, NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'your name'
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inEnzymeName = 'Mpro2'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
@@ -39,7 +39,7 @@ inCountsColorMap = ['white','white','lightcoral','red','firebrick','darkred']
 inStDevColorMap = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
 inPrintRF = True
 inPrintES = True
-inPrintEntopy = True
+inPrintEntropy = True
 inPrintMotifData = True
 inPrintNumber = 10
 inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
@@ -48,8 +48,8 @@ inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabiliti
 
 # Input 3: Computational Parameters
 inFilterSubstrates = True
-inFixedResidue = ['L','Q','C']
-inFixedPosition = [3,4,5]
+inFixedResidue = ['L','Q']
+inFixedPosition = [3,4]
 inExcludeResidues = False # Do you want to remove any AAs from your collection of substrate
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
@@ -180,14 +180,16 @@ resetColor = '\033[0m'
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
-          minCounts=inMinimumSubstrateCount, colorsCounts=inCountsColorMap,
-          colorStDev=inStDevColorMap, colorsEM=inEnrichmentColorMap,
-          colorsMotif=inLetterColors, xAxisLabels=inAAPositions,
-          xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
-          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
-          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inFilePath,
-          savePathFigs=inSavePathFigures, setFigureTimer=None)
+          excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
+          excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
+          colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
+          colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
+          xAxisLabels=inAAPositions, xAxisLabelsBinned=inAAPositionsBinned,
+          residueLabelType=inYLabelEnrichmentMap, titleLabelSize=inFigureTitleSize,
+          axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize,
+          printNumber=inPrintNumber, showNValues=inShowSampleSize,
+          saveFigures=inSaveFigures, savePath=inFilePath, savePathFigs=inSavePathFigures,
+          setFigureTimer=None)
 
 
 
@@ -259,11 +261,9 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     # Calculate: Enrichment scores
     fixedFramePopES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
                                               finalSortRF=finalRF,
-                                              fixedSeq=fixedSubSeq,
                                               printES=inPrintES)
     fixedFramePopESAdjusted = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
                                                       finalSortRF=finalRFAdjusted,
-                                                      fixedSeq=fixedSubSeq,
                                                       printES=inPrintES)
 
     # Calculate: Enrichment scores scaled
@@ -377,18 +377,15 @@ def binSubstrates(substrates, datasetTag, index):
 
 # ================================== Evaluate The Data ===================================
 if inFilterSubstrates:
-    fixedSubSeq = ngs.fixSubstrateSequence(exclusion=inExcludeResidues,
-                                           excludeAA=inExcludedResidue,
-                                           excludePosition=inExcludedPosition)
+    fixedSubSeq = ngs.fixSubstrateSequence()
 else:
     fixedSubSeq = None
 
 if inFilterSubstrates and inEvaluateSubstrateEnrichment:
     fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
-        substrates=substratesInitial, minimumCount=inMinimumSubstrateCount,
-        exclusion=inExcludeResidues, excludeAA=inExcludedResidue,
-        excludePositon=inExcludedPosition, fixedString=fixedSubSeq,
+        substrates=substratesInitial, fixedString=fixedSubSeq,
         printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
+
 
 
 # ====================================== Load Data =======================================
@@ -435,7 +432,7 @@ if inFilterSubstrates:
         else:
             countsInitial, countsInitialTotal = ngs.loadCounts(
                 filePath=filePathsInitial, files=inFileNamesInitial,
-                printLoadedData=inPrintCounts, fileType='Initial Sort', fixedSeq=None)
+                printLoadedData=inPrintCounts, fileType='Initial Sort')
             # Calculate RF
             initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
                                         fileType='Initial Sort', printRF=inPrintRF)
@@ -541,8 +538,7 @@ if loadUnfixedSubstrates:
         countsInitial, countsInitialTotal = ngs.loadCounts(filePath=filePathsInitial,
                                                            files=inFileNamesInitial,
                                                            printLoadedData=inPrintCounts,
-                                                           fileType='Initial Sort',
-                                                           fixedSeq=None)
+                                                           fileType='Initial Sort')
         # Calculate RF
         initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
                                     fileType='Initial Sort', printRF=inPrintRF)
@@ -575,8 +571,7 @@ if loadUnfixedSubstrates:
         countsFinal, countsFinalTotal = ngs.loadCounts(filePath=filePathsFinal,
                                                        files=inFileNamesFinal,
                                                        printLoadedData=inPrintCounts,
-                                                       fileType='Final Sort',
-                                                       fixedSeq=None)
+                                                       fileType='Final Sort')
         # Calculate RF
         finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
                                   fileType='Final Sort', printRF=inPrintRF)
@@ -596,9 +591,7 @@ if loadUnfixedSubstrates:
     if inFilterSubstrates:
         # Fix AA
         substratesFinal, countsFinalTotal = ngs.fixResidue(
-            substrates=substratesFinal, minimumCount=inMinimumSubstrateCount,
-            exclusion=inExcludeResidues, excludeAA=inExcludedResidue,
-            excludePositon=inExcludedPosition, fixedString=fixedSubSeq,
+            substrates=substratesFinal, fixedString=fixedSubSeq,
             printRankedSubs=inPrintFixedSubs, sortType='Final Sort')
 
         # Count fixed substrates
@@ -618,7 +611,7 @@ finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
                           fileType='Final Sort', printRF=inPrintRF)
 
 # Calculate: Positional entropy
-positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntopy)
+positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntropy)
 
 
 # Save the data
@@ -830,12 +823,12 @@ if inEvaluateOS:
 if inCompairRF:
     if inFilterSubstrates:
         ngs.compairRF(initialRF=initialRF, finalRF=finalRF, selectAA=inCompairAA,
-                      fixedSeq=fixedSubSeq, titleSize=inFigureTitleSize,
-                      labelSize=inFigureLabelSize, yMax=inCompairYMax, yMin=inCompairYMin)
+                      titleSize=inFigureTitleSize, labelSize=inFigureLabelSize,
+                      yMax=inCompairYMax, yMin=inCompairYMin)
 
         ngs.boxPlotRF(initialRF=initialRF, finalRF=finalRF, selectAA=inCompairAA,
-                      fixedSeq=fixedSubSeq, fixedPos=inFixedPosition,
-                      titleSize=inFigureTitleSize, labelSize=inFigureLabelSize,
+                      fixedPos=inFixedPosition, titleSize=inFigureTitleSize,
+                      labelSize=inFigureLabelSize,
                       yMax=inCompairYMax, yMin=inCompairYMin)
     else:
         print(f'{orange}No residues were fixed, '
@@ -862,7 +855,6 @@ if inPlotEnrichmentMap:
 
     enrichmentScores = ngs.calculateEnrichment(initialSortRF=initialRF,
                                                finalSortRF=finalRF,
-                                               fixedSeq=fixedSubSeq,
                                                printES=inPrintES)
 
     # Plot: Enrichment Map
@@ -937,12 +929,12 @@ if inPlotWeblogoMotif:
 
 if inEvaluateSubstrateEnrichment:
     ngs.substrateEnrichment(initialSubs=substratesInitial, finalSubs=substratesFinal,
-                            fixedSeq=None, NSubs=inNumberOfSavedSubstrates,
+                            NSubs=inNumberOfSavedSubstrates,
                             saveData=inSaveEnrichedSubstrates, savePath=inFilePath)
 
     if inFilterSubstrates:
         ngs.substrateEnrichment(initialSubs=substratesInitial, finalSubs=substratesFinal,
-                                fixedSeq=fixedSubSeq, NSubs=inNumberOfSavedSubstrates,
+                                NSubs=inNumberOfSavedSubstrates,
                                 saveData=inSaveEnrichedSubstrates, savePath=inFilePath)
 
 
