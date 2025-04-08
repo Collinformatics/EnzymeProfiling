@@ -14,10 +14,10 @@ import threading
 
 
 
-# ====================================== User Inputs =====================================
+# ===================================== User Inputs ======================================
 # Input 1: File Location
-inEnzymeName = 'name'
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inEnzymeName = 'Mpro2'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
@@ -29,23 +29,25 @@ inFigureTimer = False
 # Input 2: Experimental Parameters
 inSubstrateLength = len(inAAPositions)
 inSaveScaledEnrichment = False # Saving Scaled Enrichment Values
-# inFixedFramePositions = ['-2', '-1', '0', '1', '2', '3']
-inFixedFramePositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'']
-inFixedFrameLength = len(inFixedFramePositions)
+# inFixedMotifPositions = ['-2', '-1', '0', '1', '2', '3']
+inFixedMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'']
+inFixedMotifLength = len(inFixedMotifPositions)
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
-inFramePositons = [inIndexNTerminus, inIndexNTerminus+inFixedFrameLength-1]
-inAAPositionsBinned = inAAPositions[inFramePositons[0]:inIndexNTerminus+inFixedFrameLength]
+inFramePositions = [inIndexNTerminus, inIndexNTerminus + inFixedMotifLength - 1]
+inAAPositionsBinned = inAAPositions[inFramePositions[0]:
+                                    inIndexNTerminus+inFixedMotifLength]
 
 # ========================================================================================
-print(f'Frame ({len(inFramePositons)}): {inFramePositons}')
+print(f'Frame ({len(inFramePositions)}): {inFramePositions}')
 print(f'Binned ({len(inAAPositionsBinned)}): {inAAPositionsBinned}\n')
 
 
 inIndexNTerminus = 1 # Define the index if the first AA in the binned substrate
-inFramePositons = [inIndexNTerminus, inIndexNTerminus+inFixedFrameLength-1]
-inAAPositionsBinned = inAAPositions[inFramePositons[0]:inIndexNTerminus+inFixedFrameLength]
+inFramePositions = [inIndexNTerminus, inIndexNTerminus + inFixedMotifLength - 1]
+inAAPositionsBinned = inAAPositions[inFramePositions[0]:
+                                    inIndexNTerminus+inFixedMotifLength]
 
-print(f'Frame ({len(inFramePositons)}): {inFramePositons}')
+print(f'Frame ({len(inFramePositions)}): {inFramePositions}')
 print(f'Binned ({len(inAAPositionsBinned)}): {inAAPositionsBinned}\n')
 # ========================================================================================
 
@@ -208,10 +210,10 @@ inSaveBinnedSubES = False
 
 
 
-# ======================================== Set Parameters ========================================
+# ==================================== Set Parameters ====================================
 # Dataset label
 if len(inFixedPosition) == 1:
-    inSubstrateFrame = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
+    inDatasetTag = f'Motif {inFixedResidue[0]}@R{inFixedPosition[0]}'
 else:
     inFixedPosition = sorted(inFixedPosition)
     continuous = True
@@ -223,10 +225,10 @@ else:
             continuous = False
             break
     if continuous:
-        inSubstrateFrame = (f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}-'
+        inDatasetTag = (f'Motif {inFixedResidue[0]}@R{inFixedPosition[0]}-'
                             f'R{inFixedPosition[-1]}')
     else:
-        inSubstrateFrame = (f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}-'
+        inDatasetTag = (f'Motif {inFixedResidue[0]}@R{inFixedPosition[0]}-'
                             f'R{inFixedPosition[1]}, R{inFixedPosition[-1]}')
 
 # Figure parameters
@@ -261,7 +263,7 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 
 
 
-# ======================================= Initialize Class =======================================
+# =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
@@ -277,7 +279,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
 
 
 
-# ========================================== Load Data ===========================================
+# ====================================== Load Data =======================================
 def loadSubstrates(filePath, fileNames, fileType, printLoadedData, result):
     subsLoaded, totalSubs = ngs.loadSubstrates(filePath=filePath,
                                                fileNames=fileNames,
@@ -291,35 +293,36 @@ if inPlotEnrichedSubstrateFrame or inPlotBinnedSubstratePrediction:
     if inPlotBinnedSubstratePrediction:
         if not inPlotEnrichedSubstrateFrame:
             # Define: Save path
-            fileNameFixedSubsInitial = (f'subFrameProb {inEnzymeName} InitialSort '
+            fileNameFixedSubsInitial = (f'subMotifProb {inEnzymeName} InitialSort '
                                         f'{inFixedResidue[0]}@R{inFixedPosition[0]}-'
                                         f'R{inFixedPosition[-1]}')
-            fileNameFixedCountsInitial = (f'subFrameTotalCounts {inEnzymeName} InitialSort '
-                                          f'{inFixedResidue[0]}@R{inFixedPosition[0]}-'
+            fileNameFixedCountsInitial = (f'subMotifTotalCounts {inEnzymeName} '
+                                          f'InitialSort {inFixedResidue[0]}'
+                                          f'@R{inFixedPosition[0]}-'
                                           f'R{inFixedPosition[-1]}.csv')
-            fileNameFixedSubsFinal = (f'subFrameProb {inEnzymeName} FinalSort '
+            fileNameFixedSubsFinal = (f'subMotifProb {inEnzymeName} FinalSort '
                                       f'{inFixedResidue[0]}@R{inFixedPosition[0]}-'
                                       f'R{inFixedPosition[-1]}')
-            saveFileName = (f'binnedSubsES {inEnzymeName} Fixed Frame {inFixedResidue[0]}'
+            saveFileName = (f'binnedSubsES {inEnzymeName} FixedMotif {inFixedResidue[0]}'
                             f'@R{inFixedPosition[0]}-R{inFixedPosition[-1]}')
 
 
             if '/' in inSavePath:
-                filePathFixedFrameInitial = f'{inSavePath}/{fileNameFixedSubsInitial}'
-                filePathFixedFrameInitialTotalCounts = \
+                filePathFixedMotifInitial = f'{inSavePath}/{fileNameFixedSubsInitial}'
+                filePathFixedMotifInitialTotalCounts = \
                     f'{inSavePath}/{fileNameFixedCountsInitial}'
-                filePathFixedFrameFinal = f'{inSavePath}/{fileNameFixedSubsFinal}'
+                filePathFixedMotifFinal = f'{inSavePath}/{fileNameFixedSubsFinal}'
                 filePathBinnedSubsES = f'{inSavePath}/{saveFileName}'
             else:
-                filePathFixedFrameInitial = f'{inSavePath}\\{fileNameFixedSubsInitial}'
-                filePathFixedFrameInitialTotalCounts = \
+                filePathFixedMotifInitial = f'{inSavePath}\\{fileNameFixedSubsInitial}'
+                filePathFixedMotifInitialTotalCounts = \
                     f'{inSavePath}\\{fileNameFixedCountsInitial}'
-                filePathFixedFrameFinal = f'{inSavePath}\\{fileNameFixedSubsFinal}'
+                filePathFixedMotifFinal = f'{inSavePath}\\{fileNameFixedSubsFinal}'
                 filePathBinnedSubsES = f'{inSavePath}\\{saveFileName}'
 
             if (os.path.exists(filePathBinnedSubsES)
-                    or os.path.exists(filePathFixedFrameInitial)
-                    or os.path.exists(filePathFixedFrameFinal)):
+                    or os.path.exists(filePathFixedMotifInitial)
+                    or os.path.exists(filePathFixedMotifFinal)):
                 loadInitialSubs = False
 
     if loadInitialSubs:
@@ -361,8 +364,8 @@ if missingFile:
     print('\033[91mERROR: File not found at path:')
     for indexMissing in indexMissingFile:
         print(f'     {filePathsInitial[indexMissing]}')
-    print(f'\nMake sure your path is correctly named, and that you have already extracted and '
-          f'counted your NGS data\n')
+    print(f'\nMake sure your path is correctly named, and that you have already '
+          f'extracted and counted your NGS data\n')
     sys.exit()
 else:
     countsInitial, totalSubsInitial = ngs.loadCounts(filePath=filePathsInitial,
@@ -376,38 +379,39 @@ else:
 
     RFsum = np.sum(initialRF, axis=1)
     initialRFAvg = RFsum / len(initialRF.columns)
-    initialRFAvg = pd.DataFrame(initialRFAvg, index=initialRFAvg.index, columns=['Average RF'])
+    initialRFAvg = pd.DataFrame(initialRFAvg, index=initialRFAvg.index, 
+                                columns=['Average RF'])
 
 
 
 
-# ======================================= Define Functions =======================================
+# =================================== Define Functions ===================================
 def pressKey(event):
     if event.key == 'escape':
         plt.close()
 
 
 
-def loadSubstratesFixedFrame():
-    fixedFrameSubs = []
+def loadSubstratesFixedMotif():
+    fixedMotifSubs = []
     for index in range(len(inFixedPosition)):
-        print('============================== Load: Fixed Frame Substrates '
-              '=============================')
+        print('========================= Load: Fixed Motif Substrates '
+              '==========================')
 
         # Define: File path
         frame = f'{inFixedResidue[0]}@R{inFixedPosition[index]}'
-        labelTag = (f'{inEnzymeName}_FixedFrame_{frame}_'
+        labelTag = (f'{inEnzymeName}_FixedMotif_{frame}_'
                     f'MinCounts {inMinimumSubstrateCount}')
-        filePathFixedFrameSubs = os.path.join(inFilePath,
+        filePathFixedMotifSubs = os.path.join(inFilePath,
                                               f'fixedSubs_{labelTag}')
         print(f'Loading substrates at path:\n'
-              f'     {greenDark}{filePathFixedFrameSubs}{resetColor}\n')
+              f'     {greenDark}{filePathFixedMotifSubs}{resetColor}\n')
 
 
         # Load Data: Fixed substrates
-        with open(filePathFixedFrameSubs, 'rb') as file:
+        with open(filePathFixedMotifSubs, 'rb') as file:
             loadedSubs = pk.load(file)
-        fixedFrameSubs.append(loadedSubs)
+        fixedMotifSubs.append(loadedSubs)
         print(f'Fixed Frame:{purple} {frame}{resetColor}')
         iteration = 0
         for substrate, count in loadedSubs.items():
@@ -421,17 +425,16 @@ def loadSubstratesFixedFrame():
         # PCA: On a single fixed frame
         if inPCAIndividual:
             # Convert substrate data to numerical
-            tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=loadedSubs,
-                                                       collectionNumber=inTotalSubsPCA,
-                                                       useSubCounts=inEncludeSubstrateCounts,
-                                                       subPositions=inAAPositions,
-                                                       datasetTag=frame)
+            tokensESM, subsESM, subCountsESM = ngs.ESM(
+                substrates=loadedSubs, collectionNumber=inTotalSubsPCA,
+                useSubCounts=inEncludeSubstrateCounts, subPositions=inAAPositions,
+                datasetTag=frame)
 
             # Cluster substrates
-            subPopulations = ngs.PCA(substrates=loadedSubs, data=tokensESM, indices=subsESM,
-                                     numberOfPCs=inNumberOfPCs, fixedTag=inSubstrateFrame,
-                                     N=subCountsESM, fixedSubs=True, figSize=inFigureSize,
-                                     saveTag=inSubstrateFrame)
+            subPopulations = ngs.PCA(
+                substrates=loadedSubs, data=tokensESM, indices=subsESM,
+                numberOfPCs=inNumberOfPCs, fixedTag=inDatasetTag, N=subCountsESM, 
+                fixedSubs=True, figSize=inFigureSize, saveTag=inDatasetTag)
 
             # Plot: Substrate clusters
             if (inPlotEnrichmentMapPCA or inPlotEnrichmentMotifPCA
@@ -442,35 +445,35 @@ def loadSubstratesFixedFrame():
                     plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
                                              numClusters=clusterCount)
 
-    return fixedFrameSubs
+    return fixedMotifSubs
 
 
 
 def fixInitialSubs(substrates):
-    print('================================ Fix: Initial Substrates '
-          '================================')
+    print('============================ Fix: Initial Substrates '
+          '============================')
     print(f'Substrate Frames:{purple} Initial Sort{resetColor}')
 
-    subFrameInitial = {}
+    subMotifInitial = {}
     numberOfSubs = 0
 
     for substrate in substrates:
         for indexFrame in range(len(inFixedPosition)):
-            subFrame = substrate[inFramePositons[0]+indexFrame:
-                                 inFramePositons[-1]+indexFrame]
-            if subFrame in subFrameInitial:
-                subFrameInitial[subFrame] += 1
+            subMotif = substrate[inFramePositions[0] + indexFrame:
+                                 inFramePositions[-1] + indexFrame]
+            if subMotif in subMotifInitial:
+                subMotifInitial[subMotif] += 1
             else:
-                subFrameInitial[subFrame] = 1
+                subMotifInitial[subMotif] = 1
             numberOfSubs += 1
 
     # Sort the substrate frames
-    subFrameInitial = dict(sorted(subFrameInitial.items(),
+    subMotifInitial = dict(sorted(subMotifInitial.items(),
                                   key=lambda x: x[1], reverse=True))
 
     # Print the substrat frames
     iteration = 0
-    for substrate, counts in subFrameInitial.items():
+    for substrate, counts in subMotifInitial.items():
         print(f'{green} {substrate}{resetColor}, {pink}{counts}')
         if iteration == inPrintNumber:
             print(f'{resetColor}\n')
@@ -478,7 +481,7 @@ def fixInitialSubs(substrates):
         else:
             iteration += 1
 
-    return subFrameInitial, numberOfSubs
+    return subMotifInitial, numberOfSubs
 
 
 
@@ -488,7 +491,7 @@ def trimSubstrates():
     trimedSubs = {}
     for index, substrate in enumerate(inSubsPredict):
         trimedSub = substrate[inSubsPredictStartIndex:
-                              inFixedFrameLength+inSubsPredictStartIndex]
+                              inFixedMotifLength+inSubsPredictStartIndex]
         print(f'Substrate:{pink} {substrate}{resetColor}\n'
               f'     Sub:{yellow} {trimedSub}{resetColor}')
         if trimedSub in trimedSubs:
@@ -505,13 +508,13 @@ def substrateProbability(substrates, N, sortType):
           '============================')
     print(f'Substrate Frames:{purple} {sortType}')
 
-    subFrameProb = {}
+    subMotifProb = {}
     for substrate, count in substrates.items():
-        subFrameProb[substrate] = count / N
+        subMotifProb[substrate] = count / N
 
     iteration = 0
 
-    for substrate, count in subFrameProb.items():
+    for substrate, count in subMotifProb.items():
         print(f'{green}{substrate}{resetColor}, {pink}{count}')
         if iteration == inPrintNumber:
             print(f'{resetColor}\n')
@@ -519,11 +522,11 @@ def substrateProbability(substrates, N, sortType):
         else:
             iteration += 1
 
-    return subFrameProb
+    return subMotifProb
 
 
 
-def subFrameEnrichment(substratesInitial, initialN, substratesFinal):
+def subMotifEnrichment(substratesInitial, initialN, substratesFinal):
     print('============================ Calcualte: Substrate Enrichment '
           '============================')
     decimals = 3
@@ -567,8 +570,8 @@ def subFrameEnrichment(substratesInitial, initialN, substratesFinal):
 
 
 def predictActivity(substrates, predictionMatrix, normalizeValues, matrixType):
-    print('=================================== Predict Activity '
-          '====================================')
+    print('=============================== Predict Activity '
+          '================================')
     print(f'Matrix Type:{white} {matrixType}\n'
           f'{predictionMatrix}{resetColor}\n')
     maxScore = 0
@@ -576,7 +579,7 @@ def predictActivity(substrates, predictionMatrix, normalizeValues, matrixType):
     for substrate in substrates:
         score = 0
         for index, AA in enumerate(substrate):
-            position = inFixedFramePositions[index]
+            position = inFixedMotifPositions[index]
             score += predictionMatrix.loc[AA, position]
         substrates[substrate] = score
         if score > maxScore:
@@ -613,8 +616,8 @@ def predictActivity(substrates, predictionMatrix, normalizeValues, matrixType):
 
 
 def generateKinetics(predictions):
-    print('============================== Evalute Prediction Accuracy '
-          '==============================')
+    print('========================= Evaluate Prediction Accuracy '
+          '==========================')
     # Create random kinetics data
     kinetics = {}
     maxScore = 0
@@ -673,17 +676,17 @@ def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotdataPCA
         yTickMin = inYTickMinScaled
         if plotdataPCA:
             title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
-                     f'{inSubstrateFrame}\nScaled Enrichment Scores')
+                     f'{inDatasetTag}\nScaled Enrichment Scores')
         else:
-            title = f'{inEnzymeName}\n{inSubstrateFrame}\nScaled Enrichment Scores'
+            title = f'{inEnzymeName}\n{inDatasetTag}\nScaled Enrichment Scores'
     else:
         yMin = inYMinPred
         yTickMin = inYTickMinPred
         if plotdataPCA:
             title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
-                     f'{inSubstrateFrame}\nEnrichment Scores')
+                     f'{inDatasetTag}\nEnrichment Scores')
         else:
-            title = f'{inEnzymeName}\n{inSubstrateFrame}\nEnrichment Scores'
+            title = f'{inEnzymeName}\n{inDatasetTag}\nEnrichment Scores'
 
 
     # Plot the data
@@ -752,8 +755,8 @@ def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotdataPCA
 
 
 
-def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop, plotReleasedCounts,
-              addLines, motifType):
+def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop, 
+              plotReleasedCounts, addLines, motifType):
     # Set local parameters
     try:
         if bigLettersOnTop:
@@ -815,15 +818,15 @@ def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop, plot
                                width=0.95, stack_order=stackOrder)
         if 'Scaled' in motifType:
             lefts = [0.131, 0.119]
-            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], left=lefts[index],
-                                right=figBorders[3])
+            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], 
+                                left=lefts[index], right=figBorders[3])
         elif 'Enrichment' in motifType:
             lefts = [0.117, 0.117]
-            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], left=lefts[index],
-                                right=figBorders[3])
+            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], 
+                                left=lefts[index], right=figBorders[3])
         else:
-            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], left=figBorders[2],
-                                right=figBorders[3])
+            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], 
+                                left=figBorders[2], right=figBorders[3])
 
         # Set figure title
         if inShowSampleSize:
@@ -870,19 +873,21 @@ def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop, plot
         # Set yticks
         if 'Enrichment' in motifType:
             yTicks = [yMin, 0, yMax]
-            yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}' for tick in yTicks]
+            yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}' 
+                           for tick in yTicks]
             yLimitUpper = yMax
             yLimitLower = yMin
         else:
             yTicks = range(0, 5)
-            yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}' for tick in yTicks]
+            yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}' 
+                           for tick in yTicks]
             yLimitUpper = 4.32
             yLimitLower = 0
         motif.ax.set_yticks(yTicks)
         motif.ax.set_yticklabels(yTickLabels, fontsize=inFigureTickSize)
         motif.ax.set_ylim(0, yLimitUpper)
         for tick in motif.ax.yaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(inLineThickness)  # Set tick width
+            tick.tick1line.set_markeredgewidth(inLineThickness) # Set tick width
 
         # Label the axes
         motif.ax.set_xlabel('Position', fontsize=inFigureLabelSize)
@@ -958,7 +963,8 @@ def plotPredictionStats(data, predictionType):
     fig, ax = plt.subplots(figsize=inFigureSize)
     bars = ax.bar(substrates, avgScores, yerr=stDev, color='white', width=inBarWidth)
     ax.errorbar(substrates, avgScores, yerr=stDev, fmt='none',
-                ecolor='black', elinewidth=inLineThickness, capsize=5, capthick=inLineThickness)
+                ecolor='black', elinewidth=inLineThickness, 
+                capsize=5, capthick=inLineThickness)
     plt.axhline(y=0, color='black', linewidth=inLineThickness)
     plt.ylabel('Average Activity Score', fontsize=inFigureLabelSize)
     plt.title(f'{inEnzymeName}\n'
@@ -991,8 +997,8 @@ def plotPredictionStats(data, predictionType):
 
 
 def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
-    print('=============================== Predict Enrichment Scores '
-          '===============================')
+    print('=========================== Predict Enrichment Scores '
+          '===========================')
     print(f'Number of Unique Enriched Subs:'
           f'{white} {len(substratesEnriched):,}{resetColor}\n\n'
           f'Matrix:{pink} {matrixType}{green}\n{matrix}{resetColor}\n\n')
@@ -1003,7 +1009,7 @@ def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
     for substrate, score in substratesEnriched.items():
         substrateScorePredicted = 0
         for index, AA, in enumerate(substrate):
-            valueAA = matrix.loc[AA, inFixedFramePositions[index]]
+            valueAA = matrix.loc[AA, inFixedMotifPositions[index]]
 
             # # Increase weight:
             # if 1 >= abs(valueAA):
@@ -1251,7 +1257,8 @@ def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
         for substrate, scores in substrates.items():
             iteration += 1
             valueEnrichment, valuePredicted = scores[0], scores[1]
-            if inExperimentalESUpperLimit >= valueEnrichment >= inExperimentalESLowerLimit:
+            if (inExperimentalESUpperLimit >= valueEnrichment >= 
+                    inExperimentalESLowerLimit):
                 if iteration % 10 == 0:
                     difference = valueEnrichment - valuePredicted
                     print(f'{green}{substrate}{resetColor}\n'
@@ -1310,8 +1317,8 @@ def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
     if inPlotSubstrateText:
         # Annotate the points with the substrate names (optional)
         for substrate, (x, y) in substrates.items():
-            ax.annotate(substrate, (x, y), textcoords="offset points", xytext=(0, 10),
-                        ha='center')
+            ax.annotate(substrate, (x, y), textcoords="offset points", 
+                        xytext=(0, 10), ha='center')
 
     # Set tick parameters
     ax.tick_params(axis='both', which='major', length=inTickLength,
@@ -1328,8 +1335,8 @@ def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
 
 
 def plotFACSData():
-    print('================================= Measured FACS Activity '
-          '================================')
+    print('============================ Measured FACS Activity '
+          '=============================')
     # Define the data
     substrates = ['VVLQSGFR', 'VVLQSPFR', 'VYLQSGFR', 'VVLQAGFR', 'VVMQSGFR',
                   'IVLQSGFR', 'VVLHSGFR', 'VGLQSGFR', 'VVLMSGFR', 'VVVQSGFR',
@@ -1396,8 +1403,8 @@ def plotFACSData():
 
 
 def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
-    print('==================================== Plot PC Clusters '
-          '===================================')
+    print('=============================== Plot PC Clusters '
+          '================================')
     print(f'Cluster Number:{white} {clusterIndex + 1}{resetColor}\n'
           f'     Total Clusters:{white} {numClusters}{resetColor}\n\n')
 
@@ -1405,21 +1412,21 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     # Define figure titles
     if numClusters == 1:
         figureTitleEM = (f'{inTitleEnrichmentMap}: PCA Population\n'
-                         f'{inSubstrateFrame}')
+                         f'{inDatasetTag}')
         figureTitleMotif = (f'{inTitleMotif}: PCA Population\n'
-                            f'{inSubstrateFrame}')
+                            f'{inDatasetTag}')
         figureTitleWordCloud = (f'{inTitleEnrichmentMap}: PCA Population\n'
-                                f'{inSubstrateFrame}')
-        datasetTag = f'PCA Pop - {inSubstrateFrame}'
+                                f'{inDatasetTag}')
+        datasetTag = f'PCA Pop - {inDatasetTag}'
     else:
         figureTitleEM = (f'{inTitleEnrichmentMap}: PCA Population {clusterIndex + 1}\n'
-                         f'{inSubstrateFrame}')
+                         f'{inDatasetTag}')
         figureTitleMotif = (f'{inTitleMotif}: PCA Population {clusterIndex + 1}\n'
-                            f'{inSubstrateFrame}')
+                            f'{inDatasetTag}')
         figureTitleWordCloud = (f'{inTitleEnrichmentMap}: '
                                 f'PCA Population {clusterIndex + 1}\n'
-                                f'{inSubstrateFrame}')
-        datasetTag = f'PCA Pop {clusterIndex + 1} - {inSubstrateFrame}'
+                                f'{inDatasetTag}')
+        datasetTag = f'PCA Pop {clusterIndex + 1} - {inDatasetTag}'
 
     # Count fixed substrates
     countFullSubstrate = False
@@ -1428,10 +1435,10 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
             substrates=clusterSubs, positions=inAAPositions, printCounts=inPrintCounts)
     else:
         countsFinal, countsFinalTotal = ngs.countResiduesBinned(
-            substrates=clusterSubs, positions=inFixedFramePositions,
+            substrates=clusterSubs, positions=inFixedMotifPositions,
             printCounts=inPrintCounts)
     ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
-                         printCounts=inPrintSampleSize, fixedTag=inSubstrateFrame)
+                         printCounts=inPrintSampleSize, fixedTag=inDatasetTag)
 
     # Adjust the zero counts at nonfixed positions
     countsFinalAdjusted = countsFinal.copy()
@@ -1453,71 +1460,62 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntropy)
     if inPlotPositionalEntropyPCAPopulations:
         # Plot: Positional entropy
-        ngs.plotPositionalEntropy(entropy=positionalEntropy,
-                                  fixedDataset=inFixResidues, fixedTag=inSubstrateFrame,
-                                  titleSize=inFigureTitleSize, avgDelta=False)
+        ngs.plotPositionalEntropy(
+            entropy=positionalEntropy, fixedDataset=inFixResidues, 
+            fixedTag=inDatasetTag, titleSize=inFigureTitleSize, avgDelta=False)
 
 
     # Calculate: Enrichment scores
-    fixedFramePopES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
+    fixedMotifPopES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
                                               finalSortRF=finalRF,
                                               printES=inPrintES)
-    fixedFramePopESAdjusted = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
+    fixedMotifPopESAdjusted = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
                                                       finalSortRF=finalRFAdjusted,
                                                       printES=inPrintES)
 
     # Calculate: Enrichment scores scaled
-    fixedFramePCAESScaled = pd.DataFrame(0.0, index=fixedFramePopES.index,
-                                        columns=fixedFramePopES.columns)
-    fixedFramePCAESScaledAdjusted = pd.DataFrame(0.0, index=fixedFramePopES.index,
-                                                columns=fixedFramePopES.columns)
+    fixedMotifPCAESScaled = pd.DataFrame(0.0, index=fixedMotifPopES.index,
+                                        columns=fixedMotifPopES.columns)
+    fixedMotifPCAESScaledAdjusted = pd.DataFrame(0.0, index=fixedMotifPopES.index,
+                                                columns=fixedMotifPopES.columns)
 
     # Scale enrichment scores with Shannon Entropy
     print(f'Entropy:\n{positionalEntropy}\n\n')
-    for positon in fixedFramePopES.columns:
-        fixedFramePCAESScaled.loc[:, positon] = (fixedFramePopES.loc[:, positon] *
+    for positon in fixedMotifPopES.columns:
+        fixedMotifPCAESScaled.loc[:, positon] = (fixedMotifPopES.loc[:, positon] *
                                                 positionalEntropy.loc[
                                                 positon, 'ΔEntropy'])
-        fixedFramePCAESScaledAdjusted.loc[:, positon] = (
-                fixedFramePopESAdjusted.loc[:, positon] *
+        fixedMotifPCAESScaledAdjusted.loc[:, positon] = (
+                fixedMotifPopESAdjusted.loc[:, positon] *
                 positionalEntropy.loc[positon, 'ΔEntropy'])
-    print(f'Motif: Scaled\n{fixedFramePCAESScaled}\n\n')
-    yMax = max(fixedFramePCAESScaled[fixedFramePopES > 0].sum())
-    yMin = min(fixedFramePCAESScaled[fixedFramePopES < 0].sum())
+    print(f'Motif: Scaled\n{fixedMotifPCAESScaled}\n\n')
+    yMax = max(fixedMotifPCAESScaled[fixedMotifPopES > 0].sum())
+    yMin = min(fixedMotifPCAESScaled[fixedMotifPopES < 0].sum())
 
 
     # # Plot data
     if inPlotEnrichmentMapPCA:
         # Plot: Enrichment Map
-        ngs.plotEnrichmentScores(scores=fixedFramePopESAdjusted,
-                                 motifType='Enrichment',
-                                 figSize=figSizeEM,
-                                 figBorders=figBordersEM,
-                                 title=f'{figureTitleEM}\nEnrichment Scores',
-                                 showScores=inShowEnrichmentScores,
-                                 squares=inShowEnrichmentAsSquares,
-                                 saveTag=datasetTag,
-                                 motifFilter=False,
-                                 initialFrame=True,
-                                 duplicateFigure=False)
+        ngs.plotEnrichmentScores(
+            scores=fixedMotifPopESAdjusted, motifType='Enrichment', figSize=figSizeEM,
+            figBorders=figBordersEM, title=f'{figureTitleEM}\nEnrichment Scores',
+            showScores=inShowEnrichmentScores, squares=inShowEnrichmentAsSquares,
+            saveTag=datasetTag, motifFilter=False, initialFrame=True, 
+            duplicateFigure=False)
 
         # Plot: Enrichment Map Scaled
-        ngs.plotEnrichmentScores(scores=fixedFramePCAESScaledAdjusted,
-                                 motifType='Scaled Enrichment',
-                                 figSize=figSizeEM,
-                                 figBorders=figBordersEM,
-                                 title=f'{figureTitleEM}\nScaled Enrichment Scores',
-                                 showScores=inShowEnrichmentScores,
-                                 squares=inShowEnrichmentAsSquares,
-                                 saveTag=datasetTag,
-                                 motifFilter=False,
-                                 initialFrame=True,
-                                 duplicateFigure=False)
+        ngs.plotEnrichmentScores(
+            scores=fixedMotifPCAESScaledAdjusted, motifType='Scaled Enrichment',
+            figSize=figSizeEM, figBorders=figBordersEM, 
+            title=f'{figureTitleEM}\nScaled Enrichment Scores', 
+            showScores=inShowEnrichmentScores, squares=inShowEnrichmentAsSquares,
+            saveTag=datasetTag, motifFilter=False, initialFrame=True, 
+            duplicateFigure=False)
 
     if inPlotEnrichmentMotifPCA:
         if inAdjustZeroCounts:
             # Plot: Sequence Motif
-            ngs.plotMotif(data=fixedFramePCAESScaled.copy(),
+            ngs.plotMotif(data=fixedMotifPCAESScaled.copy(),
                           motifType='Scaled Enrichment',
                           bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize, 
                           figBorders=inFigureBordersEnrichmentMotif,
@@ -1543,21 +1541,21 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
 
         # Predict: Enrichment
         subsPredict, yMax, yMin = predictActivity(
-            substrates=subsPredict, predictionMatrix=fixedFramePopESAdjusted,
+            substrates=subsPredict, predictionMatrix=fixedMotifPopESAdjusted,
             normalizeValues=inNormalizePredictions, matrixType='Enrichment Scores')
         plotSubstratePrediction(substrates=subsPredict, predictValues=True,
                                 scaledMatrix=False, plotdataPCA=True, popPCA=clusterIndex)
 
         # Predict: Scaled Enrichment
         subsPredictScaled, yMax, yMin = predictActivity(
-            substrates=subsPredict, predictionMatrix=fixedFramePCAESScaledAdjusted,
+            substrates=subsPredict, predictionMatrix=fixedMotifPCAESScaledAdjusted,
             normalizeValues=inNormalizePredictions, matrixType='Scaled Enrichment Scores')
         plotSubstratePrediction(substrates=subsPredictScaled, predictValues=True,
                                 scaledMatrix=True, plotdataPCA=True, popPCA=clusterIndex)
 
 
 
-# ========================================= Run The Code =========================================
+# ===================================== Run The Code =====================================
 # Set flag
 subsPredict = None
 if inPredictSubstrateActivityPCA:
@@ -1568,16 +1566,16 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
         or inPlotBinnedSubstratePrediction):
 
     # Load: Counts
-    (fixedFrameCounts,
-     fixedFrameCountsTotal) = ngs.loadFixedFrameCounts(
-        filePath=inFilePath, substrateFrame=inFixedFramePositions,
-        substrateFrameAAPos=inAAPositionsBinned, frameIndices=inFramePositons,
-        datasetTag=inSubstrateFrame)
+    (fixedMotifCounts,
+     fixedMotifCountsTotal) = ngs.loadFixedMotifCounts(
+        filePath=inFilePath, substrateFrame=inFixedMotifPositions,
+        substrateFrameAAPos=inAAPositionsBinned, frameIndices=inFramePositions,
+        datasetTag=inDatasetTag)
 
     # Calculate: Probability & Entropy
-    fixedFrameProb = ngs.calculateFixedFrameRF(countsTotal=fixedFrameCountsTotal,
-                                               datasetTag=inSubstrateFrame)
-    positionalEntropy = ngs.calculateEntropy(RF=fixedFrameProb,
+    fixedMotifProb = ngs.calculateFixedMotifRF(countsTotal=fixedMotifCountsTotal,
+                                               datasetTag=inDatasetTag)
+    positionalEntropy = ngs.calculateEntropy(RF=fixedMotifProb,
                                              printEntropy=inPrintEntropy)
 
     # Calculate: Enrichment Scores
@@ -1585,106 +1583,106 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
             or inPlotEnrichmentMotif or inPlotBinnedSubstrates
             or inPlotBinnedSubstratePrediction):
         fixedSubSeq = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
-        fixedFrameES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
-                                               finalSortRF=fixedFrameProb,
+        fixedMotifES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
+                                               finalSortRF=fixedMotifProb,
                                                printES=inPrintES)
-        fixedFrameESScaled = pd.DataFrame(0.0, index=fixedFrameES.index,
-                                          columns=fixedFrameES.columns)
-        for positon in fixedFrameES.columns:
-            fixedFrameESScaled.loc[:, positon] = (fixedFrameES.loc[:, positon] *
+        fixedMotifESScaled = pd.DataFrame(0.0, index=fixedMotifES.index,
+                                          columns=fixedMotifES.columns)
+        for positon in fixedMotifES.columns:
+            fixedMotifESScaled.loc[:, positon] = (fixedMotifES.loc[:, positon] *
                                                   positionalEntropy.loc[
                                                       positon, 'ΔEntropy'])
 
         # Calculate: Test ES matrix
-        fixedFrameESTest = ngs.calculateEnrichmentTest(initialSortRF=initialRFAvg,
-                                                       finalSortRF=fixedFrameProb,
+        fixedMotifESTest = ngs.calculateEnrichmentTest(initialSortRF=initialRFAvg,
+                                                       finalSortRF=fixedMotifProb,
                                                        printES=inPrintES)
 
 
 # # Plot Data
 if inPlotEnrichmentMap:
-    # plotES = pd.DataFrame(-math.inf, index=fixedFrameES.index,
-    #                       columns=fixedFrameES.columns)
+    # plotES = pd.DataFrame(-math.inf, index=fixedMotifES.index,
+    #                       columns=fixedMotifES.columns)
     # addData = [3, 2, 4, 0, 1]
     # for column in addData:
-    #     plotES.iloc[:, column] = fixedFrameES.iloc[:, column]
+    #     plotES.iloc[:, column] = fixedMotifES.iloc[:, column]
     #     # Plot: Enrichment Map
     #     ngs.plotEnrichmentScores(scores=plotES,
     #                              motifType='Enrichment',
     #                              figSize=figSizeEM,
     #                              figBorders=figBordersEM,
-    #                              title=f'{inTitleEnrichmentMap}\n{inSubstrateFrame}\n'
+    #                              title=f'{inTitleEnrichmentMap}\n{inDatasetTag}\n'
     #                                    f'Enrichment Scores',
     #                              showScores=inShowEnrichmentScores,
     #                              squares=inShowEnrichmentAsSquares,
-    #                              saveTag=inSubstrateFrame,
+    #                              saveTag=inDatasetTag,
     #                              motifFilter=False,
     #                              initialFrame=True,
     #                              duplicateFigure=False)
 
     # Plot: Enrichment Map
-    ngs.plotEnrichmentScores(scores=fixedFrameES.copy(),
+    ngs.plotEnrichmentScores(scores=fixedMotifES.copy(),
                              motifType='Enrichment',
                              figSize=figSizeEM,
                              figBorders=figBordersEM,
-                             title=f'{inTitleEnrichmentMap}\n{inSubstrateFrame}\n'
+                             title=f'{inTitleEnrichmentMap}\n{inDatasetTag}\n'
                                    f'Enrichment Scores',
                              showScores=inShowEnrichmentScores,
                              squares=inShowEnrichmentAsSquares,
-                             saveTag=inSubstrateFrame,
+                             saveTag=inDatasetTag,
                              motifFilter=False,
                              initialFrame=True,
                              duplicateFigure=False)
 
     # Calculate: Stats
     if len(inFixedPosition) != 1:
-        ngs.fixedFrameStats(countsList=fixedFrameCounts,
+        ngs.fixedMotifStats(countsList=fixedMotifCounts,
                             initialProb=initialRFAvg,
-                            substrateFrame=inFixedFramePositions,
+                            substrateFrame=inFixedMotifPositions,
                             figSize=inFigureSize,
-                            datasetTag=inSubstrateFrame)
+                            datasetTag=inDatasetTag)
 
     # Plot: Enrichment Map - Scaled
-    ngs.plotEnrichmentScores(scores=fixedFrameESScaled.copy(),
+    ngs.plotEnrichmentScores(scores=fixedMotifESScaled.copy(),
                              motifType='Scaled Enrichment',
                              figSize=figSizeEM,
                              figBorders=figBordersEM,
-                             title=f'{inTitleEnrichmentMap}\n{inSubstrateFrame}\n'
+                             title=f'{inTitleEnrichmentMap}\n{inDatasetTag}\n'
                                    f'Scaled Enrichment Scores',
                              showScores=inShowEnrichmentScores,
                              squares=inShowEnrichmentAsSquares,
-                             saveTag=inSubstrateFrame,
+                             saveTag=inDatasetTag,
                              motifFilter=False,
                              initialFrame=True,
                              duplicateFigure=False)
 
 
 if inPlotEnrichmentMotif:
-    yMax = max(fixedFrameESScaled[fixedFrameESScaled > 0].sum())
-    yMin = min(fixedFrameESScaled[fixedFrameESScaled < 0].sum())
+    yMax = max(fixedMotifESScaled[fixedMotifESScaled > 0].sum())
+    yMin = min(fixedMotifESScaled[fixedMotifESScaled < 0].sum())
 
     # Plot: Sequence Motif
-    ngs.plotMotif(data=fixedFrameESScaled.copy(), motifType='Scaled Enrichment', 
+    ngs.plotMotif(data=fixedMotifESScaled.copy(), motifType='Scaled Enrichment', 
                   bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                   figBorders=inFigureBordersEnrichmentMotif,
-                  title=f'{inTitleMotif}\n{inSubstrateFrame}',
+                  title=f'{inTitleMotif}\n{inDatasetTag}',
                   titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
                   lines=inAddHorizontalLines, motifFilter=False, initialFrame=False,
-                  duplicateFigure=False, saveTag=inSubstrateFrame)
+                  duplicateFigure=False, saveTag=inDatasetTag)
 
     # Plot: Sequence Motif
-    ngs.plotMotif(data=fixedFrameESScaled.copy(), motifType='Scaled Enrichment',
+    ngs.plotMotif(data=fixedMotifESScaled.copy(), motifType='Scaled Enrichment',
                   bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                   figBorders=inFigureBordersEnrichmentMotif,
-                  title=f'{inTitleMotif}\n{inSubstrateFrame}',
+                  title=f'{inTitleMotif}\n{inDatasetTag}',
                   titleSize=inFigureTitleSize, yMax=yMax, yMin=0, yBoundary=2,
                   lines=inAddHorizontalLines, motifFilter=False, initialFrame=False,
-                  duplicateFigure=False, saveTag=f'Y Min - {inSubstrateFrame}')
+                  duplicateFigure=False, saveTag=f'Y Min - {inDatasetTag}')
 
 
 if inPlotWeblogoMotif:
     releasedRFscaled, fixedAA, yMax, yMin = ngs.heightsRF(
-        counts=fixedFrameCountsTotal.copy(), N=fixedFrameCountsTotal,
+        counts=fixedMotifCountsTotal.copy(), N=fixedMotifCountsTotal,
         invertRF=False, printRF=inPrintMotifData)
 
     if inShowWeblogoYTicks:
@@ -1693,19 +1691,19 @@ if inPlotWeblogoMotif:
         ngs.plotMotif(data=releasedRFscaled.copy(), motifType='Weblogo',
                       bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                       figBorders=inFigureBordersEnrichmentMotif,
-                      title=f'{inTitleMotif}\n{inSubstrateFrame}',
+                      title=f'{inTitleMotif}\n{inDatasetTag}',
                       titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=0,
                       lines=inAddHorizontalLines, motifFilter=False, initialFrame=False,
-                      duplicateFigure=False, saveTag=inSubstrateFrame)
+                      duplicateFigure=False, saveTag=inDatasetTag)
     else:
         # Plot: Sequence Motif
         ngs.plotMotif(data=releasedRFscaled.copy(), motifType='Weblogo',
                       bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                       figBorders=inFigureBordersEnrichmentMotif,
-                      title=f'{inTitleMotif}\n{inSubstrateFrame}',
+                      title=f'{inTitleMotif}\n{inDatasetTag}',
                       titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
                       lines=inAddHorizontalLines, motifFilter=False,
-                      initialFrame=False, duplicateFigure=False, saveTag=inSubstrateFrame)
+                      initialFrame=False, duplicateFigure=False, saveTag=inDatasetTag)
 
 
 # Plot: Measured FACS activity
@@ -1721,19 +1719,18 @@ if inPredictSubstrateActivity:
 
     # Predict: Enrichment
     subsPredict, yMax, yMin = predictActivity(substrates=subsPredict.copy(),
-                                              predictionMatrix=fixedFrameES,
+                                              predictionMatrix=fixedMotifES,
                                               normalizeValues=inNormalizePredictions,
                                               matrixType='Enrichment Scores')
-    plotSubstratePrediction(substrates=subsPredict, predictValues=True, scaledMatrix=False,
-                            plotdataPCA=False, popPCA=None)
+    plotSubstratePrediction(substrates=subsPredict, predictValues=True, 
+                            scaledMatrix=False, plotdataPCA=False, popPCA=None)
 
     # Predict: Scaled Enrichment
-    subsPredictScaled, yMax, yMin = predictActivity(substrates=subsPredict.copy(),
-                                                    predictionMatrix=fixedFrameESScaled,
-                                                    normalizeValues=inNormalizePredictions,
-                                                    matrixType='Scaled Enrichment Scores')
-    plotSubstratePrediction(substrates=subsPredictScaled, predictValues=True, scaledMatrix=True,
-                            plotdataPCA=False, popPCA=None)
+    subsPredictScaled, yMax, yMin = predictActivity(
+        substrates=subsPredict.copy(), predictionMatrix=fixedMotifESScaled,
+        normalizeValues=inNormalizePredictions, matrixType='Scaled Enrichment Scores')
+    plotSubstratePrediction(substrates=subsPredictScaled, predictValues=True, 
+                            scaledMatrix=True, plotdataPCA=False, popPCA=None)
 
     # Predict: AI
     subsPredictAI = {
@@ -1780,19 +1777,20 @@ if inPredictSubstrateActivity:
             if iteration == subLimit:
                 break
         subsPredictAI = subSubSet
-    # plotSubstratePrediction(substrates=subsPredictAI, predictValues=False, scaledMatrix=True,
-    #                         plotdataPCA=False, popPCA=None)
+    # plotSubstratePrediction(substrates=subsPredictAI, predictValues=False, 
+    #                         scaledMatrix=True, plotdataPCA=False, popPCA=None)
 
 
     # Evaluate predictions
     if inEvaluatePredictions:
-        # simKinetics = generateKinetics(predictions=subsPredict)
-        # plotPredictionAccuracy(data=simKinetics, predictionType='Enrichment')
-        # plotPredictionStats(data=simKinetics, predictionType='Enrichment')
+        simKinetics = generateKinetics(predictions=subsPredict)
+        plotPredictionAccuracy(data=simKinetics, predictionType='Enrichment')
+        plotPredictionStats(data=simKinetics, predictionType='Enrichment')
 
-        # simKineticsScaled = generateKinetics(predictions=subsPredictScaled)
-        # plotPredictionAccuracy(data=simKineticsScaled, predictionType='Scaled Enrichment')
-        # plotPredictionStats(data=simKineticsScaled, predictionType='Scaled Enrichment')
+        simKineticsScaled = generateKinetics(predictions=subsPredictScaled)
+        plotPredictionAccuracy(data=simKineticsScaled, 
+                               predictionType='Scaled Enrichment')
+        plotPredictionStats(data=simKineticsScaled, predictionType='Scaled Enrichment')
 
         simKineticsAI = generateKinetics(predictions=subsPredictAI)
         plotPredictionAccuracy(data=simKineticsAI, predictionType='SArKS - ESM')
@@ -1800,7 +1798,7 @@ if inPredictSubstrateActivity:
 
 
 # Load: Fixed frames
-substratesFixedFrame = loadSubstratesFixedFrame()
+substratesFixedMotif = loadSubstratesFixedMotif()
 
 # Evaluate substrates
 if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
@@ -1810,37 +1808,33 @@ if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
 
     # Bin substrate frames
     binnedSubs, frameTotalCountsFinal = ngs.binSubstrates(
-        substrates=substratesFixedFrame, substrateFrame=inFixedFramePositions,
-        frameIndicies=inFramePositons, datasetTag=inSubstrateFrame)
+        substrates=substratesFixedMotif, substrateFrame=inFixedMotifPositions,
+        frameIndicies=inFramePositions, datasetTag=inDatasetTag)
 
     if inPlotBinnedSubstrates:
-        ngs.plotBinnedSubstrates(substrates=binnedSubs,
-                                 countsTotal=frameTotalCountsFinal,
-                                 datasetTag=inSubstrateFrame,
-                                 dataType='Counts',
-                                 title=f'{inEnzymeName}\n{inSubstrateFrame}\n'
-                                       f'Top {inPlotBinnedSubNumber} Substrates',
-                                 numDatapoints=inPlotBinnedSubNumber,
-                                 barColor=inBarColor,
-                                 barWidth=inBarWidth)
+        ngs.plotBinnedSubstrates(
+            substrates=binnedSubs, countsTotal=frameTotalCountsFinal, 
+            datasetTag=inDatasetTag, dataType='Counts', 
+            title=f'{inEnzymeName}\n{inDatasetTag}\n'
+                  f'Top {inPlotBinnedSubNumber} Substrates', 
+            numDatapoints=inPlotBinnedSubNumber, 
+            barColor=inBarColor, barWidth=inBarWidth)
 
-        ngs.plotBinnedSubstrates(substrates=binnedSubs,
-                                 countsTotal=frameTotalCountsFinal,
-                                 datasetTag=inSubstrateFrame,
-                                 dataType='Probability',
-                                 title=f'{inEnzymeName}\n{inSubstrateFrame}\n'
-                                       f'Top {inPlotBinnedSubNumber} Substrates',
-                                 numDatapoints=inPlotBinnedSubNumber,
-                                 barColor=inBarColor,
-                                 barWidth=inBarWidth)
+        ngs.plotBinnedSubstrates(
+            substrates=binnedSubs, countsTotal=frameTotalCountsFinal, 
+            datasetTag=inDatasetTag, dataType='Probability', 
+            title=f'{inEnzymeName}\n{inDatasetTag}\n'
+                  f'Top {inPlotBinnedSubNumber} Substrates', 
+            numDatapoints=inPlotBinnedSubNumber,
+            barColor=inBarColor, barWidth=inBarWidth)
 
         # Plot: Work cloud
         if inPlotWordsPCA:
             ngs.plotWordCloud(clusterSubs=binnedSubs,
                               clusterIndex=None,
                               title=f'{inTitleEnrichmentMap}\n'
-                                    f'{inSubstrateFrame}',
-                              saveTag=f'Binned Substrates - {inSubstrateFrame}')
+                                    f'{inDatasetTag}',
+                              saveTag=f'Binned Substrates - {inDatasetTag}')
 
 
     if (inPlotBinnedSubstratePCA or inPlotEnrichmentMapPCA or inPlotEnrichmentMotifPCA
@@ -1851,14 +1845,14 @@ if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
         tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=binnedSubs,
                                                    collectionNumber=inTotalSubsPCA,
                                                    useSubCounts=inEncludeSubstrateCounts,
-                                                   subPositions=inFixedFramePositions,
-                                                   datasetTag=inSubstrateFrame)
+                                                   subPositions=inFixedMotifPositions,
+                                                   datasetTag=inDatasetTag)
 
         # Cluster substrates
         subPopulations = ngs.PCA(substrates=binnedSubs, data=tokensESM, indices=subsESM,
-                                 numberOfPCs=inNumberOfPCs, fixedTag=inSubstrateFrame,
+                                 numberOfPCs=inNumberOfPCs, fixedTag=inDatasetTag,
                                  N=subCountsESM, fixedSubs=True, figSize=inFigureSize,
-                                 saveTag=inSubstrateFrame)
+                                 saveTag=inDatasetTag)
 
         # Plot: Substrate clusters
         if (inPlotEnrichmentMapPCA or inPlotEnrichmentMotifPCA
@@ -1876,17 +1870,17 @@ if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
         if os.path.exists(filePathBinnedSubsES):
             # Load the data
             with open(filePathBinnedSubsES, 'rb') as file:
-                enrichedFrames = pk.load(file)
+                enrichedMotif = pk.load(file)
         else:
             # Obtain data: Initial sort
-            if os.path.exists(filePathFixedFrameInitial):
+            if os.path.exists(filePathFixedMotifInitial):
                 # Load the data
-                with open(filePathFixedFrameInitial, 'rb') as file:
+                with open(filePathFixedMotifInitial, 'rb') as file:
                     frameProbInitial = pk.load(file)
 
                 # Calculate: Sample size
-                frameTotalCountsInitial = pd.read_csv(filePathFixedFrameInitialTotalCounts,
-                                                      header=None)
+                frameTotalCountsInitial = pd.read_csv(
+                    filePathFixedMotifInitialTotalCounts, header=None)
                 frameTotalCountsInitial = int(frameTotalCountsInitial.iloc[0, 0])
             else:
                 # Fix frame
@@ -1899,54 +1893,54 @@ if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
                                                         sortType='Initial Sort')
 
                 # Save the data
-                with open(filePathFixedFrameInitial, 'wb') as file:
+                with open(filePathFixedMotifInitial, 'wb') as file:
                     pk.dump(frameProbInitial, file)
                 frameTotalCountsInitial = pd.DataFrame([frameTotalCountsInitial])
-                frameTotalCountsInitial.to_csv(filePathFixedFrameInitialTotalCounts,
+                frameTotalCountsInitial.to_csv(filePathFixedMotifInitialTotalCounts,
                                                index=False, header=False)
                 frameTotalCountsInitial = int(frameTotalCountsInitial.iloc[0, 0])
 
             # Obtain data: Final sort
-            if os.path.exists(filePathFixedFrameFinal):
+            if os.path.exists(filePathFixedMotifFinal):
                 # Load the data
-                with open(filePathFixedFrameFinal, 'rb') as file:
+                with open(filePathFixedMotifFinal, 'rb') as file:
                     frameProbFinal = pk.load(file)
             else:
                 # Evaluate: Probability
                 frameProbFinal = substrateProbability(substrates=binnedSubs,
                                                       N=frameTotalCountsInitial,
                                                       sortType='Final Sort')
-                with open(filePathFixedFrameFinal, 'wb') as file:
+                with open(filePathFixedMotifFinal, 'wb') as file:
                     pk.dump(frameProbFinal, file)
 
 
             # Calculate: ES
-            enrichedFrames = subFrameEnrichment(substratesInitial=frameProbInitial,
+            enrichedMotif = subMotifEnrichment(substratesInitial=frameProbInitial,
                                                 initialN=frameTotalCountsInitial,
                                                 substratesFinal=frameProbFinal)
 
             # Save the fixed substrate dataset
             if inSaveBinnedSubES:
                 with open(filePathBinnedSubsES, 'wb') as file:
-                    pk.dump(enrichedFrames, file)
+                    pk.dump(enrichedMotif, file)
                 print(f'Binned substrate ES saved at:\n'
                       f'     {filePathBinnedSubsES}\n\n')
 
-    # Plot: Binned enrichemt bar graph
+    # Plot: Binned enrichment bar graph
     if inPlotBinnedSubstrateES:
         ngs.plotBinnedSubstrates(substrates=binnedSubs,
                                  countsTotal=frameTotalCountsFinal,
-                                 datasetTag=inSubstrateFrame,
+                                 datasetTag=inDatasetTag,
                                  dataType='ES',
-                                 title=f'{inEnzymeName}\n{inSubstrateFrame}\n'
+                                 title=f'{inEnzymeName}\n{inDatasetTag}\n'
                                        f'Top {inPlotBinnedSubNumber} Substrates',
                                  numDatapoints=inPlotBinnedSubNumber,
                                  barColor=inBarColor,
                                  barWidth=inBarWidth)
 
-    # Predict: Binned enrichemt
+    # Predict: Binned enrichment
     if inPlotBinnedSubstratePrediction:
         matrixTypeEnrichment = 'Enrichment Scores Test' # 'log2(RF Final / RF Initial)'
-        predictSubstrateEnrichment(substratesEnriched=enrichedFrames,
-                                   matrix=fixedFrameES,
+        predictSubstrateEnrichment(substratesEnriched=enrichedMotif,
+                                   matrix=fixedMotifES,
                                    matrixType=matrixTypeEnrichment)
