@@ -1335,8 +1335,6 @@ class NGS:
                 fixResidueList.append(f'Excl-{removedAA}@R{self.excludePosition[index]}')
 
             for index in range(len(self.fixedAA)):
-                print(f'Pos: {self.fixedPosition}\n'
-                      f'     Index: {index}\n')
                 fixResidueList.append(f'Fixed-{self.fixedAA[index]}'
                                       f'@R{self.fixedPosition[index]}')
 
@@ -1349,7 +1347,7 @@ class NGS:
 
             self.fixedSubSeq = '_'.join([f'{seq}' for seq in fixResidueList])
 
-        # Condence the string
+        # Condense the string
         if "'" in self.fixedSubSeq:
             self.fixedSubSeq = self.fixedSubSeq.replace("'", '')
         if " " in self.fixedSubSeq:
@@ -2442,7 +2440,7 @@ class NGS:
 
 
     def plotEnrichmentScores(self, scores, motifType, figSize, figBorders, title,
-                             showScores, squares, fixingFrame, initialFrame,
+                             showScores, squares, motifFilter, initialFrame,
                              duplicateFigure, saveTag):
         print('============================ Plot: Enrichment Score '
               '=============================')
@@ -2547,7 +2545,7 @@ class NGS:
                 sys.exit()
 
             # Define: Save location
-            if fixingFrame:
+            if motifFilter:
                 figLabel = (f'{self.enzymeName} - {datasetType} '
                             f'{self.saveFigureIteration} - {saveTag} - '
                             f'MinCounts {self.minSubCount}.png')
@@ -2838,14 +2836,12 @@ class NGS:
                   f'============================================'
                   f'=============================================\n')
 
-        print(f'Fixed Pos Return: {fixedPos}')
-
         return heights, fixedPos, yMax, yMin
 
 
 
     def plotMotif(self, data, motifType, bigLettersOnTop, figureSize, figBorders,
-                  title, titleSize, yMax, yMin, yBoundary, lines, fixingFrame, 
+                  title, titleSize, yMax, yMin, yBoundary, lines, motifFilter, 
                   initialFrame, duplicateFigure, saveTag):
         print('============================= Plot: Sequence Motif '
               '==============================')
@@ -3009,7 +3005,7 @@ class NGS:
                 sys.exit()
 
             # Define: Save location
-            if fixingFrame:
+            if motifFilter:
                 figLabel = (f'{self.enzymeName} - {datasetType} '
                             f'{self.saveFigureIteration} - {saveTag} - MinCounts '
                             f'{self.minSubCount}.png')
