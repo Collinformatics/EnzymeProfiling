@@ -28,7 +28,7 @@ inSaveFileName = 'Src-F_S2_L001'
 inAlertPath = '/path/to/sounds/Bells.mp3'
 
 # Input 2: Substrate Parameters
-inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
+inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8', 'R9']
 inShowSampleSize = True # Include the sample size in your figures
 inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
 
