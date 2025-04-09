@@ -15,7 +15,6 @@ from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
-from playsound import playsound
 import pandas as pd
 import pickle as pk
 import seaborn as sns
@@ -194,6 +193,13 @@ class NGS:
 
 
     def alert(self, soundPath):
+        # This function can be used to play .mp3 files
+        # Used it to let you know when a process has been completed
+        # You will need to install the playsound module:
+        #      pip install playsound
+
+        from playsound import playsound
+
         if os.path.exists(soundPath):
             threading.Thread(target=playsound, args=(soundPath,)).start()
         else:
