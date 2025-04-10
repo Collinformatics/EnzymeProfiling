@@ -1212,44 +1212,31 @@ class NGS:
 
 
 
-    def loadFixedFrameCounts(self, filePath, substrateFrame, substrateFrameAAPos,
-                             frameIndices, datasetTag):
-        print('=========================== Load: Fixed Frame Counts '
+    def loadFixedMotifCounts(self, filePath, substrateFrame, substrateFrameAAPos,
+                             frameIndices, datasetTag, sortType):
+        print('=========================== Load: Fixed Motif Counts '
               '============================')
-        print(f'Frame Pos: {substrateFrameAAPos}\n'
-              f'     Index: {frameIndices}')
-        print(f'Select:\n'
-              f'     Start: {substrateFrameAAPos[0]}\n'
-              f'     Start: {substrateFrameAAPos[-1]}\n')
+        print(f'Loading counts:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n')
 
-        print(f'Loading counts:{purple} {datasetTag}{resetColor}\n'
-              f'Start Position:{white} {substrateFrameAAPos[frameIndices[0]]}'
-              f'{resetColor}\n'
-              f'   Start Index:{white} {frameIndices[0]}{resetColor}\n'
-              f'End Position:{white} {substrateFrameAAPos[-1]}'
-              f'{resetColor}\n'
-              f'   End Index:{white} {frameIndices[-1]}{resetColor}\n\n')
         frameLength = len(substrateFrame)
         countsFixedFrameAll = []
-        # sys.exit()
 
         # Load the counts
         for index, position in enumerate(self.fixedPosition):
             # Define: File paths
-            fileTag = f'{self.fixedAA[0]}@R{position}'
-            if '/' in filePath:
-                filePathFixedFrameCounts = (f'{filePath}/countsReleased_'
-                                            f'{self.enzymeName}_FixedFrame_{fileTag}')
+            tagFixedAA = f'{self.fixedAA[0]}@R{position}'
+            if 'final' in sortType or 'Final' in sortType:
+                tagLabel = (f'countsReleased_{self.enzymeName}_FixedMotif_Final - '
+                            f'{tagFixedAA}_MinCounts {self.minSubCount}')
             else:
-                filePathFixedFrameCounts = (f'{filePath}\\countsReleased_'
-                                            f'{self.enzymeName}_FixedFrame_{fileTag}')
-            print(f'Path: {filePathFixedFrameCounts}')
-            sys.exit()
+                tagLabel = (f'countsReleased_{self.enzymeName}_FixedMotif_Initial - '
+                            f'{tagFixedAA}_MinCounts {self.minSubCount}')
+            filePathFixedMotifCounts = os.path.join(filePath, tagLabel)
 
             # Look for the file
-            if os.path.exists(filePathFixedFrameCounts):
+            if os.path.exists(filePathFixedMotifCounts):
                 # Load file
-                countsLoaded = pd.read_csv(filePathFixedFrameCounts, index_col=0)
+                countsLoaded = pd.read_csv(filePathFixedMotifCounts, index_col=0)
 
                 # Define fixed frame positions & extract the data
                 startPosition = frameIndices[0]
@@ -1272,7 +1259,7 @@ class NGS:
                 formattedCounts = countsFixedFrame.to_string(
                     formatters={column: '{:,.0f}'.format for column in
                                 countsFixedFrame.select_dtypes(include='number').columns})
-                print(f'Selecting Positions:{purple} Fixed Frame {fileTag}\n'
+                print(f'Selecting Positions:{purple} Fixed Motif {tagFixedAA}\n'
                       f'     {white}{fixedFramePos}{resetColor}\n'
                       f'Counts:\n'
                       f'{greenLight}{formattedCounts}{resetColor}\n\n')
@@ -1284,9 +1271,9 @@ class NGS:
                     totalCountsFixedFrame += countsFixedFrame
             else:
                 print(f'{orange}ERROR: The file was not found\n'
-                      f'     {filePathFixedFrameCounts}\n\n')
+                      f'     {filePathFixedMotifCounts}\n\n')
                 sys.exit()
-        
+
         # Sum the columns
         fixedFrameColumnSums = []
         for column in substrateFrame:
@@ -1298,7 +1285,7 @@ class NGS:
                         totalCountsFixedFrame.select_dtypes(include='number').columns})
 
         # Print the data
-        print(f'{silver}Total Counts{resetColor}:{purple} {datasetTag}{resetColor}\n'
+        print(f'{silver}Combined Counts{resetColor}:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n'
               f'{formattedCounts}\n')
         print('Column Sums:')
         for index, position in enumerate(substrateFrame):
@@ -1312,8 +1299,43 @@ class NGS:
 
 
 
-    def calculateFixedFrameRF(self, countsTotal, datasetTag):
-        print('=========================== Calculate: Fixed Frame RF '
+    def loadFixedMotifSubstrates(self, filePath, datasetTag, sortType):
+        print('========================= Load: Fixed Motif Substrates '
+              '==========================')
+        print(f'Dataset:{purple}{self.enzymeName} {datasetTag}{resetColor}')
+
+        # Define: File paths
+        if 'final' in sortType or 'Final' in sortType:
+            tagLabel = (f'fixedSubs_{self.enzymeName}_FixedMotif_Final - '
+                        f'{datasetTag}_MinCounts {self.minSubCount}')
+        else:
+            tagLabel = (f'fixedSubs_{self.enzymeName}_FixedMotif_Initial - '
+                        f'{datasetTag}_MinCounts {self.minSubCount}')
+        filePathFixedMotifSubs = os.path.join(filePath, tagLabel)
+        print(f'Loading substrates at path:\n'
+              f'     {greenDark}{filePathFixedMotifSubs}{resetColor}\n')
+
+
+        # Load Data: Fixed substrates
+        with open(filePathFixedMotifSubs, 'rb') as file:
+            loadedSubs = pk.load(file)
+
+        print(f'Loaded Substrates:{purple} {datasetTag}{resetColor}')
+        iteration = 0
+        for substrate, count in loadedSubs.items():
+            print(f'Substrate:{silver} {substrate}{resetColor}\n'
+                  f'     Count:{red} {count:,}{resetColor}')
+            iteration += 1
+            if iteration >= self.printNumber:
+                print('\n')
+                break
+
+        return loadedSubs
+
+
+
+    def calculateFixedMotifRF(self, countsTotal, datasetTag):
+        print('=========================== Calculate: Fixed Motif RF '
               '===========================')
         # Sum each column
         columnSums = np.sum(countsTotal, axis=0)
@@ -2364,13 +2386,15 @@ class NGS:
 
 
 
-    def fixedFrameStats(self, countsList, initialProb, substrateFrame, figSize, datasetTag):
-        print('================== Statistical Evaluation: Fixed Frame Counts '
+    def fixedMotifStats(self, countsList, initialProb, substrateFrame,
+                        figSize, datasetTag):
+        print('================== Statistical Evaluation: Fixed Motif Counts '
               '===================')
         print(f'Evaluate:{purple} {datasetTag}{resetColor}\n')
         countsFrameTotal = pd.DataFrame(0, index=range(0, len(self.fixedPosition)),
                                         columns=substrateFrame)
-        frameProb = pd.DataFrame(0.0, index=initialProb.index, columns=substrateFrame)
+        frameProb = pd.DataFrame(0.0, index=initialProb.index,
+                                 columns=substrateFrame)
         frameES = frameProb.copy()
         frameESList = []
         frameESStDev = frameProb.copy()
@@ -2382,7 +2406,7 @@ class NGS:
             formattedCounts = countsFrame.to_string(
                 formatters={column: '{:,.0f}'.format for column in
                             countsFrame.select_dtypes(include='number').columns})
-            print(f'Counts:{purple} Fixed Frame '
+            print(f'Counts:{purple} Fixed Motif '
                   f'{self.fixedAA[0]}@R{self.fixedPosition[index]}{resetColor}\n'
                   f'{formattedCounts}\n')
 
@@ -2398,7 +2422,7 @@ class NGS:
                     frameProb.loc[:, column] / initialProb['Average RF'])
 
             print(f'Enrichment Score:{purple} '
-                  f'Fixed Frame {self.fixedAA[0]}@R{self.fixedPosition[index]}\n'
+                  f'Fixed Motif {self.fixedAA[0]}@R{self.fixedPosition[index]}\n'
                   f'{greenLight}{frameES}{resetColor}\n\n')
             frameESList.append(frameES.copy())
 
@@ -2436,7 +2460,7 @@ class NGS:
                       countedData=frameESStDev,
                       totalCounts=None,
                       title=f'{self.enzymeName}\n'
-                            f'Fixed Frame {self.fixedAA[0]}'
+                            f'Fixed Motif {self.fixedAA[0]}'
                             f'@R{self.fixedPosition[0]}-R{self.fixedPosition[-1]}\n'
                             f'Standard Deviation',
                       figSize=figSize,
@@ -3608,6 +3632,9 @@ class NGS:
             figSize, saveTag):
         print('====================================== PCA '
               '======================================')
+        print(f'')
+        print(f'Tag: {fixedTag}\n'
+              f'Save: {saveTag}\n')
         import matplotlib.patheffects as path_effects
         from matplotlib.widgets import RectangleSelector
         from sklearn.decomposition import PCA
@@ -3637,6 +3664,9 @@ class NGS:
         # # Cluster the datapoints
         # Step 1: Apply PCA on the standardized data
         pca = PCA(n_components=numberOfPCs)  # Adjust the number of components as needed
+        from sklearn.preprocessing import StandardScaler
+        scaler = StandardScaler()
+        data = scaler.fit_transform(data)
         dataPCA = pca.fit_transform(data)
         # loadings = pca.components_.T
 
@@ -3654,7 +3684,7 @@ class NGS:
         # Define: Figure parameters
         if fixedSubs:
             title = (f'{self.enzymeName}\n'
-                     f'Fixed {fixedTag}\n'
+                     f'{fixedTag}\n'
                      f'{N:,} Unique Substrates')
         else:
             title = (f'{self.enzymeName}\n'
@@ -3759,17 +3789,16 @@ class NGS:
             fig.tight_layout()
             plt.show()
 
-        datasetType = f'PCA - {N}'
 
         # Save the Figure
         if self.saveFigures:
             # Define: Save location
             if saveTag is None:
-                figLabel = (f'{self.enzymeName} - {datasetType} - '
-                            f'Unfiltered - MinCounts {self.minSubCount}.png')
+                figLabel = (f'{self.enzymeName} - PCA - Unfiltered - '
+                            f'{N} - MinCounts {self.minSubCount}.png')
             else:
-                figLabel = (f'{self.enzymeName} - {datasetType} - '
-                            f'{saveTag} - MinCounts {self.minSubCount}.png')
+                figLabel = (f'{self.enzymeName} - PCA - {fixedTag} - '
+                            f'{N} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
             # Save figure
@@ -3785,6 +3814,9 @@ class NGS:
 
         # Create list of collected substrate dictionaries
         if self.selectedSubstrates:
+            print(f'Update: Make this able to shift the frame '
+                  f'if you plot binned substrates')
+            sys.exit()
             collectedSubs = []
             for index, substrateSet in enumerate(self.selectedSubstrates):
                 print(f'Substrate Set:{white} {index + 1}{resetColor}')
@@ -3797,8 +3829,6 @@ class NGS:
                 collectionSet = dict(sorted(collectionSet.items(),
                                             key=lambda x: x[1], reverse=True))
                 collectedSubs.append(collectionSet)
-
-
 
                 # Print collected substrates
                 for substrate, count in collectionSet.items():
@@ -3918,7 +3948,7 @@ class NGS:
             #       f'Stop:{red} {endSub}{resetColor}\n\n')
 
             # Print substrates
-            print(f'Fixed Frame:{purple} {self.fixedAA[0]}@{self.fixedPosition[index]}'
+            print(f'Fixed Motif:{purple} {self.fixedAA[0]}@{self.fixedPosition[index]}'
                   f'{resetColor}')
             iteration = 0
             for substrate, count in subsFixedFrame.items():
@@ -3948,7 +3978,7 @@ class NGS:
         iteration = 0
         print(f'Binned Substrates{resetColor}:{purple} {datasetTag}{resetColor}')
         for substrate, count in binnedSubstrates.items():
-            print(f'Substrate:{greenLight} {substrate}{resetColor}\n'
+            print(f'Substrate:{yellow} {substrate}{resetColor}\n'
                   f'    Count:{red} {count:,}{resetColor}')
             iteration += 1
             if iteration == self.printNumber:

@@ -1,6 +1,5 @@
 from functions import filePaths, NGS
 import logomaker
-import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -17,14 +16,14 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: File Location
 inEnzymeName = 'Mpro2'
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inBasePath = f'/path/to/folder/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
 inSaveFigures = True
-inFigureTimer = False
+inFigureTimer = True
 
 # Input 2: Experimental Parameters
 inSubstrateLength = len(inAAPositions)
@@ -32,30 +31,18 @@ inSaveScaledEnrichment = False # Saving Scaled Enrichment Values
 # inFixedMotifPositions = ['-2', '-1', '0', '1', '2', '3']
 inFixedMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'']
 inFixedMotifLength = len(inFixedMotifPositions)
-inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
-inFramePositions = [inIndexNTerminus, inIndexNTerminus + inFixedMotifLength - 1]
-inAAPositionsBinned = inAAPositions[inFramePositions[0]:
-                                    inIndexNTerminus+inFixedMotifLength]
-
-# ========================================================================================
-print(f'Frame ({len(inFramePositions)}): {inFramePositions}')
-print(f'Binned ({len(inAAPositionsBinned)}): {inAAPositionsBinned}\n')
-
-
 inIndexNTerminus = 1 # Define the index if the first AA in the binned substrate
 inFramePositions = [inIndexNTerminus, inIndexNTerminus + inFixedMotifLength - 1]
 inAAPositionsBinned = inAAPositions[inFramePositions[0]:
                                     inIndexNTerminus+inFixedMotifLength]
 
-print(f'Frame ({len(inFramePositions)}): {inFramePositions}')
-print(f'Binned ({len(inAAPositionsBinned)}): {inAAPositionsBinned}\n')
-# ========================================================================================
-
-
 # Input 3: Computational Parameters
 inFixResidues = True
 inFixedResidue = ['Q']
-inFixedPosition = [4,5,6]
+inFixedPosition = [5,6]
+inExcludeResidues = False
+inExcludedResidue = ['Q']
+inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inFigureTitleSize = 18
@@ -421,6 +408,7 @@ def loadSubstratesFixedMotif():
             if iteration >= inPrintNumber:
                 print('\n')
                 break
+        fixedMotifSubs.append(loadedSubs)
 
         # PCA: On a single fixed frame
         if inPCAIndividual:
@@ -433,7 +421,7 @@ def loadSubstratesFixedMotif():
             # Cluster substrates
             subPopulations = ngs.PCA(
                 substrates=loadedSubs, data=tokensESM, indices=subsESM,
-                numberOfPCs=inNumberOfPCs, fixedTag=inDatasetTag, N=subCountsESM, 
+                numberOfPCs=inNumberOfPCs, fixedTag=inDatasetTag, N=subCountsESM,
                 fixedSubs=True, figSize=inFigureSize, saveTag=inDatasetTag)
 
             # Plot: Substrate clusters
@@ -444,6 +432,46 @@ def loadSubstratesFixedMotif():
                     # Plot data
                     plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
                                              numClusters=clusterCount)
+
+    return fixedMotifSubs
+
+
+def importFixedMotifSubs():
+    fixedMotifSubs = []
+
+    for position in inFixedPosition:
+        # Define: File paths
+        tagFixedAA = f'{inFixedResidue[0]}@R{position}'
+        loadedSubs = ngs.loadFixedMotifSubstrates(filePath=inFilePath,
+                                                  datasetTag=tagFixedAA,
+                                                  sortType='Final Sort')
+        fixedMotifSubs.append(loadedSubs)
+
+        # PCA: On a single fixed frame
+        if inPCAIndividual:
+            # Convert substrate data to numerical
+            tokensESM, subsESM, subCountsESM = ngs.ESM(
+                substrates=loadedSubs, collectionNumber=inTotalSubsPCA,
+                useSubCounts=inEncludeSubstrateCounts, subPositions=inAAPositions,
+                datasetTag=tagFixedAA)
+
+            # Cluster substrates
+            subPopulations = ngs.PCA(
+                substrates=loadedSubs, data=tokensESM, indices=subsESM,
+                numberOfPCs=inNumberOfPCs, fixedTag=f'Fixed Motif {tagFixedAA}',
+                N=subCountsESM, fixedSubs=True, figSize=inFigureSize,
+                saveTag=inDatasetTag)
+
+            # Plot: Substrate clusters
+            if (inPlotEnrichmentMapPCA or inPlotEnrichmentMotifPCA
+                    or inPredictSubstrateActivityPCA or inPlotWordsPCA):
+                clusterCount = len(subPopulations)
+                for index, subCluster in enumerate(subPopulations):
+                    # Plot data
+                    plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
+                                             numClusters=clusterCount)
+
+    sys.exit()
 
     return fixedMotifSubs
 
@@ -471,7 +499,7 @@ def fixInitialSubs(substrates):
     subMotifInitial = dict(sorted(subMotifInitial.items(),
                                   key=lambda x: x[1], reverse=True))
 
-    # Print the substrat frames
+    # Print the substrate frames
     iteration = 0
     for substrate, counts in subMotifInitial.items():
         print(f'{green} {substrate}{resetColor}, {pink}{counts}')
@@ -1570,7 +1598,7 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
      fixedMotifCountsTotal) = ngs.loadFixedMotifCounts(
         filePath=inFilePath, substrateFrame=inFixedMotifPositions,
         substrateFrameAAPos=inAAPositionsBinned, frameIndices=inFramePositions,
-        datasetTag=inDatasetTag)
+        datasetTag=inDatasetTag, sortType='Final Sort')
 
     # Calculate: Probability & Entropy
     fixedMotifProb = ngs.calculateFixedMotifRF(countsTotal=fixedMotifCountsTotal,
@@ -1798,7 +1826,8 @@ if inPredictSubstrateActivity:
 
 
 # Load: Fixed frames
-substratesFixedMotif = loadSubstratesFixedMotif()
+# substratesFixedMotif = loadSubstratesFixedMotif()
+substratesFixedMotif = importFixedMotifSubs()
 
 # Evaluate substrates
 if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
