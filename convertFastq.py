@@ -18,12 +18,12 @@ from functions import NGS
 # Input 1: File Location Information
 inFileName = ['Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L003_R1_001']
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/path/to/folder/{inEnzymeName}/Fastq'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}/Fastq'
 inSavePath = inBasePath
 
 # Input 2: Substrate Parameters
 inEnzymeName = inFileName[0].split('-')[0]
-inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9']
+inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
 inSubstrateLength = len(inAAPositions)
 inShowSampleSize = True # Include the sample size in your figures
 
@@ -32,11 +32,11 @@ inFixResidues = True # True: fix AAs in the substrate, False: Don't fix AAs, plo
 inFixedResidue = ['Q']
 inFixedPosition = [5]
 inNumberOfDatapoints = 20
-inSaveAsText = False # False: save as FASTA
+inSaveAsText = True # False: save as FASTA
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
-inStartSeqR2 = 'AAAGGCAGT' # KGS: AAAGGCAG
-inEndSeqR2 = 'GGTGGAAGT' # GGS: GGTGGAAGT
+inStartSeqR2 = inStartSeqR1
+inEndSeqR2 = inStartSeqR2
 inPrintQualityScores = False # QSs are "phred quality" scores
 
 
@@ -122,27 +122,22 @@ def fastaConversion(filePath, fileNames, fileType, startSeq, endSeq, printQS):
                         # Extract substrate DNA
                         if startSeq in DNA and endSeq in DNA:
                             start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)  # Find the substate end index
+                            end = DNA.find(endSeq)  # Find the substrate end index
                             substrate = DNA[start:end].strip()  # Extract substrate DNA seq
                             if 'N' not in substrate:
                                 if len(substrate) == len(inAAPositions) * 3:
                                     substrate = Seq.translate(substrate)
                                     if '*' not in substrate:
-                                            substrateCount += 1
-                                            data.append(substrate)
-                        # data.append(SeqRecord(seq=datapoint.seq, id=datapoint.id))
+                                        if inFixResidues:
+                                            selectAA = substrate[inFixedPosition[0] - 1]
+                                            if selectAA in inFixedResidue:
+                                                substrateCount += 1
+                                                data.append(substrate)
+                                            else:
+                                                substrateCount += 1
+                                                data.append(substrate)
                         if substrateCount == inNumberOfDatapoints:
                             break
-
-
-                    # Extract fixed substrates
-                    if inFixResidues:
-                        fixedData = []
-                        for substrate in data:
-                            selectAA = substrate[inFixedPosition[0] - 1]
-                            if selectAA in inFixedResidue:
-                                fixedData.append(substrate)
-                        data = fixedData
 
                     # Save the data as text files
                     print('=================================== Save: Fasta Files '
@@ -169,26 +164,26 @@ def fastaConversion(filePath, fileNames, fileType, startSeq, endSeq, printQS):
                         # Extract substrate DNA
                         if startSeq in DNA and endSeq in DNA:
                             start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)  # Find the substate end index
-                            substrate = DNA[start:end].strip()  # Extract substrate DNA seq
+                            end = DNA.find(endSeq)  # Find the substrate end index
+                            substrate = DNA[start:end].strip()  # Extract substrate DNA
                             if len(substrate) == len(inAAPositions) * 3:
                                 substrate = Seq.translate(substrate)
                                 if '*' not in substrate:
-                                    substrateCount += 1
-                                    data.append(SeqRecord(seq=substrate, id=datapoint.id))
-                        # data.append(SeqRecord(seq=datapoint.seq, id=datapoint.id))
+                                    if inFixResidues:
+                                        selectAA = substrate[inFixedPosition[0] - 1]
+                                        if selectAA in inFixedResidue:
+                                            substrateCount += 1
+                                            data.append(SeqRecord(seq=substrate,
+                                                                  id=datapoint.id))
+                                            print(substrate)
+                                    else:
+                                        substrateCount += 1
+                                        data.append(SeqRecord(seq=substrate,
+                                                              id=datapoint.id))
                         if substrateCount == inNumberOfDatapoints:
                             break
+                    print(f'\n{data}\n\n')
 
-
-                    # Extract fixed substrates
-                    if inFixResidues:
-                        fixedData = []
-                        for substrate in data:
-                            selectAA = substrate[inFixedPosition[0] - 1]
-                            if selectAA in inFixedResidue:
-                                fixedData.append(substrate)
-                        data = fixedData
 
                     # Save the data as fasta files
                     print('=================================== Save: Fasta Files '
