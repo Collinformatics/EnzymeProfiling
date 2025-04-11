@@ -18,7 +18,7 @@ from functions import NGS
 # Input 1: File Location Information
 inFileName = ['Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L003_R1_001']
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/path/{inEnzymeName}/Fastq'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}/Fastq'
 inSavePath = inBasePath
 
 # Input 2: Substrate Parameters
@@ -32,7 +32,7 @@ inFixResidues = True # True: fix AAs in the substrate, False: Don't fix AAs, plo
 inFixedResidue = ['Q']
 inFixedPosition = [5]
 inNumberOfDatapoints = 20
-inSaveAsText = True # False: False: save as a larger FASTA file
+inSaveAsText = True # False: save as a larger FASTA file
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
 inStartSeqR2 = inStartSeqR1
@@ -143,7 +143,7 @@ def fastaConversion(filePath, fileNames, fileType, startSeq, endSeq, printQS):
                     print('=================================== Save: Fasta Files '
                           '===================================')
                     numDatapoints = len(data)
-                    print(f'{purple}Text{resetColor} file:{red} {numDatapoints:,}'
+                    print(f'Extracted datapoints:{red} {numDatapoints:,}'
                           f'{resetColor} substrates\n')
                     if numDatapoints != 0:
                         savePath = saveLocationsTxt[indexPath]
@@ -151,8 +151,7 @@ def fastaConversion(filePath, fileNames, fileType, startSeq, endSeq, printQS):
                             for substrate in data:
                                 fileSave.write(f'{substrate}\n')
 
-                        # print(f'Fasta:\n{data}')
-                        print(f'Saving{purple} Text{resetColor} file at:\n'
+                        print(f'Saving a{yellow} Text{resetColor} file at:\n'
                               f'     {savePath}\n\n')
                     else:
                         print(f'The data was not saved, no substrates were found\n\n')
@@ -175,33 +174,29 @@ def fastaConversion(filePath, fileNames, fileType, startSeq, endSeq, printQS):
                                             substrateCount += 1
                                             data.append(SeqRecord(seq=substrate,
                                                                   id=datapoint.id))
-                                            print(substrate)
                                     else:
                                         substrateCount += 1
                                         data.append(SeqRecord(seq=substrate,
                                                               id=datapoint.id))
                         if substrateCount == inNumberOfDatapoints:
                             break
-                    print(f'\n{data}\n\n')
 
 
                     # Save the data as fasta files
                     print('=================================== Save: Fasta Files '
                           '===================================')
                     numDatapoints = len(data)
-                    print(f'{purple}FASTA{resetColor} file:{red} {numDatapoints:,}'
+                    print(f'Extracted datapoints:{red} {numDatapoints:,}'
                           f'{resetColor} substrates\n')
                     if numDatapoints != 0:
                         savePath = saveLocations[indexPath]
                         with open(savePath, 'w') as fasta_file:
                             SeqIO.write(data, fasta_file, 'fasta')
 
-                        # print(f'Fasta:\n{data}')
-                        print(f'Saving{purple} FASTA{resetColor} file at:\n'
+                        print(f'Saving a{yellow} FASTA{resetColor} file at:\n'
                               f'     {savePath}\n\n')
                     else:
                         print(f'The data was not saved, no substrates were found\n\n')
-
 
 
 
