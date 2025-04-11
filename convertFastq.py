@@ -18,7 +18,7 @@ from functions import NGS
 # Input 1: File Location Information
 inFileName = ['Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L003_R1_001']
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}/Fastq'
+inBasePath = f'/path/{inEnzymeName}/Fastq'
 inSavePath = inBasePath
 
 # Input 2: Substrate Parameters
