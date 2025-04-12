@@ -135,6 +135,7 @@ class NGS:
                  residueLabelType, titleLabelSize, axisLabelSize, tickLabelSize, 
                  printNumber, showNValues, savePath, saveFigures, savePathFigs, 
                  setFigureTimer):
+        self.dpi = 300
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
@@ -1431,7 +1432,7 @@ class NGS:
             countedData.index = [residue[2] for residue in self.residues]
 
         # Plot the heatmap with numbers centered inside the squares
-        fig, ax = plt.subplots(figsize=figSize)
+        fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
         heatmap = sns.heatmap(countedData, annot=True, fmt=',d', cmap=cMapCustom,
                               cbar=True, linewidths=self.lineThickness-1,
                               linecolor='black', square=False, center=None,
@@ -1498,7 +1499,7 @@ class NGS:
             countedData.index = [residue[2] for residue in self.residues]
 
         # Plot the heatmap with numbers centered inside the squares
-        fig, ax = plt.subplots(figsize=figSize)
+        fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
         heatmap = sns.heatmap(countedData, annot=True, fmt='.3f', cmap=cMapCustom, cbar=True,
                               linewidths=self.lineThickness-1, linecolor='black',
                               square=False, center=None, annot_kws={'fontweight': 'bold'})
@@ -2497,7 +2498,7 @@ class NGS:
 
 
         # Plot the heatmap with numbers centered inside the squares
-        fig, ax = plt.subplots(figsize=figSize)
+        fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
         if showScores:
             heatmap = sns.heatmap(scores, annot=True, fmt='.3f', cmap=cMapCustom,
                                   cbar=True, linewidths=self.lineThickness-1,
@@ -3693,7 +3694,7 @@ class NGS:
 
         # Plot the data
         for componets in headerCombinations:
-            fig, ax = plt.subplots(figsize=figSize)
+            fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
 
             def selectDatapoints(eClick, eRelease):
                 # # Function to update selection with a rectangle
@@ -4277,7 +4278,7 @@ class NGS:
 
 
         # Plot the data
-        fig, ax = plt.subplots(figsize=figSize)
+        fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
         fig.canvas.mpl_connect('key_press_event', pressKey)
 
         # Draw graph
