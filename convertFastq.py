@@ -10,7 +10,17 @@ from Bio.SeqRecord import SeqRecord
 
 
 
-# ========================================== User Inputs =========================================
+# This script will convert a FASTQ file to a FASTA, or Text file
+# FASTA:
+    # Pros: Contains more information than the .txt file
+    # Cons: Larger file size than .txt
+# Text:
+    # Pros: Lighter file sizes with faster uploads speeds
+    # Cons: Less information than the FASTA, as we only save the substrate sequences
+
+
+
+# ===================================== User Inputs ======================================
 # Input 1: File Location Information
 inFileName = ['Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L003_R1_001']
 inEnzymeName = inFileName[0].split('-')[0]
@@ -25,7 +35,7 @@ inSubstrateLength = len(inAAPositions)
 inShowSampleSize = True # Include the sample size in your figures
 
 # Input 3: Define Variables Used To Extract The Substrates
-inFixResidues = True # True: fix AAs in the substrate, False: Don't fix AAs, plot raw the data
+inFixResidues = True # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
 inNumberOfDatapoints = 100
@@ -55,7 +65,7 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 
 
 
-# ======================================= Define Functions =======================================
+# =================================== Define Functions ===================================
 def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, printQS):
     # Define file locations
     fileLocations = []
@@ -78,8 +88,8 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, p
     # Evaluate file path
     gZipped = False
     for indexPath, path in enumerate(fileLocations):
-        print('=================================== Load: Fastq Files '
-              '===================================')
+        print('=============================== Load: Fastq Files '
+              '===============================')
         if not os.path.isfile(path):
             pathZipped = f'{path}.gz'
             if os.path.isfile(pathZipped):
@@ -129,8 +139,8 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, p
                             break
 
                     # Save the data as text files
-                    print('=================================== Save: Fasta Files '
-                          '===================================')
+                    print('=============================== Save: Fasta Files '
+                          '===============================')
                     numDatapoints = len(data)
                     print(f'Extracted datapoints:{red} {numDatapoints:,}'
                           f'{resetColor} substrates\n')
@@ -172,8 +182,8 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, p
 
 
                     # Save the data as fasta files
-                    print('=================================== Save: Fasta Files '
-                          '===================================')
+                    print('=============================== Save: Fasta Files '
+                          '===============================')
                     numDatapoints = len(data)
                     print(f'Extracted datapoints:{red} {numDatapoints:,}'
                           f'{resetColor} substrates\n')
