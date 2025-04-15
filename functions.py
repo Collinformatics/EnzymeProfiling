@@ -186,10 +186,12 @@ class NGS:
         np.seterr(divide='ignore')
 
         # Verify directory paths
-        if os.path.exists(self.savePath) and self.savePath is not None:
-            os.makedirs(self.savePath, exist_ok=True)
-        if os.path.exists(self.savePathFigs) and self.savePathFigs is not None:
-            os.makedirs(self.savePathFigs, exist_ok=True)
+        if self.savePath is not None:
+            if os.path.exists(self.savePath):
+                os.makedirs(self.savePath, exist_ok=True)
+        if self.savePathFigs is not None:
+            if os.path.exists(self.savePathFigs):
+                os.makedirs(self.savePathFigs, exist_ok=True)
 
 
 
