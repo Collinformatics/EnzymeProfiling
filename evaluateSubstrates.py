@@ -294,7 +294,7 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
                              title=figureTitleEM,
                              showScores=inShowEnrichmentScores,
                              squares=inShowEnrichmentAsSquares,
-                             fixingFrame=False,
+                             motifFilter=False,
                              initialFrame=True,
                              duplicateFigure=False,
                              saveTag=datasetTag)
@@ -307,7 +307,7 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
                              title=figureTitleEM,
                              showScores=inShowEnrichmentScores,
                              squares=inShowEnrichmentAsSquares,
-                             fixingFrame=False,
+                             motifFilter=False,
                              initialFrame=True,
                              duplicateFigure=False,
                              saveTag=datasetTag)
@@ -862,7 +862,7 @@ if inPlotEnrichmentMap:
                              figSize=figSizeEM, figBorders=figBordersEM,
                              title=inTitleEnrichmentMap,
                              showScores=inShowEnrichmentScores,
-                             squares=inShowEnrichmentAsSquares, fixingFrame=False,
+                             squares=inShowEnrichmentAsSquares, motifFilter=False,
                              initialFrame=True, duplicateFigure=False,
                              saveTag=datasetTag)
 
@@ -900,7 +900,7 @@ if inPlotEnrichmentMotif:
                   bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                   figBorders=inFigureBordersEnrichmentMotif, title=f'{inTitleMotif}',
                   titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
-                  lines=inAddHorizontalLines, fixingFrame=False, initialFrame=True,
+                  lines=inAddHorizontalLines, motifFilter=False, initialFrame=True,
                   duplicateFigure=False, saveTag=datasetTag)
 
 
@@ -916,14 +916,14 @@ if inPlotWeblogoMotif:
                       bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                       figBorders=inFigureBordersMotifYTicks, title=inTitleMotif,
                       titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=0,
-                      lines=inAddHorizontalLines, fixingFrame=False, initialFrame=True,
+                      lines=inAddHorizontalLines, motifFilter=False, initialFrame=True,
                       duplicateFigure=False, saveTag=datasetTag)
     else:
         ngs.plotMotif(data=scaledRF, motifType='Weblogo',
                       bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
                       figBorders=inFigureBordersMotifMaxYTick, title=inTitleMotif,
                       titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
-                      lines=inAddHorizontalLines, fixingFrame=False, initialFrame=True,
+                      lines=inAddHorizontalLines, motifFilter=False, initialFrame=True,
                       duplicateFigure=False, saveTag=datasetTag)
 
 
