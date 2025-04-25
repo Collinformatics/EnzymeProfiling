@@ -16,18 +16,18 @@ from functions import filePaths, NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'name'
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inEnzymeName = 'Mpro2'
+inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
-inSaveFigures = True
+inSaveFigures = False
 
 # Input 2: Processing The Data
 inPlotPositionalEntropy = False
 inPlotEnrichmentMap = True
 inPlotEnrichmentMotif = True
-inPlotWeblogoMotif = False
+inPlotWeblogoMotif = True
 inPlotWordCloud = False
 inPlotAADistribution = False
 inPlotPositionalRF = False # For understanding shannon entropy
@@ -47,12 +47,12 @@ inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabiliti
                        # If False: use "inFileNamesInitial" for baseline probabilities
 
 # Input 3: Computational Parameters
-inFilterSubstrates = True
-inFixedResidue = ['L','Q']
-inFixedPosition = [3,4]
-inExcludeResidues = False # Do you want to remove any AAs from your collection of substrate
-inExcludedResidue = ['A','A']
-inExcludedPosition = [9,10]
+inFixResidues = True
+inFixedResidue = ['L', 'Q']
+inFixedPosition = [3, 4]
+inExcludeResidues = True
+inExcludedResidue = ['Q']
+inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inFigureTitleSize = 18
@@ -69,8 +69,8 @@ inFramePositions = [inIndexNTerminus - 1,
                     inIndexNTerminus + inBinnedSubstrateLength - 1]
 inAAPositionsBinned = inAAPositions[inFramePositions[0]:inFramePositions[-1]]
 inNumberOfPCs = 2
-inTotalSubsPCA = int(10000)
-inEncludeSubstrateCounts = False
+inTotalSubsPCA = 10000
+inIncludeSubstrateCounts = False
 inExtractPopulations = False
 inPlotPositionalEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
@@ -88,12 +88,10 @@ inShowEnrichmentAsSquares = False
 inTitleEnrichmentMap = inEnzymeName
 inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
 inPrintSelectedSubstrates = 1 # Set = 1, to print substrates with fixed residue
-inFigureSize = (9.5, 8) # (width, height)
 if inBinSubsPCA:
     inFigureBorders = [0.852, 0.075, 0.117, 0.998] # Top, bottom, left, right
 else:
     inFigureBorders = [0.882, 0.075, 0.117, 0.998]
-inFigureAsSquares = (4.5, 8)
 inFigureBordersAsSquares = [0.882, 0.075, 0.075, 0.943]
 inEnrichmentColorMap = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
                         'lightcoral','red','firebrick','darkred']
@@ -104,10 +102,6 @@ inShowWeblogoYTicks = True
 inAddHorizontalLines = False
 inTitleMotif = inTitleEnrichmentMap
 inBigLettersOnTop = False
-inFigureSizeMotif = inFigureSize
-inFigureBordersMotifYTicks = [0.882, 0.075, 0.07, 0.98] # [top, bottom, left, right]
-inFigureBordersMotifMaxYTick = [0.882, 0.075, 0.102, 0.98]
-inFigureBordersEnrichmentMotif = [0.882, 0.075, 0.138, 0.98]
 inLetterColors = ['darkgreen','firebrick','deepskyblue','pink','navy','black','gold']
                   # Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
@@ -126,16 +120,6 @@ inCompairYMin = 0.0
 
 
 # =================================== Setup Parameters ===================================
-startTime = time.time()
-if inShowEnrichmentAsSquares:
-    # Set figure dimension when plotting EM plots as squares
-    figSizeEM = inFigureAsSquares
-    figBordersEM = inFigureBordersAsSquares
-else:
-    # Set figure dimension when plotting EM plots as rectangles
-    figSizeEM = inFigureSize
-    figBordersEM = inFigureBorders
-
 colors = {
     'A': inLetterColors[0],
     'R': inLetterColors[2],
@@ -182,14 +166,14 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
-          colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
-          xAxisLabels=inAAPositions, xAxisLabelsBinned=inAAPositionsBinned,
-          residueLabelType=inYLabelEnrichmentMap, titleLabelSize=inFigureTitleSize,
-          axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize,
-          printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          saveFigures=inSaveFigures, savePath=inFilePath, savePathFigs=inSavePathFigures,
-          setFigureTimer=None)
+          colorsCounts=inCountsColorMap, colorsEM=inEnrichmentColorMap,
+          colorsMotif=inLetterColors, colorStDev=inStDevColorMap,
+          figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
+          xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
+          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
+          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
+          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inFilePath,
+          savePathFigs=inSavePathFigures, setFigureTimer=None)
 
 
 
@@ -255,7 +239,7 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     if inPlotPositionalEntropyPCAPopulations:
         # Plot: Positional entropy
         ngs.plotPositionalEntropy(entropy=positionalEntropy,
-                                  fixedDataset=inFilterSubstrates, fixedTag=fixedSubSeq,
+                                  fixedDataset=inFixResidues, fixedTag=fixedSubSeq,
                                   titleSize=inFigureTitleSize, avgDelta=False)
 
     # Calculate: Enrichment scores
@@ -288,12 +272,8 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     # # Plot data
     # Plot: Enrichment Map
     ngs.plotEnrichmentScores(scores=fixedFramePopESAdjusted,
-                             motifType='Enrichment',
-                             figSize=figSizeEM,
-                             figBorders=figBordersEM,
+                             dataType='Enrichment',
                              title=figureTitleEM,
-                             showScores=inShowEnrichmentScores,
-                             squares=inShowEnrichmentAsSquares,
                              motifFilter=False,
                              initialFrame=True,
                              duplicateFigure=False,
@@ -301,23 +281,19 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
 
     # Plot: Enrichment Map Scaled
     ngs.plotEnrichmentScores(scores=fixedFramePCAESScaledAdjusted,
-                             motifType='Scaled Enrichment',
-                             figSize=figSizeEM,
-                             figBorders=figBordersEM,
+                             dataType='Scaled Enrichment',
                              title=figureTitleEM,
-                             showScores=inShowEnrichmentScores,
-                             squares=inShowEnrichmentAsSquares,
                              motifFilter=False,
                              initialFrame=True,
                              duplicateFigure=False,
                              saveTag=datasetTag)
 
     # Plot: Sequence Motif
-    ngs.plotMotif(data=fixedFramePCAESScaled.copy(), motifType='Scaled Enrichment',
-                  bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
-                  figBorders=inFigureBordersEnrichmentMotif, title=f'{figureTitleMotif}',
-                  titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
-                  yBoundary=2,lines=inAddHorizontalLines, saveTag=datasetTag)
+    ngs.plotMotif(data=fixedFramePCAESScaled.copy(), dataType='Scaled Enrichment',
+                  bigLettersOnTop=inBigLettersOnTop, title=f'{figureTitleMotif}',
+                  titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, showYTicks=False,
+                  addHorizontalLines=inAddHorizontalLines, motifFilter=False,
+                  duplicateFigure=False, saveTag=datasetTag)
 
     # Plot: Work cloud
     ngs.plotWordCloud(clusterSubs=clusterSubs,
@@ -376,12 +352,12 @@ def binSubstrates(substrates, datasetTag, index):
 
 
 # ================================== Evaluate The Data ===================================
-if inFilterSubstrates:
-    fixedSubSeq = ngs.fixSubstrateSequence()
+if inFixResidues:
+    fixedSubSeq = ngs.genDatasetTag()
 else:
     fixedSubSeq = None
 
-if inFilterSubstrates and inEvaluateSubstrateEnrichment:
+if inFixResidues and inEvaluateSubstrateEnrichment:
     fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
         substrates=substratesInitial, fixedString=fixedSubSeq,
         printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
@@ -390,7 +366,7 @@ if inFilterSubstrates and inEvaluateSubstrateEnrichment:
 
 # ====================================== Load Data =======================================
 loadUnfixedSubstrates = True
-if inFilterSubstrates:
+if inFixResidues:
     filePathFixedCountsFinal = os.path.join(inFilePath,
                                             f'counts_{inEnzymeName}_'
                                             f'FinalSort_{fixedSubSeq}_'
@@ -401,7 +377,7 @@ if inFilterSubstrates:
                                           f'MinCounts_{inMinimumSubstrateCount}')
 
 
-    # Verify that the files exists
+    # Verify that the file exists
     if (os.path.exists(filePathFixedSubsFinal) and
             os.path.exists(filePathFixedCountsFinal)):
         loadUnfixedSubstrates = False
@@ -473,8 +449,6 @@ if inFilterSubstrates:
 
 
 if loadUnfixedSubstrates:
-    startTimeLoadData = time.time()
-
     def loadSubstrates(filePath, fileNames, fileType, printLoadedData, result):
         subsLoaded, totalSubs = ngs.loadSubstrates(filePath=filePath,
                                                    fileNames=fileNames,
@@ -576,19 +550,13 @@ if loadUnfixedSubstrates:
         finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
                                   fileType='Final Sort', printRF=inPrintRF)
 
-    # Time
-    endTime = time.time()
-    runTime = endTime - startTimeLoadData
-    print(f'Runtime:{white} Loading unfixed substrates\n'
-          f'     {red} {np.round(runTime, 3)}s{resetColor}\n\n')
-
     # Calculate: Average initial RF
     RFsum = np.sum(initialRF, axis=1)
     initialRFAvg = RFsum / len(initialRF.columns)
     initialRFAvg = pd.DataFrame(initialRFAvg, index=initialRFAvg.index,
                                 columns=['Average RF'])
 
-    if inFilterSubstrates:
+    if inFixResidues:
         # Fix AA
         substratesFinal, countsFinalTotal = ngs.fixResidue(
             substrates=substratesFinal, fixedString=fixedSubSeq,
@@ -615,7 +583,7 @@ positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntropy
 
 
 # Save the data
-if inFilterSubstrates and loadUnfixedSubstrates:
+if inFixResidues and loadUnfixedSubstrates:
     # Save the fixed substrate dataset
     with open(filePathFixedSubsFinal, 'wb') as file:
         pk.dump(substratesFinal, file)
@@ -623,13 +591,6 @@ if inFilterSubstrates and loadUnfixedSubstrates:
 
     # Save the fixed substrate counts dataset
     countsFinal.to_csv(filePathFixedCountsFinal)
-
-
-# Print: Runtime
-endTime = time.time()
-runTime = endTime - startTime
-print(f'Runtime:{white} Importing Data\n'
-      f'     {red} {np.round(runTime, 3):,}s{resetColor}\n\n')
 
 
 if inRunPCA:
@@ -646,8 +607,8 @@ if inRunPCA:
 
         # Convert substrate data to numerical
         tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=finalSubsBinned,
-                                                   collectionNumber=inTotalSubsPCA,
-                                                   useSubCounts=inEncludeSubstrateCounts,
+                                                   collectionNumber=int(inTotalSubsPCA),
+                                                   useSubCounts=inIncludeSubstrateCounts,
                                                    subPositions=inAAPositionsBinned,
                                                    datasetTag=fixedSubSeqBinned)
 
@@ -655,12 +616,12 @@ if inRunPCA:
         subPopulations = ngs.PCA(substrates=finalSubsBinned, data=tokensESM,
                                  indices=subsESM, numberOfPCs=inNumberOfPCs,
                                  fixedTag=fixedSubSeq, N=subCountsESM, fixedSubs=True,
-                                 figSize=inFigureSize, saveTag=fixedSubSeqBinned)
+                                 saveTag=fixedSubSeqBinned)
     else:
         # Convert substrate data to numerical
         tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=substratesFinal,
-                                                   collectionNumber=inTotalSubsPCA,
-                                                   useSubCounts=inEncludeSubstrateCounts,
+                                                   collectionNumber=int(inTotalSubsPCA),
+                                                   useSubCounts=inIncludeSubstrateCounts,
                                                    subPositions=inAAPositions,
                                                    datasetTag=fixedSubSeq)
 
@@ -668,18 +629,19 @@ if inRunPCA:
         subPopulations = ngs.PCA(substrates=substratesFinal, data=tokensESM,
                                  indices=subsESM, numberOfPCs=inNumberOfPCs,
                                  fixedTag=fixedSubSeq, N=subCountsESM, fixedSubs=True,
-                                 figSize=inFigureSize, saveTag=fixedSubSeq)
+                                 saveTag=fixedSubSeq)
 
     # Plot: Substrate clusters
-    clusterCount = len(subPopulations)
-    for index, subCluster in enumerate(subPopulations):
-        # Plot data
-        plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
-                                 numClusters=clusterCount)
-    sys.exit()
+    if subPopulations != None:
+        clusterCount = len(subPopulations)
+        for index, subCluster in enumerate(subPopulations):
+            # Plot data
+            plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
+                                     numClusters=clusterCount)
+        print(f'Debug PCA')
 
 
-# # Update: Current Sapmle Size
+# # Update: Current sample size
 ngs.updateSampleSize(NSubs=countsInitialTotal, sortType='Initial Sort',
                      printCounts=inPrintSampleSize, fixedTag=None)
 ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
@@ -690,8 +652,7 @@ ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
 # ==================================== Plot The Data =====================================
 if inPlotCounts:
     # Plot the data
-    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal,
-                   figSize=inFigureSize, figBorders=inFigureBorders)
+    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal)
 
 
 if inPlotAADistribution:
@@ -706,7 +667,7 @@ if inPlotAADistribution:
 # Plot: Positional entropy
 if inPlotPositionalEntropy:
     ngs.plotPositionalEntropy(entropy=positionalEntropy,
-                              fixedDataset=inFilterSubstrates, fixedTag=fixedSubSeq,
+                              fixedDataset=inFixResidues, fixedTag=fixedSubSeq,
                               titleSize=inFigureTitleSize, avgDelta=False)
 
 # Plot the RF for each position in the substrate frame
@@ -718,13 +679,13 @@ if inPlotPositionalRF:
 if inEvaluateOS:
     print('============================== Evaluate Optimal Substrates '
           '==============================')
-    if inFilterSubstrates:
+    if inFixResidues:
         # Calculate: Enrichment scores and scale with Shannon Entropy
         pType = 'Initial Sort'
         heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
             counts=countsFinal.copy(), N=countsFinalTotal, baselineProb=initialRF,
             baselineType=pType, printRF=inPrintMotifData, scaleData=True,
-            normlaizeFixedScores=inNormLetters)
+            normalizeFixedScores=inNormLetters)
 
         # Determine the OS
         combinations = 1
@@ -821,7 +782,7 @@ if inEvaluateOS:
 
 
 if inCompairRF:
-    if inFilterSubstrates:
+    if inFixResidues:
         ngs.compairRF(initialRF=initialRF, finalRF=finalRF, selectAA=inCompairAA,
                       titleSize=inFigureTitleSize, labelSize=inFigureLabelSize,
                       yMax=inCompairYMax, yMin=inCompairYMin)
@@ -858,11 +819,8 @@ if inPlotEnrichmentMap:
                                                printES=inPrintES)
 
     # Plot: Enrichment Map
-    ngs.plotEnrichmentScores(scores=enrichmentScores, motifType='Enrichment',
-                             figSize=figSizeEM, figBorders=figBordersEM,
-                             title=inTitleEnrichmentMap,
-                             showScores=inShowEnrichmentScores,
-                             squares=inShowEnrichmentAsSquares, motifFilter=False,
+    ngs.plotEnrichmentScores(scores=enrichmentScores, dataType='Enrichment',
+                             title=inTitleEnrichmentMap, motifFilter=False,
                              initialFrame=True, duplicateFigure=False,
                              saveTag=datasetTag)
 
@@ -877,13 +835,13 @@ if inPlotEnrichmentMotif:
                                          printProbability=inPrintRF)
         # Plot: Final RF
         ngs.plotRFDist(RF=codonProbs, yMax=inDFDistMaxY, codonType=inCodonSequence,
-                       sortType='Final Sort', residueColors=colors)
+                       sortType='Final Sort', fixedTag=fixedSubSeq, residueColors=colors)
 
         # Calculate: Enrichment scores
         heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
             counts=countsFinal.copy(), N=countsFinalTotal, baselineProb=codonProbs,
             baselineType=pType, printRF=inPrintMotifData, scaleData=True,
-            normlaizeFixedScores=inNormLetters)
+            normalizeFixedScores=inNormLetters)
     else:
         # Define: Baseline probability type
         pType = 'Initial Sort'
@@ -892,16 +850,15 @@ if inPlotEnrichmentMotif:
         heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
             counts=countsFinal.copy(), N=countsFinalTotal, baselineProb=initialRF,
             baselineType=pType, printRF=inPrintRF, scaleData=True,
-            normlaizeFixedScores=inNormLetters)
+            normalizeFixedScores=inNormLetters)
 
 
     # Plot: Sequence Motif
-    ngs.plotMotif(data=heights, motifType='Scaled Enrichment',
-                  bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
-                  figBorders=inFigureBordersEnrichmentMotif, title=f'{inTitleMotif}',
-                  titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
-                  lines=inAddHorizontalLines, motifFilter=False, initialFrame=True,
-                  duplicateFigure=False, saveTag=datasetTag)
+    ngs.plotMotif(
+        data=heights, dataType='Scaled Enrichment', bigLettersOnTop=inBigLettersOnTop,
+        title=f'{inTitleMotif}', titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
+        showYTicks=False, addHorizontalLines=inAddHorizontalLines, motifFilter=False,
+        duplicateFigure=False, saveTag=datasetTag)
 
 
 if inPlotWeblogoMotif:
@@ -912,19 +869,17 @@ if inPlotWeblogoMotif:
 
     if inShowWeblogoYTicks:
         # Plot: Sequence Motif
-        ngs.plotMotif(data=scaledRF, motifType='WebLogo',
-                      bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
-                      figBorders=inFigureBordersMotifYTicks, title=inTitleMotif,
-                      titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=0,
-                      lines=inAddHorizontalLines, motifFilter=False, initialFrame=True,
-                      duplicateFigure=False, saveTag=datasetTag)
+        ngs.plotMotif(
+            data=scaledRF, dataType='WebLogo', bigLettersOnTop=inBigLettersOnTop,
+            title=inTitleMotif, titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
+            showYTicks=inShowWeblogoYTicks, addHorizontalLines=inAddHorizontalLines,
+            motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
     else:
-        ngs.plotMotif(data=scaledRF, motifType='Weblogo',
-                      bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
-                      figBorders=inFigureBordersMotifMaxYTick, title=inTitleMotif,
-                      titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
-                      lines=inAddHorizontalLines, motifFilter=False, initialFrame=True,
-                      duplicateFigure=False, saveTag=datasetTag)
+        ngs.plotMotif(
+            data=scaledRF, dataType='WebLogo', bigLettersOnTop=inBigLettersOnTop,
+            title=inTitleMotif, titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
+            showYTicks=inShowWeblogoYTicks, addHorizontalLines=inAddHorizontalLines,
+            motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
 
 
 if inEvaluateSubstrateEnrichment:
@@ -932,14 +887,14 @@ if inEvaluateSubstrateEnrichment:
                             NSubs=inNumberOfSavedSubstrates,
                             saveData=inSaveEnrichedSubstrates, savePath=inFilePath)
 
-    if inFilterSubstrates:
+    if inFixResidues:
         ngs.substrateEnrichment(initialSubs=substratesInitial, finalSubs=substratesFinal,
                                 NSubs=inNumberOfSavedSubstrates,
                                 saveData=inSaveEnrichedSubstrates, savePath=inFilePath)
 
 
 if inPlotWordCloud:
-    if inFilterSubstrates:
+    if inFixResidues:
         titleWordCloud = f'{inEnzymeName}: Fixed {fixedSubSeq}'
     else:
         titleWordCloud = f'{inEnzymeName}: Unfixed'

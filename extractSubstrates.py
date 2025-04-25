@@ -5,9 +5,9 @@
     # Reverse Read: denoted by "R2"
 # Designating the sorted library
     # If there is an "F" or "R4" in the file names of your final sort, ignore this
-    # If not, then find the line "# Define: File type" and add in a string that is
-        # unique to your final sort files to the conditional statement, so that we
-        # correctly define "fileType"
+    # If not, then find the line: "# Define: File type"
+        # and add in a string that is unique to your final sort files to the
+        # conditional statement, so that we correctly define "fileType"
 
 
 import os
@@ -20,15 +20,15 @@ from functions import NGS
 # Input 1: File Location
 inFileName = ['Src-F_S2_L001_R1_001', 'Src-F_S2_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Fastq') # Define the fastq folder pathway
 inFileType = 'fastq' # Define the file type
 inSavePath = os.path.join(inBasePath, 'Extracted Data')
 inSaveFileName = 'Src-F_S2_L001'
-inAlertPath = '/path/to/sounds/Bells.mp3'
+inAlertPath = '/Users/ca34522/Documents/Python/Sounds/Bells.mp3'
 
 # Input 2: Substrate Parameters
-inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8', 'R9']
+inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
 inShowSampleSize = True # Include the sample size in your figures
 inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
 

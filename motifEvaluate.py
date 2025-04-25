@@ -1,5 +1,5 @@
 from functions import filePaths, NGS
-import logomaker
+
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -16,14 +16,14 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: File Location
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
 inSaveFigures = True
-inFigureTimer = True
+inFigureTimer = False
 
 # Input 2: Experimental Parameters
 inSubstrateLength = len(inAAPositions)
@@ -75,7 +75,7 @@ inShowSampleSize = False # Include the sample size in your figures
 # Input 5: PCA
 inNumberOfPCs = 2
 inTotalSubsPCA = int(5*10**4)
-inEncludeSubstrateCounts = False
+inIncludeSubstrateCounts = False
 inExtractPopulations = False
 inPlotPositionalEntropyPCAPopulations = False
 inAdjustZeroCounts = True # Prevent counts of 0 in PCA EM & Motif
@@ -102,8 +102,8 @@ inFigureSize = (9.5, 8) # (width, height)
 inFigureBorders = [0.873, 0.075, 0.117, 0.967] # Top, bottom, left, right
 inFigureAsSquares = (4.5, 8)
 inFigureBordersAsSquares = [0.873, 0.075, 0.075, 0.943]
-inEnrichmentColorMap = ['navy', 'royalblue', 'dodgerblue', 'lightskyblue', 'white', 'white',
-                        'lightcoral', 'red', 'firebrick', 'darkred']
+inEnrichmentColorMap = ['navy', 'royalblue', 'dodgerblue', 'lightskyblue', 'white',
+                        'white', 'lightcoral', 'red', 'firebrick', 'darkred']
 
 # Input 8: Plot Sequence Motif
 inNormLetters = False # Normalize fixed letter heights
@@ -117,8 +117,8 @@ inFigureBordersMotifYTicks = [0.94, 0.075, 0.07, 0.98] # [top, bottom, left, rig
 inFigureBordersMotifMaxYTick = [0.94, 0.075, 0.102, 0.98]
 inFigureBordersNegativeWeblogoMotif = [0.94, 0.075, 0.078, 0.98]
 inFigureBordersEnrichmentMotif = [0.94, 0.075, 0.138, 0.98]
-inLetterColors = ['darkgreen', 'firebrick', 'deepskyblue', 'pink', 'navy', 'black', 'gold']
-                  # Aliphatic, Acidic, Basic, Hydroxyl, AmMpro22, Aromatic, Sulfur
+inLetterColors = ['darkgreen','firebrick','deepskyblue','pink','navy','black','gold']
+                  # Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
 # Input 9: Evaluate Known Substrates
 inNormalizePredictions = True
@@ -218,15 +218,6 @@ else:
         inDatasetTag = (f'Motif {inFixedResidue[0]}@R{inFixedPosition[0]}-'
                             f'R{inFixedPosition[1]}, R{inFixedPosition[-1]}')
 
-# Figure parameters
-if inShowEnrichmentAsSquares:
-    # Set figure dimension when plotting EM plots as squares
-    figSizeEM = inFigureAsSquares
-    figBordersEM = inFigureBordersAsSquares
-else:
-    # Set figure dimension when plotting EM plots as rectangles
-    figSizeEM = inFigureSize
-    figBordersEM = inFigureBorders
 
 # Colors:
 white = '\033[38;2;255;255;255m'
@@ -257,12 +248,12 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
           colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
-          xAxisLabels=inAAPositions, xAxisLabelsBinned=inAAPositionsBinned,
-          residueLabelType=inYLabelEnrichmentMap, titleLabelSize=inFigureTitleSize,
-          axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize,
-          printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          saveFigures=inSaveFigures, savePath=inFilePath, savePathFigs=inSavePathFigures,
-          setFigureTimer=inFigureTimer)
+          figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
+          xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
+          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
+          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
+          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inFilePath,
+          savePathFigs=inSavePathFigures, setFigureTimer=inFigureTimer)
 
 
 
@@ -415,7 +406,7 @@ def loadSubstratesFixedMotif():
             # Convert substrate data to numerical
             tokensESM, subsESM, subCountsESM = ngs.ESM(
                 substrates=loadedSubs, collectionNumber=inTotalSubsPCA,
-                useSubCounts=inEncludeSubstrateCounts, subPositions=inAAPositions,
+                useSubCounts=inIncludeSubstrateCounts, subPositions=inAAPositions,
                 datasetTag=frame)
 
             # Cluster substrates
@@ -452,7 +443,7 @@ def importFixedMotifSubs():
             # Convert substrate data to numerical
             tokensESM, subsESM, subCountsESM = ngs.ESM(
                 substrates=loadedSubs, collectionNumber=inTotalSubsPCA,
-                useSubCounts=inEncludeSubstrateCounts, subPositions=inAAPositions,
+                useSubCounts=inIncludeSubstrateCounts, subPositions=inAAPositions,
                 datasetTag=tagFixedAA)
 
             # Cluster substrates
@@ -784,7 +775,7 @@ def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotdataPCA
 
 
 def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop, 
-              plotReleasedCounts, addLines, motifType):
+              plotReleasedCounts, addLines, dataType):
     # Set local parameters
     try:
         if bigLettersOnTop:
@@ -844,11 +835,11 @@ def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop,
         fig, ax = plt.subplots(figsize=inFigureSize)
         motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=colors,
                                width=0.95, stack_order=stackOrder)
-        if 'Scaled' in motifType:
+        if 'Scaled' in dataType:
             lefts = [0.131, 0.119]
             plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], 
                                 left=lefts[index], right=figBorders[3])
-        elif 'Enrichment' in motifType:
+        elif 'Enrichment' in dataType:
             lefts = [0.117, 0.117]
             plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], 
                                 left=lefts[index], right=figBorders[3])
@@ -862,7 +853,7 @@ def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop,
                 maxSubCount = max(finalN)
                 minSubCount = min(finalN)
 
-                if 'Enrichment' in motifType:
+                if 'Enrichment' in dataType:
                     motif.ax.set_title(f'{inEnzymeName}\n'
                                        f'N Initial = {initialN:,}\n'
                                        f'N Final = {maxSubCount:,}-{minSubCount:,}',
@@ -872,7 +863,7 @@ def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop,
                                        f'N = {maxSubCount:,}-{minSubCount:,}',
                                        fontsize=inFigureTitleSize, fontweight='bold')
             else:
-                if 'Enrichment' in motifType:
+                if 'Enrichment' in dataType:
                     motif.ax.set_title(f'{inTitleEnrichmentMap}\n'
                                        f'N Initial = {initialN:,}\n'
                                        f'N Final = {finalN:,}',
@@ -899,7 +890,7 @@ def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop,
             tick.tick1line.set_markeredgewidth(inLineThickness)  # Set tick width
 
         # Set yticks
-        if 'Enrichment' in motifType:
+        if 'Enrichment' in dataType:
             yTicks = [yMin, 0, yMax]
             yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}' 
                            for tick in yTicks]
@@ -919,14 +910,14 @@ def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop,
 
         # Label the axes
         motif.ax.set_xlabel('Position', fontsize=inFigureLabelSize)
-        if motifType == 'Weblogo':
+        if dataType == 'Weblogo':
             motif.ax.set_ylabel('Bits', fontsize=inFigureLabelSize)
         else:
-            motif.ax.set_ylabel(motifType, fontsize=inFigureLabelSize)
+            motif.ax.set_ylabel(dataType, fontsize=inFigureLabelSize)
 
         # Set horizontal line
         motif.ax.axhline(y=0, color='black', linestyle='-', linewidth=inLineThickness)
-        if 'Enrichment' not in motifType and addLines:
+        if 'Enrichment' not in dataType and addLines:
             for tick in yTicks:
                 motif.ax.axhline(y=tick, color='black', linestyle='--',
                                  linewidth=inLineThickness)
@@ -1525,18 +1516,15 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     if inPlotEnrichmentMapPCA:
         # Plot: Enrichment Map
         ngs.plotEnrichmentScores(
-            scores=fixedMotifPopESAdjusted, motifType='Enrichment', figSize=figSizeEM,
-            figBorders=figBordersEM, title=f'{figureTitleEM}\nEnrichment Scores',
-            showScores=inShowEnrichmentScores, squares=inShowEnrichmentAsSquares,
+            scores=fixedMotifPopESAdjusted, dataType='Enrichment',
+            title=f'{figureTitleEM}\nEnrichment Scores',
             saveTag=datasetTag, motifFilter=False, initialFrame=True, 
             duplicateFigure=False)
 
         # Plot: Enrichment Map Scaled
         ngs.plotEnrichmentScores(
-            scores=fixedMotifPCAESScaledAdjusted, motifType='Scaled Enrichment',
-            figSize=figSizeEM, figBorders=figBordersEM, 
-            title=f'{figureTitleEM}\nScaled Enrichment Scores', 
-            showScores=inShowEnrichmentScores, squares=inShowEnrichmentAsSquares,
+            scores=fixedMotifPCAESScaledAdjusted, dataType='Scaled Enrichment',
+            title=f'{figureTitleEM}\nScaled Enrichment Scores',
             saveTag=datasetTag, motifFilter=False, initialFrame=True, 
             duplicateFigure=False)
 
@@ -1544,13 +1532,11 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
         if inAdjustZeroCounts:
             # Plot: Sequence Motif
             ngs.plotMotif(data=fixedMotifPCAESScaled.copy(),
-                          motifType='Scaled Enrichment',
-                          bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize, 
-                          figBorders=inFigureBordersEnrichmentMotif,
-                          title=f'{figureTitleMotif}', titleSize=inFigureTitleSize,
-                          yMax=yMax, yMin=yMin, yBoundary=2, lines=inAddHorizontalLines,
-                          motifFilter=False, initialFrame=False, duplicateFigure=False,
-                          saveTag=datasetTag)
+                          dataType='Scaled Enrichment',
+                          bigLettersOnTop=inBigLettersOnTop, title=f'{figureTitleMotif}',
+                          titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
+                          showYTicks=False, addHorizontalLines=inAddHorizontalLines,
+                          motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
 
     # Plot: Work cloud
     if inPlotWordsPCA:
@@ -1634,15 +1620,11 @@ if inPlotEnrichmentMap:
     # addData = [3, 2, 4, 0, 1]
     # for column in addData:
     #     plotES.iloc[:, column] = fixedMotifES.iloc[:, column]
-    #     # Plot: Enrichment Map
+    #     Plot: Enrichment Map
     #     ngs.plotEnrichmentScores(scores=plotES,
-    #                              motifType='Enrichment',
-    #                              figSize=figSizeEM,
-    #                              figBorders=figBordersEM,
+    #                              dataType='Enrichment',
     #                              title=f'{inTitleEnrichmentMap}\n{inDatasetTag}\n'
     #                                    f'Enrichment Scores',
-    #                              showScores=inShowEnrichmentScores,
-    #                              squares=inShowEnrichmentAsSquares,
     #                              saveTag=inDatasetTag,
     #                              motifFilter=False,
     #                              initialFrame=True,
@@ -1650,13 +1632,9 @@ if inPlotEnrichmentMap:
 
     # Plot: Enrichment Map
     ngs.plotEnrichmentScores(scores=fixedMotifES.copy(),
-                             motifType='Enrichment',
-                             figSize=figSizeEM,
-                             figBorders=figBordersEM,
+                             dataType='Enrichment',
                              title=f'{inTitleEnrichmentMap}\n{inDatasetTag}\n'
                                    f'Enrichment Scores',
-                             showScores=inShowEnrichmentScores,
-                             squares=inShowEnrichmentAsSquares,
                              saveTag=inDatasetTag,
                              motifFilter=False,
                              initialFrame=True,
@@ -1672,13 +1650,9 @@ if inPlotEnrichmentMap:
 
     # Plot: Enrichment Map - Scaled
     ngs.plotEnrichmentScores(scores=fixedMotifESScaled.copy(),
-                             motifType='Scaled Enrichment',
-                             figSize=figSizeEM,
-                             figBorders=figBordersEM,
+                             dataType='Scaled Enrichment',
                              title=f'{inTitleEnrichmentMap}\n{inDatasetTag}\n'
                                    f'Scaled Enrichment Scores',
-                             showScores=inShowEnrichmentScores,
-                             squares=inShowEnrichmentAsSquares,
                              saveTag=inDatasetTag,
                              motifFilter=False,
                              initialFrame=True,
@@ -1690,48 +1664,44 @@ if inPlotEnrichmentMotif:
     yMin = min(fixedMotifESScaled[fixedMotifESScaled < 0].sum())
 
     # Plot: Sequence Motif
-    ngs.plotMotif(data=fixedMotifESScaled.copy(), motifType='Scaled Enrichment', 
-                  bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
-                  figBorders=inFigureBordersEnrichmentMotif,
+    ngs.plotMotif(data=fixedMotifESScaled.copy(), dataType='Scaled Enrichment',
+                  bigLettersOnTop=inBigLettersOnTop,
                   title=f'{inTitleMotif}\n{inDatasetTag}',
-                  titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
-                  lines=inAddHorizontalLines, motifFilter=False, initialFrame=False,
+                  titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, showYTicks=False,
+                  addHorizontalLines=inAddHorizontalLines, motifFilter=False,
                   duplicateFigure=False, saveTag=inDatasetTag)
 
     # Plot: Sequence Motif
-    ngs.plotMotif(data=fixedMotifESScaled.copy(), motifType='Scaled Enrichment',
-                  bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
-                  figBorders=inFigureBordersEnrichmentMotif,
+    ngs.plotMotif(data=fixedMotifESScaled.copy(), dataType='Scaled Enrichment',
+                  bigLettersOnTop=inBigLettersOnTop,
                   title=f'{inTitleMotif}\n{inDatasetTag}',
-                  titleSize=inFigureTitleSize, yMax=yMax, yMin=0, yBoundary=2,
-                  lines=inAddHorizontalLines, motifFilter=False, initialFrame=False,
+                  titleSize=inFigureTitleSize, yMax=yMax, yMin=0, showYTicks=False,
+                  addHorizontalLines=inAddHorizontalLines, motifFilter=False,
                   duplicateFigure=False, saveTag=f'Y Min - {inDatasetTag}')
 
 
 if inPlotWeblogoMotif:
-    releasedRFscaled, fixedAA, yMax, yMin = ngs.heightsRF(
+    releasedRScaled, fixedAA, yMax, yMin = ngs.heightsRF(
         counts=fixedMotifCountsTotal.copy(), N=fixedMotifCountsTotal,
         invertRF=False, printRF=inPrintMotifData)
 
     if inShowWeblogoYTicks:
         yMax, yMin = 5, 0
         # Plot: Sequence Motif
-        ngs.plotMotif(data=releasedRFscaled.copy(), motifType='Weblogo',
-                      bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
-                      figBorders=inFigureBordersEnrichmentMotif,
+        ngs.plotMotif(data=releasedRScaled.copy(), dataType='Weblogo',
+                      bigLettersOnTop=inBigLettersOnTop,
                       title=f'{inTitleMotif}\n{inDatasetTag}',
-                      titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=0,
-                      lines=inAddHorizontalLines, motifFilter=False, initialFrame=False,
+                      titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, showYTicks=False,
+                      addHorizontalLines=inAddHorizontalLines, motifFilter=False,
                       duplicateFigure=False, saveTag=inDatasetTag)
     else:
         # Plot: Sequence Motif
-        ngs.plotMotif(data=releasedRFscaled.copy(), motifType='Weblogo',
-                      bigLettersOnTop=inBigLettersOnTop, figureSize=inFigureSize,
-                      figBorders=inFigureBordersEnrichmentMotif,
+        ngs.plotMotif(data=releasedRScaled.copy(), dataType='Weblogo',
+                      bigLettersOnTop=inBigLettersOnTop,
                       title=f'{inTitleMotif}\n{inDatasetTag}',
-                      titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, yBoundary=2,
-                      lines=inAddHorizontalLines, motifFilter=False,
-                      initialFrame=False, duplicateFigure=False, saveTag=inDatasetTag)
+                      titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, showYTicks=False,
+                      addHorizontalLines=inAddHorizontalLines, motifFilter=False,
+                      duplicateFigure=False, saveTag=inDatasetTag)
 
 
 # Plot: Measured FACS activity
@@ -1873,7 +1843,7 @@ if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
         # Convert substrate data to numerical
         tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=binnedSubs,
                                                    collectionNumber=inTotalSubsPCA,
-                                                   useSubCounts=inEncludeSubstrateCounts,
+                                                   useSubCounts=inIncludeSubstrateCounts,
                                                    subPositions=inFixedMotifPositions,
                                                    datasetTag=inDatasetTag)
 

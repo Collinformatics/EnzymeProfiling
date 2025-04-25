@@ -131,11 +131,10 @@ def includeCommas(x):
 class NGS:
     def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
                  excludeAA, excludePosition, minCounts, colorsCounts, colorsEM,
-                 colorStDev, colorsMotif, xAxisLabels, xAxisLabelsBinned, 
+                 colorStDev, colorsMotif, figEMSquares, xAxisLabels, xAxisLabelsBinned,
                  residueLabelType, titleLabelSize, axisLabelSize, tickLabelSize, 
                  printNumber, showNValues, savePath, saveFigures, savePathFigs, 
                  setFigureTimer):
-        self.dpi = 300
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
@@ -149,6 +148,12 @@ class NGS:
         self.colorSchemeEM = colorsEM
         self.colorSchemeStDev = colorStDev
         self.colorSchemeMotif = colorsMotif
+        self.figEMSquares = figEMSquares
+        if figEMSquares:
+            self.figSizeEM = (5, 8) # (width, height)
+        else:
+            self.figSizeEM = (9.5, 8)
+        self.figSize = (9.5, 8)
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsBinned = xAxisLabelsBinned
         self.residueLabelType = residueLabelType
@@ -259,7 +264,7 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = NGS.fixSubstrateSequence(self)
+            fixedSubSeq = NGS.genDatasetTag(self)
             print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
 
 
@@ -544,7 +549,7 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = NGS.fixSubstrateSequence(self)
+            fixedSubSeq = NGS.genDatasetTag(self)
             print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
 
 
@@ -1358,31 +1363,40 @@ class NGS:
 
 
 
-    def fixSubstrateSequence(self):
+    def genDatasetTag(self):
         fixResidueList = []
         if self.excludeAAs:
             # Exclude residues
             for index, removedAA in enumerate(self.excludeAA):
-                fixResidueList.append(f'Excl-{removedAA}@R{self.excludePosition[index]}')
+                if index == 0:
+                    fixResidueList.append(
+                        f'Excl-{removedAA}@R{self.excludePosition[index]}')
+                else:
+                    fixResidueList.append(
+                        f'{removedAA}@R{self.excludePosition[index]}')
 
+            # Fix residues
             for index in range(len(self.fixedAA)):
-                fixResidueList.append(f'Fixed-{self.fixedAA[index]}'
-                                      f'@R{self.fixedPosition[index]}')
+                if index == 0:
+                    fixResidueList.append(
+                        f'Fixed-{self.fixedAA[index]}@R{self.fixedPosition[index]}')
+                else:
+                    fixResidueList.append(
+                        f'{self.fixedAA[index]}@R{self.fixedPosition[index]}')
 
-            self.fixedSubSeq = '_'.join([f'{seq}' for seq in fixResidueList])
+            self.fixedSubSeq = ' '.join(fixResidueList)
+            self.fixedSubSeq = self.fixedSubSeq.replace(" Fixed", '_Fixed')
         else:
-            # Exclude residues
+            # Fix residues
             for index in range(len(self.fixedAA)):
-                fixResidueList.append(f'{self.fixedAA[index]}'
-                                      f'@R{self.fixedPosition[index]}')
+                fixResidueList.append(
+                    f'{self.fixedAA[index]}@R{self.fixedPosition[index]}')
 
-            self.fixedSubSeq = '_'.join([f'{seq}' for seq in fixResidueList])
+            self.fixedSubSeq = ' '.join(fixResidueList)
 
         # Condense the string
         if "'" in self.fixedSubSeq:
             self.fixedSubSeq = self.fixedSubSeq.replace("'", '')
-        if " " in self.fixedSubSeq:
-            self.fixedSubSeq = self.fixedSubSeq.replace(" ", '')
 
         # Clean up fixed sequence tag
         removeTag = ('Excl-Y@R1_Excl-Y@R2_Excl-Y@R3_Excl-Y@R4_Excl-Y@R6_'
@@ -1416,182 +1430,6 @@ class NGS:
 
 
 
-    def plotCounts(self, countedData, totalCounts, title, figSize):
-        # Remove commas from string values and convert to float
-        countedData = countedData.applymap(lambda x:
-                                           float(x.replace(',', ''))
-                                           if isinstance(x, str) else x)
-
-        # Create heatmap
-        cMapCustom = NGS.createCustomColorMap(self, colorType='Counts')
-
-        # Convert the counts to a data frame for Seaborn heatmap
-        if self.residueLabelType == 0:
-            countedData.index = [residue[0] for residue in self.residues]
-        elif self.residueLabelType == 1:
-            countedData.index = [residue[1] for residue in self.residues]
-        elif self.residueLabelType == 2:
-            countedData.index = [residue[2] for residue in self.residues]
-
-        # Plot the heatmap with numbers centered inside the squares
-        fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
-        heatmap = sns.heatmap(countedData, annot=True, fmt=',d', cmap=cMapCustom,
-                              cbar=True, linewidths=self.lineThickness-1,
-                              linecolor='black', square=False, center=None,
-                              annot_kws={'fontweight': 'bold'})
-        ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
-        ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
-
-        if self.showSampleSize:
-            if totalCounts is None:
-                ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-            else:
-                ax.set_title(f'{title}\nN={totalCounts:,}',
-                             fontsize=self.labelSizeTitle, fontweight='bold')
-        else:
-            ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-        plt.tight_layout()
-
-        # Set the thickness of the figure border
-        for _, spine in ax.spines.items():
-            spine.set_visible(True)
-            spine.set_linewidth(self.lineThickness)
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks, width=self.lineThickness)
-        ax.tick_params(axis='y', labelrotation=0)
-
-        # Set xticks
-        xTicks = np.arange(len(countedData.columns)) + 0.5
-        ax.set_xticks(xTicks)
-        ax.set_xticklabels(countedData.columns)
-
-        # Set yticks
-        yTicks = np.arange(len(countedData.index)) + 0.5
-        ax.set_yticks(yTicks)
-        ax.set_yticklabels(countedData.index)
-
-
-        for _, spine in ax.spines.items():
-            spine.set_visible(True)
-
-        # Modify the colorbar
-        cbar = heatmap.collections[0].colorbar
-        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
-                            length=self.tickLength, width=self.lineThickness)
-        cbar.outline.set_linewidth(self.lineThickness)
-        cbar.outline.set_edgecolor('black')
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        plt.show()
-
-
-
-    def plotStats(self, countedData, totalCounts, title, figSize, datasetTag, dataType):
-        # Create heatmap
-        cMapCustom = NGS.createCustomColorMap(self, colorType=dataType)
-
-        # Convert the counts to a data frame for Seaborn heatmap
-        if self.residueLabelType == 0:
-            countedData.index = [residue[0] for residue in self.residues]
-        elif self.residueLabelType == 1:
-            countedData.index = [residue[1] for residue in self.residues]
-        elif self.residueLabelType == 2:
-            countedData.index = [residue[2] for residue in self.residues]
-
-        # Plot the heatmap with numbers centered inside the squares
-        fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
-        heatmap = sns.heatmap(countedData, annot=True, fmt='.3f', cmap=cMapCustom, cbar=True,
-                              linewidths=self.lineThickness-1, linecolor='black',
-                              square=False, center=None, annot_kws={'fontweight': 'bold'})
-        ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
-        ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
-        if self.showSampleSize:
-            if totalCounts is None:
-                ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-            else:
-                ax.set_title(f'{title}\nN={totalCounts:,}',
-                             fontsize=self.labelSizeTitle, fontweight='bold')
-        else:
-            ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-
-
-        # Set the thickness of the figure border
-        for _, spine in ax.spines.items():
-            spine.set_visible(True)
-            spine.set_linewidth(self.lineThickness)
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks, width=self.lineThickness)
-        ax.tick_params(axis='y', labelrotation=0)
-
-        # Set xticks
-        xTicks = np.arange(len(countedData.columns)) + 0.5
-        ax.set_xticks(xTicks)
-        ax.set_xticklabels(countedData.columns)
-
-        # Set yticks
-        yTicks = np.arange(len(countedData.index)) + 0.5
-        ax.set_yticks(yTicks)
-        ax.set_yticklabels(countedData.index)
-
-        # Set edge thickness
-        for _, spine in ax.spines.items():
-            spine.set_visible(True)
-
-        # Modify the colorbar
-        cbar = heatmap.collections[0].colorbar
-        tickLabels = cbar.ax.get_yticklabels()
-        cbarLabels = []
-        for label in tickLabels:
-            labelText = label.get_text()  # Get the text of the label
-            try:
-                labelValue = float(labelText)  # Convert to a float
-                if labelValue.is_integer():  # Check if it's an integer
-                    cbarLabels.append(int(labelValue))  # Append as an integer
-            except ValueError:
-                print(f'{orange}ERROR: Unable to plot the{cyan} {dataType}{orange} '
-                      f'label{cyan} {label}\n\n')
-                sys.exit()
-        cbar.set_ticks(cbarLabels)  # Set the positions of the ticks
-        cbar.set_ticklabels(cbarLabels)
-        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
-                            length=self.tickLength, width=self.lineThickness)
-        cbar.outline.set_linewidth(self.lineThickness)
-        cbar.outline.set_edgecolor('black')
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        fig.tight_layout()
-        if self.setFigureTimer:
-            plt.ion()
-            plt.show()
-            plt.pause(self.figureTimerDuration)
-            plt.close(fig)
-            plt.ioff()
-        else:
-            plt.show()
-
-        # Save the figure
-        if self.saveFigures:
-            # Define: Save location
-            figLabel = (f'EM - {self.enzymeName} - {dataType} - {datasetTag} - '
-                        f'MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                print(f'The figure was not saved\n\n'
-                      f'File was already found at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-            else:
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
-
-
-
     def fixResidue(self, substrates, fixedString, printRankedSubs, sortType):
         print('==================================== Fix AA '
               '=====================================')
@@ -1615,7 +1453,7 @@ class NGS:
                 keepSub = True
                 for indexExclude, AAExclude in enumerate(self.excludeAA):
                     if len(AAExclude) == 1:
-                        indexRemoveAA = self.excludePositon[indexExclude] - 1
+                        indexRemoveAA = self.excludePosition[indexExclude] - 1
 
                         # Is the AA acceptable?
                         if substrate[indexRemoveAA] == AAExclude:
@@ -1624,7 +1462,7 @@ class NGS:
                     else:
                         # Remove Multiple AA at a specific position
                         for AAExcludeMulti in AAExclude:
-                            indexRemoveAA = self.excludePositon[indexExclude] - 1
+                            indexRemoveAA = self.excludePosition[indexExclude] - 1
                             for AAExclude in AAExcludeMulti:
 
                                 # Is the AA acceptable?
@@ -1728,7 +1566,8 @@ class NGS:
             print(f'Selecting continuous sequence')
         else:
             print(f'Selecting specific residues sequence')
-        print(f'Minimum ΔEntropy Value:{pink} {minEntropy} Bits{resetColor}\n')
+        print(f'Minimum ΔEntropy Value:{pink} {minEntropy} Bits{resetColor}\n'
+              f'Entropy:\n{entropy}\n')
 
 
         print(f'Positional Entropy:\n'
@@ -1855,301 +1694,6 @@ class NGS:
 
 
 
-    def plotRFDist(self, RF, yMax, codonType, sortType, fixedTag, residueColors):
-        # Local parameters
-        tickStepSize = 0.05
-        numPos = RF.shape[1] # Number of columns
-        numAA = RF.shape[0] # Number of AA
-
-
-        # Plot the data
-        fig, ax = plt.subplots(figsize=(9, 6))
-        plt.ylabel('Probability', fontsize=self.labelSizeAxis)
-        if sortType == 'Initial Sort':
-            plt.title(f'Amino Acid Distribution - Unsorted Library',
-                      fontsize=self.labelSizeTitle, fontweight='bold')
-        else:
-            if fixedTag is None:
-                plt.title(f'Amino Acid Distribution - Sorted Library',
-                          fontsize=self.labelSizeTitle, fontweight='bold')
-            else:
-                plt.title(f'Amino Acid Distribution - Sorted Library - '
-                          f'{fixedTag}', fontsize=self.labelSizeTitle, fontweight='bold')
-        plt.subplots_adjust(top=0.926, bottom=0.068, left=0.102, right=0.979)
-
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       width=self.lineThickness)
-
-        # Set xticks
-        widthBar = 2
-        spacing = widthBar * numPos
-        widthCluster = spacing + 5
-        indices = np.arange(numAA) * widthCluster
-        midPoint = (numPos - 1) / 2 * widthBar
-        xTicks = indices + midPoint
-        ax.set_xticks(xTicks)
-        ax.set_xticklabels(RF.index, rotation=0, ha='center',
-                           fontsize=self.labelSizeTicks)
-
-        # Set yticks
-        yTicks = np.arange(0, yMax + tickStepSize, tickStepSize)
-        yTickLabels = [f'{tick:.0f}' if tick == 0 or tick == 1
-                       else f'{tick:.2f}' for tick in yTicks]
-        ax.set_yticks(yTicks)
-        ax.set_yticklabels(yTickLabels, fontsize=self.labelSizeTicks)
-        for tick in ax.yaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness)
-
-        # Set edge color
-        for index, AA in enumerate(RF.index):
-            xPos = indices[index] + np.arange(numPos) * widthBar
-            if AA == 'F' or AA == 'W' or AA == 'Y': # AA == 'N' or AA == 'Q' or
-                ax.bar(xPos, RF.loc[AA], widthBar, label=AA,
-                       color=residueColors[AA], edgecolor='dimgray')
-            else:
-                ax.bar(xPos, RF.loc[AA], widthBar, label=AA,
-                       color=residueColors[AA], edgecolor='black')
-
-        # Set edge thickness
-        for spine in ax.spines.values():
-            spine.set_linewidth(self.lineThickness)
-
-        # Set axis limits
-        plt.ylim(0, yMax)
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        plt.show()
-
-        if self.saveFigures:
-            # Define: Save location
-            if sortType == 'Initial Sort':
-                figLabel = (f'AA Distribution - {codonType} - Unfiltered - '
-                            f'{sortType} - MinCounts {self.minSubCount}.png')
-            else:
-                if fixedTag is None:
-                    figLabel = (f'AA Distribution - {codonType} - Unfiltered - '
-                                f'{sortType} - MinCounts {self.minSubCount}.png')
-                else:
-                    figLabel = (f'AA Distribution - {codonType} - {fixedTag} - '
-                                f'{sortType} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                print(f'The figure was not saved\n\n'
-                      f'File was already found at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-            else:
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
-
-
-
-    def plotPositionalRFDist(self, RF, entropyScores, residueColors):
-        for position in entropyScores.index:
-            # Extract values for plotting
-            probabilities = list(RF.loc[:, position])
-
-            # Calculate positional entropy
-            shannonS = 0
-            notNumber = False
-            for AA in self.letters:
-                prob = RF.loc[AA, position]
-                shannonS += -prob * np.log2(prob)
-            if math.isnan(shannonS):
-                shannonS = 0
-                notNumber = True
-
-            # Plot the data
-            setEdgeColor = True
-            fig, ax = plt.subplots(figsize=(8, 6))
-            if setEdgeColor:
-                widthBar = 0.8
-                xPos = np.arange(len(RF.index))
-
-                for index, AA in enumerate(RF.index):
-                    edgeColor = 'dimgray' if AA in ['F', 'W', 'Y'] else 'black'
-                    ax.bar(xPos[index], RF.loc[AA, position], widthBar, label=AA,
-                           color=residueColors[AA], edgecolor=edgeColor)
-            else:
-                plt.bar(self.letters, probabilities,
-                        color=[residueColors[AA] for AA in self.letters])
-            # plt.xlabel('Amino Acids', fontsize=self.labelSizeAxis)
-            plt.ylabel('Probability', fontsize=self.labelSizeAxis)
-            if notNumber:
-                plt.title(f'{self.enzymeName}: Amino Acid Distribution at {position}\n'
-                          f'ΔS = {entropyScores.loc[position, "ΔEntropy"]:.3f}, '
-                          f'Shannon Entropy = {shannonS:.0f}', fontsize=self.labelSizeTitle,
-                          fontweight='bold')
-            else:
-                plt.title(f'{self.enzymeName}: Amino Acid Distribution at {position}\n'
-                          f'ΔS = {entropyScores.loc[position, "ΔEntropy"]:.3f}, '
-                          f'Shannon Entropy = {shannonS:.3f}', fontsize=self.labelSizeTitle,
-                          fontweight='bold')
-            # plt.subplots_adjust(top=0.88, bottom=0.11, left=0.102, right=0.979)
-            figBorders = [0.882, 0.075, 0.104, 0.974]  # Top, bottom, left, right
-            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
-                                left=figBorders[2], right=figBorders[3])
-
-
-            # Set axis limits
-            yMax = 1
-            plt.ylim(0, yMax)
-
-            # Set tick parameters
-            ax.tick_params(axis='both', which='major', length=self.tickLength,
-                           labelsize=self.labelSizeTicks)
-
-            # Set xticks
-            xTicks = np.arange(0, len(self.letters), 1)
-            ax.set_xticks(xTicks)  # Set the positions of the ticks
-            ax.set_xticklabels(self.letters, rotation=0, ha='center',
-                               fontsize=self.labelSizeTicks)
-            for tick in ax.xaxis.get_major_ticks():
-                tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
-
-            # Set yticks
-            tickStepSize = 0.2
-            yTicks = np.arange(0, yMax + tickStepSize, tickStepSize)
-            yTickLabels = [f'{tick:.0f}' if tick == 0 or tick == 1 else f'{tick:.1f}'
-                           for tick in yTicks]
-            ax.set_yticks(yTicks)  # Set the positions of the ticks
-            ax.set_yticklabels(yTickLabels)
-            for tick in ax.yaxis.get_major_ticks():
-                tick.tick1line.set_markeredgewidth(self.lineThickness)
-
-
-            # Set edge thickness
-            for spine in ax.spines.values():
-                spine.set_linewidth(self.lineThickness)
-
-            fig.canvas.mpl_connect('key_press_event', pressKey)
-            plt.show()
-
-
-
-    def plotPositionalEntropy(self, entropy, fixedDataset, fixedTag, titleSize, avgDelta):
-        # Figure parameters
-        maxS = np.log2(len(self.letters))
-        yMax = maxS + 0.2
-        entropyMax = maxS # max(entropy.loc[:, "ΔEntropy"])
-        self.delta = entropy['ΔEntropy'].mean()
-        # deltaStDev = entropy['ΔEntropy'].std()
-        if fixedDataset:
-            title = f'{self.enzymeName}: Fixed {fixedTag}'
-        else:
-            title = f'{self.enzymeName}: Unfiltered'
-
-
-        # Map entropy values to colors using the colormap
-        colors = [(0, 'navy'),
-                  (0.3/entropyMax, 'navy'),
-                  (0.7/entropyMax, 'dodgerblue'),
-                  (0.97/entropyMax, 'white'),
-                  (0.98/entropyMax, 'white'),
-                  (1.0/entropyMax, 'white'),
-                  (1.65/entropyMax, 'red'),
-                  (3/entropyMax, 'firebrick'),
-                  (1, 'darkred')]
-        colorBar = LinearSegmentedColormap.from_list('custom_colormap', colors)
-
-
-        # Map entropy values to colors using the colormap
-        normalize = Normalize(vmin=0, vmax=yMax) # Normalize the entropy values
-        cMap = [colorBar(normalize(value)) for value in entropy['ΔEntropy'].astype(float)]
-
-        # Plotting the entropy values as a bar graph
-        fig, ax = plt.subplots(figsize=(9.5, 5))
-        plt.bar(entropy.index, entropy['ΔEntropy'], color=cMap,
-                edgecolor='black', linewidth=self.lineThickness, width=0.8)
-        plt.xlabel('Substrate Position', fontsize=self.labelSizeAxis)
-        plt.ylabel('Positional Entropy (ΔS)', fontsize=self.labelSizeAxis)
-        if avgDelta:
-            plt.title(f'{title}\nAverage ΔS = '
-                      f'{self.delta:.5f}', fontsize=titleSize, fontweight='bold')
-
-            # Set borders
-            plt.subplots_adjust(top=0.875, bottom=0.086, left=0.096, right=0.943)
-            # plt.subplots_adjust(top=0.914, bottom=0.124, left=0.071, right=0.945)
-        else:
-            plt.title(f'{title}', fontsize=titleSize, fontweight='bold')
-
-            # Set borders
-            plt.subplots_adjust(top=0.923, bottom=0.124, left=0.096, right=0.943)
-        # plt.subplots_adjust(top=0.93, bottom=0.11, left=0.096, right=0.943)
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks)
-
-        # Set xticks
-        xTicks = np.arange(0, len(entropy.iloc[:, 0]), 1)
-        ax.set_xticks(xTicks)
-        ax.set_xticklabels(entropy.index, rotation=0, ha='center')
-        for tick in ax.xaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
-
-        # Set yticks
-        yTicks = range(0, 5)
-        yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}' for tick in yTicks]
-        ax.set_yticks(yTicks)
-        ax.set_yticklabels(yTickLabels)
-        for tick in ax.yaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
-
-        # Set edge thickness
-        for spine in ax.spines.values():
-            spine.set_linewidth(self.lineThickness)
-
-        # Set axis limits
-        ax.set_ylim(0, yMax)
-
-        # Add color bar
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.1)
-        cbar = plt.colorbar(plt.cm.ScalarMappable(norm=normalize, cmap=colorBar), cax=cax)
-        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
-                            length=self.tickLength, width=self.lineThickness)
-        for tick in cbar.ax.yaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
-        cbar.outline.set_linewidth(self.lineThickness)
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        if self.setFigureTimer:
-            plt.ion()
-            plt.show()
-            plt.pause(self.figureTimerDuration)
-            plt.close(fig)
-            plt.ioff()
-        else:
-            plt.show()
-
-        # Save the figure
-        if self.saveFigures:
-            # Define: Save location
-            if fixedDataset:
-                figLabel = (f'{self.enzymeName} - Positional Entropy - '
-                            f'Fixed {fixedTag} - MinCounts {self.minSubCount}.png')
-            else:
-                figLabel = (f'{self.enzymeName} - Positional Entropy - '
-                            f'Unfiltered - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                print(f'The figure was not saved\n\n'
-                      f'File was already found at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-            else:
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
-
-
-
     def compairRF(self, initialRF, finalRF, selectAA, titleSize, labelSize,
                   yMax, yMin):
         print('======================= Evaluate Specificity: Compair RF '
@@ -2201,7 +1745,7 @@ class NGS:
 
         ax.set_ylim(yMin, yMax)
 
-        # Set edge thickness
+        # Set the edge thickness
         for spine in ax.spines.values():
             spine.set_linewidth(self.lineThickness)
 
@@ -2306,7 +1850,7 @@ class NGS:
         ax.set_xticklabels(xLabels, fontsize=labelSize)
         ax.set_ylim(yMin, yMax)
 
-        # Set edge thickness
+        # Set the edge thickness
         for spine in ax.spines.values():
             spine.set_linewidth(self.lineThickness)
 
@@ -2459,169 +2003,11 @@ class NGS:
 
 
         # Plot: Standard deviation
-        NGS.plotStats(self,
-                      countedData=frameESStDev,
-                      totalCounts=None,
-                      title=f'{self.enzymeName}\n'
-                            f'Fixed Motif {self.fixedAA[0]}'
-                            f'@R{self.fixedPosition[0]}-R{self.fixedPosition[-1]}\n'
-                            f'Standard Deviation',
-                      figSize=figSize,
-                      datasetTag=datasetTag,
-                      dataType='StDev')
-
-
-
-    def plotEnrichmentScores(self, scores, motifType, figSize, figBorders, title,
-                             showScores, squares, motifFilter, initialFrame,
-                             duplicateFigure, saveTag):
-        print('============================ Plot: Enrichment Score '
-              '=============================')
-        print(f'Dataset:{purple} {saveTag}{resetColor}\n\n')
-
-        # Create heatmap
-        cMapCustom = NGS.createCustomColorMap(self, colorType='EM')
-
-        # Define the yLabel
-        if self.residueLabelType == 0:
-            scores.index = [residue[0] for residue in self.residues]
-        elif self.residueLabelType == 1:
-            scores.index = [residue[1] for residue in self.residues]
-        elif self.residueLabelType == 2:
-            scores.index = [residue[2] for residue in self.residues]
-
-        # Define color bar limits
-        if np.max(scores) >= np.min(scores):
-            cBarMax = np.max(scores)
-            cBarMin = -1 * cBarMax
-        else:
-            cBarMin = np.min(scores)
-            cBarMax = -1 * cBarMin
-
-
-        # Plot the heatmap with numbers centered inside the squares
-        fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
-        if showScores:
-            heatmap = sns.heatmap(scores, annot=True, fmt='.3f', cmap=cMapCustom,
-                                  cbar=True, linewidths=self.lineThickness-1,
-                                  linecolor='black', square=squares, center=None,
-                                  vmax=cBarMax, vmin=cBarMin,
-                                  annot_kws={'fontweight': 'bold'})
-        else:
-            heatmap = sns.heatmap(scores, annot=False, cmap=cMapCustom, cbar=True,
-                                  linewidths=self.lineThickness-1, linecolor='black',
-                                  square=squares, center=None, vmax=cBarMax, vmin=cBarMin)
-        ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
-        ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
-        # ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-        if self.showSampleSize:
-            ax.set_title(title + '\n' +
-                         f'N Unsorted = {self.nSubsInitial:,}\n'
-                         f'N Sorted = {self.nSubsFinal:,}',
-                         fontsize=self.labelSizeTitle, fontweight='bold')
-        else:
-            ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-        # plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
-        #                     left=figBorders[2], right=figBorders[3])
-        plt.tight_layout()
-
-        # Set the thickness of the figure border
-        for _, spine in ax.spines.items():
-            spine.set_visible(True)
-            spine.set_linewidth(self.lineThickness)
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', rotation=0, length=self.tickLength,
-                       labelsize=self.labelSizeTicks, width=self.lineThickness)
-
-        # Set xticks
-        xTicks = np.arange(len(scores.columns)) + 0.5
-        ax.set_xticks(xTicks)
-        ax.set_xticklabels(scores.columns)
-
-        # Set yticks
-        yTicks = np.arange(len(scores.index)) + 0.5
-        ax.set_yticks(yTicks)
-        ax.set_yticklabels(scores.index)
-
-        # Set invalid values to grey
-        cmap = plt.cm.get_cmap(cMapCustom)
-        cmap.set_bad(color='lightgrey')
-
-        # Modify the colorbar
-        cbar = heatmap.collections[0].colorbar
-        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
-                            length=self.tickLength, width=self.lineThickness)
-        cbar.outline.set_linewidth(self.lineThickness)
-        cbar.outline.set_edgecolor('black')
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        if self.setFigureTimer:
-            plt.ion()
-            plt.show()
-            plt.pause(self.figureTimerDuration)
-            plt.close(fig)
-            plt.ioff()
-        else:
-            plt.show()
-
-
-        # Inspect dataset
-        if self.saveFigures:
-            if 'Scaled' in motifType:
-                datasetType = 'EM Scaled'
-            elif 'Enrichment' in motifType:
-                datasetType = 'EM'
-            else:
-                print(f'{orange}ERROR: What do I do with this motif type -'
-                      f'{red} {motifType}{resetColor}\n\n')
-                sys.exit()
-
-            # Define: Save location
-            if motifFilter:
-                figLabel = (f'{self.enzymeName} - {datasetType} '
-                            f'{self.saveFigureIteration} - {saveTag} - '
-                            f'MinCounts {self.minSubCount}.png')
-            else:
-                if saveTag is None:
-                    figLabel = (f'{self.enzymeName} - {datasetType} - '
-                                f'Unfiltered - MinCounts {self.minSubCount}.png')
-                else:
-                    figLabel = (f'{self.enzymeName} - {datasetType} - '
-                                f'{saveTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
-
-            # Save the figure
-            if os.path.exists(saveLocation):
-                copyNumber = 1
-
-                # Save duplicate figures
-                if duplicateFigure:
-                    fileFound = True
-                    while fileFound:
-                        # Define: Save location
-                        figLabel = (f'{self.enzymeName} - {datasetType} '
-                                    f'{copyNumber} - {saveTag} - '
-                                    f'MinCounts {self.minSubCount}.png')
-                        saveLocation = os.path.join(self.savePathFigs, figLabel)
-
-                        if not os.path.exists(saveLocation):
-                            print(f'Saving figure at path:\n'
-                                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                            fig.savefig(saveLocation, dpi=self.figureResolution)
-                            self.saveFigureIteration = copyNumber
-                            fileFound = False
-                        else:
-                            copyNumber += 1
-                else:
-                    # Verify if the fixed frame has already been evaluated
-                    print(f'{orange}WARNING: The figure already exists at the path\n'
-                          f'     {saveLocation}\n\n'
-                          f'We will not overwrite the figure{resetColor}\n\n')
-            else:
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
+        NGS.plotStats(
+            self, countedData=frameESStDev, totalCounts=None,
+            title=f'{self.enzymeName}\nFixed Motif {self.fixedAA[0]}@R'
+                  f'{self.fixedPosition[0]}-R{self.fixedPosition[-1]}\n'
+                  f'Standard Deviation', datasetTag=datasetTag, dataType='StDev')
 
 
 
@@ -2713,8 +2099,8 @@ class NGS:
         yMin = min(columnTotals[1])
 
         if printRF:
-            print(f'Residue Heights:\n{heights.round(3)}\n\n')
-            print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+            print(f'Residue Heights:\n{heights.round(3)}\n\n'
+                  f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
                   f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
         # Set values for columns with fixed residues
@@ -2726,7 +2112,7 @@ class NGS:
 
 
     def enrichmentMatrix(self, counts, N, baselineProb, baselineType, printRF, scaleData,
-                         normlaizeFixedScores):
+                         normalizeFixedScores):
         print('=========================== Calculate: Letter Heights '
               '===========================')
         print(f'Residue heights calculated by: {red}log\u2082(RF Ratios){resetColor}\n'
@@ -2832,7 +2218,7 @@ class NGS:
                   f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
         # Set values for columns with fixed residues
-        if normlaizeFixedScores:
+        if normalizeFixedScores:
             print(f'============================================'
                   f'============================================={white}\n'
                   f'============================================'
@@ -2870,215 +2256,6 @@ class NGS:
                   f'=============================================\n')
 
         return heights, fixedPos, yMax, yMin
-
-
-
-    def plotMotif(self, data, motifType, bigLettersOnTop, figureSize, figBorders,
-                  title, titleSize, yMax, yMin, yBoundary, lines, motifFilter, 
-                  initialFrame, duplicateFigure, saveTag):
-        print('============================= Plot: Sequence Motif '
-              '==============================')
-        print(f'Motif type:{purple} {motifType}{resetColor}\n'
-              f'Dataset:{purple} {saveTag}{resetColor}\n\n')
-
-
-        # Set local parameters
-        if bigLettersOnTop:
-            stackOrder = 'big_on_top'
-        else:
-            stackOrder = 'small_on_top'
-        colors = {
-            'A': self.colorSchemeMotif[0],
-            'R': self.colorSchemeMotif[2],
-            'N': self.colorSchemeMotif[4],
-            'D': self.colorSchemeMotif[1],
-            'C': self.colorSchemeMotif[6],
-            'E': self.colorSchemeMotif[1],
-            'Q': self.colorSchemeMotif[4],
-            'G': self.colorSchemeMotif[0],
-            'H': self.colorSchemeMotif[2],
-            'I': self.colorSchemeMotif[0],
-            'L': self.colorSchemeMotif[0],
-            'K': self.colorSchemeMotif[2],
-            'M': self.colorSchemeMotif[6],
-            'F': self.colorSchemeMotif[5],
-            'P': self.colorSchemeMotif[0],
-            'S': self.colorSchemeMotif[3],
-            'T': self.colorSchemeMotif[3],
-            'W': self.colorSchemeMotif[5],
-            'Y': self.colorSchemeMotif[5],
-            'V': self.colorSchemeMotif[0]
-        }
-
-        # Rename column headers
-        dataColumnsRecieved = data.columns
-        data.columns = range(len(data.columns))
-
-        # Set -inf to zero
-        if data.isin([np.inf, -np.inf]).any().any():
-            data.replace([np.inf, -np.inf], 0, inplace=True)
-            # data.fillna(0, inplace=True)
-            yMin = min(data[data < 0].sum())
-
-
-        # Plot the sequence motif
-        fig, ax = plt.subplots(figsize=figureSize)
-        motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=colors,
-                               width=0.95, stack_order=stackOrder)
-        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], left=figBorders[2],
-                            right=figBorders[3])
-
-        # Set figure title
-        if self.showSampleSize:
-            if motifType == 'WebLogo':
-                motif.ax.set_title(title + f'\nN = {self.nSubsFinal:,}\n',
-                                   fontsize=titleSize, fontweight='bold')
-            else:
-                motif.ax.set_title(title + f'\nN Unsorted = {self.nSubsInitial:,}\n'
-                                   f'N Sorted = {self.nSubsFinal:,}',
-                                   fontsize=titleSize, fontweight='bold')
-        else:
-            motif.ax.set_title(title, fontsize=titleSize, fontweight='bold')
-
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks)
-
-        # Set borders
-        motif.style_spines(visible=False)
-        motif.style_spines(spines=['left', 'bottom'], visible=True)
-        for spine in motif.ax.spines.values():
-            spine.set_linewidth(self.lineThickness)
-
-        # Set xticks
-        if len(dataColumnsRecieved) == len(self.xAxisLabels):
-            motif.ax.set_xticks([pos for pos in range(len(self.xAxisLabels))])
-            motif.ax.set_xticklabels(self.xAxisLabels, fontsize=self.labelSizeTicks,
-                                     rotation=0, ha='center')
-        else:
-            motif.ax.set_xticks([pos for pos in range(len(dataColumnsRecieved))])
-            motif.ax.set_xticklabels(dataColumnsRecieved, fontsize=self.labelSizeTicks,
-                                     rotation=0, ha='center')
-
-        for tick in motif.ax.xaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
-
-        # Set yticks
-        if yBoundary == 0:
-            yTicks = range(0, 5)
-            yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}'
-                           for tick in yTicks]
-            yLimitUpper = 4.32
-            yLimitLower = 0
-        elif yBoundary == 1:
-            yTicks = range(-4, 5)
-            yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}'
-                           for tick in yTicks]
-            yLimitUpper = yMax
-            yLimitLower = -4.32
-        else:
-            yTicks = [yMin, 0, yMax]
-            yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}'
-                           for tick in yTicks]
-            yLimitUpper = yMax
-            yLimitLower = yMin
-        motif.ax.set_yticks(yTicks)
-        motif.ax.set_yticklabels(yTickLabels, fontsize=self.labelSizeTicks)
-        motif.ax.set_ylim(yLimitLower, yLimitUpper)
-        for tick in motif.ax.yaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
-
-        # Label the axes
-        motif.ax.set_xlabel('Position', fontsize=self.labelSizeAxis)
-        if motifType == 'Weblogo':
-            motif.ax.set_ylabel('Bits', fontsize=self.labelSizeAxis)
-        else:
-            motif.ax.set_ylabel(motifType, fontsize=self.labelSizeAxis)
-
-        # Set horizontal line
-        motif.ax.axhline(y=0, color='black', linestyle='-', linewidth=self.lineThickness)
-        if yBoundary != 2:
-            if lines:
-                for tick in yTicks:
-                    motif.ax.axhline(y=tick, color='black', linestyle='--',
-                                     linewidth=self.lineThickness)
-
-        # Evaluate dataset for fixed residues
-        spacer = np.diff(motif.ax.get_xticks()) # Find the space between each tick
-        spacer = spacer[0] / 2
-
-        # Use the spacer to set a grey background to fixed residues
-        for index, position in enumerate(self.xAxisLabels):
-            if position in self.fixedPosition:
-                # Plot grey boxes on each side of the xtick
-                motif.ax.axvspan(index - spacer, index + spacer,
-                                 facecolor='darkgrey', alpha=0.2)
-
-        fig.tight_layout()
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        if self.setFigureTimer:
-            plt.ion()
-            plt.show()
-            plt.pause(self.figureTimerDuration)
-            plt.close(fig)
-            plt.ioff()
-        else:
-            plt.show()
-
-        # Save the figure
-        if self.saveFigures:
-            if motifType == 'WebLogo':
-                datasetType = motifType
-            elif 'Scaled' in motifType:
-                datasetType = 'Motif'
-            else:
-                print(f'{orange}ERROR: What do I do with this motif type -'
-                      f'{red} {motifType}{resetColor}\n\n')
-                sys.exit()
-
-            # Define: Save location
-            if motifFilter:
-                figLabel = (f'{self.enzymeName} - {datasetType} '
-                            f'{self.saveFigureIteration} - {saveTag} - MinCounts '
-                            f'{self.minSubCount}.png')
-            else:
-                if saveTag is None:
-                    figLabel = (f'{self.enzymeName} - {datasetType} - '
-                                f'Unfiltered - MinCounts {self.minSubCount}.png')
-                else:
-                    figLabel = (f'{self.enzymeName} - {datasetType} - '
-                                f'{saveTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                copyNumber = 1
-                fileFound = True
-                # Save duplicate figures
-                if duplicateFigure:
-                    while fileFound:
-                        # Define: Save location
-                        figLabel = (f'{self.enzymeName} - {figLabel} {copyNumber} - '
-                                    f'{saveTag} - MinCounts {self.minSubCount}.png')
-                        saveLocation = os.path.join(self.savePathFigs, figLabel)
-
-                        if not os.path.exists(saveLocation):
-                            print(f'Saving figure at path:\n'
-                                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                            fig.savefig(saveLocation, dpi=self.figureResolution)
-                            self.saveFigureIteration = copyNumber
-                            fileFound = False
-                        else:
-                            copyNumber += 1
-                else:
-                    print(f'{orange}WARNING: The figure already exists at the path\n'
-                          f'     {saveLocation}\n\n'
-                          f'We will not overwrite the figure{resetColor}\n\n')
-            else:
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
 
 
 
@@ -3260,6 +2437,8 @@ class NGS:
 
 
     def calculateEntropy(self, RF, printEntropy):
+        print('============================== Calculate: Entropy '
+              '===============================')
         entropy = pd.DataFrame(0.0, index=RF.columns, columns=['ΔEntropy'])
         entropyMax = np.log2(len(RF.index))
         for indexColumn in RF.columns:
@@ -3632,10 +2811,9 @@ class NGS:
 
 
     def PCA(self, substrates, data, indices, numberOfPCs, fixedTag, N, fixedSubs,
-            figSize, saveTag):
+            saveTag):
         print('====================================== PCA '
               '======================================')
-        print(f'')
         print(f'Tag: {fixedTag}\n'
               f'Save: {saveTag}\n')
         import matplotlib.patheffects as path_effects
@@ -3643,11 +2821,10 @@ class NGS:
         from sklearn.decomposition import PCA
 
 
-        # Initialize lists to  of clustered substrates
+        # Initialize lists for the clustered substrates
         self.selectedSubstrates = []
         self.selectedDatapoints = []
         rectangles = []
-
 
         # Define: Dataset tag
         if fixedTag is None:
@@ -3696,7 +2873,7 @@ class NGS:
 
         # Plot the data
         for componets in headerCombinations:
-            fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
+            fig, ax = plt.subplots(figsize=self.figSize)
 
             def selectDatapoints(eClick, eRelease):
                 # # Function to update selection with a rectangle
@@ -3815,11 +2992,10 @@ class NGS:
                 fig.savefig(saveLocation, dpi=self.figureResolution)
 
 
-        # Create list of collected substrate dictionaries
+        # Create a list of collected substrate dictionaries
         if self.selectedSubstrates:
             print(f'Update: Make this able to shift the frame '
                   f'if you plot binned substrates')
-            sys.exit()
             collectedSubs = []
             for index, substrateSet in enumerate(self.selectedSubstrates):
                 print(f'Substrate Set:{white} {index + 1}{resetColor}')
@@ -3843,7 +3019,950 @@ class NGS:
                         break
 
             return collectedSubs
-    
+        else:
+            return None
+
+
+
+    def suffixTree(self, substrates, N, entropySubFrame, indexSubFrame, entropyMin,
+                   datasetTag, dataType, figSize):
+        print('================================== Suffix Tree '
+              '==================================')
+        if datasetTag is None:
+            print(f'Dataset:{purple} {self.enzymeName} - Unfixed{resetColor}\n')
+        else:
+            print(f'Dataset:{purple} {self.enzymeName} {dataType} {datasetTag}'
+                  f'{resetColor}\n')
+
+
+        from Trie import Trie
+
+
+        trie = Trie() # Initialize Trie
+        motifs = {}
+        indexStart = min(indexSubFrame)
+        indexEnd = max(indexSubFrame)
+
+        # Print substrates
+        iteration = 0
+        substrates = dict(sorted(substrates.items(), key=lambda item: item[1],
+                                 reverse=True))
+        for substrate, count in substrates.items():
+            iteration += 1
+            print(f'Substrate:{silver} {substrate}{resetColor}\n'
+                  f'     Count:{red} {count:,}{resetColor}')
+            if iteration >= self.printNumber:
+                break
+        print('\n')
+
+        # Find motif positions based on entropy threshold
+        indexPos = []
+        for index in entropySubFrame.index:
+            posEntropy = entropySubFrame.loc[index, 'ΔEntropy']
+            if posEntropy >= entropyMin:
+                indexPos.append(int(index.replace('R', '')) - 1)
+        print(f'Index Pos: {indexPos}')
+
+        motifTrie = {}
+        countsMotif = 0
+        def addMotif(motif, count):
+            # Extract important AAs from the motif
+            motif = ''.join(motif[index] for index in indexPos)
+
+            # Add motif to the trie
+            if motif in motifTrie.keys():
+                motifTrie[motif] += count
+            else:
+                motifTrie[motif] = count
+                trie.insert(motif)
+
+
+        # Extract the motifs
+        motifCount = 0
+        for substrate, count in substrates.items():
+            motif = substrate[indexStart:indexEnd + 1]
+            if motif in motifs:
+                motifs[motif] += count
+            else:
+                motifs[motif] = count
+                motifCount += 1
+
+            # Add the motif to the tree
+            addMotif(motif, count)
+            countsMotif = len(motifTrie.keys())
+            if countsMotif >= N:
+                break
+        motifs = dict(sorted(motifs.items(), key=lambda item: item[1], reverse=True))
+        motifTrie = dict(sorted(motifTrie.items(), key=lambda item: item[1],
+                                reverse=True))
+
+        # Print motifs
+        print(f'Extracted Motifs:')
+        for index, (motif, count) in enumerate(motifs.items()):
+            print(f'{index+1}:{yellow} {motif}{resetColor} '
+                  f'Count:{red} {count:,}{resetColor}')
+        print('\n')
+
+        # Print trie
+        print(f'Extracted Trie:')
+        for index, (seq, count) in enumerate(motifTrie.items()):
+            print(f'{index + 1}:{pink} {seq}{resetColor} '
+                  f'Count:{red} {count:,}{resetColor}')
+        print('\n')
+
+        # Calculate: RF
+        motifTable = NGS.evaluateSubtrees(self, trie=trie, motifTrie=motifTrie)
+
+        # Plot the Trie
+        NGS.plotTrie(self, trie=trie, motifTable=motifTable, countsMotif=countsMotif,
+                     datasetTag=datasetTag, figSize=figSize)
+
+
+
+    def plotCounts(self, countedData, totalCounts, title, figSize):
+        # Remove commas from string values and convert to float
+        countedData = countedData.applymap(lambda x:
+                                           float(x.replace(',', ''))
+                                           if isinstance(x, str) else x)
+
+        # Create heatmap
+        cMapCustom = NGS.createCustomColorMap(self, colorType='Counts')
+
+        # Convert the counts to a data frame for Seaborn heatmap
+        if self.residueLabelType == 0:
+            countedData.index = [residue[0] for residue in self.residues]
+        elif self.residueLabelType == 1:
+            countedData.index = [residue[1] for residue in self.residues]
+        elif self.residueLabelType == 2:
+            countedData.index = [residue[2] for residue in self.residues]
+
+        # Plot the heatmap with numbers centered inside the squares
+        fig, ax = plt.subplots(figsize=self.figSize)
+        heatmap = sns.heatmap(countedData, annot=True, fmt=',d', cmap=cMapCustom,
+                              cbar=True, linewidths=self.lineThickness-1,
+                              linecolor='black', square=False, center=None,
+                              annot_kws={'fontweight': 'bold'})
+        ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
+        ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
+
+        if self.showSampleSize:
+            if totalCounts is None:
+                ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+            else:
+                ax.set_title(f'{title}\nN={totalCounts:,}',
+                             fontsize=self.labelSizeTitle, fontweight='bold')
+        else:
+            ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        figBorders = [0.852, 0.075, 0.117, 1]
+        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
+                            left=figBorders[2], right=figBorders[3])
+
+        # Set the thickness of the figure border
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+            spine.set_linewidth(self.lineThickness)
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks, width=self.lineThickness)
+        ax.tick_params(axis='y', labelrotation=0)
+
+        # Set x-ticks
+        xTicks = np.arange(len(countedData.columns)) + 0.5
+        ax.set_xticks(xTicks)
+        ax.set_xticklabels(countedData.columns)
+
+        # Set y-ticks
+        yTicks = np.arange(len(countedData.index)) + 0.5
+        ax.set_yticks(yTicks)
+        ax.set_yticklabels(countedData.index)
+
+
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+
+        # Modify the colorbar
+        cbar = heatmap.collections[0].colorbar
+        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
+                            length=self.tickLength, width=self.lineThickness)
+        cbar.outline.set_linewidth(self.lineThickness)
+        cbar.outline.set_edgecolor('black')
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        plt.show()
+
+
+
+    def plotPositionalEntropy(self, entropy, fixedDataset, fixedTag, titleSize, avgDelta):
+        # Figure parameters
+        maxS = np.log2(len(self.letters))
+        yMax = maxS + 0.2
+        entropyMax = maxS # max(entropy.loc[:, "ΔEntropy"])
+        self.delta = entropy['ΔEntropy'].mean()
+        # deltaStDev = entropy['ΔEntropy'].std()
+        if fixedDataset:
+            title = f'{self.enzymeName}: Fixed {fixedTag}'
+        else:
+            title = f'{self.enzymeName}: Unfiltered'
+
+
+        # Map entropy values to colors using the colormap
+        colors = [(0, 'navy'),
+                  (0.3/entropyMax, 'navy'),
+                  (0.7/entropyMax, 'dodgerblue'),
+                  (0.97/entropyMax, 'white'),
+                  (0.98/entropyMax, 'white'),
+                  (1.0/entropyMax, 'white'),
+                  (1.65/entropyMax, 'red'),
+                  (3/entropyMax, 'firebrick'),
+                  (1, 'darkred')]
+        colorBar = LinearSegmentedColormap.from_list('custom_colormap', colors)
+
+
+        # Map entropy values to colors using the colormap
+        normalize = Normalize(vmin=0, vmax=yMax) # Normalize the entropy values
+        cMap = [colorBar(normalize(value)) for value in entropy['ΔEntropy'].astype(float)]
+
+        # Plotting the entropy values as a bar graph
+        fig, ax = plt.subplots(figsize=(9.5, 5))
+        plt.bar(entropy.index, entropy['ΔEntropy'], color=cMap,
+                edgecolor='black', linewidth=self.lineThickness, width=0.8)
+        plt.xlabel('Substrate Position', fontsize=self.labelSizeAxis)
+        plt.ylabel('Positional Entropy (ΔS)', fontsize=self.labelSizeAxis)
+        if avgDelta:
+            plt.title(f'{title}\nAverage ΔS = '
+                      f'{self.delta:.5f}', fontsize=titleSize, fontweight='bold')
+
+            # Set borders
+            plt.subplots_adjust(top=0.875, bottom=0.086, left=0.096, right=0.943)
+            # plt.subplots_adjust(top=0.914, bottom=0.124, left=0.071, right=0.945)
+        else:
+            plt.title(f'{title}', fontsize=titleSize, fontweight='bold')
+
+            # Set borders
+            plt.subplots_adjust(top=0.923, bottom=0.124, left=0.096, right=0.943)
+        # plt.subplots_adjust(top=0.93, bottom=0.11, left=0.096, right=0.943)
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks)
+
+        # Set x-ticks
+        xTicks = np.arange(0, len(entropy.iloc[:, 0]), 1)
+        ax.set_xticks(xTicks)
+        ax.set_xticklabels(entropy.index, rotation=0, ha='center')
+        for tick in ax.xaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
+
+        # Set y-ticks
+        yTicks = range(0, 5)
+        yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}' for tick in yTicks]
+        ax.set_yticks(yTicks)
+        ax.set_yticklabels(yTickLabels)
+        for tick in ax.yaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
+
+        # Set the edge thickness
+        for spine in ax.spines.values():
+            spine.set_linewidth(self.lineThickness)
+
+        # Set axis limits
+        ax.set_ylim(0, yMax)
+
+        # Add color bar
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.1)
+        cbar = plt.colorbar(plt.cm.ScalarMappable(norm=normalize, cmap=colorBar), cax=cax)
+        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
+                            length=self.tickLength, width=self.lineThickness)
+        for tick in cbar.ax.yaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
+        cbar.outline.set_linewidth(self.lineThickness)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        if self.setFigureTimer:
+            plt.ion()
+            plt.show()
+            plt.pause(self.figureTimerDuration)
+            plt.close(fig)
+            plt.ioff()
+        else:
+            plt.show()
+
+        # Save the figure
+        if self.saveFigures:
+            # Define: Save location
+            if fixedDataset:
+                figLabel = (f'{self.enzymeName} - Positional Entropy - '
+                            f'Fixed {fixedTag} - MinCounts {self.minSubCount}.png')
+            else:
+                figLabel = (f'{self.enzymeName} - Positional Entropy - '
+                            f'Unfiltered - MinCounts {self.minSubCount}.png')
+            saveLocation = os.path.join(self.savePathFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                print(f'The figure was not saved\n\n'
+                      f'File was already found at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+
+    def plotRFDist(self, RF, yMax, codonType, sortType, fixedTag, residueColors):
+        # Local parameters
+        tickStepSize = 0.05
+        numPos = RF.shape[1] # Number of columns
+        numAA = RF.shape[0] # Number of AA
+
+
+        # Plot the data
+        fig, ax = plt.subplots(figsize=(9, 6))
+        plt.ylabel('Probability', fontsize=self.labelSizeAxis)
+        if sortType == 'Initial Sort':
+            plt.title(f'Amino Acid Distribution - Unsorted Library',
+                      fontsize=self.labelSizeTitle, fontweight='bold')
+        else:
+            if fixedTag is None:
+                plt.title(f'Amino Acid Distribution - Sorted Library',
+                          fontsize=self.labelSizeTitle, fontweight='bold')
+            else:
+                plt.title(f'Amino Acid Distribution - Sorted Library - '
+                          f'{fixedTag}', fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.subplots_adjust(top=0.926, bottom=0.068, left=0.102, right=0.979)
+
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       width=self.lineThickness)
+
+        # Set x-ticks
+        widthBar = 2
+        spacing = widthBar * numPos
+        widthCluster = spacing + 5
+        indices = np.arange(numAA) * widthCluster
+        midPoint = (numPos - 1) / 2 * widthBar
+        xTicks = indices + midPoint
+        ax.set_xticks(xTicks)
+        ax.set_xticklabels(RF.index, rotation=0, ha='center',
+                           fontsize=self.labelSizeTicks)
+
+        # Set y-ticks
+        yTicks = np.arange(0, yMax + tickStepSize, tickStepSize)
+        yTickLabels = [f'{tick:.0f}' if tick == 0 or tick == 1
+                       else f'{tick:.2f}' for tick in yTicks]
+        ax.set_yticks(yTicks)
+        ax.set_yticklabels(yTickLabels, fontsize=self.labelSizeTicks)
+        for tick in ax.yaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness)
+
+        # Set the edge color
+        for index, AA in enumerate(RF.index):
+            xPos = indices[index] + np.arange(numPos) * widthBar
+            if AA == 'F' or AA == 'W' or AA == 'Y': # AA == 'N' or AA == 'Q' or
+                ax.bar(xPos, RF.loc[AA], widthBar, label=AA,
+                       color=residueColors[AA], edgecolor='dimgray')
+            else:
+                ax.bar(xPos, RF.loc[AA], widthBar, label=AA,
+                       color=residueColors[AA], edgecolor='black')
+
+        # Set the edge thickness
+        for spine in ax.spines.values():
+            spine.set_linewidth(self.lineThickness)
+
+        # Set axis limits
+        plt.ylim(0, yMax)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        plt.show()
+
+        if self.saveFigures:
+            # Define: Save location
+            if sortType == 'Initial Sort':
+                figLabel = (f'AA Distribution - {codonType} - Unfiltered - '
+                            f'{sortType} - MinCounts {self.minSubCount}.png')
+            else:
+                if fixedTag is None:
+                    figLabel = (f'AA Distribution - {codonType} - Unfiltered - '
+                                f'{sortType} - MinCounts {self.minSubCount}.png')
+                else:
+                    figLabel = (f'AA Distribution - {codonType} - {fixedTag} - '
+                                f'{sortType} - MinCounts {self.minSubCount}.png')
+            saveLocation = os.path.join(self.savePathFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                print(f'The figure was not saved\n\n'
+                      f'File was already found at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+
+    def plotPositionalRFDist(self, RF, entropyScores, residueColors):
+        for position in entropyScores.index:
+            # Extract values for plotting
+            probabilities = list(RF.loc[:, position])
+
+            # Calculate positional entropy
+            shannonS = 0
+            notNumber = False
+            for AA in self.letters:
+                prob = RF.loc[AA, position]
+                shannonS += -prob * np.log2(prob)
+            if math.isnan(shannonS):
+                shannonS = 0
+                notNumber = True
+
+            # Plot the data
+            setEdgeColor = True
+            fig, ax = plt.subplots(figsize=(8, 6))
+            if setEdgeColor:
+                widthBar = 0.8
+                xPos = np.arange(len(RF.index))
+
+                for index, AA in enumerate(RF.index):
+                    edgeColor = 'dimgray' if AA in ['F', 'W', 'Y'] else 'black'
+                    ax.bar(xPos[index], RF.loc[AA, position], widthBar, label=AA,
+                           color=residueColors[AA], edgecolor=edgeColor)
+            else:
+                plt.bar(self.letters, probabilities,
+                        color=[residueColors[AA] for AA in self.letters])
+            # plt.xlabel('Amino Acids', fontsize=self.labelSizeAxis)
+            plt.ylabel('Probability', fontsize=self.labelSizeAxis)
+            if notNumber:
+                plt.title(f'{self.enzymeName}: Amino Acid Distribution at {position}\n'
+                          f'ΔS = {entropyScores.loc[position, "ΔEntropy"]:.3f}, '
+                          f'Shannon Entropy = {shannonS:.0f}', fontsize=self.labelSizeTitle,
+                          fontweight='bold')
+            else:
+                plt.title(f'{self.enzymeName}: Amino Acid Distribution at {position}\n'
+                          f'ΔS = {entropyScores.loc[position, "ΔEntropy"]:.3f}, '
+                          f'Shannon Entropy = {shannonS:.3f}', fontsize=self.labelSizeTitle,
+                          fontweight='bold')
+            # plt.subplots_adjust(top=0.88, bottom=0.11, left=0.102, right=0.979)
+            figBorders = [0.882, 0.075, 0.104, 0.974]  # Top, bottom, left, right
+            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
+                                left=figBorders[2], right=figBorders[3])
+
+
+            # Set axis limits
+            yMax = 1
+            plt.ylim(0, yMax)
+
+            # Set tick parameters
+            ax.tick_params(axis='both', which='major', length=self.tickLength,
+                           labelsize=self.labelSizeTicks)
+
+            # Set x-ticks
+            xTicks = np.arange(0, len(self.letters), 1)
+            ax.set_xticks(xTicks)  # Set the positions of the ticks
+            ax.set_xticklabels(self.letters, rotation=0, ha='center',
+                               fontsize=self.labelSizeTicks)
+            for tick in ax.xaxis.get_major_ticks():
+                tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
+
+            # Set y-ticks
+            tickStepSize = 0.2
+            yTicks = np.arange(0, yMax + tickStepSize, tickStepSize)
+            yTickLabels = [f'{tick:.0f}' if tick == 0 or tick == 1 else f'{tick:.1f}'
+                           for tick in yTicks]
+            ax.set_yticks(yTicks)  # Set the positions of the ticks
+            ax.set_yticklabels(yTickLabels)
+            for tick in ax.yaxis.get_major_ticks():
+                tick.tick1line.set_markeredgewidth(self.lineThickness)
+
+
+            # Set the edge thickness
+            for spine in ax.spines.values():
+                spine.set_linewidth(self.lineThickness)
+
+            fig.canvas.mpl_connect('key_press_event', pressKey)
+            plt.show()
+
+
+
+    def plotEnrichmentScores(self, scores, dataType, title, motifFilter, initialFrame,
+                             duplicateFigure, saveTag):
+        print('============================ Plot: Enrichment Score '
+              '=============================')
+        print(f'Dataset:{purple} {saveTag}{resetColor}\n\n')
+
+        # Create heatmap
+        cMapCustom = NGS.createCustomColorMap(self, colorType='EM')
+
+        # Define the yLabel
+        if self.residueLabelType == 0:
+            scores.index = [residue[0] for residue in self.residues]
+        elif self.residueLabelType == 1:
+            scores.index = [residue[1] for residue in self.residues]
+        elif self.residueLabelType == 2:
+            scores.index = [residue[2] for residue in self.residues]
+
+        # Define color bar limits
+        if np.max(scores) >= np.min(scores):
+            cBarMax = np.max(scores)
+            cBarMin = -1 * cBarMax
+        else:
+            cBarMin = np.min(scores)
+            cBarMax = -1 * cBarMin
+
+
+        # Plot the heatmap with numbers centered inside the squares
+        fig, ax = plt.subplots(figsize=self.figSizeEM)
+        if self.figEMSquares:
+            heatmap = sns.heatmap(scores, annot=False, cmap=cMapCustom, cbar=True,
+                                  linewidths=self.lineThickness - 1, linecolor='black',
+                                  square=self.figEMSquares, center=None,
+                                  vmax=cBarMax, vmin=cBarMin)
+        else:
+            heatmap = sns.heatmap(scores, annot=True, fmt='.3f', cmap=cMapCustom,
+                                  cbar=True, linewidths=self.lineThickness-1,
+                                  linecolor='black', square=self.figEMSquares,
+                                  center=None, vmax=cBarMax, vmin=cBarMin,
+                                  annot_kws={'fontweight': 'bold'})
+        ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
+        ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
+        if self.showSampleSize:
+            title += (f'\nN Unsorted = {self.nSubsInitial:,}\n'
+                      f'N Sorted = {self.nSubsFinal:,}')
+        ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        if self.figEMSquares:
+            figBorders = [0.852, 0.075, 0, 0.895]
+        else:
+            figBorders = [0.852, 0.075, 0.117, 1]  # Top, bottom, left, right
+        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
+                            left=figBorders[2], right=figBorders[3])
+
+        # Set the thickness of the figure border
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+            spine.set_linewidth(self.lineThickness)
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', rotation=0, length=self.tickLength,
+                       labelsize=self.labelSizeTicks, width=self.lineThickness)
+
+        # Set x-ticks
+        xTicks = np.arange(len(scores.columns)) + 0.5
+        ax.set_xticks(xTicks)
+        ax.set_xticklabels(scores.columns)
+
+        # Set y-ticks
+        yTicks = np.arange(len(scores.index)) + 0.5
+        ax.set_yticks(yTicks)
+        ax.set_yticklabels(scores.index)
+
+        # Set invalid values to grey
+        cmap = plt.cm.get_cmap(cMapCustom)
+        cmap.set_bad(color='lightgrey')
+
+        # Modify the colorbar
+        cbar = heatmap.collections[0].colorbar
+        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
+                            length=self.tickLength, width=self.lineThickness)
+        cbar.outline.set_linewidth(self.lineThickness)
+        cbar.outline.set_edgecolor('black')
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        if self.setFigureTimer:
+            plt.ion()
+            plt.show()
+            plt.pause(self.figureTimerDuration)
+            plt.close(fig)
+            plt.ioff()
+        else:
+            plt.show()
+
+
+        # Inspect dataset
+        if self.saveFigures:
+            if 'Scaled' in dataType:
+                datasetType = 'EM Scaled'
+            elif 'Enrichment' in dataType:
+                datasetType = 'EM'
+            else:
+                print(f'{orange}ERROR: What do I do with this motif type -'
+                      f'{red} {dataType}{resetColor}\n\n')
+                sys.exit()
+
+            # Define: Save location
+            if motifFilter:
+                figLabel = (f'{self.enzymeName} - {datasetType} '
+                            f'{self.saveFigureIteration} - {saveTag} - '
+                            f'MinCounts {self.minSubCount}.png')
+            else:
+                if saveTag is None:
+                    figLabel = (f'{self.enzymeName} - {datasetType} - '
+                                f'Unfiltered - MinCounts {self.minSubCount}.png')
+                else:
+                    figLabel = (f'{self.enzymeName} - {datasetType} - '
+                                f'{saveTag} - MinCounts {self.minSubCount}.png')
+            saveLocation = os.path.join(self.savePathFigs, figLabel)
+
+            # Save the figure
+            if os.path.exists(saveLocation):
+                copyNumber = 1
+
+                # Save duplicate figures
+                if duplicateFigure:
+                    fileFound = True
+                    while fileFound:
+                        # Define: Save location
+                        figLabel = (f'{self.enzymeName} - {datasetType} '
+                                    f'{copyNumber} - {saveTag} - '
+                                    f'MinCounts {self.minSubCount}.png')
+                        saveLocation = os.path.join(self.savePathFigs, figLabel)
+
+                        if not os.path.exists(saveLocation):
+                            print(f'Saving figure at path:\n'
+                                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                            fig.savefig(saveLocation, dpi=self.figureResolution)
+                            self.saveFigureIteration = copyNumber
+                            fileFound = False
+                        else:
+                            copyNumber += 1
+                else:
+                    # Verify if the fixed frame has already been evaluated
+                    print(f'{orange}WARNING: The figure already exists at the path\n'
+                          f'     {saveLocation}\n\n'
+                          f'We will not overwrite the figure{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+
+    def plotMotif(self, data, dataType, bigLettersOnTop, title, titleSize, yMax, yMin,
+                  showYTicks, addHorizontalLines, motifFilter, duplicateFigure, saveTag):
+        print('============================= Plot: Sequence Motif '
+              '==============================')
+        print(f'Motif type:{purple} {dataType}{resetColor}\n'
+              f'Dataset:{purple} {saveTag}{resetColor}\n\n')
+
+
+        # Set local parameters
+        if bigLettersOnTop:
+            stackOrder = 'big_on_top'
+        else:
+            stackOrder = 'small_on_top'
+        colors = {
+            'A': self.colorSchemeMotif[0],
+            'R': self.colorSchemeMotif[2],
+            'N': self.colorSchemeMotif[4],
+            'D': self.colorSchemeMotif[1],
+            'C': self.colorSchemeMotif[6],
+            'E': self.colorSchemeMotif[1],
+            'Q': self.colorSchemeMotif[4],
+            'G': self.colorSchemeMotif[0],
+            'H': self.colorSchemeMotif[2],
+            'I': self.colorSchemeMotif[0],
+            'L': self.colorSchemeMotif[0],
+            'K': self.colorSchemeMotif[2],
+            'M': self.colorSchemeMotif[6],
+            'F': self.colorSchemeMotif[5],
+            'P': self.colorSchemeMotif[0],
+            'S': self.colorSchemeMotif[3],
+            'T': self.colorSchemeMotif[3],
+            'W': self.colorSchemeMotif[5],
+            'Y': self.colorSchemeMotif[5],
+            'V': self.colorSchemeMotif[0]
+        }
+
+        # Rename column headers
+        dataColumnsRecieved = data.columns
+        data.columns = range(len(data.columns))
+
+        # Set -inf to zero
+        if data.isin([np.inf, -np.inf]).any().any():
+            data.replace([np.inf, -np.inf], 0, inplace=True)
+            # data.fillna(0, inplace=True)
+            yMin = min(data[data < 0].sum())
+
+
+        # Plot the sequence motif
+        fig, ax = plt.subplots(figsize=self.figSize)
+        motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=colors,
+                               width=0.95, stack_order=stackOrder)
+        # Set figure title
+        if self.showSampleSize:
+            if dataType.lower() == 'weblogo':
+                title += f'\nN = {self.nSubsFinal:,}'
+                if showYTicks:
+                    figBorders = [0.882, 0.075, 0.07, 0.98]
+                else:
+                    figBorders = [0.882, 0.075, 0.09, 0.98]
+            else:
+                title +=  (f'\nN Unsorted = {self.nSubsInitial:,}\n'
+                           f'N Sorted = {self.nSubsFinal:,}')
+                figBorders = [0.852, 0.075, 0.138, 0.98]
+        else:
+            if dataType.lower() == 'weblogo':
+                figBorders = [0.882, 0.075, 0.138, 0.98]
+            else:
+                figBorders = [0.852, 0.075, 0.138, 0.98]
+
+        motif.ax.set_title(title, fontsize=titleSize, fontweight='bold')
+        # inFigureBordersMotifYTicks = [0.882, 0.075, 0.07, 0.98]
+        # inFigureBordersMotifMaxYTick = [0.882, 0.075, 0.102, 0.98]
+        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], left=figBorders[2],
+                            right=figBorders[3])
+
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks)
+
+        # Set borders
+        motif.style_spines(visible=False)
+        motif.style_spines(spines=['left', 'bottom'], visible=True)
+        for spine in motif.ax.spines.values():
+            spine.set_linewidth(self.lineThickness)
+
+        # Set x-ticks
+        if len(dataColumnsRecieved) == len(self.xAxisLabels):
+            motif.ax.set_xticks([pos for pos in range(len(self.xAxisLabels))])
+            motif.ax.set_xticklabels(self.xAxisLabels, fontsize=self.labelSizeTicks,
+                                     rotation=0, ha='center')
+        else:
+            motif.ax.set_xticks([pos for pos in range(len(dataColumnsRecieved))])
+            motif.ax.set_xticklabels(dataColumnsRecieved, fontsize=self.labelSizeTicks,
+                                     rotation=0, ha='center')
+
+        for tick in motif.ax.xaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
+
+        # Set y-ticks
+        if 'enrichment' in dataType.lower():
+            yTicks = [yMin, 0, yMax]
+            yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}'
+                           for tick in yTicks]
+            yLimitUpper = yMax
+            yLimitLower = yMin
+        else:
+            if showYTicks:
+                yTicks = range(0, 5)
+                yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}'
+                               for tick in yTicks]
+                yLimitUpper = 4.32
+                yLimitLower = 0
+
+                if addHorizontalLines:
+                    for tick in yTicks:
+                        motif.ax.axhline(y=tick, color='black', linestyle='--',
+                                         linewidth=self.lineThickness)
+            else:
+                yTicks = [yMin, 0, yMax]
+                yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}'
+                               for tick in yTicks]
+                yLimitUpper = yMax
+                yLimitLower = yMin
+
+        motif.ax.set_yticks(yTicks)
+        motif.ax.set_yticklabels(yTickLabels, fontsize=self.labelSizeTicks)
+        motif.ax.set_ylim(yLimitLower, yLimitUpper)
+        for tick in motif.ax.yaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
+
+        # Label the axes
+        motif.ax.set_xlabel('Position', fontsize=self.labelSizeAxis)
+        if dataType.lower() == 'weblogo':
+            motif.ax.set_ylabel('Bits', fontsize=self.labelSizeAxis)
+        else:
+            motif.ax.set_ylabel(dataType, fontsize=self.labelSizeAxis)
+
+        # Set horizontal line
+        motif.ax.axhline(y=0, color='black', linestyle='-', linewidth=self.lineThickness)
+
+        # Evaluate dataset for fixed residues
+        spacer = np.diff(motif.ax.get_xticks()) # Find the space between each tick
+        spacer = spacer[0] / 2
+
+        # Use the spacer to set a gray background to fixed residues
+        for index, position in enumerate(self.xAxisLabels):
+            if position in self.fixedPosition:
+                # Plot grey boxes on each side of the xtick
+                motif.ax.axvspan(index - spacer, index + spacer,
+                                 facecolor='darkgrey', alpha=0.2)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        if self.setFigureTimer:
+            plt.ion()
+            plt.show()
+            plt.pause(self.figureTimerDuration)
+            plt.close(fig)
+            plt.ioff()
+        else:
+            plt.show()
+
+        # Save the figure
+        if self.saveFigures:
+            if dataType == 'WebLogo':
+                datasetType = dataType
+            elif 'Scaled' in dataType:
+                datasetType = 'Motif'
+            else:
+                print(f'{orange}ERROR: What do I do with this motif type -'
+                      f'{red} {dataType}{resetColor}\n\n')
+                sys.exit()
+
+            # Define: Save location
+            if motifFilter:
+                figLabel = (f'{self.enzymeName} - {datasetType} '
+                            f'{self.saveFigureIteration} - {saveTag} - MinCounts '
+                            f'{self.minSubCount}.png')
+            else:
+                if saveTag is None:
+                    figLabel = (f'{self.enzymeName} - {datasetType} - '
+                                f'Unfiltered - MinCounts {self.minSubCount}.png')
+                else:
+                    figLabel = (f'{self.enzymeName} - {datasetType} - '
+                                f'{saveTag} - MinCounts {self.minSubCount}.png')
+            saveLocation = os.path.join(self.savePathFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                copyNumber = 1
+                fileFound = True
+                # Save duplicate figures
+                if duplicateFigure:
+                    while fileFound:
+                        # Define: Save location
+                        figLabel = (f'{self.enzymeName} - {figLabel} {copyNumber} - '
+                                    f'{saveTag} - MinCounts {self.minSubCount}.png')
+                        saveLocation = os.path.join(self.savePathFigs, figLabel)
+
+                        if not os.path.exists(saveLocation):
+                            print(f'Saving figure at path:\n'
+                                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                            fig.savefig(saveLocation, dpi=self.figureResolution)
+                            self.saveFigureIteration = copyNumber
+                            fileFound = False
+                        else:
+                            copyNumber += 1
+                else:
+                    print(f'{orange}WARNING: The figure already exists at the path\n'
+                          f'     {saveLocation}\n\n'
+                          f'We will not overwrite the figure{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+
+    def plotStats(self, countedData, totalCounts, title, datasetTag, dataType):
+        # Create heatmap
+        cMapCustom = NGS.createCustomColorMap(self, colorType=dataType)
+
+        # Convert the counts to a data frame for Seaborn heatmap
+        if self.residueLabelType == 0:
+            countedData.index = [residue[0] for residue in self.residues]
+        elif self.residueLabelType == 1:
+            countedData.index = [residue[1] for residue in self.residues]
+        elif self.residueLabelType == 2:
+            countedData.index = [residue[2] for residue in self.residues]
+
+        # Plot the heatmap with numbers centered inside the squares
+        fig, ax = plt.subplots(figsize=self.figSizeEM)
+        heatmap = sns.heatmap(countedData, annot=True, fmt='.3f', cmap=cMapCustom,
+                              cbar=True, linewidths=self.lineThickness-1,
+                              linecolor='black', square=False, center=None,
+                              annot_kws={'fontweight': 'bold'})
+        ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
+        ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
+        if self.showSampleSize:
+            if totalCounts is None:
+                ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+            else:
+                ax.set_title(f'{title}\nN={totalCounts:,}',
+                             fontsize=self.labelSizeTitle, fontweight='bold')
+        else:
+            ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        figBorders = [0.852, 0.075, 0.117, 1]
+        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
+                            left=figBorders[2], right=figBorders[3])
+
+
+        # Set the thickness of the figure border
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+            spine.set_linewidth(self.lineThickness)
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks, width=self.lineThickness)
+        ax.tick_params(axis='y', labelrotation=0)
+
+        # Set x-ticks
+        xTicks = np.arange(len(countedData.columns)) + 0.5
+        ax.set_xticks(xTicks)
+        ax.set_xticklabels(countedData.columns)
+
+        # Set y-ticks
+        yTicks = np.arange(len(countedData.index)) + 0.5
+        ax.set_yticks(yTicks)
+        ax.set_yticklabels(countedData.index)
+
+        # Set the edge thickness
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+
+        # Modify the colorbar
+        cbar = heatmap.collections[0].colorbar
+        tickLabels = cbar.ax.get_yticklabels()
+        cbarLabels = []
+        for label in tickLabels:
+            labelText = label.get_text()  # Get the text of the label
+            try:
+                labelValue = float(labelText)  # Convert to a float
+                if labelValue.is_integer():  # Check if it's an integer
+                    cbarLabels.append(int(labelValue))  # Append as an integer
+            except ValueError:
+                print(f'{orange}ERROR: Unable to plot the{cyan} {dataType}{orange} '
+                      f'label{cyan} {label}\n\n')
+                sys.exit()
+        cbar.set_ticks(cbarLabels)  # Set the positions of the ticks
+        cbar.set_ticklabels(cbarLabels)
+        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
+                            length=self.tickLength, width=self.lineThickness)
+        cbar.outline.set_linewidth(self.lineThickness)
+        cbar.outline.set_edgecolor('black')
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        if self.setFigureTimer:
+            plt.ion()
+            plt.show()
+            plt.pause(self.figureTimerDuration)
+            plt.close(fig)
+            plt.ioff()
+        else:
+            plt.show()
+
+        # Save the figure
+        if self.saveFigures:
+            # Define: Save location
+            figLabel = (f'EM - {self.enzymeName} - {dataType} - {datasetTag} - '
+                        f'MinCounts {self.minSubCount}.png')
+            saveLocation = os.path.join(self.savePathFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                print(f'The figure was not saved\n\n'
+                      f'File was already found at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
 
 
     def plotWordCloud(self, clusterSubs, clusterIndex, title, saveTag):
@@ -3853,7 +3972,8 @@ class NGS:
             print(f'Selecting PCA Population:{red} {clusterIndex + 1}{resetColor}')
         iteration = 0
         for substrate, count in clusterSubs.items():
-            print(f'     {silver}{substrate}{resetColor}, Count:{pink} {count:,}{resetColor}')
+            print(f'     {silver}{substrate}{resetColor}, '
+                  f'Count:{pink} {count:,}{resetColor}')
             iteration += 1
             if iteration == self.printNumber:
                 break
@@ -3874,7 +3994,7 @@ class NGS:
 
 
         # Display the word cloud
-        fig = plt.figure(figsize=(9.5, 8), facecolor='white')
+        fig = plt.figure(figsize=self.figSize, facecolor='white')
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.axis('off')
@@ -4042,7 +4162,7 @@ class NGS:
             yMin = math.floor(min(yValues))
 
         # Plot the data
-        fig, ax = plt.subplots(figsize=(9.5, 8))
+        fig, ax = plt.subplots(figsize=self.figSize)
         bars = plt.bar(xValues, yValues, color=barColor, width=barWidth)
         plt.ylabel(dataType, fontsize=self.labelSizeAxis)
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
@@ -4055,7 +4175,7 @@ class NGS:
         # else:
         #     plt.subplots_adjust(top=0.873, bottom=0.12, left=0.1, right=0.979)
 
-        # Set edge color
+        # Set the edge color
         for bar in bars:
             bar.set_edgecolor('black')
 
@@ -4189,7 +4309,7 @@ class NGS:
 
 
 
-    def plotTrie(self, trie, motifTable, countsMotif, datasetTag, figSize):
+    def plotTrie(self, trie, motifTable, countsMotif, datasetTag):
         import networkx as nx
 
         inOffset = 2000
@@ -4280,7 +4400,7 @@ class NGS:
 
 
         # Plot the data
-        fig, ax = plt.subplots(figsize=figSize, dpi=self.dpi)
+        fig, ax = plt.subplots(figsize=self.figSize)
         fig.canvas.mpl_connect('key_press_event', pressKey)
 
         # Draw graph
@@ -4307,123 +4427,3 @@ class NGS:
                 print(f'Saving figure at path:\n'
                       f'     {greenDark}{saveLocation}{resetColor}\n\n')
                 fig.savefig(saveLocation, dpi=self.figureResolution)
-
-
-
-    def suffixTree(self, substrates, N, entropySubFrame, indexSubFrame, entropyMin,
-                   datasetTag, dataType, figSize):
-        print('================================== Suffix Tree '
-              '==================================')
-        if datasetTag is None:
-            print(f'Dataset:{purple} {self.enzymeName} - Unfixed{resetColor}\n')
-        else:
-            print(f'Dataset:{purple} {self.enzymeName} {dataType} {datasetTag}'
-                  f'{resetColor}\n')
-
-
-        from Trie import Trie
-
-
-        trie = Trie() # Initialize Trie
-        motifs = {}
-        indexStart = min(indexSubFrame)
-        indexEnd = max(indexSubFrame)
-
-        # Print substrates
-        iteration = 0
-        substrates = dict(sorted(substrates.items(), key=lambda item: item[1],
-                                 reverse=True))
-        for substrate, count in substrates.items():
-            iteration += 1
-            print(f'Substrate:{silver} {substrate}{resetColor}\n'
-                  f'     Count:{red} {count:,}{resetColor}')
-            if iteration >= self.printNumber:
-                break
-        print('\n')
-
-        # Find motif positions based on entropy threshold
-        indexPos = []
-        for index in entropySubFrame.index:
-            posEntropy = entropySubFrame.loc[index, 'ΔEntropy']
-            if posEntropy >= entropyMin:
-                indexPos.append(int(index.replace('R', '')) - 1)
-
-        motifTrie = {}
-        countsMotif = 0
-        def addMotif(motif, count):
-            # Extract important AAs from the motif
-            motif = ''.join(motif[index] for index in indexPos)
-
-            # Add motif to the trie
-            if motif in motifTrie.keys():
-                motifTrie[motif] += count
-            else:
-                motifTrie[motif] = count
-                trie.insert(motif)
-
-
-        # Extract the motifs
-        motifCount = 0
-        for substrate, count in substrates.items():
-            motif = substrate[indexStart:indexEnd + 1]
-            if motif in motifs:
-                motifs[motif] += count
-            else:
-                motifs[motif] = count
-                motifCount += 1
-
-            # Add the motif to the tree
-            addMotif(motif, count)
-            countsMotif = len(motifTrie.keys())
-            if countsMotif >= N:
-                break
-        motifs = dict(sorted(motifs.items(), key=lambda item: item[1], reverse=True))
-        motifTrie = dict(sorted(motifTrie.items(), key=lambda item: item[1],
-                                reverse=True))
-
-        # Print motifs
-        print(f'Extracted Motifs:')
-        for index, (motif, count) in enumerate(motifs.items()):
-            print(f'{index+1}:{yellow} {motif}{resetColor} '
-                  f'Count:{red} {count:,}{resetColor}')
-        print('\n')
-
-        # Print trie
-        print(f'Extracted Trie:')
-        for index, (seq, count) in enumerate(motifTrie.items()):
-            print(f'{index + 1}:{pink} {seq}{resetColor} '
-                  f'Count:{red} {count:,}{resetColor}')
-        print('\n')
-
-        # Calculate: RF
-        motifTable = NGS.evaluateSubtrees(self, trie=trie, motifTrie=motifTrie)
-
-        # Plot the Trie
-        NGS.plotTrie(self, trie=trie, motifTable=motifTable, countsMotif=countsMotif,
-                     datasetTag=datasetTag, figSize=figSize)
-
-
-        def clusterLevenshtein():
-            from scipy.cluster.hierarchy import linkage, dendrogram
-            import numpy as np
-            import matplotlib.pyplot as plt
-            from Levenshtein import distance
-
-            # Compute pairwise Levenshtein distances
-            motifList = list(motifs.keys())
-            distanceMatrix = np.array(
-                [[distance(m1, m2) for m2 in motifList] for m1 in motifList])
-
-            # Perform hierarchical clustering
-            linkageMatrix = linkage(distanceMatrix, method='ward')
-
-            # Plot the data
-            fig, ax = plt.subplots(figsize=(12, 6))
-            fig.canvas.mpl_connect('key_press_event', pressKey)
-            dendrogram(linkageMatrix, labels=motifList, leaf_rotation=90)
-            plt.title('Motif Cluster (Levenshtein Distance)',
-                      fontsize=16, fontweight='bold')
-            plt.tight_layout()
-            plt.show()
-
-        # clusterLevenshtein()
