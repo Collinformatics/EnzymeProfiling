@@ -20,7 +20,7 @@ from functions import NGS
 # Input 1: File Location
 inFileName = ['Src-F_S2_L001_R1_001', 'Src-F_S2_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Fastq') # Define the fastq folder pathway
 inFileType = 'fastq' # Define the file type
 inSavePath = os.path.join(inBasePath, 'Extracted Data')
@@ -51,17 +51,15 @@ inCountsColorMap = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD
 inFigureTitleSize = 18
 inFigureLabelSize = 16
 inFigureTickSize = 13
-inFigureSize = (10, 8) # (width, height)
-inFigureBorders = [0.882, 0.075, 0.18, 1] # Top, bottom, left, right
 
 
 
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
-          fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
-          excludeAAs=None, excludeAA=None, excludePosition=None,
-          minCounts=0, colorsCounts=inCountsColorMap, colorStDev=None,
-          colorsEM=None, colorsMotif=None, xAxisLabels=inAAPositions,
+          fixedAA=inFixedResidue, fixedPosition=inFixedPosition, excludeAAs=None,
+          excludeAA=None, excludePosition=None, minCounts=0,
+          colorsCounts=inCountsColorMap, colorStDev=None, colorsEM=None,
+          colorsMotif=None, figEMSquares=False, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=None, residueLabelType=inCountMapYLabel,
           titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
           tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
@@ -147,4 +145,4 @@ ngs.extractionEffiency(files=inFileName)
 # Plot the data
 if inPlotCounts:
     ngs.plotCounts(countedData=counts, totalCounts=totalSubs,
-                   title=f'{inEnzymeName}\n{inSaveFileName}', figSize=inFigureSize)
+                   title=f'{inEnzymeName}\n{inSaveFileName}')
