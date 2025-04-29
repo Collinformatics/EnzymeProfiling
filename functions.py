@@ -131,9 +131,8 @@ def includeCommas(x):
 class NGS:
     def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
                  excludeAA, excludePosition, minCounts, figEMSquares, xAxisLabels,
-                 xAxisLabelsBinned, residueLabelType, titleLabelSize, axisLabelSize,
-                 tickLabelSize, printNumber, showNValues, savePath, saveFigures,
-                 savePathFigs, setFigureTimer):
+                 xAxisLabelsBinned, residueLabelType, printNumber, showNValues, savePath,
+                 saveFigures, savePathFigs, setFigureTimer):
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
@@ -153,9 +152,9 @@ class NGS:
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsBinned = xAxisLabelsBinned
         self.residueLabelType = residueLabelType
-        self.labelSizeTitle = titleLabelSize
-        self.labelSizeAxis = axisLabelSize
-        self.labelSizeTicks = tickLabelSize
+        self.labelSizeTitle = 18
+        self.labelSizeAxis = 16
+        self.labelSizeTicks = 13
         self.lineThickness = 1.5
         self.tickLength = 4
         self.residues = defaultResidues
@@ -3220,7 +3219,7 @@ class NGS:
         else:
             plt.title(f'\n{title}',
                       fontsize=self.labelSizeTitle, fontweight='bold')
-        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.088, right=0.917)
+        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.112, right=0.917)
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -3453,6 +3452,8 @@ class NGS:
         print('======================== Plot: Probability Distribution '
               '=========================')
         for position in entropyScores.index:
+            yMax = 1
+
             # Extract values for plotting
             probabilities = list(probability.loc[:, position])
 
@@ -3495,7 +3496,7 @@ class NGS:
                           f'Shannon Entropy = {shannonS:.3f}',
                           fontsize=self.labelSizeTitle, fontweight='bold')
             plt.subplots_adjust(top=0.898, bottom=0.1, left=0.129, right=0.936)
-            plt.ylim(0, 1)
+            plt.ylim(0, yMax)
 
             # Set tick parameters
             ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -3732,24 +3733,21 @@ class NGS:
             if dataType.lower() == 'weblogo':
                 title += f'\nN = {self.nSubsFinal:,}'
                 if showYTicks:
-                    figBorders = [0.882, 0.075, 0.07, 0.98]
+                    figBorders = [0.852, 0.075, 0.112, 0.938]
                 else:
-                    figBorders = [0.882, 0.075, 0.09, 0.98]
+                    figBorders = [0.852, 0.075, 0.112, 0.938]
             else:
                 title +=  (f'\nN Unsorted = {self.nSubsInitial:,}\n'
                            f'N Sorted = {self.nSubsFinal:,}')
-                figBorders = [0.852, 0.075, 0.138, 0.98]
+                figBorders = [0.852, 0.075, 0.164, 0.938]
         else:
             if dataType.lower() == 'weblogo':
-                figBorders = [0.882, 0.075, 0.138, 0.98]
+                figBorders = [0.852, 0.075, 0.112, 0.938]
             else:
-                figBorders = [0.852, 0.075, 0.138, 0.98]
-
+                figBorders = [0.852, 0.075, 0.164, 0.938]
         motif.ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-        # inFigureBordersMotifYTicks = [0.882, 0.075, 0.07, 0.98]
-        # inFigureBordersMotifMaxYTick = [0.882, 0.075, 0.102, 0.98]
-        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], left=figBorders[2],
-                            right=figBorders[3])
+        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
+                            left=figBorders[2], right=figBorders[3])
 
 
         # Set tick parameters

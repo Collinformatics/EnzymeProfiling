@@ -20,12 +20,12 @@ from functions import NGS
 # Input 1: File Location
 inFileName = ['Src-F_S2_L001_R1_001', 'Src-F_S2_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Fastq') # Define the fastq folder pathway
 inFileType = 'fastq' # Define the file type
 inSavePath = os.path.join(inBasePath, 'Extracted Data')
 inSaveFileName = 'Src-F_S2_L001'
-inAlertPath = '/path/Bells.mp3'
+inAlertPath = '/Users/ca34522/Documents/Python/Sounds/Bells.mp3'
 
 # Input 2: Substrate Parameters
 inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
@@ -47,9 +47,6 @@ inPrintQualityScores = False # QSs are "phred quality" scores
 inPlotCountsAA = True
 inPrintCounts = True
 inCountMapYLabel = 2  # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
-inFigureTitleSize = 18
-inFigureLabelSize = 16
-inFigureTickSize = 13
 
 
 
@@ -58,10 +55,9 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition, excludeAAs=None,
           excludeAA=None, excludePosition=None, minCounts=0, figEMSquares=False,
           xAxisLabels=inAAPositions, xAxisLabelsBinned=None,
-          residueLabelType=inCountMapYLabel, titleLabelSize=inFigureTitleSize,
-          axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize,
-          printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          saveFigures=False, savePath=None, savePathFigs=None, setFigureTimer=None)
+          residueLabelType=inCountMapYLabel, printNumber=inPrintNumber,
+          showNValues=inShowSampleSize, saveFigures=False,
+          savePath=None, savePathFigs=None, setFigureTimer=None)
 
 
 

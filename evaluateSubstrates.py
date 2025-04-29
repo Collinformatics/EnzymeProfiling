@@ -33,10 +33,7 @@ inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
-inFigureTitleSize = 18
-inFigureLabelSize = 16
-inFigureTickSize = 13
-inShowSampleSize = True # Include the sample size in your figures
+inPlotWithSampleSize = True
 
 # Input 3: Processing The Data
 inPlotPositionalEntropy = True
@@ -44,11 +41,10 @@ inPlotEnrichmentMap = True
 inPlotEnrichmentMotif = True
 inPlotWeblogoMotif = True
 inPlotWordCloud = True
-inPlotPositionalRF = True # For understanding shannon entropy
 inPlotAADistribution = True
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotCountsAA = True
-
+inPlotPositionalProbDist = True # For understanding shannon entropy
 
 # Input 4: Inspecting The Data
 inPrintLoadedSubs = True
@@ -62,7 +58,7 @@ inPrintMotifData = True
 inPrintNumber = 10
 
 # Input 5: Optimal Substrates
-inEvaluateOS = True
+inEvaluateOS = False
 inPrintOSNumber = 10
 inMaxResidueCount = 4
 
@@ -132,9 +128,8 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
-          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
-          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, saveFigures=inSaveFigures, savePath=inFilePath,
+          printNumber=inPrintNumber, showNValues=inPlotWithSampleSize,
+          saveFigures=inSaveFigures, savePath=inFilePath,
           savePathFigs=inSavePathFigures, setFigureTimer=None)
 
 
@@ -561,12 +556,6 @@ if inPlotPositionalEntropy:
     ngs.plotPositionalEntropy(entropy=positionalEntropy, fixedDataset=inFixResidues,
                               fixedTag=fixedSubSeq, avgDelta=False)
 
-# Plot the RF for each position in the substrate frame
-if inPlotPositionalRF:
-    ngs.plotPositionalProbDist(probability=finalRF, entropyScores=positionalEntropy,
-                               sortType='Final Sort', datasetTag=fixedSubSeq)
-
-
 if inEvaluateOS:
     print('============================== Evaluate Optimal Substrates '
           '==============================')
@@ -675,11 +664,10 @@ if inEvaluateOS:
 if inCompairRF:
     if inFixResidues:
         ngs.compairRF(initialRF=initialRF, finalRF=finalRF, selectAA=inCompairAA,
-                      labelSize=inFigureLabelSize, yMax=inCompairYMax, yMin=inCompairYMin)
+                      yMax=inCompairYMax, yMin=inCompairYMin)
 
         ngs.boxPlotRF(initialRF=initialRF, finalRF=finalRF, selectAA=inCompairAA,
-                      fixedPos=inFixedPosition, labelSize=inFigureLabelSize,
-                      yMax=inCompairYMax, yMin=inCompairYMin)
+                      fixedPos=inFixedPosition, yMax=inCompairYMax, yMin=inCompairYMin)
     else:
         print(f'{orange}No residues were fixed, '
               f'so specificity cannon be evaluated{resetColor}\n')
@@ -836,3 +824,8 @@ if inPlotCountsAA:
     # Plot the data
     ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal,
                    datasetTag=fixedSubSeq)
+
+if inPlotPositionalProbDist:
+    ngs.plotPositionalProbDist(probability=finalRF, entropyScores=positionalEntropy,
+                               sortType='Final Sort', datasetTag=fixedSubSeq)
+
