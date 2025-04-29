@@ -17,40 +17,17 @@ from functions import filePaths, NGS
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
-inSaveFigures = False
+inSaveFigures = True
 
-# Input 2: Processing The Data
-inPlotPositionalEntropy = False
-inPlotEnrichmentMap = True
-inPlotEnrichmentMotif = True
-inPlotWeblogoMotif = True
-inPlotWordCloud = False
-inPlotAADistribution = False
-inPlotPositionalRF = False # For understanding shannon entropy
-inPrintLoadedSubs = True
-inPrintSampleSize = True
-inPrintCounts = True
-inPlotCounts = False
-inCountsColorMap = ['white','white','lightcoral','red','firebrick','darkred']
-inStDevColorMap = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
-inPrintRF = True
-inPrintES = True
-inPrintEntropy = True
-inPrintMotifData = True
-inPrintNumber = 10
-inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
-inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabilities
-                       # If False: use "inFileNamesInitial" for baseline probabilities
-
-# Input 3: Computational Parameters
-inFixResidues = True
-inFixedResidue = ['L', 'Q']
-inFixedPosition = [3, 4]
-inExcludeResidues = True
+# Input 4: Computational Parameters
+inFixResidues = False
+inFixedResidue = ['Q']
+inFixedPosition = [4]
+inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
@@ -60,9 +37,40 @@ inFigureLabelSize = 16
 inFigureTickSize = 13
 inShowSampleSize = True # Include the sample size in your figures
 
-# Input 4: PCA
-inRunPCA = False
-inBinSubsPCA = False
+# Input 3: Processing The Data
+inPlotPositionalEntropy = True
+inPlotEnrichmentMap = True
+inPlotEnrichmentMotif = True
+inPlotWeblogoMotif = True
+inPlotWordCloud = False
+inPlotPositionalRF = False # For understanding shannon entropy
+inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
+inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabilities
+                       # If False: use "inFileNamesInitial" for baseline probabilities
+
+# Input 4: Inspecting The Data
+inPlotCountsAA = False
+inPrintLoadedSubs = True
+inPrintSampleSize = True
+inPrintCounts = True
+inPrintRF = True
+inPrintES = True
+inPrintEntropy = True
+inPrintMotifData = True
+inPrintNumber = 10
+
+# Input 5: Optimal Substrates
+inEvaluateOS = True
+inPrintOSNumber = 10
+inMaxResidueCount = 4
+
+# Input 6: Probability Distributions
+inPlotAADistribution = True
+inDFDistMaxY = 0.35
+
+# Input 7: PCA
+inRunPCA = True
+inBinSubsPCA = True
 inIndexNTerminus = 2 # Define bounds for binned substrate
 inBinnedSubstrateLength = 5 # Define the length of you substrate
 inFramePositions = [inIndexNTerminus - 1,
@@ -70,19 +78,12 @@ inFramePositions = [inIndexNTerminus - 1,
 inAAPositionsBinned = inAAPositions[inFramePositions[0]:inFramePositions[-1]]
 inNumberOfPCs = 2
 inTotalSubsPCA = 10000
-inIncludeSubstrateCounts = False
+inIncludeSubCountsESM = False
 inExtractPopulations = False
 inPlotPositionalEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
 
-# Input 5: Optimal Substrates
-inEvaluateOS = False
-inMaxResidueCount = 4
-
-# Input 6: Probability Distributions
-inDFDistMaxY = 0.35
-
-# Input 7: Plot Heatmap
+# Input 8: Plot Heatmap
 inShowEnrichmentScores = True
 inShowEnrichmentAsSquares = False
 inTitleEnrichmentMap = inEnzymeName
@@ -96,22 +97,19 @@ inFigureBordersAsSquares = [0.882, 0.075, 0.075, 0.943]
 inEnrichmentColorMap = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
                         'lightcoral','red','firebrick','darkred']
 
-# Input 8: Plot Sequence Motif
+# Input 9: Plot Sequence Motif
 inNormLetters = True # Normalize fixed letter heights
 inShowWeblogoYTicks = True
 inAddHorizontalLines = False
 inTitleMotif = inTitleEnrichmentMap
 inBigLettersOnTop = False
-inLetterColors = ['darkgreen','firebrick','deepskyblue','pink','navy','black','gold']
-                  # Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
-# Input 9: Evaluate Substrate Enrichment
+# Input 10: Evaluate Substrate Enrichment
 inEvaluateSubstrateEnrichment = False
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
-# Input 10: Evaluate Specificity
-inPlotShannonEntropy = False
+# Input 11: Evaluate Specificity
 inCompairRF = False # Plot RF distributions of a given AA
 inCompairAA = 'V' # Select the AA of interest
 inCompairYMax = 0.4 # Set the y-axis for the RF comparison figure
@@ -120,30 +118,6 @@ inCompairYMin = 0.0
 
 
 # =================================== Setup Parameters ===================================
-colors = {
-    'A': inLetterColors[0],
-    'R': inLetterColors[2],
-    'N': inLetterColors[4],
-    'D': inLetterColors[1],
-    'C': inLetterColors[6],
-    'E': inLetterColors[1],
-    'Q': inLetterColors[4],
-    'G': inLetterColors[0],
-    'H': inLetterColors[2],
-    'I': inLetterColors[0],
-    'L': inLetterColors[0],
-    'K': inLetterColors[2],
-    'M': inLetterColors[6],
-    'F': inLetterColors[5],
-    'P': inLetterColors[0],
-    'S': inLetterColors[3],
-    'T': inLetterColors[3],
-    'W': inLetterColors[5],
-    'Y': inLetterColors[5],
-    'V': inLetterColors[0]
-}
-
-
 # Colors:
 white = '\033[38;2;255;255;255m'
 silver = '\033[38;2;204;204;204m'
@@ -166,8 +140,6 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          colorsCounts=inCountsColorMap, colorsEM=inEnrichmentColorMap,
-          colorsMotif=inLetterColors, colorStDev=inStDevColorMap,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
           titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
@@ -593,54 +565,6 @@ if inFixResidues and loadUnfixedSubstrates:
     countsFinal.to_csv(filePathFixedCountsFinal)
 
 
-if inRunPCA:
-    # Bin substrates before PCA, or don't
-    if inBinSubsPCA:
-        fixedSubSeqBinned = (f'{fixedSubSeq} - '
-                             f'Binned Subs {inAAPositionsBinned[0]}-'
-                             f'{inAAPositionsBinned[-1]}')
-
-        # Bin substrates
-        finalSubsBinned, totalSubsFinalBin = binSubstrates(substrates=substratesFinal,
-                                                           datasetTag=fixedSubSeqBinned,
-                                                           index=0)
-
-        # Convert substrate data to numerical
-        tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=finalSubsBinned,
-                                                   collectionNumber=int(inTotalSubsPCA),
-                                                   useSubCounts=inIncludeSubstrateCounts,
-                                                   subPositions=inAAPositionsBinned,
-                                                   datasetTag=fixedSubSeqBinned)
-
-        # Cluster substrates
-        subPopulations = ngs.PCA(substrates=finalSubsBinned, data=tokensESM,
-                                 indices=subsESM, numberOfPCs=inNumberOfPCs,
-                                 fixedTag=fixedSubSeq, N=subCountsESM, fixedSubs=True,
-                                 saveTag=fixedSubSeqBinned)
-    else:
-        # Convert substrate data to numerical
-        tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=substratesFinal,
-                                                   collectionNumber=int(inTotalSubsPCA),
-                                                   useSubCounts=inIncludeSubstrateCounts,
-                                                   subPositions=inAAPositions,
-                                                   datasetTag=fixedSubSeq)
-
-        # Cluster substrates
-        subPopulations = ngs.PCA(substrates=substratesFinal, data=tokensESM,
-                                 indices=subsESM, numberOfPCs=inNumberOfPCs,
-                                 fixedTag=fixedSubSeq, N=subCountsESM, fixedSubs=True,
-                                 saveTag=fixedSubSeq)
-
-    # Plot: Substrate clusters
-    if subPopulations != None:
-        clusterCount = len(subPopulations)
-        for index, subCluster in enumerate(subPopulations):
-            # Plot data
-            plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
-                                     numClusters=clusterCount)
-        print(f'Debug PCA')
-
-
 # # Update: Current sample size
 ngs.updateSampleSize(NSubs=countsInitialTotal, sortType='Initial Sort',
                      printCounts=inPrintSampleSize, fixedTag=None)
@@ -650,30 +574,28 @@ ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
 
 
 # ==================================== Plot The Data =====================================
-if inPlotCounts:
+if inPlotCountsAA:
     # Plot the data
-    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal)
+    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal,
+                   datasetTag=fixedSubSeq)
 
 
 if inPlotAADistribution:
     # Plot: Initial RF
-    ngs.plotRFDist(RF=initialRF, yMax=inDFDistMaxY, codonType=inCodonSequence,
-                   sortType='Initial Sort', fixedTag=fixedSubSeq, residueColors=colors)
+    ngs.plotLibraryProbDist(
+        probInitial=initialRF, probFinal=finalRF, yMax=inDFDistMaxY,
+        codonType=inCodonSequence, fixedTag=fixedSubSeq)
 
-    # Plot: Final RF
-    ngs.plotRFDist(RF=finalRF, yMax=inDFDistMaxY, codonType=inCodonSequence,
-                   sortType='Final Sort', fixedTag=fixedSubSeq, residueColors=colors)
 
 # Plot: Positional entropy
 if inPlotPositionalEntropy:
-    ngs.plotPositionalEntropy(entropy=positionalEntropy,
-                              fixedDataset=inFixResidues, fixedTag=fixedSubSeq,
-                              titleSize=inFigureTitleSize, avgDelta=False)
+    ngs.plotPositionalEntropy(
+        entropy=positionalEntropy, fixedDataset=inFixResidues, fixedTag=fixedSubSeq,
+        titleSize=inFigureTitleSize, avgDelta=False)
 
 # Plot the RF for each position in the substrate frame
 if inPlotPositionalRF:
-    ngs.plotPositionalRFDist(RF=finalRF, entropyScores=positionalEntropy,
-                             residueColors=colors)
+    ngs.plotPositionalProbDist(probability=finalRF, entropyScores=positionalEntropy)
 
 
 if inEvaluateOS:
@@ -799,9 +721,9 @@ if inCompairRF:
 
 # # Plot the data
 if fixedSubSeq is None:
-    datasetTag = fixedSubSeq
+    datasetTag = 'Unfiltered'
 else:
-    datasetTag = f'Fixed {fixedSubSeq}'
+    datasetTag = fixedSubSeq
 if inPlotEnrichmentMap:
     inBin = True
     # Calculate: Enrichment scores
@@ -834,8 +756,9 @@ if inPlotEnrichmentMotif:
         codonProbs = ngs.calculateProbAA(codonSeq=inCodonSequence,
                                          printProbability=inPrintRF)
         # Plot: Final RF
-        ngs.plotRFDist(RF=codonProbs, yMax=inDFDistMaxY, codonType=inCodonSequence,
-                       sortType='Final Sort', fixedTag=fixedSubSeq, residueColors=colors)
+        ngs.plotLibraryProbDist(
+            probability=codonProbs, yMax=inDFDistMaxY, codonType=inCodonSequence,
+            sortType='Final Sort', fixedTag=fixedSubSeq)
 
         # Calculate: Enrichment scores
         heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
@@ -891,6 +814,55 @@ if inEvaluateSubstrateEnrichment:
         ngs.substrateEnrichment(initialSubs=substratesInitial, finalSubs=substratesFinal,
                                 NSubs=inNumberOfSavedSubstrates,
                                 saveData=inSaveEnrichedSubstrates, savePath=inFilePath)
+
+
+
+if inRunPCA:
+    # Bin substrates before PCA, or don't
+    if inBinSubsPCA:
+        fixedSubSeqBinned = (f'{fixedSubSeq} - '
+                             f'Binned Subs {inAAPositionsBinned[0]}-'
+                             f'{inAAPositionsBinned[-1]}')
+
+        # Bin substrates
+        finalSubsBinned, totalSubsFinalBin = binSubstrates(substrates=substratesFinal,
+                                                           datasetTag=fixedSubSeqBinned,
+                                                           index=0)
+
+        # Convert substrate data to numerical
+        tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=finalSubsBinned,
+                                                   collectionNumber=int(inTotalSubsPCA),
+                                                   useSubCounts=inIncludeSubCountsESM,
+                                                   subPositions=inAAPositionsBinned,
+                                                   datasetTag=fixedSubSeqBinned)
+
+        # Cluster substrates
+        subPopulations = ngs.PCA(substrates=finalSubsBinned, data=tokensESM,
+                                 indices=subsESM, numberOfPCs=inNumberOfPCs,
+                                 fixedTag=fixedSubSeq, N=subCountsESM, fixedSubs=True,
+                                 saveTag=fixedSubSeqBinned)
+    else:
+        # Convert substrate data to numerical
+        tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=substratesFinal,
+                                                   collectionNumber=int(inTotalSubsPCA),
+                                                   useSubCounts=inIncludeSubCountsESM,
+                                                   subPositions=inAAPositions,
+                                                   datasetTag=fixedSubSeq)
+
+        # Cluster substrates
+        subPopulations = ngs.PCA(substrates=substratesFinal, data=tokensESM,
+                                 indices=subsESM, numberOfPCs=inNumberOfPCs,
+                                 fixedTag=fixedSubSeq, N=subCountsESM, fixedSubs=True,
+                                 saveTag=fixedSubSeq)
+
+    # Plot: Substrate clusters
+    if subPopulations != None:
+        clusterCount = len(subPopulations)
+        for index, subCluster in enumerate(subPopulations):
+            # Plot data
+            plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
+                                     numClusters=clusterCount)
+        print(f'Debug PCA')
 
 
 if inPlotWordCloud:

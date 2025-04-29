@@ -16,7 +16,7 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
@@ -56,8 +56,6 @@ inPrintLoadedSubs = True
 inPrintSampleSize = True
 inPrintCounts = True
 inPlotCounts = False
-inCountsColorMap = ['white','white','lightcoral','red','firebrick','darkred']
-inStDevColorMap = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
 inPrintRF = True
 inPrintEntropy = True
 inShowEnrichmentData = True
@@ -87,8 +85,6 @@ inPrintSelectedSubstrates = 1  # Set = 1, to print substrates with fixed residue
 inFigureBorders = [0.873, 0.075, 0.117, 0.998]  # Top, bottom, left, right
 inFigureAsSquares = (4.5, 8)
 inFigureBordersAsSquares = [0.873, 0.075, 0.075, 0.943]
-inEnrichmentColorMap = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
-                        'lightcoral', 'red', 'firebrick', 'darkred']
 
 # Input 7: Plot Sequence Motif
 inTitleMotif = inTitleEnrichmentMap
@@ -102,8 +98,6 @@ inFigureBordersMotifYTicks = [0.882, 0.075, 0.07, 0.98]  # [top, bottom, left, r
 inFigureBordersMotifMaxYTick = [0.882, 0.075, 0.102, 0.98]
 inFigureBordersNegativeWeblogoMotif = [0.882, 0.075, 0.078, 0.98]
 inFigureBordersEnrichmentMotif = [0.882, 0.075, 0.112, 0.98] # 0.112
-inLetterColors = ['darkgreen','firebrick','deepskyblue','pink','navy','black','gold']
-# Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
 # Input 8: Substrate Enrichment
 inBinSubstrates = False
@@ -174,8 +168,6 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
-          colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=None, residueLabelType=inYLabelEnrichmentMap,
           titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,

@@ -16,7 +16,7 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: File Location
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
@@ -68,17 +68,13 @@ inPlotBinnedSubstratePCA = False
 inPlotBinnedSubstrateES = False
 inPlotBinnedSubstratePrediction = False
 inPlotCounts = False
-inCountsColorMap = ['white', 'white', 'lightcoral', 'red', 'firebrick', 'darkred']
-inStDevColorMap = ['white', 'white', '#FF76FA', '#FF50F9', '#FF00F2', '#CA00DF', '#BD16FF']
 inShowSampleSize = False # Include the sample size in your figures
 
 # Input 5: PCA
 inNumberOfPCs = 2
 inTotalSubsPCA = int(5*10**4)
-inIncludeSubstrateCounts = False
-inExtractPopulations = False
+inIncludeSubCountsESM = True
 inPlotPositionalEntropyPCAPopulations = False
-inAdjustZeroCounts = True # Prevent counts of 0 in PCA EM & Motif
 
 # Input 6: Printing The Data
 inPrintLoadedSubs = True
@@ -102,8 +98,6 @@ inFigureSize = (9.5, 8) # (width, height)
 inFigureBorders = [0.873, 0.075, 0.117, 0.967] # Top, bottom, left, right
 inFigureAsSquares = (4.5, 8)
 inFigureBordersAsSquares = [0.873, 0.075, 0.075, 0.943]
-inEnrichmentColorMap = ['navy', 'royalblue', 'dodgerblue', 'lightskyblue', 'white',
-                        'white', 'lightcoral', 'red', 'firebrick', 'darkred']
 
 # Input 8: Plot Sequence Motif
 inNormLetters = False # Normalize fixed letter heights
@@ -117,8 +111,6 @@ inFigureBordersMotifYTicks = [0.94, 0.075, 0.07, 0.98] # [top, bottom, left, rig
 inFigureBordersMotifMaxYTick = [0.94, 0.075, 0.102, 0.98]
 inFigureBordersNegativeWeblogoMotif = [0.94, 0.075, 0.078, 0.98]
 inFigureBordersEnrichmentMotif = [0.94, 0.075, 0.138, 0.98]
-inLetterColors = ['darkgreen','firebrick','deepskyblue','pink','navy','black','gold']
-                  # Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
 # Input 9: Evaluate Known Substrates
 inNormalizePredictions = True
@@ -246,8 +238,6 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
-          colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
           titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
@@ -406,14 +396,14 @@ def loadSubstratesFixedMotif():
             # Convert substrate data to numerical
             tokensESM, subsESM, subCountsESM = ngs.ESM(
                 substrates=loadedSubs, collectionNumber=inTotalSubsPCA,
-                useSubCounts=inIncludeSubstrateCounts, subPositions=inAAPositions,
+                useSubCounts=inIncludeSubCountsESM, subPositions=inAAPositions,
                 datasetTag=frame)
 
             # Cluster substrates
             subPopulations = ngs.PCA(
                 substrates=loadedSubs, data=tokensESM, indices=subsESM,
                 numberOfPCs=inNumberOfPCs, fixedTag=inDatasetTag, N=subCountsESM,
-                fixedSubs=True, figSize=inFigureSize, saveTag=inDatasetTag)
+                fixedSubs=True, saveTag=inDatasetTag)
 
             # Plot: Substrate clusters
             if (inPlotEnrichmentMapPCA or inPlotEnrichmentMotifPCA
@@ -443,15 +433,14 @@ def importFixedMotifSubs():
             # Convert substrate data to numerical
             tokensESM, subsESM, subCountsESM = ngs.ESM(
                 substrates=loadedSubs, collectionNumber=inTotalSubsPCA,
-                useSubCounts=inIncludeSubstrateCounts, subPositions=inAAPositions,
+                useSubCounts=inIncludeSubCountsESM, subPositions=inAAPositions,
                 datasetTag=tagFixedAA)
 
             # Cluster substrates
             subPopulations = ngs.PCA(
                 substrates=loadedSubs, data=tokensESM, indices=subsESM,
-                numberOfPCs=inNumberOfPCs, fixedTag=f'Fixed Motif {tagFixedAA}',
-                N=subCountsESM, fixedSubs=True, figSize=inFigureSize,
-                saveTag=inDatasetTag)
+                numberOfPCs=inNumberOfPCs, fixedTag=tagFixedAA,
+                N=subCountsESM, fixedSubs=True, saveTag=inDatasetTag)
 
             # Plot: Substrate clusters
             if (inPlotEnrichmentMapPCA or inPlotEnrichmentMotifPCA
@@ -461,8 +450,6 @@ def importFixedMotifSubs():
                     # Plot data
                     plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
                                              numClusters=clusterCount)
-
-    sys.exit()
 
     return fixedMotifSubs
 
@@ -1529,14 +1516,13 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
             duplicateFigure=False)
 
     if inPlotEnrichmentMotifPCA:
-        if inAdjustZeroCounts:
-            # Plot: Sequence Motif
-            ngs.plotMotif(data=fixedMotifPCAESScaled.copy(),
-                          dataType='Scaled Enrichment',
-                          bigLettersOnTop=inBigLettersOnTop, title=f'{figureTitleMotif}',
-                          titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
-                          showYTicks=False, addHorizontalLines=inAddHorizontalLines,
-                          motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
+        # Plot: Sequence Motif
+        ngs.plotMotif(data=fixedMotifPCAESScaled.copy(),
+                      dataType='Scaled Enrichment',
+                      bigLettersOnTop=inBigLettersOnTop, title=f'{figureTitleMotif}',
+                      titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
+                      showYTicks=False, addHorizontalLines=inAddHorizontalLines,
+                      motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
 
     # Plot: Work cloud
     if inPlotWordsPCA:
@@ -1607,11 +1593,6 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
                                                   positionalEntropy.loc[
                                                       positon, 'ΔEntropy'])
 
-        # Calculate: Test ES matrix
-        fixedMotifESTest = ngs.calculateEnrichmentTest(initialSortRF=initialRFAvg,
-                                                       finalSortRF=fixedMotifProb,
-                                                       printES=inPrintES)
-
 
 # # Plot Data
 if inPlotEnrichmentMap:
@@ -1645,7 +1626,6 @@ if inPlotEnrichmentMap:
         ngs.fixedMotifStats(countsList=fixedMotifCounts,
                             initialProb=initialRFAvg,
                             substrateFrame=inFixedMotifPositions,
-                            figSize=inFigureSize,
                             datasetTag=inDatasetTag)
 
     # Plot: Enrichment Map - Scaled
@@ -1843,15 +1823,14 @@ if (inPlotBinnedSubstrates or inPlotBinnedSubstrateES
         # Convert substrate data to numerical
         tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=binnedSubs,
                                                    collectionNumber=inTotalSubsPCA,
-                                                   useSubCounts=inIncludeSubstrateCounts,
+                                                   useSubCounts=inIncludeSubCountsESM,
                                                    subPositions=inFixedMotifPositions,
                                                    datasetTag=inDatasetTag)
 
         # Cluster substrates
         subPopulations = ngs.PCA(substrates=binnedSubs, data=tokensESM, indices=subsESM,
                                  numberOfPCs=inNumberOfPCs, fixedTag=inDatasetTag,
-                                 N=subCountsESM, fixedSubs=True, figSize=inFigureSize,
-                                 saveTag=inDatasetTag)
+                                 N=subCountsESM, fixedSubs=True, saveTag=inDatasetTag)
 
         # Plot: Substrate clusters
         if (inPlotEnrichmentMapPCA or inPlotEnrichmentMotifPCA
