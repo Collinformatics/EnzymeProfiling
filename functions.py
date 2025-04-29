@@ -3303,6 +3303,7 @@ class NGS:
     def plotLibraryProbDist(self, probInitial, probFinal, yMax, codonType, fixedTag):
         print('======================= Plot: AA Probability Distribution '
               '=======================')
+        plotInitial, plotFinal = False, False
         if probInitial is None and probFinal is None:
             print(f'{orange}ERROR: both of the inputs probInitial and '
                   f'probFinal cannot be None.{resetColor}\n\n')
@@ -3311,12 +3312,14 @@ class NGS:
         # Determine yMax
         maxInitial = 0
         if probFinal is not None:
+            plotFinal = True
             numPos = probInitial.shape[1]
             numAA = probInitial.shape[0]
             maxInitial = probInitial.values.max()
             maxInitialAdj = np.floor(maxInitial * 10) / 10
         maxFinal = 0
         if probFinal is not None:
+            plotInitial = True
             numPos = probFinal.shape[1] # Number of columns
             numAA = probFinal.shape[0] # Number of AA
             maxFinal = probFinal.values.max()
@@ -3422,8 +3425,10 @@ class NGS:
                     fig.savefig(saveLocation, dpi=self.figureResolution)
 
         # Plot the data
-        plotFig(probability=probInitial, sortType='Initial Sort')
-        plotFig(probability=probFinal, sortType='Final Sort')
+        if plotInitial:
+            plotFig(probability=probInitial, sortType='Initial Sort')
+        if plotFinal:
+            plotFig(probability=probFinal, sortType='Final Sort')
 
 
 
