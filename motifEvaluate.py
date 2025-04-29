@@ -16,7 +16,7 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: File Location
 inEnzymeName = 'Mpro2'
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
