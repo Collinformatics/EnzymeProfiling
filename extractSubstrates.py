@@ -34,8 +34,8 @@ inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, 
 
 # Input 3: Define Variables Used To Extract The Substrates
 inFixedLibrary = False
-inFixedResidue = []
-inFixedPosition = []
+inFixedResidue = ['']
+inFixedPosition = ['']
 inPrintNumber = 10 # Print peptide sequences to validate substrate extraction
 inStartSeqR1 = 'AAAGGCAGT' # Define DNA sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
