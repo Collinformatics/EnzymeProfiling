@@ -47,7 +47,6 @@ inPrintQualityScores = False # QSs are "phred quality" scores
 inPrintCounts = True
 inPlotCounts = True
 inCountMapYLabel = 2  # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
-inCountsColorMap = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
 inFigureTitleSize = 18
 inFigureLabelSize = 16
 inFigureTickSize = 13
@@ -57,14 +56,12 @@ inFigureTickSize = 13
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition, excludeAAs=None,
-          excludeAA=None, excludePosition=None, minCounts=0,
-          colorsCounts=inCountsColorMap, colorStDev=None, colorsEM=None,
-          colorsMotif=None, figEMSquares=False, xAxisLabels=inAAPositions,
-          xAxisLabelsBinned=None, residueLabelType=inCountMapYLabel,
-          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
-          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, saveFigures=False, savePath=None,
-          savePathFigs=None, setFigureTimer=None)
+          excludeAA=None, excludePosition=None, minCounts=0, figEMSquares=False, 
+          xAxisLabels=inAAPositions, xAxisLabelsBinned=None, 
+          residueLabelType=inCountMapYLabel, titleLabelSize=inFigureTitleSize, 
+          axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize, 
+          printNumber=inPrintNumber, showNValues=inShowSampleSize, 
+          saveFigures=False, savePath=None, savePathFigs=None, setFigureTimer=None)
 
 
 
