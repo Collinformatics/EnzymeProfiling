@@ -7,6 +7,8 @@
         pip install matplotlib
         pip install numpy
         pip install pandas
+        pip install playsound
+        pip install PyObjC
         pip install seaborn
         pip install scikit-learn
         pip install torch
