@@ -149,6 +149,7 @@ class NGS:
         else:
             self.figSizeEM = (9.5, 8)
         self.figSize = (9.5, 8)
+        self.figSizeMini = (self.figSize[0], 6)
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsBinned = xAxisLabelsBinned
         self.residueLabelType = residueLabelType
@@ -1647,7 +1648,7 @@ class NGS:
 
 
 
-    def calculateProbAA(self, codonSeq, printProbability):
+    def calculateProbCodon(self, codonSeq, printProbability):
         nucleotides = ['A', 'C', 'G', 'T']
         S = ['C', 'G']
         K = ['G', 'T']
@@ -1732,8 +1733,7 @@ class NGS:
 
 
 
-    def compairRF(self, initialRF, finalRF, selectAA, titleSize, labelSize,
-                  yMax, yMin):
+    def compairRF(self, initialRF, finalRF, selectAA, labelSize, yMax, yMin):
         print('======================= Evaluate Specificity: Compair RF '
               '========================')
         if selectAA in self.letters:
@@ -1769,7 +1769,7 @@ class NGS:
         # Adding labels and title
         ax.set_ylabel('Relative Frequency', fontsize=labelSize)
         ax.set_title(f'{residue} RF: {self.enzymeName} Fixed {self.fixedSubSeq}',
-                     fontsize=titleSize, fontweight='bold')
+                     fontsize=self.labelSizeTitle, fontweight='bold')
         ax.legend()
         plt.subplots_adjust(top=0.907, bottom=0.083, left=0.138, right=0.971)
 
@@ -1792,10 +1792,9 @@ class NGS:
 
 
 
-    def boxPlotRF(self, initialRF, finalRF, selectAA, fixedPos, titleSize,
-                  labelSize, yMax, yMin):
-        print('======================= Evaluate Specificity: RF Box Plot '
-              '=======================')
+    def boxPlotRF(self, initialRF, finalRF, selectAA, fixedPos, labelSize, yMax, yMin):
+        print('=============================== Plot: RF Box Plot '
+              '===============================')
         if selectAA in self.letters:
             residue = self.residues[self.letters.index(selectAA)][0]
         else:
@@ -1878,7 +1877,7 @@ class NGS:
 
         # Add labels and title
         ax.set_title(f'{self.enzymeName} - {residue} RF: Fixed {self.fixedSubSeq}',
-                     fontsize=titleSize, fontweight='bold')
+                     fontsize=self.labelSizeTitle, fontweight='bold')
         ax.set_ylabel('Relative Frequency', fontsize=labelSize)
 
 
@@ -3179,7 +3178,7 @@ class NGS:
 
 
 
-    def plotPositionalEntropy(self, entropy, fixedDataset, fixedTag, titleSize, avgDelta):
+    def plotPositionalEntropy(self, entropy, fixedDataset, fixedTag, avgDelta):
         # Figure parameters
         maxS = np.log2(len(self.letters))
         yMax = maxS + 0.2
@@ -3210,24 +3209,18 @@ class NGS:
         cMap = [colorBar(normalize(value)) for value in entropy['ΔEntropy'].astype(float)]
 
         # Plotting the entropy values as a bar graph
-        fig, ax = plt.subplots(figsize=(9.5, 5))
+        fig, ax = plt.subplots(figsize=self.figSizeMini)
         plt.bar(entropy.index, entropy['ΔEntropy'], color=cMap,
                 edgecolor='black', linewidth=self.lineThickness, width=0.8)
         plt.xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         plt.ylabel('Positional Entropy (ΔS)', fontsize=self.labelSizeAxis)
         if avgDelta:
-            plt.title(f'{title}\nAverage ΔS = '
-                      f'{self.delta:.5f}', fontsize=titleSize, fontweight='bold')
-
-            # Set borders
-            plt.subplots_adjust(top=0.875, bottom=0.086, left=0.096, right=0.943)
-            # plt.subplots_adjust(top=0.914, bottom=0.124, left=0.071, right=0.945)
+            plt.title(f'{title}\nAverage ΔS = {self.delta:.5f}',
+                      fontsize=self.labelSizeTitle, fontweight='bold')
         else:
-            plt.title(f'{title}', fontsize=titleSize, fontweight='bold')
-
-            # Set borders
-            plt.subplots_adjust(top=0.923, bottom=0.124, left=0.096, right=0.943)
-        # plt.subplots_adjust(top=0.93, bottom=0.11, left=0.096, right=0.943)
+            plt.title(f'\n{title}',
+                      fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.088, right=0.917)
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -3298,28 +3291,33 @@ class NGS:
 
 
 
-    def plotLibraryProbDist(self, probInitial, probFinal, yMax, codonType, fixedTag):
+    def plotLibraryProbDist(self, probInitial, probFinal, codonType, fixedTag):
         print('======================= Plot: AA Probability Distribution '
               '=======================')
-        plotInitial, plotFinal = False, False
+        # Inspect data
         if probInitial is None and probFinal is None:
-            print(f'{orange}ERROR: both of the inputs probInitial and '
+            print(f'{orange}ERROR: both of the inputs for probInitial and '
                   f'probFinal cannot be None.{resetColor}\n\n')
             sys.exit()
 
-        # Determine yMax
+        # Initialize parameters
+        plotInitial, plotFinal = False, False
         maxInitial = 0
-        if probFinal is not None:
-            plotFinal = True
+        maxInitialAdj = 0
+        maxFinal = 0
+        maxFinalAdj = 0
+
+        # Determine yMax
+        if probInitial is not None:
+            plotInitial = True
             numPos = probInitial.shape[1]
             numAA = probInitial.shape[0]
             maxInitial = probInitial.values.max()
             maxInitialAdj = np.floor(maxInitial * 10) / 10
-        maxFinal = 0
         if probFinal is not None:
-            plotInitial = True
-            numPos = probFinal.shape[1] # Number of columns
-            numAA = probFinal.shape[0] # Number of AA
+            plotFinal = True
+            numPos = probFinal.shape[1]
+            numAA = probFinal.shape[0]
             maxFinal = probFinal.values.max()
             maxFinalAdj= np.floor(maxFinal * 10) / 10
         if maxFinalAdj > maxInitialAdj:
@@ -3336,12 +3334,17 @@ class NGS:
             if yMax < maxY:
                 while yMax < maxY:
                     yMax += tickStepSize
+        if codonType == fixedTag:
+            yMax = np.ceil(probFinal.values.max() * 10) / 10
 
 
         def plotFig(probability, sortType):
-            print(f'Plotting:{purple} {self.enzymeName} {sortType}{resetColor}\n')
+            if codonType == fixedTag:
+                print(f'Plotting:{purple} {codonType} codon{resetColor}')
+            else:
+                print(f'Plotting:{purple} {self.enzymeName} {sortType}{resetColor}\n')
 
-            fig, ax = plt.subplots(figsize=(self.figSize[0], 6))
+            fig, ax = plt.subplots(figsize=self.figSize)
             plt.ylabel('Probability Distribution', fontsize=self.labelSizeAxis)
             if sortType == 'Initial Sort':
                 plt.title(f'Unsorted {self.enzymeName} Library',
@@ -3351,8 +3354,13 @@ class NGS:
                     plt.title(f'Sorted {self.enzymeName} Library',
                               fontsize=self.labelSizeTitle, fontweight='bold')
                 else:
-                    plt.title(f'Sorted {self.enzymeName} Library - '
-                              f'{fixedTag}', fontsize=self.labelSizeTitle, fontweight='bold')
+                    if codonType == fixedTag:
+                        plt.title(f'Codon Probability - {codonType}',
+                        fontsize=self.labelSizeTitle, fontweight='bold')
+                    else:
+                        plt.title(f'Sorted {self.enzymeName} Library - '
+                                  f'{fixedTag}', fontsize=self.labelSizeTitle,
+                                  fontweight='bold')
             plt.subplots_adjust(top=0.926, bottom=0.068, left=0.102, right=0.979)
 
 
@@ -3361,7 +3369,10 @@ class NGS:
                            width=self.lineThickness)
 
             # Set x-ticks
-            widthBar = 2
+            if codonType == fixedTag:
+                widthBar = 9
+            else:
+                widthBar = 2
             spacing = widthBar * numPos
             widthCluster = spacing + 5
             indices = np.arange(numAA) * widthCluster
@@ -3403,13 +3414,16 @@ class NGS:
             if self.saveFigures:
                 # Define: Save location
                 if fixedTag is None:
-                    figLabel = (f'AA Distribution - Unfiltered - '
+                    figLabel = (f'AA Distribution - {self.enzymeName} - Unfiltered - '
                                 f'{sortType} - Y Max {yMax} - {codonType} - '
                                 f'MinCounts {self.minSubCount}.png')
                 else:
-                    figLabel = (f'AA Distribution - {fixedTag} - '
-                                f'{sortType} - Y Max {yMax} - {codonType} - '
-                                f'MinCounts {self.minSubCount}.png')
+                    if codonType == fixedTag:
+                        figLabel = f'AA Distribution - {codonType} Codon.png'
+                    else:
+                        figLabel = (f'AA Distribution - {self.enzymeName} - {fixedTag} - '
+                                    f'{sortType} - Y Max {yMax} - {codonType} - '
+                                    f'MinCounts {self.minSubCount}.png')
                 saveLocation = os.path.join(self.savePathFigs, figLabel)
 
                 # Save figure
@@ -3426,11 +3440,18 @@ class NGS:
         if plotInitial:
             plotFig(probability=probInitial, sortType='Initial Sort')
         if plotFinal:
-            plotFig(probability=probFinal, sortType='Final Sort')
+            print('Fix Tag:', fixedTag)
+            if codonType == fixedTag:
+                print(f'{fixedTag}:\n{probFinal}')
+                plotFig(probability=probFinal, sortType=fixedTag)
+            else:
+                plotFig(probability=probFinal, sortType='Final Sort')
 
 
 
-    def plotPositionalProbDist(self, probability, entropyScores):
+    def plotPositionalProbDist(self, probability, entropyScores, sortType, datasetTag):
+        print('======================== Plot: Probability Distribution '
+              '=========================')
         for position in entropyScores.index:
             # Extract values for plotting
             probabilities = list(probability.loc[:, position])
@@ -3447,7 +3468,7 @@ class NGS:
 
             # Plot the data
             setEdgeColor = True
-            fig, ax = plt.subplots(figsize=(8, 6))
+            fig, ax = plt.subplots(figsize=self.figSizeMini)
             if setEdgeColor:
                 widthBar = 0.8
                 xPos = np.arange(len(probability.index))
@@ -3462,24 +3483,19 @@ class NGS:
             # plt.xlabel('Amino Acids', fontsize=self.labelSizeAxis)
             plt.ylabel('Probability', fontsize=self.labelSizeAxis)
             if notNumber:
-                plt.title(f'{self.enzymeName}: Amino Acid Distribution at {position}\n'
+                plt.title(f'{self.enzymeName}: '
+                          f'Amino Acid Distribution at {position}\n'
                           f'ΔS = {entropyScores.loc[position, "ΔEntropy"]:.3f}, '
-                          f'Shannon Entropy = {shannonS:.0f}', fontsize=self.labelSizeTitle,
-                          fontweight='bold')
+                          f'Shannon Entropy = {shannonS:.0f}',
+                          fontsize=self.labelSizeTitle, fontweight='bold')
             else:
-                plt.title(f'{self.enzymeName}: Amino Acid Distribution at {position}\n'
+                plt.title(f'{self.enzymeName}: '
+                          f'Amino Acid Distribution at {position}\n'
                           f'ΔS = {entropyScores.loc[position, "ΔEntropy"]:.3f}, '
-                          f'Shannon Entropy = {shannonS:.3f}', fontsize=self.labelSizeTitle,
-                          fontweight='bold')
-            # plt.subplots_adjust(top=0.88, bottom=0.11, left=0.102, right=0.979)
-            figBorders = [0.882, 0.075, 0.104, 0.974]  # Top, bottom, left, right
-            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
-                                left=figBorders[2], right=figBorders[3])
-
-
-            # Set axis limits
-            yMax = 1
-            plt.ylim(0, yMax)
+                          f'Shannon Entropy = {shannonS:.3f}',
+                          fontsize=self.labelSizeTitle, fontweight='bold')
+            plt.subplots_adjust(top=0.898, bottom=0.1, left=0.129, right=0.936)
+            plt.ylim(0, 1)
 
             # Set tick parameters
             ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -3510,9 +3526,32 @@ class NGS:
             fig.canvas.mpl_connect('key_press_event', pressKey)
             plt.show()
 
+            # Save the figure
+            if self.saveFigures:
+                # Define: Save location
+                if datasetTag is None:
+                    figLabel = (f'AA Distribution - {position} - {self.enzymeName} - '
+                                f'{sortType} - Unfiltered - '
+                                f'MinCounts {self.minSubCount}.png')
+                else:
+                    figLabel = (f'AA Distribution - {position} - {self.enzymeName} - '
+                                f'{sortType} - {datasetTag} - '
+                                f'MinCounts {self.minSubCount}.png')
+                saveLocation = os.path.join(self.savePathFigs, figLabel)
+
+                # Save figure
+                if os.path.exists(saveLocation):
+                    print(f'{yellow}The figure was not saved\n\n'
+                          f'File was already found at path:\n'
+                          f'     {saveLocation}{resetColor}\n\n')
+                else:
+                    print(f'Saving figure at path:\n'
+                          f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                    fig.savefig(saveLocation, dpi=self.figureResolution)
 
 
-    def plotEnrichmentScores(self, scores, dataType, title, motifFilter, initialFrame,
+
+    def plotEnrichmentScores(self, scores, dataType, title, motifFilter,
                              duplicateFigure, saveTag):
         print('============================ Plot: Enrichment Score '
               '=============================')
@@ -3660,8 +3699,8 @@ class NGS:
 
 
 
-    def plotMotif(self, data, dataType, bigLettersOnTop, title, titleSize, yMax, yMin,
-                  showYTicks, addHorizontalLines, motifFilter, duplicateFigure, saveTag):
+    def plotMotif(self, data, dataType, bigLettersOnTop, title, yMax, yMin, showYTicks,
+                  addHorizontalLines, motifFilter, duplicateFigure, saveTag):
         print('============================= Plot: Sequence Motif '
               '==============================')
         print(f'Motif type:{purple} {dataType}{resetColor}\n'
@@ -3706,7 +3745,7 @@ class NGS:
             else:
                 figBorders = [0.852, 0.075, 0.138, 0.98]
 
-        motif.ax.set_title(title, fontsize=titleSize, fontweight='bold')
+        motif.ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         # inFigureBordersMotifYTicks = [0.882, 0.075, 0.07, 0.98]
         # inFigureBordersMotifMaxYTick = [0.882, 0.075, 0.102, 0.98]
         plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], left=figBorders[2],

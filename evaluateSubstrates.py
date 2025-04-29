@@ -3,6 +3,7 @@
 # IMPORTANT: Process all of your data with extractSubstrates before using this script
 
 
+
 import numpy as np
 import os
 import sys
@@ -17,7 +18,7 @@ from functions import filePaths, NGS
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
@@ -42,15 +43,16 @@ inPlotPositionalEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMotif = True
 inPlotWeblogoMotif = True
-inPlotWordCloud = False
-inPlotPositionalRF = False # For understanding shannon entropy
-inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
-inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabilities
-                       # If False: use "inFileNamesInitial" for baseline probabilities
+inPlotWordCloud = True
+inPlotPositionalRF = True # For understanding shannon entropy
+inPlotAADistribution = True
+inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
+inPlotCountsAA = True
+
 
 # Input 4: Inspecting The Data
-inPlotCountsAA = False
 inPrintLoadedSubs = True
+inPrintBinnedSubstrates = True
 inPrintSampleSize = True
 inPrintCounts = True
 inPrintRF = True
@@ -63,10 +65,6 @@ inPrintNumber = 10
 inEvaluateOS = True
 inPrintOSNumber = 10
 inMaxResidueCount = 4
-
-# Input 6: Probability Distributions
-inPlotAADistribution = True
-inDFDistMaxY = 0.35
 
 # Input 7: PCA
 inRunPCA = True
@@ -88,29 +86,21 @@ inShowEnrichmentScores = True
 inShowEnrichmentAsSquares = False
 inTitleEnrichmentMap = inEnzymeName
 inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
-inPrintSelectedSubstrates = 1 # Set = 1, to print substrates with fixed residue
-if inBinSubsPCA:
-    inFigureBorders = [0.852, 0.075, 0.117, 0.998] # Top, bottom, left, right
-else:
-    inFigureBorders = [0.882, 0.075, 0.117, 0.998]
-inFigureBordersAsSquares = [0.882, 0.075, 0.075, 0.943]
-inEnrichmentColorMap = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
-                        'lightcoral','red','firebrick','darkred']
 
 # Input 9: Plot Sequence Motif
-inNormLetters = True # Normalize fixed letter heights
+inNormLetters = True # Equal letter heights fixed for fixed AAs
 inShowWeblogoYTicks = True
 inAddHorizontalLines = False
 inTitleMotif = inTitleEnrichmentMap
 inBigLettersOnTop = False
 
 # Input 10: Evaluate Substrate Enrichment
-inEvaluateSubstrateEnrichment = False
+inEvaluateSubstrateEnrichment = True
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
 # Input 11: Evaluate Specificity
-inCompairRF = False # Plot RF distributions of a given AA
+inCompairRF = True # Plot RF distributions of a given AA
 inCompairAA = 'V' # Select the AA of interest
 inCompairYMax = 0.4 # Set the y-axis for the RF comparison figure
 inCompairYMin = 0.0
@@ -212,7 +202,7 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
         # Plot: Positional entropy
         ngs.plotPositionalEntropy(entropy=positionalEntropy,
                                   fixedDataset=inFixResidues, fixedTag=fixedSubSeq,
-                                  titleSize=inFigureTitleSize, avgDelta=False)
+                                  avgDelta=False)
 
     # Calculate: Enrichment scores
     fixedFramePopES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
@@ -243,27 +233,19 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
 
     # # Plot data
     # Plot: Enrichment Map
-    ngs.plotEnrichmentScores(scores=fixedFramePopESAdjusted,
-                             dataType='Enrichment',
-                             title=figureTitleEM,
-                             motifFilter=False,
-                             initialFrame=True,
-                             duplicateFigure=False,
-                             saveTag=datasetTag)
+    ngs.plotEnrichmentScores(scores=fixedFramePopESAdjusted, dataType='Enrichment',
+                             title=figureTitleEM, motifFilter=False,
+                             duplicateFigure=False, saveTag=datasetTag)
 
     # Plot: Enrichment Map Scaled
     ngs.plotEnrichmentScores(scores=fixedFramePCAESScaledAdjusted,
-                             dataType='Scaled Enrichment',
-                             title=figureTitleEM,
-                             motifFilter=False,
-                             initialFrame=True,
-                             duplicateFigure=False,
-                             saveTag=datasetTag)
+                             dataType='Scaled Enrichment', title=figureTitleEM,
+                             motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
 
     # Plot: Sequence Motif
     ngs.plotMotif(data=fixedFramePCAESScaled.copy(), dataType='Scaled Enrichment',
                   bigLettersOnTop=inBigLettersOnTop, title=f'{figureTitleMotif}',
-                  titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin, showYTicks=False,
+                  yMax=yMax, yMin=yMin, showYTicks=False,
                   addHorizontalLines=inAddHorizontalLines, motifFilter=False,
                   duplicateFigure=False, saveTag=datasetTag)
 
@@ -288,7 +270,7 @@ def binSubstrates(substrates, datasetTag, index):
     startSub = inFramePositions[0] + startDifference
     endSub = startSub + inBinnedSubstrateLength
 
-    if inPrintSelectedSubstrates:
+    if inPrintBinnedSubstrates:
         print(f'Fixed frame:{purple} {datasetTag}{resetColor}')
         iteration = 0
         for substrate, count in substrates.items():
@@ -574,28 +556,15 @@ ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
 
 
 # ==================================== Plot The Data =====================================
-if inPlotCountsAA:
-    # Plot the data
-    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal,
-                   datasetTag=fixedSubSeq)
-
-
-if inPlotAADistribution:
-    # Plot: Initial RF
-    ngs.plotLibraryProbDist(
-        probInitial=initialRF, probFinal=finalRF, yMax=inDFDistMaxY,
-        codonType=inCodonSequence, fixedTag=fixedSubSeq)
-
-
 # Plot: Positional entropy
 if inPlotPositionalEntropy:
-    ngs.plotPositionalEntropy(
-        entropy=positionalEntropy, fixedDataset=inFixResidues, fixedTag=fixedSubSeq,
-        titleSize=inFigureTitleSize, avgDelta=False)
+    ngs.plotPositionalEntropy(entropy=positionalEntropy, fixedDataset=inFixResidues,
+                              fixedTag=fixedSubSeq, avgDelta=False)
 
 # Plot the RF for each position in the substrate frame
 if inPlotPositionalRF:
-    ngs.plotPositionalProbDist(probability=finalRF, entropyScores=positionalEntropy)
+    ngs.plotPositionalProbDist(probability=finalRF, entropyScores=positionalEntropy,
+                               sortType='Final Sort', datasetTag=fixedSubSeq)
 
 
 if inEvaluateOS:
@@ -603,10 +572,9 @@ if inEvaluateOS:
           '==============================')
     if inFixResidues:
         # Calculate: Enrichment scores and scale with Shannon Entropy
-        pType = 'Initial Sort'
         heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
             counts=countsFinal.copy(), N=countsFinalTotal, baselineProb=initialRF,
-            baselineType=pType, printRF=inPrintMotifData, scaleData=True,
+            baselineType='Initial Sort', printRF=inPrintMotifData, scaleData=True,
             normalizeFixedScores=inNormLetters)
 
         # Determine the OS
@@ -650,68 +618,67 @@ if inEvaluateOS:
         # Construct the OS
         substrate += ''.join(topAA)
         score += topES
-    # Update OS dictionary
-    substratesOS[substrate] = score
-    # print(f'{white}OS{resetColor}:{white} {substrate}{resetColor}, '
-    #       f'{white}ES{resetColor}: {score:.6f}\n\n')
 
-    # Create additional substrates
-    # print(f'========== Create substrates ==========')
-    for indexColumn, column in enumerate(heights.columns):
-        # print(f'Column Index:{white} {indexColumn}{resetColor}, '
-        #       f'Column:{white} {column}{resetColor}')
+        # Update OS dictionary
+        substratesOS[substrate] = score
+        # print(f'{white}OS{resetColor}:{white} {substrate}{resetColor}, '
+        #       f'{white}ES{resetColor}: {score:.6f}\n\n')
 
-        # Collect new substrates to add after the iteration
-        newSubstratesList = []
+        # Create additional substrates
+        # print(f'========== Create substrates ==========')
+        for indexColumn, column in enumerate(heights.columns):
+            # print(f'Column Index:{white} {indexColumn}{resetColor}, '
+            #       f'Column:{white} {column}{resetColor}')
 
-        for substrate, ESMax in list(substratesOS.items()):
-            # print(f'Current Substrates:\n'
-            #       f'     Substrate:{purple} {substrate}{resetColor}, '
-            #       f'ES:{white} {ESMax}{resetColor}\n')
-            AAOS = substrate[indexColumn]
-            ESOS = optimalAA[indexColumn][AAOS]
+            # Collect new substrates to add after the iteration
+            newSubstratesList = []
 
-            # Access the correct filtered data for the column
-            optimalAAPos = optimalAA[indexColumn]
-            for AA, ES in optimalAAPos.items():
-                if AA != AAOS:
-                    # print(f'New Residue:{white} {AA}{resetColor}, '
-                    #       f'ES:{white} {ES:.6f}{resetColor}\n'
-                    #       f'     Replaced Residue:{white} {AAOS}{resetColor}, '
-                    #       f'ES:{white} {ES:.6f}{resetColor}\n')
+            for substrate, ESMax in list(substratesOS.items()):
+                # print(f'Current Substrates:\n'
+                #       f'     Substrate:{purple} {substrate}{resetColor}, '
+                #       f'ES:{white} {ESMax}{resetColor}\n')
+                AAOS = substrate[indexColumn]
+                ESOS = optimalAA[indexColumn][AAOS]
 
-                    # Replace AAOS with AA
-                    newSubstrate = substrate[:indexColumn] + AA + substrate[indexColumn + 1:]
-                    newES = ESMax + (ES - ESOS)
-                    # print(f'     New Substrate:{silver} {newSubstrate}{resetColor}, '
-                    #       f'ES:{white} {newES}{resetColor}\n'
-                    #       f'          ES New:{white} {ES}{resetColor}\n'
-                    #       f'          ES Old:{white} {ESOS}{resetColor}\n\n')
+                # Access the correct filtered data for the column
+                optimalAAPos = optimalAA[indexColumn]
+                for AA, ES in optimalAAPos.items():
+                    if AA != AAOS:
+                        # print(f'New Residue:{white} {AA}{resetColor}, '
+                        #       f'ES:{white} {ES:.6f}{resetColor}\n'
+                        #       f'     Replaced Residue:{white} {AAOS}{resetColor}, '
+                        #       f'ES:{white} {ES:.6f}{resetColor}\n')
 
-                    # Collect new substrate and ES to add later
-                    newSubstratesList.append((newSubstrate, newES))
-        # Update substratesOS with new substrates after the iteration
-        for newSubstrate, newES in newSubstratesList:
-            substratesOS[newSubstrate] = newES
+                        # Replace AAOS with AA
+                        newSubstrate = substrate[:indexColumn] + AA + substrate[indexColumn + 1:]
+                        newES = ESMax + (ES - ESOS)
+                        # print(f'     New Substrate:{silver} {newSubstrate}{resetColor}, '
+                        #       f'ES:{white} {newES}{resetColor}\n'
+                        #       f'          ES New:{white} {ES}{resetColor}\n'
+                        #       f'          ES Old:{white} {ESOS}{resetColor}\n\n')
 
-    substratesOS = sorted(substratesOS.items(), key=lambda x: x[1], reverse=True)
-    print(f'Top {inPrintOSNumber} Optimal Substrates:')
-    for i, (substrate, ES) in enumerate(substratesOS[:inPrintOSNumber], start=1):
-        print(f'     Substrate:{white} {substrate}{resetColor}, '
-              f'ES:{white} {ES:.6f}{resetColor}')
+                        # Collect new substrate and ES to add later
+                        newSubstratesList.append((newSubstrate, newES))
+            # Update substratesOS with new substrates after the iteration
+            for newSubstrate, newES in newSubstratesList:
+                substratesOS[newSubstrate] = newES
 
-    print(f'\nNumber of substrates:{silver} {len(substratesOS):,}{resetColor}\n\n')
+        substratesOS = sorted(substratesOS.items(), key=lambda x: x[1], reverse=True)
+        print(f'Top {inPrintOSNumber} Optimal Substrates:')
+        for i, (substrate, ES) in enumerate(substratesOS[:inPrintOSNumber], start=1):
+            print(f'     Substrate:{white} {substrate}{resetColor}, '
+                  f'ES:{white} {ES:.6f}{resetColor}')
+
+        print(f'\nNumber of substrates:{silver} {len(substratesOS):,}{resetColor}\n\n')
 
 
 if inCompairRF:
     if inFixResidues:
         ngs.compairRF(initialRF=initialRF, finalRF=finalRF, selectAA=inCompairAA,
-                      titleSize=inFigureTitleSize, labelSize=inFigureLabelSize,
-                      yMax=inCompairYMax, yMin=inCompairYMin)
+                      labelSize=inFigureLabelSize, yMax=inCompairYMax, yMin=inCompairYMin)
 
         ngs.boxPlotRF(initialRF=initialRF, finalRF=finalRF, selectAA=inCompairAA,
-                      fixedPos=inFixedPosition, titleSize=inFigureTitleSize,
-                      labelSize=inFigureLabelSize,
+                      fixedPos=inFixedPosition, labelSize=inFigureLabelSize,
                       yMax=inCompairYMax, yMin=inCompairYMin)
     else:
         print(f'{orange}No residues were fixed, '
@@ -743,45 +710,23 @@ if inPlotEnrichmentMap:
     # Plot: Enrichment Map
     ngs.plotEnrichmentScores(scores=enrichmentScores, dataType='Enrichment',
                              title=inTitleEnrichmentMap, motifFilter=False,
-                             initialFrame=True, duplicateFigure=False,
-                             saveTag=datasetTag)
+                             duplicateFigure=False, saveTag=datasetTag)
 
 
 if inPlotEnrichmentMotif:
-    # Determine baseline probabilities
-    if inUseCodonProb:
-        # Define: Baseline probability type
-        pType = f'{inCodonSequence} Codon'
-
-        codonProbs = ngs.calculateProbAA(codonSeq=inCodonSequence,
-                                         printProbability=inPrintRF)
-        # Plot: Final RF
-        ngs.plotLibraryProbDist(
-            probability=codonProbs, yMax=inDFDistMaxY, codonType=inCodonSequence,
-            sortType='Final Sort', fixedTag=fixedSubSeq)
-
-        # Calculate: Enrichment scores
-        heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
-            counts=countsFinal.copy(), N=countsFinalTotal, baselineProb=codonProbs,
-            baselineType=pType, printRF=inPrintMotifData, scaleData=True,
-            normalizeFixedScores=inNormLetters)
-    else:
-        # Define: Baseline probability type
-        pType = 'Initial Sort'
-
-        # Calculate: Enrichment scores
-        heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
-            counts=countsFinal.copy(), N=countsFinalTotal, baselineProb=initialRF,
-            baselineType=pType, printRF=inPrintRF, scaleData=True,
-            normalizeFixedScores=inNormLetters)
+    # Calculate: Enrichment scores
+    heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
+        counts=countsFinal.copy(), N=countsFinalTotal, baselineProb=initialRF,
+        baselineType='Initial Sort', printRF=inPrintRF, scaleData=True,
+        normalizeFixedScores=inNormLetters)
 
 
     # Plot: Sequence Motif
-    ngs.plotMotif(
-        data=heights, dataType='Scaled Enrichment', bigLettersOnTop=inBigLettersOnTop,
-        title=f'{inTitleMotif}', titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
-        showYTicks=False, addHorizontalLines=inAddHorizontalLines, motifFilter=False,
-        duplicateFigure=False, saveTag=datasetTag)
+    ngs.plotMotif(data=heights, dataType='Scaled Enrichment',
+                  bigLettersOnTop=inBigLettersOnTop, title=f'{inTitleMotif}',
+                  yMax=yMax, yMin=yMin, showYTicks=False,
+                  addHorizontalLines=inAddHorizontalLines, motifFilter=False,
+                  duplicateFigure=False, saveTag=datasetTag)
 
 
 if inPlotWeblogoMotif:
@@ -794,15 +739,15 @@ if inPlotWeblogoMotif:
         # Plot: Sequence Motif
         ngs.plotMotif(
             data=scaledRF, dataType='WebLogo', bigLettersOnTop=inBigLettersOnTop,
-            title=inTitleMotif, titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
-            showYTicks=inShowWeblogoYTicks, addHorizontalLines=inAddHorizontalLines,
-            motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
+            title=inTitleMotif, yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
+            addHorizontalLines=inAddHorizontalLines, motifFilter=False,
+            duplicateFigure=False, saveTag=datasetTag)
     else:
         ngs.plotMotif(
             data=scaledRF, dataType='WebLogo', bigLettersOnTop=inBigLettersOnTop,
-            title=inTitleMotif, titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
-            showYTicks=inShowWeblogoYTicks, addHorizontalLines=inAddHorizontalLines,
-            motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
+            title=inTitleMotif, yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
+            addHorizontalLines=inAddHorizontalLines, motifFilter=False,
+            duplicateFigure=False, saveTag=datasetTag)
 
 
 if inEvaluateSubstrateEnrichment:
@@ -874,3 +819,20 @@ if inPlotWordCloud:
                       clusterIndex=None,
                       title=titleWordCloud,
                       saveTag=datasetTag)
+
+if inPlotAADistribution:
+    # Plot: AA probabilities in initial & final sorts
+    ngs.plotLibraryProbDist(probInitial=initialRF, probFinal=finalRF,
+                            codonType=inCodonSequence, fixedTag=fixedSubSeq)
+
+    # Evaluate: Degenerate codon probabilities
+    codonProbs = ngs.calculateProbCodon(codonSeq=inCodonSequence,
+                                        printProbability=inPrintRF)
+    # Plot: Codon probabilities
+    ngs.plotLibraryProbDist(probInitial=None, probFinal=codonProbs,
+                            codonType=inCodonSequence, fixedTag=inCodonSequence)
+
+if inPlotCountsAA:
+    # Plot the data
+    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal,
+                   datasetTag=fixedSubSeq)
