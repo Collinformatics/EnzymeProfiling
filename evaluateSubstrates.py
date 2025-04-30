@@ -18,14 +18,14 @@ from functions import filePaths, NGS
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
 inSaveFigures = True
 
 # Input 4: Computational Parameters
-inFixResidues = False
+inFixResidues = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
@@ -35,12 +35,16 @@ inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inPlotWithSampleSize = True
 
+inEvaluateSubstrateEnrichment = True
+
+inPlotWords = True
+
 # Input 3: Processing The Data
-inPlotPositionalEntropy = True
+inPlotPositionalEntropy = False
 inPlotEnrichmentMap = True
-inPlotEnrichmentMotif = True
-inPlotWeblogoMotif = True
-inPlotWordCloud = True
+inPlotEnrichmentMotif = False
+inPlotWeblogoMotif = False
+inPlotWordCloud = False
 inPlotAADistribution = True
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotCountsAA = True
@@ -91,7 +95,7 @@ inTitleMotif = inTitleEnrichmentMap
 inBigLettersOnTop = False
 
 # Input 10: Evaluate Substrate Enrichment
-inEvaluateSubstrateEnrichment = True
+inEvaluateSubstrateEnrichment = False # ============= Fix: Load Initial Subs =============
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
@@ -316,14 +320,12 @@ if inFixResidues and inEvaluateSubstrateEnrichment:
 # ====================================== Load Data =======================================
 loadUnfixedSubstrates = True
 if inFixResidues:
-    filePathFixedCountsFinal = os.path.join(inFilePath,
-                                            f'counts_{inEnzymeName}_'
-                                            f'FinalSort_{fixedSubSeq}_'
-                                            f'MinCounts_{inMinimumSubstrateCount}')
-    filePathFixedSubsFinal = os.path.join(inFilePath,
-                                          f'fixedSubs_{inEnzymeName}_'
-                                          f'FinalSort_{fixedSubSeq}_'
-                                          f'MinCounts_{inMinimumSubstrateCount}')
+    filePathFixedCountsFinal = os.path.join(
+        inFilePath, f'counts - {inEnzymeName} - {fixedSubSeq} - '
+                    f'FinalSort - MinCounts_{inMinimumSubstrateCount}')
+    filePathFixedSubsFinal = os.path.join(
+        inFilePath, f'fixedSubs - {inEnzymeName} - {fixedSubSeq} - '
+                    f'FinalSort - MinCounts_{inMinimumSubstrateCount}')
 
 
     # Verify that the file exists
@@ -737,6 +739,17 @@ if inPlotWeblogoMotif:
             addHorizontalLines=inAddHorizontalLines, motifFilter=False,
             duplicateFigure=False, saveTag=datasetTag)
 
+
+# Plot: Work cloud
+if inPlotWords:
+    ngs.plotWordCloud(clusterSubs=substratesFinal,
+                      clusterIndex=None,
+                      title=f'{inTitleEnrichmentMap}\n'
+                            f'{fixedSubSeq}',
+                      saveTag=f'{fixedSubSeq}')
+
+
+# ========================================================================================
 
 if inEvaluateSubstrateEnrichment:
     ngs.substrateEnrichment(initialSubs=substratesInitial, finalSubs=substratesFinal,

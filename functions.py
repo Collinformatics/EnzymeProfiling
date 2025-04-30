@@ -1732,7 +1732,7 @@ class NGS:
 
 
 
-    def compairRF(self, initialRF, finalRF, selectAA, labelSize, yMax, yMin):
+    def compairRF(self, initialRF, finalRF, selectAA, yMax, yMin):
         print('======================= Evaluate Specificity: Compair RF '
               '========================')
         if selectAA in self.letters:
@@ -1766,7 +1766,7 @@ class NGS:
                color='#BF5700')
 
         # Adding labels and title
-        ax.set_ylabel('Relative Frequency', fontsize=labelSize)
+        ax.set_ylabel('Relative Frequency', fontsize=self.labelSizeAxis)
         ax.set_title(f'{residue} RF: {self.enzymeName} Fixed {self.fixedSubSeq}',
                      fontsize=self.labelSizeTitle, fontweight='bold')
         ax.legend()
@@ -1791,7 +1791,7 @@ class NGS:
 
 
 
-    def boxPlotRF(self, initialRF, finalRF, selectAA, fixedPos, labelSize, yMax, yMin):
+    def boxPlotRF(self, initialRF, finalRF, selectAA, fixedPos, yMax, yMin):
         print('=============================== Plot: RF Box Plot '
               '===============================')
         if selectAA in self.letters:
@@ -1877,7 +1877,7 @@ class NGS:
         # Add labels and title
         ax.set_title(f'{self.enzymeName} - {residue} RF: Fixed {self.fixedSubSeq}',
                      fontsize=self.labelSizeTitle, fontweight='bold')
-        ax.set_ylabel('Relative Frequency', fontsize=labelSize)
+        ax.set_ylabel('Relative Frequency', fontsize=self.labelSizeAxis)
 
 
         # Set tick parameters
@@ -1886,7 +1886,7 @@ class NGS:
 
         # Set x & y-axis tick labels
         ax.set_xticks(range(len(xLabels)))
-        ax.set_xticklabels(xLabels, fontsize=labelSize)
+        ax.set_xticklabels(xLabels, fontsize=self.labelSizeAxis)
         ax.set_ylim(yMin, yMax)
 
         # Set the edge thickness
@@ -2923,9 +2923,9 @@ class NGS:
                 plt.draw()
             plt.scatter(dataPCA[componets[0]], dataPCA[componets[1]],
                         c='#CC5500', edgecolor='black')
-            plt.xlabel(f'Principal Component {componets[0][-1]}',
+            plt.xlabel(f'Principal Component {componets[0][-1]} ({varRatio[0]})',
                        fontsize=self.labelSizeAxis)
-            plt.ylabel(f'Principal Component {componets[1][-1]}',
+            plt.ylabel(f'Principal Component {componets[1][-1]} ({varRatio[1]})',
                        fontsize=self.labelSizeAxis)
             plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
 
@@ -3720,7 +3720,6 @@ class NGS:
         # Set -inf to zero
         if data.isin([np.inf, -np.inf]).any().any():
             data.replace([np.inf, -np.inf], 0, inplace=True)
-            # data.fillna(0, inplace=True)
             yMin = min(data[data < 0].sum())
 
 
