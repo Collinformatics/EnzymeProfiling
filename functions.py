@@ -1738,7 +1738,7 @@ class NGS:
 
 
 
-    def compairRF(self, initialRF, finalRF, selectAA, yMax, yMin):
+    def compairRF(self, probInitial, probFinal, selectAA):
         print('======================= Evaluate Specificity: Compair RF '
               '========================')
         if selectAA in self.letters:
@@ -1750,8 +1750,8 @@ class NGS:
         print(f'Fixed Residues:{red} {self.fixedSubSeq}{resetColor}\n'
               f'Selected Residue:{red} {residue}{resetColor}\n')
 
-        initial = initialRF[initialRF.index.str.contains(selectAA)]
-        final = finalRF[finalRF.index.str.contains(selectAA)]
+        initial = probInitial[probInitial.index.str.contains(selectAA)]
+        final = probFinal[probFinal.index.str.contains(selectAA)]
 
         print(f'{purple}Initial Sort{resetColor}:\n{initial}\n'
               f'{purple}Final Sort{resetColor}:\n{final}\n\n')
@@ -1759,11 +1759,33 @@ class NGS:
         # Figure parameters
         barWidth = 0.35
 
+        # Determine yMax
+        yMin = 0
+        maxInitial = probInitial.values.max()
+        maxInitialAdj = np.floor(maxInitial * 10) / 10
+        maxFinal = probFinal.values.max()
+        maxFinalAdj= np.floor(maxFinal * 10) / 10
+        if maxFinalAdj > maxInitialAdj:
+            yMax = maxFinalAdj
+            maxY = maxFinal
+        else:
+            yMax = maxInitialAdj
+            maxY = maxInitial
+        if yMax > 0.6:
+            tickStepSize = 0.1
+        else:
+            tickStepSize = 0.05
+        if yMax != 1.0:
+            if yMax < maxY:
+                while yMax < maxY:
+                    yMax += tickStepSize
+
+
         # Set the positions of the bars on the x-axis
         x = np.arange(len(final.columns))
 
         # Create a figure and axes
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=self.figSizeMini)
 
         # Plotting the bars
         ax.bar(x - barWidth / 2, initial.iloc[0], width=barWidth, label='Initial Sort',
@@ -1776,7 +1798,7 @@ class NGS:
         ax.set_title(f'{residue} RF: {self.enzymeName} Fixed {self.fixedSubSeq}',
                      fontsize=self.labelSizeTitle, fontweight='bold')
         ax.legend()
-        plt.subplots_adjust(top=0.907, bottom=0.083, left=0.138, right=0.971)
+        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.112, right=0.917)
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -1797,7 +1819,7 @@ class NGS:
 
 
 
-    def boxPlotRF(self, initialRF, finalRF, selectAA, fixedPos, yMax, yMin):
+    def boxPlotRF(self, probInitial, probFinal, selectAA):
         print('=============================== Plot: RF Box Plot '
               '===============================')
         if selectAA in self.letters:
@@ -1806,22 +1828,42 @@ class NGS:
             print(f'{silver}Residue not recognized:{red} {selectAA}{silver}\n'
                   f'Please check input:{red} self.fixedAA')
             sys.exit()
-
         print(f'Fixed Residues:{red} {self.fixedSubSeq}{resetColor}\n'
               f'Selected Residue:{red} {residue}{resetColor}\n')
 
-
         # Extract data
-        initial = initialRF[initialRF.index.str.contains(selectAA)].T
-        final = finalRF[finalRF.index.str.contains(selectAA)].T
+        initial = probInitial[probInitial.index.str.contains(selectAA)].T
+        final = probFinal[probFinal.index.str.contains(selectAA)].T
         print(f'{purple}Initial Sort{resetColor}:\n{initial}\n')
         print(f'{purple}Final Sort{resetColor}:\n{final}\n\n')
-        final = final.drop(final.index[[pos-1 for pos in fixedPos]])
+        final = final.drop(final.index[[pos-1 for pos in self.fixedPosition]])
         print(f'Remove fixed residues:{purple} Final Sort{resetColor}\n{final}\n\n')
 
         # Set local parameters
         self.tickLength, self.lineThickness = 4, 1
         xLabels = ['Initial Sort', 'Final Sort']
+
+        # Determine yMax
+        yMin = 0
+        maxInitial = probInitial.values.max()
+        maxInitialAdj = np.floor(maxInitial * 10) / 10
+        maxFinal = probFinal.values.max()
+        maxFinalAdj= np.floor(maxFinal * 10) / 10
+        if maxFinalAdj > maxInitialAdj:
+            yMax = maxFinalAdj
+            maxY = maxFinal
+        else:
+            yMax = maxInitialAdj
+            maxY = maxInitial
+        if yMax > 0.6:
+            tickStepSize = 0.1
+        else:
+            tickStepSize = 0.05
+        if yMax != 1.0:
+            if yMax < maxY:
+                while yMax < maxY:
+                    yMax += tickStepSize
+
 
         # Find outliers in the initial dataset
         outliersInitial = []
@@ -1865,7 +1907,7 @@ class NGS:
                   f'fixed{red} {self.fixedSubSeq}{resetColor} \n\n')
 
         # Create a figure and axes
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=self.figSizeMini)
 
         # Plot the data
         initial.boxplot(
@@ -1878,7 +1920,7 @@ class NGS:
             boxprops=dict(facecolor='#BF5700'), whiskerprops=dict(color='black'),
             medianprops=dict(color='#F7971F', linewidth=0.5),
             flierprops=dict(marker='o', markerfacecolor='#F7971F', markersize=10))
-        plt.subplots_adjust(top=0.907, bottom=0.083, left=0.138, right=0.971)
+        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.112, right=0.917)
 
         # Add labels and title
         ax.set_title(f'{self.enzymeName} - {residue} RF: Fixed {self.fixedSubSeq}',
@@ -2464,7 +2506,7 @@ class NGS:
         # Define headers
         headersInitial = ['Initial Subs', 'Counts']
         headersFinal = ['Final Subs', 'Counts']
-        headersEnriched = ['Enriched Subs', 'log₂(finalRF / initialRF)']
+        headersEnriched = ['Enriched Subs', 'log₂(probFinal / probInitial)']
         # headerWidth = {1: 14.6,
         #                4: 14.6,
         #                7: 14.6,
@@ -2607,9 +2649,9 @@ class NGS:
                     countInitial = initialSubs[substrate]
                 else:
                     countInitial = 1
-                finalRF = count / totalSubstratesFinal
-                initialRF = countInitial / totalSubstratesInitial
-                enrichment = np.log2(finalRF/initialRF)
+                probFinal = count / totalSubstratesFinal
+                probInitial = countInitial / totalSubstratesInitial
+                enrichment = np.log2(probFinal/probInitial)
                 enrichedSubs[substrate] = enrichment
         else:
             for substrate, count in finalSubs.items():
@@ -2617,9 +2659,9 @@ class NGS:
                     countInitial = initialSubs[substrate]
                 else:
                     countInitial = 1
-                finalRF = count / totalSubstratesFinal
-                initialRF = countInitial / totalSubstratesInitial
-                enrichment = np.log2(finalRF/initialRF)
+                probFinal = count / totalSubstratesFinal
+                probInitial = countInitial / totalSubstratesInitial
+                enrichment = np.log2(probFinal/probInitial)
                 enrichedSubs[substrate] = enrichment
         # sys.exit()
 
@@ -2803,7 +2845,7 @@ class NGS:
 
 
 
-    def PCA(self, substrates, data, indices, numberOfPCs, fixedTag, N, fixedSubs,
+    def plotPCA(self, substrates, data, indices, numberOfPCs, fixedTag, N, fixedSubs,
             saveTag):
         print('====================================== PCA '
               '======================================')
@@ -3297,8 +3339,6 @@ class NGS:
 
 
     def plotLibraryProbDist(self, probInitial, probFinal, codonType, fixedTag):
-        print('======================= Plot: AA Probability Distribution '
-              '=======================')
         # Inspect data
         if probInitial is None and probFinal is None:
             print(f'{orange}ERROR: both of the inputs for probInitial and '
@@ -3344,10 +3384,15 @@ class NGS:
 
 
         def plotFig(probability, sortType):
+            print('======================= Plot: AA Probability Distribution '
+                  '=======================')
             if codonType == fixedTag:
-                print(f'Plotting:{purple} {codonType} codon{resetColor}')
+                print(f'Plotting Probability Distribution:'
+                      f'{purple} {codonType} codon{resetColor}')
             else:
-                print(f'Plotting:{purple} {self.enzymeName} {sortType}{resetColor}\n')
+                print(f'Plotting Probability Distribution:'
+                      f'{purple} {self.enzymeName} {sortType}{resetColor}')
+            print(f'{probability}\n')
 
             fig, ax = plt.subplots(figsize=self.figSize)
             plt.ylabel('Probability Distribution', fontsize=self.labelSizeAxis)
@@ -3360,7 +3405,7 @@ class NGS:
                               fontsize=self.labelSizeTitle, fontweight='bold')
                 else:
                     if codonType == fixedTag:
-                        plt.title(f'Codon Probability - {codonType}',
+                        plt.title(f'{codonType} Codon',
                         fontsize=self.labelSizeTitle, fontweight='bold')
                     else:
                         plt.title(f'Sorted {self.enzymeName} Library - '
@@ -3445,9 +3490,7 @@ class NGS:
         if plotInitial:
             plotFig(probability=probInitial, sortType='Initial Sort')
         if plotFinal:
-            print('Fix Tag:', fixedTag)
             if codonType == fixedTag:
-                print(f'{fixedTag}:\n{probFinal}')
                 plotFig(probability=probFinal, sortType=fixedTag)
             else:
                 plotFig(probability=probFinal, sortType='Final Sort')

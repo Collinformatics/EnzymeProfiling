@@ -3,7 +3,7 @@
 # IMPORTANT: Process all of your data with extractSubstrates before using this script
 
 
-
+from functions import filePaths, NGS
 import numpy as np
 import os
 import sys
@@ -11,7 +11,6 @@ import pickle as pk
 import pandas as pd
 import threading
 import time
-from functions import filePaths, NGS
 
 
 
@@ -24,31 +23,30 @@ inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
 inSaveFigures = True
 
-# Input 4: Computational Parameters
+# Input 2: Computational Parameters
 inFixResidues = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
-inExcludedResidue = ['Q']
-inExcludedPosition = [8]
+inExcludedResidue = [['Q', 'G'], 'L']
+inExcludedPosition = [8, 7]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inPlotWithSampleSize = True
 
-inEvaluateSubstrateEnrichment = True
-
-inPlotWords = True
+inEvaluateSubstrateEnrichment = False
 
 # Input 3: Processing The Data
-inPlotPositionalEntropy = False
+inPlotPositionalEntropy = True
 inPlotEnrichmentMap = True
-inPlotEnrichmentMotif = False
-inPlotWeblogoMotif = False
-inPlotWordCloud = False
-inPlotAADistribution = True
+inPlotEnrichmentMotif = True
+inPlotWeblogoMotif = True
+inPlotWordCloud = True
+inPlotPCA = False
+inPlotAADistribution = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
-inPlotCountsAA = True
-inPlotPositionalProbDist = True # For understanding shannon entropy
+inPlotCountsAA = False
+inPlotPositionalProbDist = False # For understanding shannon entropy
 
 # Input 4: Inspecting The Data
 inPrintLoadedSubs = True
@@ -66,8 +64,7 @@ inEvaluateOS = False
 inPrintOSNumber = 10
 inMaxResidueCount = 4
 
-# Input 7: PCA
-inRunPCA = True
+# Input 6: PCA
 inBinSubsPCA = True
 inIndexNTerminus = 2 # Define bounds for binned substrate
 inBinnedSubstrateLength = 5 # Define the length of you substrate
@@ -81,29 +78,27 @@ inExtractPopulations = False
 inPlotPositionalEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
 
-# Input 8: Plot Heatmap
+# Input 7: Plot Heatmap
 inShowEnrichmentScores = True
 inShowEnrichmentAsSquares = False
 inTitleEnrichmentMap = inEnzymeName
 inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
 
-# Input 9: Plot Sequence Motif
+# Input 8: Plot Sequence Motif
 inNormLetters = True # Equal letter heights fixed for fixed AAs
 inShowWeblogoYTicks = True
 inAddHorizontalLines = False
 inTitleMotif = inTitleEnrichmentMap
 inBigLettersOnTop = False
 
-# Input 10: Evaluate Substrate Enrichment
+# Input 9: Evaluate Substrate Enrichment
 inEvaluateSubstrateEnrichment = False # ============= Fix: Load Initial Subs =============
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
-# Input 11: Evaluate Specificity
+# Input 10: Evaluate Specificity
 inCompairRF = True # Plot RF distributions of a given AA
-inCompairAA = 'V' # Select the AA of interest
-inCompairYMax = 0.4 # Set the y-axis for the RF comparison figure
-inCompairYMin = 0.0
+inCompairAA = 'L' # Select the AA of interest
 
 
 
@@ -133,7 +128,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
           printNumber=inPrintNumber, showNValues=inPlotWithSampleSize,
-          saveFigures=inSaveFigures, savePath=inFilePath,
+          idMotif=False, saveFigures=inSaveFigures, savePath=inFilePath,
           savePathFigs=inSavePathFigures, setFigureTimer=None)
 
 
@@ -551,6 +546,12 @@ ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
                      printCounts=inPrintSampleSize, fixedTag=fixedSubSeq)
 
 
+if inCompairRF:
+    ngs.compairRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)
+
+    ngs.boxPlotRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)
+
+
 
 # ==================================== Plot The Data =====================================
 # Plot: Positional entropy
@@ -663,36 +664,14 @@ if inEvaluateOS:
         print(f'\nNumber of substrates:{silver} {len(substratesOS):,}{resetColor}\n\n')
 
 
-if inCompairRF:
-    if inFixResidues:
-        ngs.compairRF(initialRF=initialRF, finalRF=finalRF, selectAA=inCompairAA,
-                      yMax=inCompairYMax, yMin=inCompairYMin)
-
-        ngs.boxPlotRF(initialRF=initialRF, finalRF=finalRF, selectAA=inCompairAA,
-                      fixedPos=inFixedPosition, yMax=inCompairYMax, yMin=inCompairYMin)
-    else:
-        print(f'{orange}No residues were fixed, '
-              f'so specificity cannon be evaluated{resetColor}\n')
-
-
-
 # # Plot the data
 if fixedSubSeq is None:
     datasetTag = 'Unfiltered'
 else:
     datasetTag = fixedSubSeq
+
 if inPlotEnrichmentMap:
-    inBin = True
     # Calculate: Enrichment scores
-    if inBin:
-        import pandas as pd
-        import numpy as np
-
-        RFsum = np.sum(initialRF, axis=1)
-        initialRFAvg = RFsum / len(initialRF.columns)
-        initialRF = pd.DataFrame(initialRFAvg, index=initialRFAvg.index,
-                                 columns=['Average RF'])
-
     enrichmentScores = ngs.calculateEnrichment(initialSortRF=initialRF,
                                                finalSortRF=finalRF,
                                                printES=inPrintES)
@@ -741,12 +720,15 @@ if inPlotWeblogoMotif:
 
 
 # Plot: Work cloud
-if inPlotWords:
+if inPlotWordCloud:
+    if inFixResidues:
+        titleWordCloud = f'{inEnzymeName}: Fixed {fixedSubSeq}'
+    else:
+        titleWordCloud = f'{inEnzymeName}: Unfixed'
     ngs.plotWordCloud(clusterSubs=substratesFinal,
                       clusterIndex=None,
-                      title=f'{inTitleEnrichmentMap}\n'
-                            f'{fixedSubSeq}',
-                      saveTag=f'{fixedSubSeq}')
+                      title=titleWordCloud,
+                      saveTag=datasetTag)
 
 
 # ========================================================================================
@@ -763,7 +745,7 @@ if inEvaluateSubstrateEnrichment:
 
 
 
-if inRunPCA:
+if inPlotPCA:
     # Bin substrates before PCA, or don't
     if inBinSubsPCA:
         fixedSubSeqBinned = (f'{fixedSubSeq} - '
@@ -783,10 +765,10 @@ if inRunPCA:
                                                    datasetTag=fixedSubSeqBinned)
 
         # Cluster substrates
-        subPopulations = ngs.PCA(substrates=finalSubsBinned, data=tokensESM,
-                                 indices=subsESM, numberOfPCs=inNumberOfPCs,
-                                 fixedTag=fixedSubSeq, N=subCountsESM, fixedSubs=True,
-                                 saveTag=fixedSubSeqBinned)
+        subPopulations = ngs.plotPCA(substrates=finalSubsBinned, data=tokensESM,
+                                     indices=subsESM, numberOfPCs=inNumberOfPCs,
+                                     fixedTag=fixedSubSeq, N=subCountsESM,
+                                     fixedSubs=True, saveTag=fixedSubSeqBinned)
     else:
         # Convert substrate data to numerical
         tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=substratesFinal,
@@ -796,7 +778,7 @@ if inRunPCA:
                                                    datasetTag=fixedSubSeq)
 
         # Cluster substrates
-        subPopulations = ngs.PCA(substrates=substratesFinal, data=tokensESM,
+        subPopulations = ngs.plotPCA(substrates=substratesFinal, data=tokensESM,
                                  indices=subsESM, numberOfPCs=inNumberOfPCs,
                                  fixedTag=fixedSubSeq, N=subCountsESM, fixedSubs=True,
                                  saveTag=fixedSubSeq)
@@ -810,16 +792,6 @@ if inRunPCA:
                                      numClusters=clusterCount)
         print(f'Debug PCA')
 
-
-if inPlotWordCloud:
-    if inFixResidues:
-        titleWordCloud = f'{inEnzymeName}: Fixed {fixedSubSeq}'
-    else:
-        titleWordCloud = f'{inEnzymeName}: Unfixed'
-    ngs.plotWordCloud(clusterSubs=substratesFinal,
-                      clusterIndex=None,
-                      title=titleWordCloud,
-                      saveTag=datasetTag)
 
 if inPlotAADistribution:
     # Plot: AA probabilities in initial & final sorts
@@ -842,3 +814,7 @@ if inPlotPositionalProbDist:
     ngs.plotPositionalProbDist(probability=finalRF, entropyScores=positionalEntropy,
                                sortType='Final Sort', datasetTag=fixedSubSeq)
 
+if inCompairRF:
+    ngs.compairRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)
+
+    ngs.boxPlotRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)
