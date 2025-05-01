@@ -131,8 +131,8 @@ def includeCommas(x):
 class NGS:
     def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
                  excludeAA, excludePosition, minCounts, figEMSquares, xAxisLabels,
-                 xAxisLabelsBinned, residueLabelType, printNumber, showNValues, savePath,
-                 saveFigures, savePathFigs, setFigureTimer):
+                 xAxisLabelsBinned, residueLabelType, printNumber, showNValues, idMotif,
+                 savePath, saveFigures, savePathFigs, setFigureTimer):
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
@@ -172,6 +172,7 @@ class NGS:
         self.nSubsFinal = 0
         self.nSubsTotal = 0
         self.delta = 0
+        self.findMotif = idMotif
         self.savePath = savePath
         self.saveFigures = saveFigures
         self.savePathFigs = savePathFigs
@@ -1257,12 +1258,12 @@ class NGS:
         for index, position in enumerate(self.fixedPosition):
             # Define: File paths
             tagFixedAA = f'{self.fixedAA[0]}@R{position}'
-            if 'final' in sortType or 'Final' in sortType:
-                tagLabel = (f'countsReleased_{self.enzymeName}_FixedMotif_Final - '
-                            f'{tagFixedAA}_MinCounts {self.minSubCount}')
+            if 'final' in sortType.lower():
+                tagLabel = (f'fixedMotifCountsRel - {self.enzymeName} - {tagFixedAA} - '
+                            f'FinalSort - MinCounts {self.minSubCount}')
             else:
-                tagLabel = (f'countsReleased_{self.enzymeName}_FixedMotif_Initial - '
-                            f'{tagFixedAA}_MinCounts {self.minSubCount}')
+                tagLabel = (f'fixedMotifCountsRel - {self.enzymeName} - {tagFixedAA} - '
+                            f'InitialSort - MinCounts {self.minSubCount}')
             filePathFixedMotifCounts = os.path.join(filePath, tagLabel)
 
             # Look for the file
@@ -1394,29 +1395,34 @@ class NGS:
             for index, removedAA in enumerate(self.excludeAA):
                 if index == 0:
                     fixResidueList.append(
-                        f'Excl-{removedAA}@R{self.excludePosition[index]}')
+                        f'Excl-{removedAA}@R{self.excludePosition[index]}'.replace(
+                            ' ', ''))
                 else:
                     fixResidueList.append(
-                        f'{removedAA}@R{self.excludePosition[index]}')
+                        f'{removedAA}@R{self.excludePosition[index]}'.replace(
+                            ' ', ''))
 
             # Fix residues
             for index in range(len(self.fixedAA)):
                 if index == 0:
                     fixResidueList.append(
-                        f'Fixed-{self.fixedAA[index]}@R{self.fixedPosition[index]}')
+                        f'Fixed-{self.fixedAA[index]}@R'
+                        f'{self.fixedPosition[index]}'.replace(' ', ''))
                 else:
                     fixResidueList.append(
-                        f'{self.fixedAA[index]}@R{self.fixedPosition[index]}')
+                        f'{self.fixedAA[index]}@R'
+                        f'{self.fixedPosition[index]}'.replace(' ', ''))
 
-            self.fixedSubSeq = ' '.join(fixResidueList)
-            self.fixedSubSeq = self.fixedSubSeq.replace(" Fixed", '_Fixed')
+            self.fixedSubSeq = '_'.join(fixResidueList)
+            self.fixedSubSeq = self.fixedSubSeq.replace("_Fixed", ' Fixed')
         else:
             # Fix residues
             for index in range(len(self.fixedAA)):
                 fixResidueList.append(
-                    f'{self.fixedAA[index]}@R{self.fixedPosition[index]}')
+                    f'{self.fixedAA[index]}@R'
+                    f'{self.fixedPosition[index]}'.replace(' ', ''))
 
-            self.fixedSubSeq = ' '.join(fixResidueList)
+            self.fixedSubSeq = '_'.join(fixResidueList)
 
         # Condense the string
         if "'" in self.fixedSubSeq:
@@ -1424,10 +1430,10 @@ class NGS:
 
         # Clean up fixed sequence tag
         removeTag = ('Excl-Y@R1_Excl-Y@R2_Excl-Y@R3_Excl-Y@R4_Excl-Y@R6_'
-                    'Excl-Y@R7_Excl-Y@R8_Excl-Y@R9_Fixed-')
+                    'Excl-Y@R7_Excl-Y@R8_Excl-Y@R9')
         if removeTag in self.fixedSubSeq:
             self.fixedSubSeq = self.fixedSubSeq.replace(removeTag, '')
-            self.fixedSubSeq = f'{self.fixedSubSeq} Excl Y'
+            self.fixedSubSeq = f'Excl Y {self.fixedSubSeq}'
 
         return self.fixedSubSeq
 
@@ -1741,7 +1747,7 @@ class NGS:
             print(f'{silver}Residue not recognized:{red} {selectAA}{silver}\n'
                   f'Please check input:{red} self.fixedAA')
             sys.exit()
-        print(f'Fixed Residues:{red} {self.fixedSubSeq}{resetColor}'
+        print(f'Fixed Residues:{red} {self.fixedSubSeq}{resetColor}\n'
               f'Selected Residue:{red} {residue}{resetColor}\n')
 
         initial = initialRF[initialRF.index.str.contains(selectAA)]
@@ -3646,18 +3652,21 @@ class NGS:
 
 
         # Inspect dataset
+        duplicate = False
+        # Save the figure
         if self.saveFigures:
             if 'Scaled' in dataType:
                 datasetType = 'EM Scaled'
             elif 'Enrichment' in dataType:
                 datasetType = 'EM'
             else:
-                print(f'{orange}ERROR: What do I do with this motif type -'
-                      f'{red} {dataType}{resetColor}\n\n')
+                print(f'{orange}ERROR: What do I do with this dataset type -'
+                      f'{cyan} {dataType}{resetColor}\n\n')
                 sys.exit()
 
             # Define: Save location
             if motifFilter:
+                duplicate = True
                 figLabel = (f'{self.enzymeName} - {datasetType} '
                             f'{self.saveFigureIteration} - {saveTag} - '
                             f'MinCounts {self.minSubCount}.png')
@@ -3666,34 +3675,43 @@ class NGS:
                             f'{saveTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
-            # Save the figure
+            # Save figure
             if os.path.exists(saveLocation):
-                copyNumber = 1
-
-                # Save duplicate figures
-                if duplicateFigure:
-                    fileFound = True
-                    while fileFound:
-                        # Define: Save location
-                        figLabel = (f'{self.enzymeName} - {datasetType} '
-                                    f'{copyNumber} - {saveTag} - '
-                                    f'MinCounts {self.minSubCount}.png')
-                        saveLocation = os.path.join(self.savePathFigs, figLabel)
-
-                        if not os.path.exists(saveLocation):
-                            print(f'Saving figure at path:\n'
-                                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                            fig.savefig(saveLocation, dpi=self.figureResolution)
-                            self.saveFigureIteration = copyNumber
-                            fileFound = False
-                        else:
-                            copyNumber += 1
-                else:
-                    # Verify if the fixed frame has already been evaluated
-                    print(f'{orange}WARNING: The figure already exists at the path\n'
+                if self.findMotif and duplicate:
+                    # Turn off figure autosave
+                    self.saveFigures = False
+                    print(f'{yellow}WARNING{resetColor}: '
+                          f'{yellow}The figure already exists at the path\n'
                           f'     {saveLocation}\n\n'
                           f'We will not overwrite the figure{resetColor}\n\n')
+                else:
+                    # Save duplicate figures
+                    if duplicateFigure:
+                        copyNumber = 1
+                        fileFound = True
+                        while fileFound:
+                            # Define: Save location
+                            figLabel = (f'{self.enzymeName} - {datasetType} '
+                                        f'{copyNumber} - {saveTag} - '
+                                        f'MinCounts {self.minSubCount}.png')
+                            saveLocation = os.path.join(self.savePathFigs, figLabel)
+
+                            if not os.path.exists(saveLocation):
+                                print(f'Saving figure at path:\n'
+                                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                                fig.savefig(saveLocation, dpi=self.figureResolution)
+                                self.saveFigureIteration = copyNumber
+                                fileFound = False
+                            else:
+                                copyNumber += 1
+                    else:
+                        # Dont save the duplicated figure
+                        print(f'{yellow}WARNING{resetColor}: '
+                              f'{yellow}The figure already exists at the path\n'
+                              f'     {saveLocation}\n\n'
+                              f'We will not overwrite the figure{resetColor}\n\n')
             else:
+                self.findMotif = False
                 print(f'Saving figure at path:\n'
                       f'     {greenDark}{saveLocation}{resetColor}\n\n')
                 fig.savefig(saveLocation, dpi=self.figureResolution)
@@ -3714,7 +3732,7 @@ class NGS:
             stackOrder = 'small_on_top'
 
         # Rename column headers
-        dataColumnsRecieved = data.columns
+        dataColumnsReceived = data.columns
         data.columns = range(len(data.columns))
 
         # Set -inf to zero
@@ -3760,13 +3778,13 @@ class NGS:
             spine.set_linewidth(self.lineThickness)
 
         # Set x-ticks
-        if len(dataColumnsRecieved) == len(self.xAxisLabels):
+        if len(dataColumnsReceived) == len(self.xAxisLabels):
             motif.ax.set_xticks([pos for pos in range(len(self.xAxisLabels))])
             motif.ax.set_xticklabels(self.xAxisLabels, fontsize=self.labelSizeTicks,
                                      rotation=0, ha='center')
         else:
-            motif.ax.set_xticks([pos for pos in range(len(dataColumnsRecieved))])
-            motif.ax.set_xticklabels(dataColumnsRecieved, fontsize=self.labelSizeTicks,
+            motif.ax.set_xticks([pos for pos in range(len(dataColumnsReceived))])
+            motif.ax.set_xticklabels(dataColumnsReceived, fontsize=self.labelSizeTicks,
                                      rotation=0, ha='center')
 
         for tick in motif.ax.xaxis.get_major_ticks():
@@ -3835,19 +3853,22 @@ class NGS:
         else:
             plt.show()
 
+        # Inspect dataset
+        duplicate = False
         # Save the figure
         if self.saveFigures:
             if dataType.lower() == 'weblogo':
                 datasetType = dataType
-            elif 'Scaled' in dataType:
-                datasetType = 'Motif'
+            elif 'scaled' in dataType.lower():
+                datasetType = 'Logo'
             else:
-                print(f'{orange}ERROR: What do I do with this motif type -'
+                print(f'{orange}ERROR: What do I do with this dataset type -'
                       f'{red} {dataType}{resetColor}\n\n')
                 sys.exit()
 
             # Define: Save location
             if motifFilter:
+                duplicate = True
                 figLabel = (f'{self.enzymeName} - {datasetType} '
                             f'{self.saveFigureIteration} - {saveTag} - MinCounts '
                             f'{self.minSubCount}.png')
@@ -3858,29 +3879,40 @@ class NGS:
 
             # Save figure
             if os.path.exists(saveLocation):
-                copyNumber = 1
-                fileFound = True
-                # Save duplicate figures
-                if duplicateFigure:
-                    while fileFound:
-                        # Define: Save location
-                        figLabel = (f'{self.enzymeName} - {figLabel} {copyNumber} - '
-                                    f'{saveTag} - MinCounts {self.minSubCount}.png')
-                        saveLocation = os.path.join(self.savePathFigs, figLabel)
-
-                        if not os.path.exists(saveLocation):
-                            print(f'Saving figure at path:\n'
-                                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                            fig.savefig(saveLocation, dpi=self.figureResolution)
-                            self.saveFigureIteration = copyNumber
-                            fileFound = False
-                        else:
-                            copyNumber += 1
-                else:
-                    print(f'{orange}WARNING: The figure already exists at the path\n'
+                if self.findMotif and duplicate:
+                    # Turn off figure autosave
+                    self.saveFigures = False
+                    print(f'{yellow}WARNING{resetColor}: '
+                          f'{yellow}The figure already exists at the path\n'
                           f'     {saveLocation}\n\n'
                           f'We will not overwrite the figure{resetColor}\n\n')
+                else:
+                    # Save duplicate figures
+                    if duplicateFigure:
+                        copyNumber = 1
+                        fileFound = True
+                        while fileFound:
+                            # Define: Save location
+                            figLabel = (f'{self.enzymeName} - {figLabel} {copyNumber} - '
+                                        f'{saveTag} - MinCounts {self.minSubCount}.png')
+                            saveLocation = os.path.join(self.savePathFigs, figLabel)
+    
+                            if not os.path.exists(saveLocation):
+                                print(f'Saving figure at path:\n'
+                                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                                fig.savefig(saveLocation, dpi=self.figureResolution)
+                                self.saveFigureIteration = copyNumber
+                                fileFound = False
+                            else:
+                                copyNumber += 1
+                    else:
+                        # Dont save the duplicated figure
+                        print(f'{yellow}WARNING{resetColor}: '
+                              f'{yellow}The figure already exists at the path\n'
+                              f'     {saveLocation}\n\n'
+                              f'We will not overwrite the figure{resetColor}\n\n')
             else:
+                self.findMotif = False
                 print(f'Saving figure at path:\n'
                       f'     {greenDark}{saveLocation}{resetColor}\n\n')
                 fig.savefig(saveLocation, dpi=self.figureResolution)
@@ -3999,6 +4031,7 @@ class NGS:
     def plotWordCloud(self, clusterSubs, clusterIndex, title, saveTag):
         print('=============================== Plot: Word Cloud '
               '================================')
+        datasetType = 'Words'
         if clusterIndex is not None:
             print(f'Selecting PCA Population:{red} {clusterIndex + 1}{resetColor}')
         iteration = 0
@@ -4010,9 +4043,9 @@ class NGS:
                 break
         print('\n')
 
-        cmap = NGS.createCustomColorMap(self, colorType='Word Cloud')
 
         # Create word cloud
+        cmap = NGS.createCustomColorMap(self, colorType='Word Cloud')
         wordcloud = (WordCloud(
             width=950,
             height=800,
@@ -4040,7 +4073,6 @@ class NGS:
         else:
             plt.show()
 
-        datasetType = 'Words'
 
         # Save the Figure
         if self.saveFigures:
@@ -4061,8 +4093,8 @@ class NGS:
 
 
 
-    def binSubstrates(self, substrates, substrateFrame, frameIndicies, datasetTag):
-        print('================================ Bin Substrates '
+    def extractMotif(self, substrates, substrateFrame, frameIndicies, datasetTag):
+        print('================================= Extract Motif '
               '=================================')
         print(f'Binning Substrates:{purple} {datasetTag}{resetColor}\n'
               f'Start Position:{white} {substrateFrame[frameIndicies[0]]}{resetColor}\n'
@@ -4070,10 +4102,11 @@ class NGS:
               f'End Position:{white} {substrateFrame[frameIndicies[-1]]}{resetColor}\n'
               f'   End Index:{white} {frameIndicies[-1]}{resetColor}\n\n')
         frameLength = len(substrateFrame)
+        sys.exit()
 
 
         # Bin substrates
-        binnedSubstrates = {}
+        motifs = {}
         countTotalSubstrates = 0
         countUniqueSubstrates = 0
         for index, subsFixedFrame in enumerate(substrates):
@@ -4115,19 +4148,18 @@ class NGS:
                     countTotalSubstrates += count
                     sub = substrate[startSub:endSub]
 
-                    if sub in binnedSubstrates:
-                        binnedSubstrates[sub] += count
+                    if sub in motifs:
+                        motifs[sub] += count
                     else:
                         countUniqueSubstrates += 1
-                        binnedSubstrates[sub] = count
-        # Sort the dictionary by counts from highest to lowest
-        binnedSubstrates = dict(sorted(binnedSubstrates.items(),
-                                       key=lambda item: item[1], reverse=True))
+                        motifs[sub] = count
+        # Sort the dictionary
+        motifs = dict(sorted(motifs.items(), key=lambda item: item[1], reverse=True))
 
         # Print binned substrates
         iteration = 0
         print(f'Binned Substrates{resetColor}:{purple} {datasetTag}{resetColor}')
-        for substrate, count in binnedSubstrates.items():
+        for substrate, count in motifs.items():
             print(f'Substrate:{yellow} {substrate}{resetColor}\n'
                   f'    Count:{red} {count:,}{resetColor}')
             iteration += 1
@@ -4137,7 +4169,7 @@ class NGS:
         print(f'Total Substrates:{red} {countTotalSubstrates:,}{resetColor}\n'
               f'Unique Substrates:{red} {countUniqueSubstrates:,}{resetColor}\n\n')
 
-        return binnedSubstrates, countTotalSubstrates
+        return motifs, countTotalSubstrates
 
 
 

@@ -22,8 +22,8 @@ inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
 inSaveData = True
-inSaveFigures = False
-inSetFigureTimer = False
+inSaveFigures = True
+inSetFigureTimer = True
 
 # Input 2: Experimental Parameters
 inSubstrateLength = len(inAAPositions)
@@ -32,10 +32,11 @@ inSaveScaledEnrichment = False  # Saving Scaled Enrichment Values
 inSubstratePositions = inAAPositions # ['P4', 'P3', 'P2', 'P1', 'P1\'']
 
 # Input 3: Computational Parameters
+inRefixMotif = False
 inFixResidues = True
 inFixedResidue = ['Q'] # Only use 1 AA
-inFixedPosition = [4]
-inExcludeResidues = True
+inFixedPosition = [7]
+inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inDatasetTag = f'Motif {inFixedResidue[0]}@R{inFixedPosition[0]}'
@@ -51,6 +52,13 @@ inCombineFixedMotifs = False
 inPredictSubstrateEnrichmentScores = False
 inDuplicateFigure = True
 
+# Input 5: Figure Parameters
+inPlotPositionalEntropy = True
+inPlotEnrichmentMap = True
+inPlotEnrichmentMotif = False
+inPlotUnscaledScatter = False
+inPlotScaledScatter = False
+
 # Input 4: Processing The Data
 inPrintLoadedSubs = True
 inPrintSampleSize = True
@@ -65,26 +73,12 @@ inCodonSequence = 'NNS'  # Base probabilities of degenerate codons (can be N, S,
 inUseCodonProb = False  # If True: use "inCodonSequence" for baseline probabilities
 # If False: use "inFileNamesInitialSort" for baseline probabilities
 
-# Input 5: Figure Parameters
-inPlotEnrichmentMap = True
-inPlotEnrichmentMotif = True
-inPlotPositionalEntropy = True
-inPlotUnscaledScatter = False
-inPlotScaledScatter = False
-inFigureSize = (9.5, 8)  # (width, height)
-inFigureTitleSize = 18
-inFigureLabelSize = 16
-inFigureTickSize = 13
-
 # Input 6: Plot Heatmap
 inShowEnrichmentScores = True
-inShowEnrichmentAsSquares = True
+inShowEnrichmentAsSquares = False
 inTitleEnrichmentMap = f'{inEnzymeName}: {inDatasetTag}'
 inYLabelEnrichmentMap = 2  # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
 inPrintSelectedSubstrates = 1  # Set = 1, to print substrates with fixed residue
-inFigureBorders = [0.873, 0.075, 0.117, 0.998]  # Top, bottom, left, right
-inFigureAsSquares = (4.5, 8)
-inFigureBordersAsSquares = [0.873, 0.075, 0.075, 0.943]
 
 # Input 7: Plot Sequence Motif
 inTitleMotif = inTitleEnrichmentMap
@@ -94,10 +88,6 @@ inShowWeblogoYTicks = True
 inAddHorizontalLines = False
 inPlotNegativeWeblogoMotif = False
 inBigLettersOnTop = False
-inFigureBordersMotifYTicks = [0.882, 0.075, 0.07, 0.98]  # [top, bottom, left, right]
-inFigureBordersMotifMaxYTick = [0.882, 0.075, 0.102, 0.98]
-inFigureBordersNegativeWeblogoMotif = [0.882, 0.075, 0.078, 0.98]
-inFigureBordersEnrichmentMotif = [0.882, 0.075, 0.112, 0.98] # 0.112
 
 # Input 8: Substrate Enrichment
 inBinSubstrates = False
@@ -170,9 +160,8 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=None, residueLabelType=inYLabelEnrichmentMap,
-          titleLabelSize=inFigureTitleSize, axisLabelSize=inFigureLabelSize,
-          tickLabelSize=inFigureTickSize, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, savePath=inFilePath, saveFigures=inSaveFigures,
+          printNumber=inPrintNumber, showNValues=inShowSampleSize,
+          idMotif=True, savePath=inFilePath, saveFigures=inSaveFigures,
           savePathFigs=inSavePathFigures, setFigureTimer=inSetFigureTimer)
 
 
@@ -279,19 +268,17 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
 
     # Prepare dataset type label
     sortTypePathTag = sortType.replace(' ', '')
+    fixedTag = fixedTag.replace(' ', '')
 
 
     # # Load Data
     # Define: File path
-    filePathFixedSubs = os.path.join(inFilePath,
-                                     f'fixedSubs_{inEnzymeName}_'
-                                     f'{sortTypePathTag}_{fixedTag}_'
-                                     f'MinCounts {inMinimumSubstrateCount}')
-    filePathFixedCounts = os.path.join(inFilePath,
-                                       f'counts_{inEnzymeName}_'
-                                       f'{sortTypePathTag}_{fixedTag}_'
-                                       f'MinCounts {inMinimumSubstrateCount}')
-
+    filePathFixedSubs = os.path.join(
+        inFilePath, f'fixedSubs - {inEnzymeName} - {fixedTag} - '
+                    f'{sortTypePathTag} - MinCounts_{inMinimumSubstrateCount}')
+    filePathFixedCounts = os.path.join(
+        inFilePath, f'counts - {inEnzymeName} - {fixedTag} - '
+                    f'{sortTypePathTag} - MinCounts_{inMinimumSubstrateCount}')
 
     # Determine if the fixed substrate file exists
     loadFiles = False
@@ -453,18 +440,17 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
                                                           datasetType='Final Sort',
                                                           printCounts=inPrintCounts)
 
-        if initialFix:
-            # Save the fixed substrate dataset
-            with open(filePathFixedSubs, 'wb') as file:
-                pk.dump(fixedSubs, file)
+        # Save the fixed substrate dataset
+        with open(filePathFixedSubs, 'wb') as file:
+            pk.dump(fixedSubs, file)
 
-            # Save the counted substrate data
-            fixedCounts.to_csv(filePathFixedCounts, index=True, float_format='%.0f')
+        # Save the counted substrate data
+        fixedCounts.to_csv(filePathFixedCounts, index=True, float_format='%.0f')
 
-            # Print your save location
-            print(f'Fixed substrate data saved at:\n'
-                  f'     {filePathFixedSubs}\n'
-                  f'     {filePathFixedCounts}\n\n')
+        # Print your save location
+        print(f'Fixed substrate data saved at:\n'
+              f'     {filePathFixedSubs}\n'
+              f'     {filePathFixedCounts}\n\n')
 
     return fixedSubs, fixedCounts, fixedCountsTotal
 
@@ -529,9 +515,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     if inPlotPositionalEntropy:
         # Visualize: Change in Entropy
-        ngs.plotPositionalEntropy(entropy=positionalEntropy,
-                                  fixedDataset=inFixResidues, fixedTag=fixedSubSeq,
-                                  titleSize=inFigureTitleSize, avgDelta=False)
+        ngs.plotPositionalEntropy(entropy=positionalEntropy, fixedDataset=inFixResidues,
+                                  fixedTag=fixedSubSeq, avgDelta=False)
 
     # Update: Current Sample Size
     ngs.updateSampleSize(NSubs=countsTotalFixedMotif,
@@ -550,10 +535,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     if inPlotEnrichmentMap:
         # Plot: Enrichment Map
         ngs.plotEnrichmentScores(scores=finalFixedES, dataType='Enrichment',
-                                 title=inTitleEnrichmentMap,
-                                 motifFilter=True, initialFrame=True,
-                                 duplicateFigure=inDuplicateFigure,
-                                 saveTag=datasetTag)
+                                 title=inTitleEnrichmentMap, motifFilter=True,
+                                 duplicateFigure=inDuplicateFigure, saveTag=datasetTag)
     # sys.exit()
 
     if inPlotEnrichmentMotif:
@@ -567,9 +550,9 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         # Plot: Sequence Motif
         ngs.plotMotif(
             data=heights, dataType='Scaled Enrichment', bigLettersOnTop=inBigLettersOnTop,
-            title=inTitleMotif, titleSize=inFigureTitleSize, yMax=yMax,yMin=yMin,
-            showYTicks=inShowWeblogoYTicks, addHorizontalLines=inAddHorizontalLines,
-            motifFilter=True, duplicateFigure=inDuplicateFigure, saveTag=datasetTag)
+            title=inTitleMotif, yMax=yMax,yMin=yMin, showYTicks=inShowWeblogoYTicks,
+            addHorizontalLines=inAddHorizontalLines, motifFilter=True,
+            duplicateFigure=inDuplicateFigure, saveTag=datasetTag)
 
 
     # # Determine: Other Important Residues
@@ -668,16 +651,13 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                 if ES <= inSetMinimumESFixAA and ES != float('-inf'):
                     if AA in preferredResidues[index]:
                         preferredResidues[index].remove(AA)
-                        print(f'Preferred Positions New:{purple} '
-                              f'{preferredPositions}{resetColor}\n')
 
 
         # # Plot the data
         if inPlotEnrichmentMap:
             # Plot: Enrichment Map
             ngs.plotEnrichmentScores(scores=finalFixedES, dataType='Enrichment',
-                                     title=inTitleEnrichmentMap,
-                                     motifFilter=True, initialFrame=False,
+                                     title=inTitleEnrichmentMap, motifFilter=True,
                                      duplicateFigure=inDuplicateFigure,
                                      saveTag=datasetTag)
 
@@ -693,9 +673,9 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             ngs.plotMotif(
                 data=heights, dataType='Scaled Enrichment',
                 bigLettersOnTop=inBigLettersOnTop,  title=inTitleMotif,
-                titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
-                showYTicks=inShowWeblogoYTicks, addHorizontalLines=inAddHorizontalLines,
-                motifFilter=True, duplicateFigure=inDuplicateFigure, saveTag=datasetTag)
+                yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
+                addHorizontalLines=inAddHorizontalLines, motifFilter=True,
+                duplicateFigure=inDuplicateFigure, saveTag=datasetTag)
 
 
     # # Release and fix each position
@@ -788,8 +768,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         if inPlotEnrichmentMap:
             # Plot: Enrichment Map
             ngs.plotEnrichmentScores(scores=finalFixedES, dataType='Enrichment',
-                                     title=inTitleEnrichmentMap,
-                                     motifFilter=True, initialFrame=False,
+                                     title=inTitleEnrichmentMap, motifFilter=True,
                                      duplicateFigure=inDuplicateFigure,
                                      saveTag=datasetTag)
 
@@ -805,9 +784,9 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             ngs.plotMotif(
                 data=heights, dataType='Scaled Enrichment',
                 bigLettersOnTop=inBigLettersOnTop, title=inTitleMotif,
-                titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
-                showYTicks=inShowWeblogoYTicks, addHorizontalLines=inAddHorizontalLines,
-                motifFilter=True, duplicateFigure=inDuplicateFigure, saveTag=datasetTag)
+                yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
+                addHorizontalLines=inAddHorizontalLines, motifFilter=True,
+                duplicateFigure=inDuplicateFigure, saveTag=datasetTag)
 
 
         # # Refix Dropped Position
@@ -838,6 +817,9 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                              sortType=f'{purple}Final Sort{resetColor} - {purple}Fixed',
                              printCounts=inPrintSampleSize, fixedTag=fixedSubSeq)
 
+
+        # Here
+
         # Calculate: RF
         finalFixedRF = ngs.calculateRF(counts=fixedCountsFinal, N=countsTotalFixedMotif,
                                        fileType='Fixed Final Sort', printRF=inPrintRF)
@@ -866,14 +848,13 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             ngs.saveFigureIteration += 1
 
             print(f'{red}This is the final figure{resetColor}\n\n')
-            datasetTag = f'Final - {datasetTag}'
+            datasetTag = f'{datasetTag} - Final'
 
 
         if inPlotEnrichmentMap:
             # Plot: Enrichment Map
             ngs.plotEnrichmentScores(scores=finalFixedES, dataType='Enrichment',
-                                     title=inTitleEnrichmentMap,
-                                     motifFilter=True, initialFrame=False,
+                                     title=inTitleEnrichmentMap, motifFilter=True,
                                      duplicateFigure=inDuplicateFigure,
                                      saveTag=datasetTag)
 
@@ -890,9 +871,9 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             ngs.plotMotif(
                 data=heights, dataType='Scaled Enrichment',
                 bigLettersOnTop=inBigLettersOnTop, title=inTitleMotif,
-                titleSize=inFigureTitleSize, yMax=yMax, yMin=yMin,
-                showYTicks=inShowWeblogoYTicks, addHorizontalLines=inAddHorizontalLines,
-                motifFilter=True, duplicateFigure=inDuplicateFigure,saveTag=datasetTag)
+                yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
+                addHorizontalLines=inAddHorizontalLines, motifFilter=True,
+                duplicateFigure=inDuplicateFigure,saveTag=datasetTag)
 
 
     # Initialize matrix
@@ -920,17 +901,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         releasedESScaled.loc[:, position] = (releasedES.loc[:, position] *
                                              positionalEntropy.loc[position, "ΔEntropy"])
 
-    # # Finish fixing this frame & save the data
-    # Define: File path
-    labelTag = (f'{inEnzymeName}_FixedMotif_{datasetTag}_'
-                f'MinCounts {inMinimumSubstrateCount}')
-
-    filePathFixedMotifSubs = os.path.join(inFilePath,
-                                          f'fixedSubs_{labelTag}')
-    filePathFixedMotifCounts = os.path.join(inFilePath,
-                                            f'counts_{labelTag}')
-    filePathFixedMotifReleasedCounts = os.path.join(inFilePath,
-                                                    f'countsReleased_{labelTag}')
 
     # Save the data
     if inSaveData:
@@ -960,18 +930,21 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 fixedSubSeq = ngs.genDatasetTag()
 
 # Define: File path
-filePathFixedMotifSubs = os.path.join(inFilePath,
-                                      f'fixedSubs_{inEnzymeName}_'
-                                      f'FixedMotif_{fixedSubSeq}_'
-                                      f'MinCounts 3{inMinimumSubstrateCount}')
-filePathFixedMotifCounts = os.path.join(inFilePath,
-                                        f'counts_{inEnzymeName}_'
-                                        f'FixedMotif_{fixedSubSeq}_'
-                                        f'MinCounts {inMinimumSubstrateCount}')
+filePathFixedMotifSubs = os.path.join(
+    inFilePath, f'fixedMotif - {inEnzymeName} - {fixedSubSeq} - '
+                f'FinalSort - MinCounts {inMinimumSubstrateCount}')
+filePathFixedMotifCounts = os.path.join(
+    inFilePath, f'fixedMotifCounts - {inEnzymeName} - {fixedSubSeq} - '
+                f'FinalSort - MinCounts {inMinimumSubstrateCount}')
+filePathFixedMotifReleasedCounts = os.path.join(
+    inFilePath, f'fixedMotifCountsRel - {inEnzymeName} - {fixedSubSeq} - '
+                f'FinalSort - MinCounts {inMinimumSubstrateCount}')
+
 
 
 # Load the fixed frame if the file can be found
-if os.path.exists(filePathFixedMotifSubs) and os.path.exists(filePathFixedMotifCounts):
+if (os.path.exists(filePathFixedMotifSubs) and
+        os.path.exists(filePathFixedMotifCounts) and not inRefixMotif):
     print('============================== Load: Fixed Substrate Frame '
           '==============================')
     print(f'File found:{purple} {inDatasetTag}\n'
@@ -981,7 +954,7 @@ if os.path.exists(filePathFixedMotifSubs) and os.path.exists(filePathFixedMotifC
     # Disable: Autosave figures
     if inSaveFigures:
         ngs.saveFigures = False
-        print(f'{orange}Option{resetColor}:'
+        print(f'{orange}NGS Parameter Update{resetColor}:'
               f'{orange} inSaveFigures was Disabled{resetColor}\n\n')
 
     # Load Data: Fixed substrates
@@ -989,10 +962,10 @@ if os.path.exists(filePathFixedMotifSubs) and os.path.exists(filePathFixedMotifC
         fixedMotifFinalSubs = pk.load(file)
 
     # Load Data: Fixed counts
-    countsFixedMotif = pd.read_csv(filePathFixedMotifCounts, index_col=0)
+    fixedCountsFinal = pd.read_csv(filePathFixedMotifCounts, index_col=0)
 
     # Calculate: Total counts
-    countsTotalFixedMotif = sum(countsFixedMotif.iloc[:, 0])
+    countsTotalFixedMotif = sum(fixedCountsFinal.iloc[:, 0])
 
     # Print loaded data
     iteration = 0
@@ -1012,7 +985,38 @@ if os.path.exists(filePathFixedMotifSubs) and os.path.exists(filePathFixedMotifC
     # Update sample size
     ngs.updateSampleSize(NSubs=countsTotalFixedMotif,
                          sortType=f'Final Sort - Fixed Frame:',
-                         printCounts=inPrintSampleSize, fixedTag=None)
+                         printCounts=inPrintSampleSize, fixedTag=fixedSubSeq)
+
+    # Calculate: RF
+    finalFixedRF = ngs.calculateRF(counts=fixedCountsFinal, N=countsTotalFixedMotif,
+                                   fileType='Fixed Final Sort', printRF=inPrintRF)
+
+    # Calculate enrichment scores
+    finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
+                                           finalSortRF=finalFixedRF,
+                                           printES=inShowEnrichmentData)
+    if inPlotEnrichmentMap:
+        # Plot: Enrichment Map
+        ngs.plotEnrichmentScores(scores=finalFixedES, dataType='Enrichment',
+                                 title=inTitleEnrichmentMap, motifFilter=True,
+                                 duplicateFigure=inDuplicateFigure,
+                                 saveTag=f'Fixed Motif {fixedSubSeq}')
+
+    if inPlotEnrichmentMotif:
+        # Calculate enrichment scores and scale with Shannon Entropy
+        pType = 'Initial Sort'
+        heights, fixedAA, yMax, yMin = ngs.enrichmentMatrix(
+            counts=fixedCountsFinal, N=countsTotalFixedMotif,
+            baselineProb=initialRF, baselineType=pType, printRF=inShowMotifData,
+            scaleData=True, normalizeFixedScores=inNormLetters)
+
+        # Plot: Sequence Motif
+        ngs.plotMotif(
+            data=heights, dataType='Scaled Enrichment',
+            bigLettersOnTop=inBigLettersOnTop, title=inTitleMotif,
+            yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
+            addHorizontalLines=inAddHorizontalLines, motifFilter=True,
+            duplicateFigure=inDuplicateFigure, saveTag=f'Fixed Motif {fixedSubSeq}')
 else:
     # Fix the substrate frame
     (fixedMotifFinalSubs,
@@ -1024,4 +1028,4 @@ else:
                                           fixRes=inFixedResidue,
                                           fixPos=inFixedPosition,
                                           sortType='Final Sort',
-                                          datasetTag=fixedSubSeq)
+                                          datasetTag=f'Motif {fixedSubSeq}')
