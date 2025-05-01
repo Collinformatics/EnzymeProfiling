@@ -1757,28 +1757,11 @@ class NGS:
               f'{purple}Final Sort{resetColor}:\n{final}\n\n')
 
         # Figure parameters
-        barWidth = 0.35
+        barWidth = 0.4
 
         # Determine yMax
         yMin = 0
-        maxInitial = probInitial.values.max()
-        maxInitialAdj = np.floor(maxInitial * 10) / 10
-        maxFinal = probFinal.values.max()
-        maxFinalAdj= np.floor(maxFinal * 10) / 10
-        if maxFinalAdj > maxInitialAdj:
-            yMax = maxFinalAdj
-            maxY = maxFinal
-        else:
-            yMax = maxInitialAdj
-            maxY = maxInitial
-        if yMax > 0.6:
-            tickStepSize = 0.1
-        else:
-            tickStepSize = 0.05
-        if yMax != 1.0:
-            if yMax < maxY:
-                while yMax < maxY:
-                    yMax += tickStepSize
+        yMax = 1
 
 
         # Set the positions of the bars on the x-axis
@@ -1836,7 +1819,8 @@ class NGS:
         final = probFinal[probFinal.index.str.contains(selectAA)].T
         print(f'{purple}Initial Sort{resetColor}:\n{initial}\n')
         print(f'{purple}Final Sort{resetColor}:\n{final}\n\n')
-        final = final.drop(final.index[[pos-1 for pos in self.fixedPosition]])
+        print(f'Pos: {self.fixedPosition}')
+        final = final.drop(final.index[[int(pos) - 1 for pos in self.fixedPosition]])
         print(f'Remove fixed residues:{purple} Final Sort{resetColor}\n{final}\n\n')
 
         # Set local parameters
@@ -1845,24 +1829,7 @@ class NGS:
 
         # Determine yMax
         yMin = 0
-        maxInitial = probInitial.values.max()
-        maxInitialAdj = np.floor(maxInitial * 10) / 10
-        maxFinal = probFinal.values.max()
-        maxFinalAdj= np.floor(maxFinal * 10) / 10
-        if maxFinalAdj > maxInitialAdj:
-            yMax = maxFinalAdj
-            maxY = maxFinal
-        else:
-            yMax = maxInitialAdj
-            maxY = maxInitial
-        if yMax > 0.6:
-            tickStepSize = 0.1
-        else:
-            tickStepSize = 0.05
-        if yMax != 1.0:
-            if yMax < maxY:
-                while yMax < maxY:
-                    yMax += tickStepSize
+        yMax = 1
 
 
         # Find outliers in the initial dataset
@@ -2046,25 +2013,21 @@ class NGS:
 
 
 
-    def heightsRF(self, counts, N, invertRF, printRF):
+    def heightsRF(self, counts, N, printRF):
         print('=========================== Calculate: Letter Heights '
               '===========================')
-        if invertRF:
-            print(f'Residue heights calculated by:{red} '
-                  f'RF-Inverted * ΔS{resetColor}\n')
-        else:
-            print(f'Residue heights calculated by:{red} RF * ΔS{resetColor}\n')
+        print(f'Residue heights calculated by:{red} RF * ΔS{resetColor}\n')
 
 
-        self.fixedPosition = {}
+        fixedPos = {}
         for indexColumn in counts.columns:
             values = counts.loc[:, indexColumn]
             if N in values.values:
                 indexRow = values[values == N].index[0]
-                self.fixedPosition[indexColumn] = indexRow
+                fixedPos[indexColumn] = indexRow
         print(f'Fixed Residues:')
-        if self.fixedPosition:
-            for key, value in self.fixedPosition.items():
+        if fixedPos:
+            for key, value in fixedPos.items():
                 print(f'     Fixed Position: {red}{key}{resetColor}, '
                       f'Residue: {red}{value}{resetColor}')
         else:
@@ -2095,24 +2058,6 @@ class NGS:
         self.delta = sum(entropy.loc[:, 'ΔEntropy']) / self.substrateLength
         print(f'{entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
 
-        if invertRF:
-            # print('Invert RF Values: Column Sums')
-            for indexColumn in RF.columns:
-                if indexColumn not in self.fixedPosition:
-                    print(f'RF at: {red}{indexColumn}{resetColor}, '
-                          f'Sum: {red}{np.round(sum(RF.loc[:, indexColumn]), 2)}'
-                          f'{resetColor}')
-                    RF.loc[:, indexColumn] = RF.loc[:, indexColumn] - 1
-                    RF.loc[:, indexColumn] = (RF.loc[:, indexColumn] /
-                                              abs(sum(RF.loc[:, indexColumn])))
-
-                    print(f'     RF inverted at: {red}{indexColumn}{resetColor} '
-                          f'Sum: {red}{np.round(sum(RF.loc[:, indexColumn]), 2)}'
-                          f'{resetColor}')
-            print('\n{orange}NOTE{resetColor}: Sums of the inverted RF values should be '
-                  '{red}-1.0{resetColor}\n\n')
-            print(f'Normalized Inverted RF:\n{RF.round(3)}')
-            print('\n')
 
         heights = pd.DataFrame(0, index=counts.index, columns=counts.columns, dtype=float)
         for indexColumn in heights.columns:
@@ -2139,10 +2084,10 @@ class NGS:
                   f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
         # Set values for columns with fixed residues
-        for key, value in self.fixedPosition.items():
+        for key, value in fixedPos.items():
             heights.loc[value, key] = yMax
 
-        return heights, self.fixedPosition, yMax, yMin
+        return heights, fixedPos, yMax, yMin
 
 
 
@@ -4077,10 +4022,12 @@ class NGS:
         datasetType = 'Words'
         if clusterIndex is not None:
             print(f'Selecting PCA Population:{red} {clusterIndex + 1}{resetColor}')
+        else:
+            print(f'Substrates:{purple} {saveTag}{resetColor}')
         iteration = 0
         for substrate, count in clusterSubs.items():
             print(f'     {silver}{substrate}{resetColor}, '
-                  f'Count:{pink} {count:,}{resetColor}')
+                  f'Count:{red} {count:,}{resetColor}')
             iteration += 1
             if iteration == self.printNumber:
                 break
@@ -4094,9 +4041,9 @@ class NGS:
             height=800,
             background_color='white',
             min_font_size=10, # Minimum font size
-            max_font_size=100, # Maximum font size
+            max_font_size=120, # Maximum font size
             scale=5,  # Increase scale for larger words
-            colormap=cmap # cool, hsv, plasma, _
+            colormap=cmap
         ).generate_from_frequencies(clusterSubs))
 
 
