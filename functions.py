@@ -1603,7 +1603,7 @@ class NGS:
 
 
 
-    def findMotif(self, entropy, minEntropy, fixFullFrame, getIndices):
+    def identifyMotif(self, entropy, minEntropy, fixFullFrame, getIndices):
         print('================================ Identify Motif '
               '=================================')
         if fixFullFrame:
