@@ -3811,7 +3811,7 @@ class NGS:
             tick.tick1line.set_markeredgewidth(self.lineThickness) # Set tick width
 
         # Label the axes
-        motif.ax.set_xlabel('Position', fontsize=self.labelSizeAxis)
+        motif.ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         if dataType.lower() == 'weblogo':
             motif.ax.set_ylabel('Bits', fontsize=self.labelSizeAxis)
         else:

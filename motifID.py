@@ -25,17 +25,11 @@ inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = True
 
-# Input 2: Experimental Parameters
-inSubstrateLength = len(inAAPositions)
-inShowSampleSize = True  # Include the sample size in your figures
-inSaveScaledEnrichment = False  # Saving Scaled Enrichment Values
-inSubstratePositions = inAAPositions # ['P4', 'P3', 'P2', 'P1', 'P1\'']
-
-# Input 3: Computational Parameters
-inRefixMotif = False
-inFixResidues = True
+# Input 2: Computational Parameters
+inMinDeltaS = 0.55
+inRefixMotif = True
 inFixedResidue = ['Q'] # Only use 1 AA
-inFixedPosition = [7]
+inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -43,7 +37,6 @@ inDatasetTag = f'Motif {inFixedResidue[0]}@R{inFixedPosition[0]}'
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
 inFixEntireSubstrateFrame = False
-inMinDeltaS = 0.6
 inMinimumSubstrateCount = 10
 inSetMinimumESFixAA = 0
 inSetMinimumESReleaseAA = -1
@@ -52,7 +45,8 @@ inCombineFixedMotifs = False
 inPredictSubstrateEnrichmentScores = False
 inDuplicateFigure = True
 
-# Input 5: Figure Parameters
+# Input 3: Figure Parameters
+inShowSampleSize = True
 inPlotPositionalEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMotif = False
@@ -73,14 +67,14 @@ inCodonSequence = 'NNS'  # Base probabilities of degenerate codons (can be N, S,
 inUseCodonProb = False  # If True: use "inCodonSequence" for baseline probabilities
 # If False: use "inFileNamesInitialSort" for baseline probabilities
 
-# Input 6: Plot Heatmap
+# Input 5: Plot Heatmap
 inShowEnrichmentScores = True
 inShowEnrichmentAsSquares = False
 inTitleEnrichmentMap = f'{inEnzymeName}: {inDatasetTag}'
 inYLabelEnrichmentMap = 2  # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
 inPrintSelectedSubstrates = 1  # Set = 1, to print substrates with fixed residue
 
-# Input 7: Plot Sequence Motif
+# Input 6: Plot Sequence Motif
 inTitleMotif = inTitleEnrichmentMap
 inNormLetters = False  # Normalize fixed letter heights
 inPlotWeblogoMotif = False
@@ -89,13 +83,13 @@ inAddHorizontalLines = False
 inPlotNegativeWeblogoMotif = False
 inBigLettersOnTop = False
 
-# Input 8: Substrate Enrichment
+# Input 7: Substrate Enrichment
 inBinSubstrates = False
 inSaveEnrichedSubs = False
 inPredictionDatapointColor = '#CC5500'
 inSetAxisLimits = False
 
-# Input 9: Predict Optimal substrates
+# Input 8: Predict Optimal substrates
 inSetMinimumES = True
 inPrintES = True
 inPlotSubsetOfSubstrates = True
@@ -129,8 +123,8 @@ else:
         addValue = inFixedPosition[0] - 4
         inBinPositionRange[0] += addValue
         inBinPositionRange[1] += addValue
-inMatrixESLabel = r'Enrichment Scores'  # - log5()'
-inMatrixScaledESLabel = r'ΔS * Enrichment Scores'  # - log5()'
+inMatrixESLabel = r'Enrichment Scores' # - log5()'
+inMatrixScaledESLabel = r'ΔS * Enrichment Scores' # - log5()'
 
 
 
@@ -154,7 +148,7 @@ resetColor = '\033[0m'
 
 
 # =================================== Initialize Class ===================================
-ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
+ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
@@ -515,7 +509,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     if inPlotPositionalEntropy:
         # Visualize: Change in Entropy
-        ngs.plotPositionalEntropy(entropy=positionalEntropy, fixedDataset=inFixResidues,
+        ngs.plotPositionalEntropy(entropy=positionalEntropy, fixedDataset=True,
                                   fixedTag=fixedSubSeq, avgDelta=False)
 
     # Update: Current Sample Size
