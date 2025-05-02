@@ -16,20 +16,20 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
 inSaveData = True
 inSaveFigures = True
-inSetFigureTimer = False
+inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.5
+inMinDeltaS = 0.55
 inRefixMotif = True
 inFixedResidue = ['Q'] # Only use 1 AA
-inFixedPosition = [6]
+inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -128,7 +128,7 @@ inMatrixScaledESLabel = r'ΔS * Enrichment Scores' # - log5()'
 
 
 
-# =============================== Setup Figure Parameters ================================
+# =================================== Setup Parameters ===================================
 global fixedSubSeq
 
 # Colors:
@@ -613,18 +613,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         finalFixedRF = ngs.calculateRF(counts=fixedCountsFinal, N=countsTotalFixedMotif,
                                        fileType='Fixed Final Sort', printRF=inPrintRF)
 
-        # Visualize: Change in Entropy
-        if inPlotPositionalEntropy:
-            motifPos = ngs.identifyMotif(entropy=positionalEntropy, 
-                                         minEntropy=inMinDeltaS,
-                                         fixFullFrame=inFixFullMotifSeq,
-                                         getIndices=False)
-            if inManualEntropy:
-                motifPos = pd.DataFrame(1, index=inManualFrame,
-                                                    columns=['ΔEntropy'])
-                print(f'Ranked Motif Frame:{green} User Defined{purple}\n'
-                      f'{motifPos}{resetColor}\n\n')
-
         # Calculate enrichment scores
         finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
                                                finalSortRF=finalFixedRF,
@@ -723,18 +711,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         finalFixedRF = ngs.calculateRF(counts=fixedCountsFinal, N=countsTotalFixedMotif,
                                        fileType='Fixed Final Sort', printRF=inPrintRF)
 
-        # Visualize: Change in Entropy
-        if inPlotPositionalEntropy:
-            motifPos = ngs.identifyMotif(entropy=positionalEntropy, 
-                                         minEntropy=inMinDeltaS,
-                                         fixFullFrame=inFixFullMotifSeq,
-                                         getIndices=False)
-            if inManualEntropy:
-                motifPos = pd.DataFrame(1, index=inManualFrame,
-                                                    columns=['ΔEntropy'])
-                print(f'Ranked Motif Frame:{green} User Defined{purple}\n'
-                      f'{motifPos}{resetColor}\n\n')
-
         # Calculate enrichment scores
         finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
                                                finalSortRF=finalFixedRF,
@@ -807,18 +783,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         finalFixedRF = ngs.calculateRF(counts=fixedCountsFinal, N=countsTotalFixedMotif,
                                        fileType='Fixed Final Sort', printRF=inPrintRF)
 
-        # Visualize: Change in Entropy
-        if inPlotPositionalEntropy:
-            motifPos = ngs.identifyMotif(entropy=positionalEntropy, 
-                                         minEntropy=inMinDeltaS,
-                                         fixFullFrame=inFixFullMotifSeq,
-                                         getIndices=False)
-            if inManualEntropy:
-                motifPos = pd.DataFrame(1, index=inManualFrame,
-                                        columns=['ΔEntropy'])
-                print(f'Ranked Motif Frame:{green} User Defined{purple}\n'
-                      f'{motifPos}{resetColor}\n\n')
-
         # Calculate enrichment scores
         finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
                                                finalSortRF=finalFixedRF,
@@ -885,7 +849,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
 
     # Save the data
-    if inSaveData:
+    if inSaveData and not inRefixMotif:
         # Save the fixed substrate dataset
         with open(filePathFixedMotifSubs, 'wb') as file:
             pk.dump(fixedSubsFinal, file)
@@ -897,10 +861,10 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                               index=True, float_format='%.0f')
 
         # Print the save paths
-        print(f'Fixed substrate data saved at:\n'
+        print(f'Fixed substrate data saved at:{greenDark}\n'
               f'     {filePathFixedMotifSubs}\n'
               f'     {filePathFixedMotifCounts}\n'
-              f'     {filePathFixedMotifReleasedCounts}\n\n')
+              f'     {filePathFixedMotifReleasedCounts}{resetColor}\n\n')
 
     return (fixedSubsFinal, fixedCountsFinal, countsTotalFixedMotif,
             releasedRF, releasedRFScaled, releasedCounts)

@@ -22,6 +22,8 @@ import sys
 import time
 import threading
 import warnings
+
+from setuptools.command.rotate import rotate
 from wordcloud import WordCloud
 
 
@@ -46,8 +48,6 @@ pd.set_option('display.width', 1000)
 pd.set_option('display.float_format', '{:,.5f}'.format)
 
 # Colors: Console
-white = '\033[38;2;255;255;255m'
-whiteA = white
 silver = '\033[38;2;204;204;204m'
 purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
@@ -55,6 +55,7 @@ pink = '\033[38;2;255;0;242m'
 cyan = '\033[38;2;22;255;212m'
 green = '\033[38;2;5;232;49m'
 greenLight = '\033[38;2;204;255;188m'
+greenLightB = '\033[38;2;204;255;188m'
 greenDark = '\033[38;2;30;121;13m'
 yellow = '\033[38;2;255;217;24m'
 orange = '\033[38;2;247;151;31m'
@@ -337,12 +338,12 @@ class NGS:
                         # Extract substrate DNA seq
                         substrate = DNA[start:end].strip() 
                         print(f'     Inspected substrate: '
-                              f'{whiteA}{substrate}{resetColor}')
+                              f'{greenLightB}{substrate}{resetColor}')
                         if len(substrate) == self.substrateLength * 3:
                             # Express substrate
                             substrate = str(Seq.translate(substrate))
                             print(f'     Inspected Substrate:'
-                                  f'{whiteA} {substrate}{resetColor}')
+                                  f'{greenLightB} {substrate}{resetColor}')
 
                             # Inspect substrate seq: PRINT ONLY
                             if 'X' not in substrate and '*' not in substrate:
@@ -449,12 +450,12 @@ class NGS:
                         # Extract substrate DNA seq
                         substrate = DNA[start:end].strip()
                         print(f'     Inspected substrate: '
-                              f'{whiteA}{substrate}{resetColor}')
+                              f'{greenLightB}{substrate}{resetColor}')
                         if len(substrate) == self.substrateLength * 3:
                             # Express substrate
                             substrate = str(Seq.translate(substrate))
                             print(f'     Inspected Substrate:'
-                                  f'{whiteA} {substrate}{resetColor}')
+                                  f'{greenLightB} {substrate}{resetColor}')
 
                             # Inspect substrate seq: PRINT ONLY
                             if 'X' not in substrate and '*' not in substrate:
@@ -623,12 +624,12 @@ class NGS:
                         # Extract substrate DNA seq
                         substrate = DNA[start:end].strip()
                         print(f'     Inspected substrate: '
-                              f'{whiteA}{substrate}{resetColor}')
+                              f'{greenLightB}{substrate}{resetColor}')
                         if len(substrate) == self.substrateLength * 3:
                             # Express substrate
                             substrate = str(Seq.translate(substrate))
                             print(f'     Inspected Substrate:'
-                                  f'{whiteA} {substrate}{resetColor}')
+                                  f'{greenLightB} {substrate}{resetColor}')
 
                             # Inspect substrate seq: PRINT ONLY
                             if 'X' not in substrate and '*' not in substrate:
@@ -736,12 +737,12 @@ class NGS:
                         # Extract substrate DNA seq
                         substrate = DNA[start:end].strip()
                         print(f'     Inspected substrate: '
-                              f'{whiteA}{substrate}{resetColor}')
+                              f'{greenLightB}{substrate}{resetColor}')
                         if len(substrate) == self.substrateLength * 3:
                             # Express substrate
                             substrate = str(Seq.translate(substrate))
                             print(f'     Inspected Substrate:'
-                                  f'{whiteA} {substrate}{resetColor}')
+                                  f'{greenLightB} {substrate}{resetColor}')
 
                             # Inspect substrate seq: PRINT ONLY
                             if 'X' not in substrate and '*' not in substrate:
@@ -882,7 +883,7 @@ class NGS:
         countModulus = 100 # Check the Nth substrate length
         for index, substrate in enumerate(substrates.keys()):
             if index % countModulus == 0:
-                # print(f'Check:{white} {index}')
+                # print(f'Check:{greenLightB} {index}')
                 if len(substrate) != lengthFirstSub:
                     print(f'{orange}ERROR: The substrate lengths do not match\n'
                           f'     {firstSub}: {lengthFirstSub} AA\n'
@@ -957,7 +958,7 @@ class NGS:
 
         stopTime = time.time()
         endTime = stopTime - beginTime
-        print(f'Runtime:{white} Count AA\n'
+        print(f'Runtime:{greenLightB} Count AA\n'
               f'     {red}{np.round(endTime, 3):,}s{resetColor}\n\n')
 
         return countedData, totalSubs
@@ -1053,7 +1054,7 @@ class NGS:
             # Load counted substrate data
             print(f'Loading counts within these files:')
             for fileName in files:
-                print(f'     {whiteA}{fileName}{resetColor}')
+                print(f'     {greenLightB}{fileName}{resetColor}')
             print('')
 
             for indexPath, path in enumerate(filePath):
@@ -1069,12 +1070,12 @@ class NGS:
                             formatters={column: '{:,.0f}'.format for column in
                                         countedData.select_dtypes(
                                             include='number').columns})
-                        print(f'\nCounts: {whiteA}{files[indexPath]}{resetColor}\n'
+                        print(f'\nCounts: {greenLightB}{files[indexPath]}{resetColor}\n'
                               f'{formattedCounts}\n')
 
                     substrateCounts = sum(countedData.iloc[:, 0])
                     totalSubstrateCount += substrateCounts
-                    print(f'\nNumber of substrates in {whiteA}'
+                    print(f'\nNumber of substrates in {greenLightB}'
                           f'{files[indexPath]}{resetColor}: '
                           f'{red}{substrateCounts:,}{resetColor}\n'
                     f'Total substrates: {red}'
@@ -1089,7 +1090,7 @@ class NGS:
                         formattedCounts = data.to_string(
                             formatters={column: '{:,.0f}'.format for column in
                                         data.select_dtypes(include='number').columns})
-                        print(f'\nCounts: {whiteA}{files[indexPath]}{resetColor}\n'
+                        print(f'\nCounts: {greenLightB}{files[indexPath]}{resetColor}\n'
                               f'{formattedCounts}\n')
 
                     substrateCounts = sum(data.iloc[:, 0])
@@ -1097,7 +1098,7 @@ class NGS:
 
                     countedData += data
 
-                    print(f'\nNumber of substrates in {whiteA}'
+                    print(f'\nNumber of substrates in {greenLightB}'
                           f'{files[indexPath]}{resetColor}: '
                           f'{red}{substrateCounts:,}{resetColor}\n'
                           f'Total substrates: {red}'
@@ -1107,7 +1108,7 @@ class NGS:
             if printLoadedData:
                 print(f'Total counts for:')
                 for file in files:
-                    print(f'     {whiteA}{file}{resetColor}')
+                    print(f'     {greenLightB}{file}{resetColor}')
                 # Format values to have commas
                 countedDataFormat = countedData.apply(
                     lambda col: col.map(lambda x: f'{x:,}'))
@@ -1185,7 +1186,7 @@ class NGS:
 
         print(f'Loading data in these files:')
         for fileName in fileNames:
-            print(f'     {white}{fileName}{resetColor}')
+            print(f'     {greenLightB}{fileName}{resetColor}')
         print()
 
         # Function to load each file
@@ -1199,7 +1200,7 @@ class NGS:
             with open(fileLocation, 'rb') as openedFile:  # Open file
                 data = pk.load(openedFile)  # Access the data
                 dataTotalSubs = sum(data.values())
-                print(f'     Total substrates in {white}{fileName}{resetColor}: '
+                print(f'     Total substrates in {greenLightB}{fileName}{resetColor}: '
                       f'{red}{dataTotalSubs:,}{resetColor}\n')
 
                 # Combine the loaded dictionary into the main substrates
@@ -1293,7 +1294,7 @@ class NGS:
                     formatters={column: '{:,.0f}'.format for column in
                                 countsFixedFrame.select_dtypes(include='number').columns})
                 print(f'Selecting Positions:{purple} Fixed Motif {tagFixedAA}\n'
-                      f'     {white}{fixedFramePos}{resetColor}\n'
+                      f'     {greenLightB}{fixedFramePos}{resetColor}\n'
                       f'Counts:\n'
                       f'{greenLight}{formattedCounts}{resetColor}\n\n')
 
@@ -1924,8 +1925,8 @@ class NGS:
         if printES:
             print('========================== Calculate: Enrichment Score '
                   '==========================')
-            print(f'Enrichment Score:{purple} {self.fixedSubSeq}\n'
-                  f'{silver}{enrichment.round(3)}{resetColor}\n\n')
+            print(f'Enrichment Score:{purple} {self.fixedSubSeq}{resetColor}\n'
+                  f'{enrichment.round(3)}\n\n')
         else:
             print('\n')
 
@@ -2197,7 +2198,7 @@ class NGS:
         # Set values for columns with fixed residues
         if normalizeFixedScores:
             print(f'============================================'
-                  f'============================================={white}\n'
+                  f'============================================={greenLightB}\n'
                   f'============================================'
                   f'============================================={resetColor}\n'
                   f'============================================'
@@ -2205,7 +2206,7 @@ class NGS:
                   f'{yellow}Readjusting the fixed residue heights '
                   f'to be equal to the tallest stack{resetColor}\n\n'
                   f'============================================'
-                  f'============================================={white}\n'
+                  f'============================================={greenLightB}\n'
                   f'============================================'
                   f'============================================={resetColor}\n'
                   f'============================================'
@@ -2218,7 +2219,7 @@ class NGS:
                   f'{baselineType})\n{silver}{heights.round(3)}{resetColor}\n')
 
             print(f'============================================'
-                  f'============================================={white}\n'
+                  f'============================================={greenLightB}\n'
                   f'============================================'
                   f'============================================={resetColor}\n'
                   f'============================================'
@@ -2226,7 +2227,7 @@ class NGS:
                   f'{yellow}Readjusting the fixed residue heights '
                   f'to be equal to the tallest stack{resetColor}\n\n'
                   f'============================================'
-                  f'============================================={white}\n'
+                  f'============================================={greenLightB}\n'
                   f'============================================'
                   f'============================================={resetColor}\n'
                   f'============================================'
@@ -2374,7 +2375,7 @@ class NGS:
                                         substrate[indexColumn + 1:])
                         newES = ESMax + (score - scoreSubstrate)
                         # print(f'{silver}New Substrate{resetColor}:'
-                        #       f'{whiteA} {newSubstrate}{resetColor}, '
+                        #       f'{greenLightB} {newSubstrate}{resetColor}, '
                         #       f'ES:{red} {newES}{resetColor}\n'
                         #       f'     Residue Score New:{red} {score}{resetColor}\n'
                         #       f'     Residue Score Old:{red} {scoreSubstrate}'
@@ -2773,7 +2774,7 @@ class NGS:
                   f'{resetColor}\n')
             sys.exit()
 
-        print(f'Batch Tokens:{white} {batchTokens.shape}{resetColor}\n'
+        print(f'Batch Tokens:{greenLightB} {batchTokens.shape}{resetColor}\n'
               f'{greenLight}{batchTokens}{resetColor}\n\n')
         slicedTokens = pd.DataFrame(batchTokens[:, 1:-1],
                                     index=batchSubs,
@@ -2971,7 +2972,7 @@ class NGS:
                   f'if you plot binned substrates')
             collectedSubs = []
             for index, substrateSet in enumerate(self.selectedSubstrates):
-                print(f'Substrate Set:{white} {index + 1}{resetColor}')
+                print(f'Substrate Set:{greenLightB} {index + 1}{resetColor}')
                 iteration = 0
                 collectionSet = {}
                 for substrate in substrateSet:
@@ -3202,14 +3203,14 @@ class NGS:
         plt.bar(entropy.index, entropy['ΔEntropy'], color=cMap,
                 edgecolor='black', linewidth=self.lineThickness, width=0.8)
         plt.xlabel('Substrate Position', fontsize=self.labelSizeAxis)
-        plt.ylabel('Positional Entropy (ΔS)', fontsize=self.labelSizeAxis)
+        plt.ylabel('ΔS', fontsize=self.labelSizeAxis, rotation=0, labelpad=15)
         if avgDelta:
             plt.title(f'{title}\nAverage ΔS = {self.delta:.5f}',
                       fontsize=self.labelSizeTitle, fontweight='bold')
         else:
             plt.title(f'\n{title}',
                       fontsize=self.labelSizeTitle, fontweight='bold')
-        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.112, right=0.917)
+        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.121, right=0.917)
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -4083,10 +4084,10 @@ class NGS:
         print('================================= Extract Motif '
               '=================================')
         print(f'Binning Substrates:{purple} {datasetTag}{resetColor}\n'
-              f'Start Position:{white} {substrateFrame[frameIndicies[0]]}{resetColor}\n'
-              f'   Start Index:{white} {frameIndicies[0]}{resetColor}\n'
-              f'End Position:{white} {substrateFrame[frameIndicies[-1]]}{resetColor}\n'
-              f'   End Index:{white} {frameIndicies[-1]}{resetColor}\n\n')
+              f'Start Position:{greenLightB} {substrateFrame[frameIndicies[0]]}{resetColor}\n'
+              f'   Start Index:{greenLightB} {frameIndicies[0]}{resetColor}\n'
+              f'End Position:{greenLightB} {substrateFrame[frameIndicies[-1]]}{resetColor}\n'
+              f'   End Index:{greenLightB} {frameIndicies[-1]}{resetColor}\n\n')
         frameLength = len(substrateFrame)
         sys.exit()
 
@@ -4106,8 +4107,8 @@ class NGS:
                 startSubPrevious += fixedPosDifference
                 # print(f'Pos Curr:{purple} {self.fixedPosition[index]}{resetColor}\n'
                 #       f'Pos Prev:{purple} {self.fixedPosition[index - 1]}{resetColor}')
-                # print(f'     Start Diff:{white} {fixedPosDifference}{resetColor}\n'
-                #       f'     Start Prev:{white} {startSubPrevious}{resetColor}')
+                # print(f'     Start Diff:{greenLightB} {fixedPosDifference}{resetColor}\n'
+                #       f'     Start Prev:{greenLightB} {startSubPrevious}{resetColor}')
                 startSub = index + startSubPrevious - 1
                 endSub = startSub + frameLength
             else:

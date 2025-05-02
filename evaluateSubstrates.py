@@ -24,16 +24,15 @@ inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeN
 inSaveFigures = True
 
 # Input 2: Computational Parameters
-inFixResidues = False
+inFixResidues = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
-inExcludedResidue = ['']
+inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inPlotWithSampleSize = True
-
 inEvaluateSubstrateEnrichment = False
 
 # Input 3: Processing The Data
@@ -60,7 +59,7 @@ inPrintMotifData = True
 inPrintNumber = 10
 
 # Input 5: Motif Extraction
-inIndexNTerminus = 1 # Define starting bounds for the motif
+inIndexNTerminus = inFixedPosition[0] - 3 # Define starting bounds for the motif
 inMotifLength = 5 # Define the length of your motif
 inFramePositions = [inIndexNTerminus - 1,
                     inIndexNTerminus + inMotifLength - 1]
