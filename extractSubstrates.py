@@ -56,7 +56,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           excludeAA=None, excludePosition=None, minCounts=0, figEMSquares=False,
           xAxisLabels=inAAPositions, xAxisLabelsBinned=None,
           residueLabelType=inCountMapYLabel, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, saveFigures=False,
+          showNValues=inShowSampleSize, findMotif=False, saveFigures=False,
           savePath=None, savePathFigs=None, setFigureTimer=None)
 
 

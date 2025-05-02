@@ -28,8 +28,8 @@ inFixResidues = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
-inExcludedResidue = [['Q', 'G'], 'L']
-inExcludedPosition = [8, 7]
+inExcludedResidue = ['']
+inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inPlotWithSampleSize = True
@@ -98,9 +98,9 @@ inEvaluateSubstrateEnrichment = False # ============= Fix: Load Initial Subs ===
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
-# Input 11: Evaluate Specificity
-inCompairRF = True # Plot RF distributions of a given AA
-inCompairAA = 'L' # Select the AA of interest
+# Input 11: Evaluate Positional Preferences
+inPlotPosProb = False # Plot RF distributions of a given AA
+inCompairAA = 'L' # Select AA of interest (different A than inFixedResidue)
 
 
 
@@ -130,7 +130,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=inAAPositionsMotif, residueLabelType=inYLabelEnrichmentMap,
           printNumber=inPrintNumber, showNValues=inPlotWithSampleSize,
-          idMotif=False, saveFigures=inSaveFigures, savePath=inFilePath,
+          findMotif=False, saveFigures=inSaveFigures, savePath=inFilePath,
           savePathFigs=inSavePathFigures, setFigureTimer=None)
 
 
@@ -527,7 +527,8 @@ finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
                           fileType='Final Sort', printRF=inPrintRF)
 
 # Calculate: Positional entropy
-positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntropy)
+positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntropy,
+                                         datasetTag=fixedSubSeq)
 
 
 # Save the data
@@ -818,7 +819,7 @@ if inPlotPositionalProbDist:
     ngs.plotPositionalProbDist(probability=finalRF, entropyScores=positionalEntropy,
                                sortType='Final Sort', datasetTag=fixedSubSeq)
 
-if inCompairRF:
+if inPlotPosProb:
     ngs.compairRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)
 
     ngs.boxPlotRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)

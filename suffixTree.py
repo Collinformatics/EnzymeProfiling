@@ -9,12 +9,6 @@ import sys
 
 
 
-# Adjust size
-# Go from trie to motif, with 5 AA motif, show cut site
-# Generate questions with trie: help evaluate our data
-    # Look for not immediately apparent (find interesting trends)
-        # Why does C pop up when L is removed
-
 # ADD: Word cloud
 
 
@@ -22,9 +16,9 @@ import sys
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/to/folder/{inEnzymeName}'
+inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
-inSavePathFigures = '/path/to/folder/Figures'
+inSavePathFigures = '/Users/ca34522/Documents/Classes/Bioinformatics/Project/Figures'
 # os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
 inSaveFigures = True
@@ -147,23 +141,17 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          colorsCounts=inCountsColorMap, colorStDev=inStDevColorMap,
-          colorsEM=inEnrichmentColorMap, colorsMotif=inLetterColors,
-          xAxisLabels=inAAPositions, xAxisLabelsBinned=inAAPositionsBinned,
-          residueLabelType=inYLabelEnrichmentMap, titleLabelSize=inFigureTitleSize,
-          axisLabelSize=inFigureLabelSize, tickLabelSize=inFigureTickSize,
-          printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          saveFigures=inSaveFigures, savePath=inFilePath, savePathFigs=inSavePathFigures,
-          setFigureTimer=None)
+          xAxisLabels=inAAPositions, xAxisLabelsBinned=None,
+          residueLabelType=inYLabelEnrichmentMap, printNumber=inPrintNumber,
+          showNValues=inShowSampleSize, findMotif=False, saveFigures=inSaveFigures,
+          savePath=inFilePath, savePathFigs=inSavePathFigures, setFigureTimer=None)
 
 
 
 # ====================================== Load Data =======================================
 startTimeLoadData = time.time()
 if inFilterSubstrates:
-    fixedSubSeq = ngs.fixSubstrateSequence(exclusion=inExcludeResidues,
-                                           excludedAA=inExcludedResidue,
-                                           excludedPosition=inExcludedPosition)
+    fixedSubSeq = ngs.fixSubstrateSequence()
     datasetTag = f'Fixed {fixedSubSeq}'
 else:
     fixedSubSeq = None
@@ -324,16 +312,13 @@ if loadUnfixedSubstrates:
 
     # Load the data: final sort
     filePathsFinal = []
-    if '/' in inFilePath:
-        for fileName in inFileNamesFinal:
-            filePathsFinal.append(f'{inFilePath}/counts_{fileName}')
-    else:
-        for fileName in inFileNamesFinal:
-            filePathsFinal.append(f'{inFilePath}\\counts_{fileName}')
+    for fileName in inFileNamesFinal:
+        filePathsFinal.append(os.path.join(inFilePath, f'counts_{fileName}'))
 
     # Verify that all files exist
     missingFile = False
     for indexFile, path in enumerate(filePathsFinal):
+        print(path)
         if os.path.exists(path):
             continue
         else:
@@ -351,10 +336,6 @@ if loadUnfixedSubstrates:
                                                        files=inFileNamesFinal,
                                                        printLoadedData=inPrintCounts,
                                                        fileType='Final Sort')
-
-# Calculate RF
-finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
-                          fileType='Final Sort', printRF=inPrintRF)
 
 # Time
 endTime = time.time()
@@ -385,12 +366,14 @@ if inFilterSubstrates:
         printRankedSubs=inPrintFixedSubs, sortType='Final Sort')
 
     # Count fixed substrates
-    countsFinal, _ = ngs.countResidues(substrates=substratesFinal,
+    countsFinal, countsFinalTotal = ngs.countResidues(substrates=substratesFinal,
                                        datasetType='Final Sort',
                                        printCounts=inPrintCounts)
-else:
-    titleSuffixTree = f'{inEnzymeName}: Fixed {fixedSubSeq}'
-    datasetTag = None
+
+
+# Calculate RF
+finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
+                          fileType='Final Sort', printRF=inPrintRF)
 
 
 # Calculate: Positional entropy

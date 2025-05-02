@@ -16,27 +16,27 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
 inSaveData = True
 inSaveFigures = True
-inSetFigureTimer = True
+inSetFigureTimer = False
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.55
+inMinDeltaS = 0.5
 inRefixMotif = True
-inFixedResidue = ['Q'] # Only use 1 AA
-inFixedPosition = [4]
+inFixedResidue = ['L'] # Only use 1 AA
+inFixedPosition = [6]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inDatasetTag = f'Motif {inFixedResidue[0]}@R{inFixedPosition[0]}'
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
-inFixEntireSubstrateFrame = False
+inFixFullMotifSeq = False
 inMinimumSubstrateCount = 10
 inSetMinimumESFixAA = 0
 inSetMinimumESReleaseAA = -1
@@ -155,7 +155,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=None, residueLabelType=inYLabelEnrichmentMap,
           printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          idMotif=True, savePath=inFilePath, saveFigures=inSaveFigures,
+          findMotif=True, savePath=inFilePath, saveFigures=inSaveFigures,
           savePathFigs=inSavePathFigures, setFigureTimer=inSetFigureTimer)
 
 
@@ -346,7 +346,6 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
                         fixedSubsTotal += count
             else:
                 for substrate, count in subs.items():
-                    keepSub = False
                     saveSeq = []
 
                     # Evaluate substrate
@@ -494,18 +493,15 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     # Determine substrate frame
     positionalEntropy = ngs.calculateEntropy(RF=finalFixedRF,
-                                             printEntropy=inPrintEntropy)
+                                             printEntropy=inPrintEntropy,
+                                             datasetTag=fixedSubSeq)
     if inManualEntropy:
-        substrateFrameSorted = pd.DataFrame(1, index=inManualFrame,
-                                            columns=['ΔEntropy'])
-        print(f'Ranked Substrate Frame:{green} User Defined{purple}\n'
-              f'{substrateFrameSorted}{resetColor}\n\n')
+        motifPos = pd.DataFrame(1, index=inManualFrame, columns=['ΔEntropy'])
+        print(f'{pink}Ranked Substrate Frame{resetColor}:{yellow} User Defined\n'
+              f'{cyan}{motifPos}{resetColor}\n\n')
     else:
-        substrateFrameSorted = ngs.findSubstrateFrame(entropy=positionalEntropy,
-                                                      minEntropy=inMinDeltaS,
-                                                      fixFullFrame=
-                                                      inFixEntireSubstrateFrame,
-                                                      getIndices=False)
+        motifPos = ngs.identifyMotif(entropy=positionalEntropy, minEntropy=inMinDeltaS,
+                                     fixFullFrame=inFixFullMotifSeq, getIndices=False)
 
     if inPlotPositionalEntropy:
         # Visualize: Change in Entropy
@@ -556,13 +552,11 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     # # Fix The Next Set Of Substrates
     # Cycle through the substrate and fix AA
-    for iteration, position in enumerate(substrateFrameSorted.index):
+    for iteration, position in enumerate(motifPos.index):
         if position == initialFixedPos:
             # Skip the position that was already fixed
             continue
 
-        # Update iteration number
-        ngs.saveFigureIteration += 1
 
         # Add the position from this iteration to the list of inspected locations
         if 'R' in position:
@@ -621,16 +615,15 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
         # Visualize: Change in Entropy
         if inPlotPositionalEntropy:
-            substrateFrameSorted = ngs.findSubstrateFrame(entropy=positionalEntropy,
-                                                          minEntropy=inMinDeltaS,
-                                                          fixFullFrame=
-                                                          inFixEntireSubstrateFrame,
-                                                          getIndices=False)
+            motifPos = ngs.identifyMotif(entropy=positionalEntropy, 
+                                         minEntropy=inMinDeltaS,
+                                         fixFullFrame=inFixFullMotifSeq,
+                                         getIndices=False)
             if inManualEntropy:
-                substrateFrameSorted = pd.DataFrame(1, index=inManualFrame,
+                motifPos = pd.DataFrame(1, index=inManualFrame,
                                                     columns=['ΔEntropy'])
-                print(f'Ranked Substrate Frame:{green} User Defined{purple}\n'
-                      f'{substrateFrameSorted}{resetColor}\n\n')
+                print(f'Ranked Motif Frame:{green} User Defined{purple}\n'
+                      f'{motifPos}{resetColor}\n\n')
 
         # Calculate enrichment scores
         finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
@@ -676,7 +669,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     # Initialize the list of residues that will be fixed
     keepResidues = preferredResidues.copy()
     keepPositions = preferredPositions.copy()
-    for iteration, position in enumerate(substrateFrameSorted.index):
+    for iteration, position in enumerate(motifPos.index):
         print(f'=================================== Release Residues '
               f'===================================')
         print(f'Save Iteration: {ngs.saveFigureIteration}')
@@ -732,16 +725,15 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
         # Visualize: Change in Entropy
         if inPlotPositionalEntropy:
-            substrateFrameSorted = ngs.findSubstrateFrame(entropy=positionalEntropy,
-                                                          minEntropy=inMinDeltaS,
-                                                          fixFullFrame=
-                                                          inFixEntireSubstrateFrame,
-                                                          getIndices=False)
+            motifPos = ngs.identifyMotif(entropy=positionalEntropy, 
+                                         minEntropy=inMinDeltaS,
+                                         fixFullFrame=inFixFullMotifSeq,
+                                         getIndices=False)
             if inManualEntropy:
-                substrateFrameSorted = pd.DataFrame(1, index=inManualFrame,
+                motifPos = pd.DataFrame(1, index=inManualFrame,
                                                     columns=['ΔEntropy'])
-                print(f'Ranked Substrate Frame:{green} User Defined{purple}\n'
-                      f'{substrateFrameSorted}{resetColor}\n\n')
+                print(f'Ranked Motif Frame:{green} User Defined{purple}\n'
+                      f'{motifPos}{resetColor}\n\n')
 
         # Calculate enrichment scores
         finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
@@ -811,25 +803,21 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                              sortType=f'{purple}Final Sort{resetColor} - {purple}Fixed',
                              printCounts=inPrintSampleSize, fixedTag=fixedSubSeq)
 
-
-        # Here
-
         # Calculate: RF
         finalFixedRF = ngs.calculateRF(counts=fixedCountsFinal, N=countsTotalFixedMotif,
                                        fileType='Fixed Final Sort', printRF=inPrintRF)
 
         # Visualize: Change in Entropy
         if inPlotPositionalEntropy:
-            substrateFrameSorted = ngs.findSubstrateFrame(entropy=positionalEntropy,
-                                                          minEntropy=inMinDeltaS,
-                                                          fixFullFrame=
-                                                          inFixEntireSubstrateFrame,
-                                                          getIndices=False)
+            motifPos = ngs.identifyMotif(entropy=positionalEntropy, 
+                                         minEntropy=inMinDeltaS,
+                                         fixFullFrame=inFixFullMotifSeq,
+                                         getIndices=False)
             if inManualEntropy:
-                substrateFrameSorted = pd.DataFrame(1, index=inManualFrame,
-                                                    columns=['ΔEntropy'])
-                print(f'Ranked Substrate Frame:{green} User Defined{purple}\n'
-                      f'{substrateFrameSorted}{resetColor}\n\n')
+                motifPos = pd.DataFrame(1, index=inManualFrame,
+                                        columns=['ΔEntropy'])
+                print(f'Ranked Motif Frame:{green} User Defined{purple}\n'
+                      f'{motifPos}{resetColor}\n\n')
 
         # Calculate enrichment scores
         finalFixedES = ngs.calculateEnrichment(initialSortRF=initialRF,
@@ -837,7 +825,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                                                printES=inShowEnrichmentData)
 
         # Display loop status
-        if position == substrateFrameSorted.index[-1]:
+        if position == motifPos.index[-1]:
             # Update iteration number
             ngs.saveFigureIteration += 1
 
@@ -877,7 +865,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     # Fill in missing columns in the released counts matrix and calculate RF
     for position in releasedCounts.columns:
-        if position not in substrateFrameSorted.index:
+        if position not in motifPos.index:
             releasedCounts.loc[:, position] = fixedCountsFinal.loc[:, position]
 
         releasedRF.loc[:, position] = (releasedCounts.loc[:, position] /

@@ -131,7 +131,7 @@ def includeCommas(x):
 class NGS:
     def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
                  excludeAA, excludePosition, minCounts, figEMSquares, xAxisLabels,
-                 xAxisLabelsBinned, residueLabelType, printNumber, showNValues, idMotif,
+                 xAxisLabelsBinned, residueLabelType, printNumber, showNValues, findMotif,
                  savePath, saveFigures, savePathFigs, setFigureTimer):
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
@@ -172,7 +172,7 @@ class NGS:
         self.nSubsFinal = 0
         self.nSubsTotal = 0
         self.delta = 0
-        self.findMotif = idMotif
+        self.findMotif = findMotif
         self.savePath = savePath
         self.saveFigures = saveFigures
         self.savePathFigs = savePathFigs
@@ -1603,18 +1603,15 @@ class NGS:
 
 
 
-    def findSubstrateFrame(self, entropy, minEntropy, fixFullFrame, getIndices):
-        print('============================= Find Substrate Frame '
-              '==============================')
+    def findMotif(self, entropy, minEntropy, fixFullFrame, getIndices):
+        print('================================ Identify Motif '
+              '=================================')
         if fixFullFrame:
-            print(f'Selecting continuous sequence')
+            print(f'Selecting continuous motif')
         else:
-            print(f'Selecting specific residues sequence')
-        print(f'Minimum ΔEntropy Value:{pink} {minEntropy} Bits{resetColor}\n'
-              f'Entropy:\n{entropy}\n')
-
-
-        print(f'Positional Entropy:\n'
+            print(f'Selecting non-continuous motif')
+        print(f'Minimum ΔEntropy Value:{pink} {minEntropy} Bits{resetColor}\n\n'
+              f'Positional Entropy:\n'
               f'{pink}{entropy}{resetColor}\n')
         subFrame = entropy.copy()
         lastPosition = len(entropy) - 1
@@ -1639,9 +1636,9 @@ class NGS:
 
         # Sort the frame
         subFrameSorted = subFrame.sort_values(by='ΔEntropy', ascending=False).copy()
-        print(f'Determine Substrate Frame:\n'
+        print(f'Motif Frame:\n'
               f'{pink}{subFrame}{resetColor}\n\n'
-              f'Ranked Substrate Frame:\n'
+              f'Ranked Motif Frame:\n'
               f'{red}{subFrameSorted}{resetColor}\n\n')
 
         if getIndices:
@@ -2416,7 +2413,7 @@ class NGS:
 
 
 
-    def calculateEntropy(self, RF, printEntropy):
+    def calculateEntropy(self, RF, printEntropy, datasetTag=''):
         print('============================== Calculate: Entropy '
               '===============================')
         entropy = pd.DataFrame(0.0, index=RF.columns, columns=['ΔEntropy'])
@@ -2432,7 +2429,7 @@ class NGS:
             entropy.loc[indexColumn, 'ΔEntropy'] = entropyMax - S
 
         if printEntropy:
-            print(f'Positional Entropy:\n{entropy}\n\nMax Entropy: '
+            print(f'Positional Entropy: {datasetTag}\n{entropy}\n\nMax Entropy: '
                   f'{entropyMax.round(6)}\n\n')
 
         return entropy
