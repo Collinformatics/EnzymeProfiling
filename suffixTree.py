@@ -18,8 +18,7 @@ import sys
 inEnzymeName = 'Mpro2'
 inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
-inSavePathFigures = '/Users/ca34522/Documents/Classes/Bioinformatics/Project/Figures'
-# os.path.join(inBasePath, 'Figures')
+inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
 inSaveFigures = True
 
