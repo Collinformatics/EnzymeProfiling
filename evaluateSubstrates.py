@@ -24,7 +24,7 @@ inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeN
 inSaveFigures = True
 
 # Input 2: Computational Parameters
-inFixResidues = True
+inFixResidues = False
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
@@ -305,7 +305,7 @@ def binSubstrates(substrates, datasetTag, index):
 if inFixResidues:
     fixedSubSeq = ngs.genDatasetTag()
 else:
-    fixedSubSeq = None
+    fixedSubSeq = 'Unfiltered'
 
 if inFixResidues and inEvaluateSubstrateEnrichment:
     fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
@@ -551,13 +551,6 @@ ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
 
 
 # ==================================== Plot The Data =====================================
-# # Plot the data
-if fixedSubSeq is None:
-    datasetTag = 'Unfiltered'
-else:
-    datasetTag = fixedSubSeq
-
-
 # Plot: Positional entropy
 if inPlotPositionalEntropy:
     ngs.plotPositionalEntropy(entropy=positionalEntropy, fixedDataset=inFixResidues,
@@ -573,7 +566,7 @@ if inPlotEnrichmentMap:
     # Plot: Enrichment Map
     ngs.plotEnrichmentScores(scores=enrichmentScores, dataType='Enrichment',
                              title=inTitleEnrichmentMap, motifFilter=False,
-                             duplicateFigure=False, saveTag=datasetTag)
+                             duplicateFigure=False, saveTag=fixedSubSeq)
 
 
 if inPlotEnrichmentMotif:
@@ -589,7 +582,7 @@ if inPlotEnrichmentMotif:
                   bigLettersOnTop=inBigLettersOnTop, title=f'{inTitleMotif}',
                   yMax=yMax, yMin=yMin, showYTicks=False,
                   addHorizontalLines=inAddHorizontalLines, motifFilter=False,
-                  duplicateFigure=False, saveTag=datasetTag)
+                  duplicateFigure=False, saveTag=fixedSubSeq)
 
 
 if inPlotWeblogoMotif:
@@ -603,13 +596,13 @@ if inPlotWeblogoMotif:
             data=scaledRF, dataType='WebLogo', bigLettersOnTop=inBigLettersOnTop,
             title=inTitleMotif, yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
             addHorizontalLines=inAddHorizontalLines, motifFilter=False,
-            duplicateFigure=False, saveTag=datasetTag)
+            duplicateFigure=False, saveTag=fixedSubSeq)
     else:
         ngs.plotMotif(
             data=scaledRF, dataType='WebLogo', bigLettersOnTop=inBigLettersOnTop,
             title=inTitleMotif, yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
             addHorizontalLines=inAddHorizontalLines, motifFilter=False,
-            duplicateFigure=False, saveTag=datasetTag)
+            duplicateFigure=False, saveTag=fixedSubSeq)
 
 
 if inPlotWordCloud or inBinSubsPCA:
@@ -637,7 +630,7 @@ if inPlotWordCloud or inBinSubsPCA:
             ngs.plotWordCloud(clusterSubs=substratesFinal,
                               clusterIndex=None,
                               title=titleWordCloud,
-                              saveTag=fixedSubSeq)
+                              saveTag='Unfiltered')
 
 
 

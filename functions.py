@@ -4016,7 +4016,6 @@ class NGS:
     def plotWordCloud(self, clusterSubs, clusterIndex, title, saveTag):
         print('=============================== Plot: Word Cloud '
               '================================')
-        datasetType = 'Words'
         if clusterIndex is not None:
             print(f'Selecting PCA Population:{red} {clusterIndex + 1}{resetColor}')
         else:
@@ -4064,7 +4063,7 @@ class NGS:
         # Save the Figure
         if self.saveFigures:
             # Define: Save location
-            figLabel = (f'{self.enzymeName} - {datasetType} - '
+            figLabel = (f'{self.enzymeName} - Words - '
                         f'{saveTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.savePathFigs, figLabel)
 
