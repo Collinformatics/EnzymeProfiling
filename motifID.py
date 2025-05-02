@@ -28,7 +28,7 @@ inSetFigureTimer = False
 # Input 2: Computational Parameters
 inMinDeltaS = 0.5
 inRefixMotif = True
-inFixedResidue = ['L'] # Only use 1 AA
+inFixedResidue = ['Q'] # Only use 1 AA
 inFixedPosition = [6]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
