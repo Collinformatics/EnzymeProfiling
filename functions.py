@@ -133,7 +133,8 @@ class NGS:
     def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
                  excludeAA, excludePosition, minCounts, figEMSquares, xAxisLabels,
                  xAxisLabelsBinned, residueLabelType, printNumber, showNValues, findMotif,
-                 filePath, savePath, saveFigures, savePathFigs, setFigureTimer):
+                 filePath, filesInit, filesFinal, savePath, saveFigures, savePathFigs,
+                 setFigureTimer):
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
@@ -175,6 +176,8 @@ class NGS:
         self.delta = 0
         self.findMotif = findMotif
         self.filePath = filePath
+        self.filesInit = filesInit
+        self.filesFinal = filesFinal
         self.savePath = savePath
         self.saveFigures = saveFigures
         self.savePathFigs = savePathFigs
@@ -1020,6 +1023,37 @@ class NGS:
 
 
 
+    def updateSampleSize(self, NSubs, sortType, printCounts, fixedTag):
+        # Update the current sample size
+        if sortType == 'Initial Sort':
+            self.nSubsInitial = NSubs
+            self.nSubsTotal = self.nSubsInitial + self.nSubsFinal
+        elif 'Final' in sortType:
+            self.nSubsFinal = NSubs
+            self.nSubsTotal = self.nSubsInitial + self.nSubsFinal
+        else:
+            print('============================== Current Sample Size '
+                  '==============================')
+            if fixedTag is None:
+                print(f'Sort Type:{purple} {sortType}{resetColor}')
+            else:
+                print(f'Sort Type:{purple} {sortType} {fixedTag}{resetColor}')
+            print(f'{orange}ERROR: The sample sizes were not updated\n\n')
+            sys.exit()
+
+        if printCounts:
+            print('============================== Current Sample Size '
+                  '==============================')
+            if fixedTag is None:
+                print(f'Sort Type:{purple} {sortType}{resetColor}')
+            else:
+                print(f'Sort Type:{purple} {sortType} {fixedTag}{resetColor}')
+            print(f'Initial Sort:{silver} {self.nSubsInitial:,}{resetColor}\n'
+                  f'Final Sort:{silver} {self.nSubsFinal:,}{resetColor}\n'
+                  f'Total Substrates:{pink} {self.nSubsTotal:,}{resetColor}\n\n')
+
+
+
     def loadCounts(self, filePath, files, printLoadedData, fileType):
         totalSubstrateCount = 0
 
@@ -1148,38 +1182,7 @@ class NGS:
 
 
 
-    def updateSampleSize(self, NSubs, sortType, printCounts, fixedTag):
-        # Update the current sample size
-        if sortType == 'Initial Sort':
-            self.nSubsInitial = NSubs
-            self.nSubsTotal = self.nSubsInitial + self.nSubsFinal
-        elif 'Final' in sortType:
-            self.nSubsFinal = NSubs
-            self.nSubsTotal = self.nSubsInitial + self.nSubsFinal
-        else:
-            print('============================== Current Sample Size '
-                  '==============================')
-            if fixedTag is None:
-                print(f'Sort Type:{purple} {sortType}{resetColor}')
-            else:
-                print(f'Sort Type:{purple} {sortType} {fixedTag}{resetColor}')
-            print(f'{orange}ERROR: The sample sizes were not updated\n\n')
-            sys.exit()
-
-        if printCounts:
-            print('============================== Current Sample Size '
-                  '==============================')
-            if fixedTag is None:
-                print(f'Sort Type:{purple} {sortType}{resetColor}')
-            else:
-                print(f'Sort Type:{purple} {sortType} {fixedTag}{resetColor}')
-            print(f'Initial Sort:{silver} {self.nSubsInitial:,}{resetColor}\n'
-                  f'Final Sort:{silver} {self.nSubsFinal:,}{resetColor}\n'
-                  f'Total Substrates:{pink} {self.nSubsTotal:,}{resetColor}\n\n')
-
-
-
-    def loadSubstrates(self, filePath, fileNames, fileType, printLoadedData):
+    def loadSubstrates(self, fileNames, fileType):
         print('============================= Load: Substrate Files '
               '=============================')
         substrates = {}
@@ -1192,10 +1195,7 @@ class NGS:
 
         # Function to load each file
         def loadFile(fileName):
-            if '/' in filePath:
-                fileLocation = f'{filePath}/substrates_{fileName}'
-            else:
-                fileLocation = f'{filePath}\\substrates_{fileName}'
+            fileLocation = os.path.join(self.filePath, f'substrates_{fileName}')
             print(f'File path:\n     {greenDark}{fileLocation}{resetColor}\n')
 
             with open(fileLocation, 'rb') as openedFile:  # Open file
@@ -1230,20 +1230,70 @@ class NGS:
 
 
         # Print loaded data substrates
-        if printLoadedData:
-            print(f'Loaded Data:{purple} {fileType}{resetColor}')
-
-            iteration = 0
-            for substrate, count in substrates.items():
-                iteration += 1
-                print(f'     {silver}{substrate}{resetColor}, Counts: {red}{count:,}'
-                      f'{resetColor}')
-                if iteration >= self.printNumber:
-                    break
-            print(f'\nTotal substrates:{purple} {fileType}\n'
-                  f'     {red} {substrateTotal:,}{resetColor}\n\n')
+        print(f'Loaded Data:{purple} {fileType}{resetColor}')
+        iteration = 0
+        for substrate, count in substrates.items():
+            iteration += 1
+            print(f'     {silver}{substrate}{resetColor}, Counts: {red}{count:,}'
+                  f'{resetColor}')
+            if iteration >= self.printNumber:
+                break
+        print(f'\nTotal substrates:{purple} {fileType}\n'
+              f'     {red} {substrateTotal:,}{resetColor}\n\n')
 
         return substrates, substrateTotal
+
+
+
+
+    def loadUnfilteredSubs(self, loadInitial=False):
+        def loadSubstrates(fileNames, fileType, result):
+            subsLoaded, totalSubs = NGS.loadSubstrates(self, fileNames=fileNames,
+                                                       fileType=fileType)
+            result[fileType] = (subsLoaded, totalSubs)
+
+        # Initialize result dictionary
+        loadedResults = {}
+
+
+        if loadInitial:
+            # Create threads for loading initial and final substrates
+            threadInitial = threading.Thread(target=loadSubstrates,
+                                             args=(self.filesInit, 'Initial Sort',
+                                                   loadedResults))
+            threadFinal = threading.Thread(target=loadSubstrates,
+                                           args=(self.filesFinal, 'Final Sort',
+                                                 loadedResults))
+
+            # Start the threads
+            threadInitial.start()
+            threadFinal.start()
+
+            # Wait for the threads to complete
+            threadInitial.join()
+            threadFinal.join()
+
+            # Retrieve the loaded substrates
+            substratesInitial, totalSubsInitial = loadedResults['Initial Sort']
+            substratesFinal, totalSubsFinal = loadedResults['Final Sort']
+
+            return substratesInitial, totalSubsInitial, substratesFinal, totalSubsFinal
+        else:
+            # Create thread for the final substrates
+            threadFinal = threading.Thread(target=loadSubstrates,
+                                           args=(self.filesFinal, 'Final Sort',
+                                                 loadedResults))
+
+            # Start the thread
+            threadFinal.start()
+
+            # Wait for the thread to complete
+            threadFinal.join()
+
+            # Retrieve the loaded substrates
+            substratesFinal, totalSubsFinal = loadedResults['Final Sort']
+
+            return substratesFinal, totalSubsFinal
 
 
 

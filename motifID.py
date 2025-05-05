@@ -16,18 +16,18 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
-inSaveData = True
-inSaveFigures = True
-inSetFigureTimer = False
+inSaveData = False
+inSaveFigures = False
+inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.55
-inRefixMotif = False
+inMinDeltaS = 0.6
+inRefixMotif = True
 inFixedResidue = ['Q'] # Only use 1 AA
 inFixedPosition = [4]
 inExcludeResidues = False
@@ -48,7 +48,7 @@ inDuplicateFigure = True
 inShowSampleSize = True
 inPlotPositionalEntropy = True
 inPlotEnrichmentMap = True
-inPlotEnrichmentMotif = True
+inPlotEnrichmentMotif = False
 inPlotUnscaledScatter = True
 inPlotScaledScatter = True
 
@@ -152,44 +152,14 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=None, residueLabelType=inYLabelEnrichmentMap,
           printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          findMotif=True, savePath=inFilePath, saveFigures=inSaveFigures,
-          savePathFigs=inSavePathFigures, setFigureTimer=inSetFigureTimer)
+          findMotif=True, savePath=inFilePath, filePath=inFilePath,
+          filesInit=inFileNamesInitialSort, filesFinal=inFileNamesFinalSort,
+          saveFigures=inSaveFigures, savePathFigs=inSavePathFigures,
+          setFigureTimer=inSetFigureTimer)
 
 
 
 # ====================================== Load Data =======================================
-def loadSubstrates(filePath, fileNames, fileType, printLoadedData, result):
-    subsLoaded, totalSubs = ngs.loadSubstrates(filePath=filePath,
-                                               fileNames=fileNames,
-                                               fileType=fileType,
-                                               printLoadedData=printLoadedData)
-    result[fileType] = (subsLoaded, totalSubs)
-
-# Initialize result dictionary
-loadedResults = {}
-
-# Create threads for loading initial and final substrates
-# threadInitial = threading.Thread(target=loadSubstrates,
-#                                  args=(inFilePath, inFileNamesInitialSort,
-#                                        'Initial Sort', inPrintCounts, loadedResults))
-threadFinal = threading.Thread(target=loadSubstrates,
-                               args=(inFilePath, inFileNamesFinalSort, 'Final Sort',
-                                     inPrintCounts, loadedResults))
-
-# Start the threads
-# threadInitial.start()
-threadFinal.start()
-
-# Wait for the threads to complete
-# threadInitial.join()
-threadFinal.join()
-# time.sleep(0.5)
-
-# Retrieve the loaded substrates
-# substratesInitial, totalSubsInitial = loadedResults['Initial Sort']
-substratesFinal, totalSubsFinal = loadedResults['Final Sort']
-
-
 # Load Data: Initial sort
 filePathsInitial = []
 if '/' in inFilePath:
@@ -227,12 +197,67 @@ else:
 # Update: Current Sample Size
 ngs.updateSampleSize(NSubs=totalSubsInitial, sortType='Initial Sort',
                      printCounts=inPrintSampleSize, fixedTag=None)
-ngs.updateSampleSize(NSubs=totalSubsFinal, sortType='Final Sort',
-                     printCounts=inPrintSampleSize, fixedTag=None)
+
 
 
 
 # =================================== Define Functions ===================================
+def loadUnfilteredSubs(loadInitial=False):
+    # Initialize result dictionary
+    loadedResults = {}
+
+    def loadSubstrates(filePath, fileNames, fileType, printLoadedData, result):
+        subsLoaded, totalSubs = ngs.loadSubstrates(filePath=filePath,
+                                                   fileNames=fileNames,
+                                                   fileType=fileType,
+                                                   printLoadedData=printLoadedData)
+        result[fileType] = (subsLoaded, totalSubs)
+
+
+    if loadInitial:
+        # Create threads for loading initial and final substrates
+        threadInitial = threading.Thread(target=loadSubstrates,
+                                         args=(inFilePath, inFileNamesInitialSort,
+                                               'Initial Sort', inPrintCounts,
+                                               loadedResults))
+        threadFinal = threading.Thread(target=loadSubstrates,
+                                       args=(inFilePath, inFileNamesFinalSort,
+                                             'Final Sort', inPrintCounts,
+                                             loadedResults))
+
+        # Start the threads
+        threadInitial.start()
+        threadFinal.start()
+
+        # Wait for the threads to complete
+        threadInitial.join()
+        threadFinal.join()
+
+        # Retrieve the loaded substrates
+        substratesInitial, totalSubsInitial = loadedResults['Initial Sort']
+        substratesFinal, totalSubsFinal = loadedResults['Final Sort']
+
+        return substratesInitial, totalSubsInitial, substratesFinal, totalSubsFinal
+    else:
+        # Create thread for the final substrates
+        threadFinal = threading.Thread(target=loadSubstrates,
+                                       args=(inFilePath, inFileNamesFinalSort,
+                                             'Final Sort', inPrintCounts,
+                                             loadedResults))
+
+        # Start the thread
+        threadFinal.start()
+
+        # Wait for the thread to complete
+        threadFinal.join()
+
+        # Retrieve the loaded substrates
+        substratesFinal, totalSubsFinal = loadedResults['Final Sort']
+
+        return substratesFinal, totalSubsFinal
+
+
+
 def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePosition,
                  sortType, fixedTag, initialFix):
     print('==================================== Fix Substrates '
@@ -874,18 +899,10 @@ fixedSubSeq = ngs.genDatasetTag()
 inDatasetTag = f'Motif {fixedSubSeq}'
 inFigureTitle = f'{inEnzymeName}: {inDatasetTag}'
 
-# Define: File path
-filePathFixedMotifSubs = os.path.join(
-    inFilePath, f'fixedMotif - {inEnzymeName} - {fixedSubSeq} - '
-                f'FinalSort - MinCounts {inMinimumSubstrateCount}')
-filePathFixedMotifCounts = os.path.join(
-    inFilePath, f'fixedMotifCounts - {inEnzymeName} - {fixedSubSeq} - '
-                f'FinalSort - MinCounts {inMinimumSubstrateCount}')
-filePathFixedMotifReleasedCounts = os.path.join(
-    inFilePath, f'fixedMotifCountsRel - {inEnzymeName} - {fixedSubSeq} - '
-                f'FinalSort - MinCounts {inMinimumSubstrateCount}')
-
-
+# Define: File paths
+(filePathFixedMotifSubs,
+ filePathFixedMotifCounts,
+ filePathFixedMotifReleasedCounts) = ngs.filePathMotif(datasetTag=fixedSubSeq)
 
 # Load the fixed frame if the file can be found
 if (os.path.exists(filePathFixedMotifSubs) and
@@ -961,6 +978,9 @@ if (os.path.exists(filePathFixedMotifSubs) and
             addHorizontalLines=inAddHorizontalLines, motifFilter=True,
             duplicateFigure=inDuplicateFigure, saveTag=inDatasetTag)
 else:
+    # Load: Unfiltered substates
+    substratesFinal, totalSubsFinal, = ngs.loadUnfilteredSubs()
+
     # Fix the substrate frame
     (fixedMotifFinalSubs,
      countsFixedMotif,
