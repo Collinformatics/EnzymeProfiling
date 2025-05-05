@@ -22,8 +22,6 @@ import sys
 import time
 import threading
 import warnings
-
-from setuptools.command.rotate import rotate
 from wordcloud import WordCloud
 
 
@@ -133,8 +131,7 @@ class NGS:
     def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
                  excludeAA, excludePosition, minCounts, figEMSquares, xAxisLabels,
                  xAxisLabelsBinned, residueLabelType, printNumber, showNValues, findMotif,
-                 filePath, filesInit, filesFinal, savePath, saveFigures, savePathFigs,
-                 setFigureTimer):
+                 filePath, filesInit, filesFinal, saveFigures, setFigureTimer):
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
@@ -172,15 +169,20 @@ class NGS:
         self.showSampleSize = showNValues
         self.nSubsInitial = 0
         self.nSubsFinal = 0
-        self.nSubsTotal = 0
         self.delta = 0
         self.findMotif = findMotif
-        self.filePath = filePath
+
+
+
         self.filesInit = filesInit
         self.filesFinal = filesFinal
-        self.savePath = savePath
         self.saveFigures = saveFigures
-        self.savePathFigs = savePathFigs
+        self.pathFolder = filePath
+        self.pathSaveData = os.path.join(self.pathFolder, 'Data')
+        self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
+
+
+
         self.setFigureTimer = setFigureTimer
         self.figureTimerDuration = 0.5
         self.saveFigureIteration = 0
@@ -193,12 +195,17 @@ class NGS:
         np.seterr(divide='ignore')
 
         # Verify directory paths
-        if self.savePath is not None:
-            if os.path.exists(self.savePath):
-                os.makedirs(self.savePath, exist_ok=True)
-        if self.savePathFigs is not None:
-            if os.path.exists(self.savePathFigs):
-                os.makedirs(self.savePathFigs, exist_ok=True)
+        if not os.path.exists(self.pathFolder):
+            print(f'{orange}ERROR: Folder not found\n'
+                  f'Check input: "{cyan}inPathFolder{orange}"\n'
+                  f'     inPathFolder = {self.pathFolder}')
+            sys.exit()
+        if self.pathSaveData is not None:
+            if os.path.exists(self.pathSaveData):
+                os.makedirs(self.pathSaveData, exist_ok=True)
+        if self.pathSaveFigs is not None:
+            if os.path.exists(self.pathSaveFigs):
+                os.makedirs(self.pathSaveFigs, exist_ok=True)
 
 
 
@@ -950,7 +957,6 @@ class NGS:
                 sys.exit()
 
 
-        self.nSubsTotal = totalSubs
         print(f'Total substrates: {red}{totalSubs:,}{resetColor}\n'
               f'Total Unique Substrates:{red} {len(substrates):,}{resetColor}\n\n')
 
@@ -1014,7 +1020,6 @@ class NGS:
                   f'{silver}{countedDataPrint}{resetColor}\n\n')
 
 
-        self.nSubsTotal = totalSubs
         columnSums = columnSums.apply(lambda col: col.map(includeCommas))
         print(f'{columnSums}')
         print(f'\nTotal number of substrates: {red}{totalSubs:,}{resetColor}\n\n')
@@ -1027,10 +1032,8 @@ class NGS:
         # Update the current sample size
         if sortType == 'Initial Sort':
             self.nSubsInitial = NSubs
-            self.nSubsTotal = self.nSubsInitial + self.nSubsFinal
         elif 'Final' in sortType:
             self.nSubsFinal = NSubs
-            self.nSubsTotal = self.nSubsInitial + self.nSubsFinal
         else:
             print('============================== Current Sample Size '
                   '==============================')
@@ -1048,15 +1051,120 @@ class NGS:
                 print(f'Sort Type:{purple} {sortType}{resetColor}')
             else:
                 print(f'Sort Type:{purple} {sortType} {fixedTag}{resetColor}')
+
+            totalSubs = self.nSubsInitial + self.nSubsFinal
             print(f'Initial Sort:{silver} {self.nSubsInitial:,}{resetColor}\n'
                   f'Final Sort:{silver} {self.nSubsFinal:,}{resetColor}\n'
-                  f'Total Substrates:{pink} {self.nSubsTotal:,}{resetColor}\n\n')
+                  f'Total Substrates:{pink} {totalSubs:,}{resetColor}\n\n')
 
 
 
-    def loadCounts(self, filePath, files, printLoadedData, fileType):
+    def loadCounts(self, fileType, filter, datasetTag=None):
         totalSubstrateCount = 0
 
+        print(f'Loading Counts: {fileType}\n'
+              f'Filter: {filter}\n')
+
+        # Define: File paths
+        files = []
+        if filter:
+            print(f'filter data: {datasetTag}')
+            path = os.path.join(
+                self.pathFolder, f'counts - {self.enzymeName} - {datasetTag} - '
+                                    f'FinalSort - MinCounts_{self.minSubCount}')
+            print(f'     {greenDark}{path}{resetColor}')
+            sys.exit()
+        else:
+            if 'initial' in fileType.lower():
+                fileNames = self.filesInit
+            else:
+                fileNames = self.filesFinal
+
+            for fileName in fileNames:
+                files.append(os.path.join(self.pathSaveData, f'counts_{fileName}'))
+        print(f'Loading Files:')
+        for filePath in files:
+            # Verify if the file exists at its specified path
+            if not os.path.exists(filePath):
+                print(f'{orange}ERROR: File not found\n'
+                      f'     {filePath}')
+                sys.exit()
+            print(f'     {greenDark}{filePath}{resetColor}')
+        print('')
+
+
+        #  Load: AA counts
+        firstFile = True
+        for index, filePath in enumerate(files):
+            fileName = filePath.replace(self.pathSaveData, '')
+            if firstFile:
+                firstFile = False
+                # Access the data
+                countedData = pd.read_csv(filePath, index_col=0)
+                countedData = countedData.astype(int) # Convert datapoints to integers
+
+                # Format values to have commas
+                formattedCounts = countedData.to_string(
+                    formatters={column: '{:,.0f}'.format for column in
+                                countedData.select_dtypes(
+                                    include='number').columns})
+
+                substrateCounts = sum(countedData.iloc[:, 0])
+                totalSubstrateCount += substrateCounts
+                print(f'\nCounts: {greenLightB}{fileName}{resetColor}\n'
+                      f'{formattedCounts}\n'
+                      f'Substrate Count: {red}{substrateCounts:,}{resetColor}\n')
+            else:
+                # Access the data
+                data = pd.read_csv(filePath, index_col=0)
+                data = data.astype(int)  # Convert datapoints to integers
+
+                # Format values to have commas
+                formattedCounts = data.to_string(
+                    formatters={column: '{:,.0f}'.format for column in
+                                data.select_dtypes(include='number').columns})
+
+                substrateCounts = sum(data.iloc[:, 0])
+                totalSubstrateCount += substrateCounts
+                print(f'\nCounts: {greenLightB}{fileName}{resetColor}\n'
+                      f'{formattedCounts}\n'
+                      f'Substrate Count: {red}'
+                      f'{substrateCounts:,}{resetColor}\n\n')
+
+                countedData += data
+        print(f'Number of substrates in{purple} {self.enzymeName} '
+              f'{purple}{fileType}{resetColor}: '
+              f'{red}{totalSubstrateCount:,}{resetColor}\n')
+
+        # Sum each column
+        columnSums = pd.DataFrame(np.sum(countedData, axis=0), columns=['Total Counts'])
+        columnSumsFormat = columnSums.apply(lambda x: x.map('{:,}'.format))
+        print(f'{columnSumsFormat}')
+
+
+        # Sanity Check: Do the sums of each column match the total number of substrates?
+        for indexColumn, columnSum in enumerate(columnSums.iloc[:, 0]):
+            if columnSum != totalSubstrateCount:
+                columnSums = columnSums.apply(lambda x: x.map('{:,}'.format))
+                print(f'{orange}ERROR: The total number of substrates '
+                      f'({cyan}{totalSubstrateCount:,}{orange}) =/= '
+                      f'the sum of column {pink}{columnSums.index[indexColumn]}{orange} '
+                      f'({cyan}{columnSum:,}{orange})')
+                sys.exit()
+        print('\n')
+
+        sys.exit()
+
+        # Record the number of substrates in this dataset
+        if fileType == 'Initial Sort':
+            self.nSubsInitial = totalSubstrateCount
+        else:
+            self.nSubsFinal = totalSubstrateCount
+
+        return countedData, totalSubstrateCount
+
+
+    def old(self):
         if files is None:
             print('=========================== Load: Counted Fixed Files '
                   '===========================')
@@ -1065,24 +1173,22 @@ class NGS:
                 print(f'File path:\n     {greenDark}{filePath}{resetColor}\n')
 
                 # Load counted fixed counted substrate data
-                fixedCounts = pd.read_csv(filePath, index_col=0)
+                countedData = pd.read_csv(filePath, index_col=0)
                 if not printLoadedData:
                     print(f'\nCounts: {red}{self.fixedSubSeq}{resetColor}\n'
-                          f'{silver}{fixedCounts}{resetColor}')
+                          f'{silver}{countedData}{resetColor}')
 
-                totalSubstrateCount = sum(fixedCounts.iloc[:, 0])
+                totalSubstrateCount = sum(countedData.iloc[:, 0])
                 print(f'\nTotal substrates with {red}{self.fixedSubSeq}{resetColor}: '
                       f'{red}{totalSubstrateCount:,}{resetColor}\n\n')
 
             # Record the number of substrates in this dataset
             if fileType == 'Initial Sort':
                 self.nSubsInitial = totalSubstrateCount
-                self.nSubsTotal += totalSubstrateCount
             else:
                 self.nSubsFinal = totalSubstrateCount
-                self.nSubsTotal += totalSubstrateCount
 
-            return fixedCounts, totalSubstrateCount
+            return countedData, totalSubstrateCount
         else:
             print('============================== Load: Counted Files '
                   '==============================')
@@ -1120,13 +1226,13 @@ class NGS:
                     data = pd.read_csv(path, index_col=0)
                     data = data.astype(int) # Convert datapoints to integers
 
-                    if printLoadedData:
-                        # Format values to have commas
-                        formattedCounts = data.to_string(
-                            formatters={column: '{:,.0f}'.format for column in
-                                        data.select_dtypes(include='number').columns})
-                        print(f'\nCounts: {greenLightB}{files[indexPath]}{resetColor}\n'
-                              f'{formattedCounts}\n')
+
+                    # Format values to have commas
+                    formattedCounts = data.to_string(
+                        formatters={column: '{:,.0f}'.format for column in
+                                    data.select_dtypes(include='number').columns})
+                    print(f'\nCounts: {greenLightB}{files[indexPath]}{resetColor}\n'
+                          f'{formattedCounts}\n')
 
                     substrateCounts = sum(data.iloc[:, 0])
                     totalSubstrateCount += substrateCounts
@@ -1140,17 +1246,16 @@ class NGS:
                           f'{totalSubstrateCount:,}{resetColor}\n\n')
             print(f'{orange}All {purple}{fileType}{orange} '
                   f'files have been loaded and counted{resetColor}\n')
-            if printLoadedData:
-                print(f'Total counts for:')
-                for file in files:
-                    print(f'     {greenLightB}{file}{resetColor}')
-                # Format values to have commas
-                countedDataFormat = countedData.apply(
-                    lambda col: col.map(lambda x: f'{x:,}'))
-                print(f'{countedDataFormat}\n')
+            print(f'Total counts for:')
+            for file in files:
+                print(f'     {greenLightB}{file}{resetColor}')
+            # Format values to have commas
+            countedDataFormat = countedData.apply(
+                lambda col: col.map(lambda x: f'{x:,}'))
+            print(f'{countedDataFormat}\n')
 
             # Sanity Check: Do the sums of each column match the total number of substrates?
-            columnSums = pd.DataFrame(np.sum(countedData, axis=0), columns=['Column Sums'])
+            columnSums = pd.DataFrame(np.sum(countedData, axis=0), columns=['Total Counts'])
             for indexColumn, columnSum in enumerate(columnSums.iloc[:, 0]):
                 if columnSum != totalSubstrateCount:
                     columnSums = columnSums.apply(lambda x: x.map('{:,}'.format))
@@ -1173,10 +1278,8 @@ class NGS:
             # Record the number of substrates in this dataset
             if fileType == 'Initial Sort':
                 self.nSubsInitial = totalSubstrateCount
-                self.nSubsTotal += totalSubstrateCount
             else:
                 self.nSubsFinal = totalSubstrateCount
-                self.nSubsTotal += totalSubstrateCount
 
             return countedData, totalSubstrateCount
 
@@ -1195,7 +1298,7 @@ class NGS:
 
         # Function to load each file
         def loadFile(fileName):
-            fileLocation = os.path.join(self.filePath, f'substrates_{fileName}')
+            fileLocation = os.path.join(self.pathFolder, f'substrates_{fileName}')
             print(f'File path:\n     {greenDark}{fileLocation}{resetColor}\n')
 
             with open(fileLocation, 'rb') as openedFile:  # Open file
@@ -1247,7 +1350,7 @@ class NGS:
 
 
     def loadUnfilteredSubs(self, loadInitial=False):
-        def loadSubstrates(fileNames, fileType, result):
+        def loadSubsThread(fileNames, fileType, result):
             subsLoaded, totalSubs = NGS.loadSubstrates(self, fileNames=fileNames,
                                                        fileType=fileType)
             result[fileType] = (subsLoaded, totalSubs)
@@ -1258,10 +1361,10 @@ class NGS:
 
         if loadInitial:
             # Create threads for loading initial and final substrates
-            threadInitial = threading.Thread(target=loadSubstrates,
+            threadInitial = threading.Thread(target=loadSubsThread,
                                              args=(self.filesInit, 'Initial Sort',
                                                    loadedResults))
-            threadFinal = threading.Thread(target=loadSubstrates,
+            threadFinal = threading.Thread(target=loadSubsThread,
                                            args=(self.filesFinal, 'Final Sort',
                                                  loadedResults))
 
@@ -1280,7 +1383,7 @@ class NGS:
             return substratesInitial, totalSubsInitial, substratesFinal, totalSubsFinal
         else:
             # Create thread for the final substrates
-            threadFinal = threading.Thread(target=loadSubstrates,
+            threadFinal = threading.Thread(target=loadSubsThread,
                                            args=(self.filesFinal, 'Final Sort',
                                                  loadedResults))
 
@@ -1372,7 +1475,7 @@ class NGS:
         # Print the data
         print(f'{silver}Combined Counts{resetColor}:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n'
               f'{formattedCounts}\n')
-        print('Column Sums:')
+        print('Total Counts:')
         for index, position in enumerate(substrateFrame):
             print(f'     {position}: {red}{fixedFrameColumnSums[index]:,}{resetColor}')
         print('\n')
@@ -1385,13 +1488,13 @@ class NGS:
     def filePathMotif(self, datasetTag):
         # Define: File path
         filePathFixedMotifSubs = os.path.join(
-            self.filePath, f'fixedMotifSubs - {self.enzymeName} - {datasetTag} - '
+            self.pathFolder, f'fixedMotifSubs - {self.enzymeName} - {datasetTag} - '
                         f'FinalSort - MinCounts {self.minSubCount}')
         filePathFixedMotifCounts = os.path.join(
-            self.filePath, f'fixedMotifCounts - {self.enzymeName} - {datasetTag} - '
+            self.pathFolder, f'fixedMotifCounts - {self.enzymeName} - {datasetTag} - '
                         f'FinalSort - MinCounts {self.minSubCount}')
         filePathFixedMotifReleasedCounts = os.path.join(
-            self.filePath, f'fixedMotifCountsRel - {self.enzymeName} - {datasetTag} - '
+            self.pathFolder, f'fixedMotifCountsRel - {self.enzymeName} - {datasetTag} - '
                         f'FinalSort - MinCounts {self.minSubCount}')
         paths = [filePathFixedMotifSubs, filePathFixedMotifCounts,
                  filePathFixedMotifReleasedCounts]
@@ -3013,7 +3116,7 @@ class NGS:
             # Define: Save location
             figLabel = (f'{self.enzymeName} - PCA - {fixedTag} - '
                         f'{N} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
@@ -3327,7 +3430,7 @@ class NGS:
             else:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
                             f'Unfiltered - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
@@ -3477,7 +3580,7 @@ class NGS:
                         figLabel = (f'AA Distribution - {self.enzymeName} - {fixedTag} - '
                                     f'{sortType} - Y Max {yMax} - {codonType} - '
                                     f'MinCounts {self.minSubCount}.png')
-                saveLocation = os.path.join(self.savePathFigs, figLabel)
+                saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
                 # Save figure
                 if os.path.exists(saveLocation):
@@ -3590,7 +3693,7 @@ class NGS:
                     figLabel = (f'AA Distribution - {position} - {self.enzymeName} - '
                                 f'{sortType} - {datasetTag} - '
                                 f'MinCounts {self.minSubCount}.png')
-                saveLocation = os.path.join(self.savePathFigs, figLabel)
+                saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
                 # Save figure
                 if os.path.exists(saveLocation):
@@ -3719,7 +3822,7 @@ class NGS:
             else:
                 figLabel = (f'{self.enzymeName} - {datasetType} - '
                             f'{saveTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
@@ -3740,7 +3843,7 @@ class NGS:
                             figLabel = (f'{self.enzymeName} - {datasetType} '
                                         f'{copyNumber} - {saveTag} - '
                                         f'MinCounts {self.minSubCount}.png')
-                            saveLocation = os.path.join(self.savePathFigs, figLabel)
+                            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
                             if not os.path.exists(saveLocation):
                                 print(f'Saving figure at path:\n'
@@ -3921,7 +4024,7 @@ class NGS:
             else:
                 figLabel = (f'{self.enzymeName} - {datasetType} - '
                             f'{saveTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
@@ -3941,7 +4044,7 @@ class NGS:
                             # Define: Save location
                             figLabel = (f'{self.enzymeName} - {figLabel} {copyNumber} - '
                                         f'{saveTag} - MinCounts {self.minSubCount}.png')
-                            saveLocation = os.path.join(self.savePathFigs, figLabel)
+                            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
     
                             if not os.path.exists(saveLocation):
                                 print(f'Saving figure at path:\n'
@@ -4060,7 +4163,7 @@ class NGS:
             # Define: Save location
             figLabel = (f'EM - {self.enzymeName} - {dataType} - {datasetTag} - '
                         f'MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
@@ -4126,7 +4229,7 @@ class NGS:
             # Define: Save location
             figLabel = (f'{self.enzymeName} - Words - '
                         f'{saveTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
@@ -4306,7 +4409,7 @@ class NGS:
             # Define: Save location
             figLabel = (f'{self.enzymeName} - Binned Substrates - {dataType} - '
                         f'{datasetTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
@@ -4526,7 +4629,7 @@ class NGS:
         if self.saveFigures:
             # Define: Save location
             figLabel += '.png'
-            saveLocation = os.path.join(self.savePathFigs, figLabel)
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):

@@ -17,10 +17,7 @@ import time
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/{inEnzymeName}'
-inFilePath = os.path.join(inBasePath, 'Extracted Data')
-inSavePathFigures = os.path.join(inBasePath, 'Figures')
-inFileNamesInitial, inFileNamesFinal, inAAPositions = filePaths(enzyme=inEnzymeName)
+inPathFolder = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inSaveFigures = True
 
 # Input 2: Computational Parameters
@@ -51,7 +48,6 @@ inPlotPositionalProbDist = False # For understanding shannon entropy
 inPrintLoadedSubs = True
 inPrintBinnedSubstrates = True
 inPrintSampleSize = True
-inPrintCounts = True
 inPrintRF = True
 inPrintES = True
 inPrintEntropy = True
@@ -61,9 +57,6 @@ inPrintNumber = 10
 # Input 5: Motif Extraction
 inIndexNTerminus = inFixedPosition[0] - 3 # Define starting bounds for the motif
 inMotifLength = 5 # Define the length of your motif
-inFramePositions = [inIndexNTerminus - 1,
-                    inIndexNTerminus + inMotifLength - 1]
-inAAPositionsMotif = inAAPositions[inFramePositions[0]:inFramePositions[-1]]
 
 # Input 6: PCA
 inBinSubsPCA = True
@@ -119,22 +112,27 @@ orange = '\033[38;2;247;151;31m'
 red = '\033[91m'
 resetColor = '\033[0m'
 
+# Load: Dataset labels
+fileNamesInitial, fileNamesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
+inFramePositions = [inIndexNTerminus - 1, inIndexNTerminus + inMotifLength - 1]
+labelAAPosMotif = labelAAPos[inFramePositions[0]:inFramePositions[-1]]
+
 
 
 # =================================== Initialize Class ===================================
-ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
+ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(labelAAPos),
           fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
-          xAxisLabelsBinned=inAAPositionsMotif, residueLabelType=inYLabelEnrichmentMap,
+          figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
+          xAxisLabelsBinned=labelAAPosMotif, residueLabelType=inYLabelEnrichmentMap,
           printNumber=inPrintNumber, showNValues=inPlotWithSampleSize,
-          findMotif=False, filePath=inFilePath, saveFigures=inSaveFigures,
-          savePath=inFilePath, savePathFigs=inSavePathFigures, setFigureTimer=None)
+          findMotif=False, filePath=inPathFolder, filesInit=fileNamesInitial,
+          filesFinal=fileNamesFinal,saveFigures=inSaveFigures, setFigureTimer=None)
 
 
 
-# ====================================== Load Data =======================================
+# =================================== Define Functions ===================================
 def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     print('==================================== Plot PC Clusters '
           '===================================')
@@ -165,13 +163,11 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
     if countFullSubstrate:
         countsFinal, countsFinalTotal = ngs.countResiduesBinned(
             substrates=clusterSubs,
-            positions=inAAPositionsMotif,
-            printCounts=inPrintCounts)
+            positions=labelAAPosMotif)
     else:
         countsFinal, countsFinalTotal = ngs.countResiduesBinned(
             substrates=clusterSubs,
-            positions=inAAPositionsMotif,
-            printCounts=inPrintCounts)
+            positions=labelAAPosMotif)
     ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
                          printCounts=inPrintSampleSize, fixedTag=fixedSubSeq)
 
@@ -300,28 +296,32 @@ def binSubstrates(substrates, datasetTag, index):
 
 
 
-# ================================== Evaluate The Data ===================================
+# ====================================== Load Data =======================================
 if inFixResidues:
     fixedSubSeq = ngs.genDatasetTag()
 else:
     fixedSubSeq = 'Unfiltered'
 
-if inFixResidues and inEvaluateSubstrateEnrichment:
-    fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
-        substrates=substratesInitial, fixedString=fixedSubSeq,
-        printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
 
 
+ngs.loadCounts(fileType='Final Sort', filter=True, datasetTag=fixedSubSeq)
 
-# ====================================== Load Data =======================================
+
+sys.exit()
+
+ngs.loadCounts(fileType='Final Sort', filter=False)
+
+ngs.loadCounts(fileType='Initial Sort', filter=False)
+
+
 loadUnfixedSubstrates = True
 if inFixResidues:
     filePathFixedCountsFinal = os.path.join(
-        inFilePath, f'counts - {inEnzymeName} - {fixedSubSeq} - '
-                    f'FinalSort - MinCounts_{inMinimumSubstrateCount}')
+        ngs.pathFolder, f'counts - {inEnzymeName} - {fixedSubSeq} - '
+                        f'FinalSort - MinCounts_{inMinimumSubstrateCount}')
     filePathFixedSubsFinal = os.path.join(
-        inFilePath, f'fixedSubs - {inEnzymeName} - {fixedSubSeq} - '
-                    f'FinalSort - MinCounts_{inMinimumSubstrateCount}')
+        ngs.pathFolder, f'fixedSubs - {inEnzymeName} - {fixedSubSeq} - '
+                        f'FinalSort - MinCounts_{inMinimumSubstrateCount}')
 
 
     # Verify that the file exists
@@ -331,8 +331,8 @@ if inFixResidues:
 
         # # Load the data: Initial sort
         filePathsInitial = []
-        for fileName in inFileNamesInitial:
-            filePathsInitial.append(os.path.join(inFilePath, f'counts_{fileName}'))
+        for fileName in fileNamesInitial:
+            filePathsInitial.append(os.path.join(ngs.pathDirectory, f'counts_{fileName}'))
 
 
         # Verify that all files exist
@@ -354,8 +354,8 @@ if inFixResidues:
             sys.exit()
         else:
             countsInitial, countsInitialTotal = ngs.loadCounts(
-                filePath=filePathsInitial, files=inFileNamesInitial,
-                printLoadedData=inPrintCounts, fileType='Initial Sort')
+                filePath=filePathsInitial, files=fileNamesInitial,
+                fileType='Initial Sort')
             # Calculate RF
             initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
                                         fileType='Initial Sort', printRF=inPrintRF)
@@ -396,48 +396,13 @@ if inFixResidues:
 
 
 if loadUnfixedSubstrates:
-    def loadSubstrates(filePath, fileNames, fileType, printLoadedData, result):
-        subsLoaded, totalSubs = ngs.loadSubstrates(filePath=filePath,
-                                                   fileNames=fileNames,
-                                                   fileType=fileType,
-                                                   printLoadedData=printLoadedData)
-        result[fileType] = (subsLoaded, totalSubs)
-
-
-    # Initialize result dictionary
-    loadedResults = {}
-
-    # Create threads for loading initial and final substrates
-    threadInitial = threading.Thread(target=loadSubstrates,
-                                     args=(inFilePath, inFileNamesInitial,
-                                           'Initial Sort', inPrintCounts, loadedResults))
-    threadFinal = threading.Thread(target=loadSubstrates,
-                                   args=(inFilePath, inFileNamesFinal,
-                                         'Final Sort', inPrintCounts, loadedResults))
-
-    # Start the threads
-    threadInitial.start()
-    threadFinal.start()
-
-    # Wait for the threads to complete
-    threadInitial.join()
-    threadFinal.join()
-    time.sleep(0.5)
-
-    # Retrieve the loaded substrates
-    substratesInitial, totalSubsInitial = loadedResults['Initial Sort']
-    substratesFinal, totalSubsFinal = loadedResults['Final Sort']
+    (substratesInitial, totalSubsInitial,
+     substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs(loadInitial=True)
 
     # Load the data: Initial sort
     filePathsInitial = []
-    for fileName in inFileNamesInitial:
-        filePathsInitial.append(os.path.join(inFilePath, f'counts_{fileName}'))
-    # if '/' in inFilePath:
-    #     for fileName in inFileNamesInitial: # _MinCounts_{inMinimumSubstrateCount}
-    #         filePathsInitial.append(f'{inFilePath}/counts_{fileName}')
-    # else:
-    #     for fileName in inFileNamesInitial:
-    #         filePathsInitial.append(f'{inFilePath}\\counts_{fileName}')
+    for fileName in fileNamesInitial:
+        filePathsInitial.append(os.path.join(ngs.pathDirectory, f'counts_{fileName}'))
 
     # Verify that all files exist
     missingFile = False
@@ -457,8 +422,7 @@ if loadUnfixedSubstrates:
         sys.exit()
     else:
         countsInitial, countsInitialTotal = ngs.loadCounts(filePath=filePathsInitial,
-                                                           files=inFileNamesInitial,
-                                                           printLoadedData=inPrintCounts,
+                                                           files=fileNamesInitial,
                                                            fileType='Initial Sort')
         # Calculate RF
         initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
@@ -466,12 +430,8 @@ if loadUnfixedSubstrates:
 
     # Load the data: final sort
     filePathsFinal = []
-    if '/' in inFilePath:
-        for fileName in inFileNamesFinal:
-            filePathsFinal.append(f'{inFilePath}/counts_{fileName}')
-    else:
-        for fileName in inFileNamesFinal:
-            filePathsFinal.append(f'{inFilePath}\\counts_{fileName}')
+    for fileName in fileNamesFinal:
+        filePathsFinal.append(os.path.join(ngs.pathDirectory, f'counts_{fileName}'))
 
     # Verify that all files exist
     missingFile = False
@@ -490,8 +450,7 @@ if loadUnfixedSubstrates:
         sys.exit()
     else:
         countsFinal, countsFinalTotal = ngs.loadCounts(filePath=filePathsFinal,
-                                                       files=inFileNamesFinal,
-                                                       printLoadedData=inPrintCounts,
+                                                       files=fileNamesFinal,
                                                        fileType='Final Sort')
         # Calculate RF
         finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
@@ -511,8 +470,7 @@ if loadUnfixedSubstrates:
 
         # Count fixed substrates
         countsFinal, _ = ngs.countResidues(substrates=substratesFinal,
-                                           datasetType='Final Sort',
-                                           printCounts=inPrintCounts)
+                                           datasetType='Final Sort')
 
 
 # Calculate: Average initial RF
@@ -546,6 +504,15 @@ ngs.updateSampleSize(NSubs=countsInitialTotal, sortType='Initial Sort',
                      printCounts=inPrintSampleSize, fixedTag=None)
 ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
                      printCounts=inPrintSampleSize, fixedTag=fixedSubSeq)
+
+
+
+# ================================== Evaluate The Data ===================================
+if inFixResidues and inEvaluateSubstrateEnrichment:
+    fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
+        substrates=substratesInitial, fixedString=fixedSubSeq,
+        printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
+
 
 
 
@@ -607,8 +574,8 @@ if inPlotWeblogoMotif:
 if inPlotWordCloud or inBinSubsPCA:
     if inFixResidues:
         fixedSubSeqMotif = (f'{fixedSubSeq} - '
-                             f'Motif {inAAPositionsMotif[0]}-'
-                             f'{inAAPositionsMotif[-1]}')
+                             f'Motif {labelAAPosMotif[0]}-'
+                             f'{labelAAPosMotif[-1]}')
 
         # Bin substrates
         finalSubsMotif, totalSubsFinalMotif = binSubstrates(substrates=substratesFinal,
@@ -665,7 +632,7 @@ if inEvaluateOS:
             combinations *= numberAA
 
             # Define substrate position
-            positionSub = inAAPositions[index-1]
+            positionSub = labelAAPos[index-1]
             print(f'Position:{purple} {positionSub}{resetColor}')
 
             for AA, datapoint in data.items():
@@ -758,7 +725,7 @@ if inPlotPCA:
         tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=finalSubsMotif,
                                                    collectionNumber=int(inTotalSubsPCA),
                                                    useSubCounts=inIncludeSubCountsESM,
-                                                   subPositions=inAAPositionsMotif,
+                                                   subPositions=labelAAPosMotif,
                                                    datasetTag=fixedSubSeqMotif)
 
         # Cluster substrates
@@ -771,7 +738,7 @@ if inPlotPCA:
         tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=substratesFinal,
                                                    collectionNumber=int(inTotalSubsPCA),
                                                    useSubCounts=inIncludeSubCountsESM,
-                                                   subPositions=inAAPositions,
+                                                   subPositions=labelAAPos,
                                                    datasetTag=fixedSubSeq)
 
         # Cluster substrates
@@ -813,5 +780,4 @@ if inPlotPositionalProbDist:
 
 if inPlotPosProb:
     ngs.compairRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)
-
     ngs.boxPlotRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)
