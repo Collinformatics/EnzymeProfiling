@@ -18,13 +18,13 @@ from functions import NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location
-inFileName = ['Src-F_S2_L001_R1_001', 'Src-F_S2_L001_R2_001'] # Define file name(s)
+inFileName = ['Fyn-I_S6_L001_R1_001', 'Fyn-I_S6_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
 inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Fastq') # Define the fastq folder pathway
 inFileType = 'fastq' # Define the file type
 inSavePath = os.path.join(inBasePath, 'Extracted Data')
-inSaveFileName = 'Src-F_S2_L001'
+inSaveFileName = 'Fyn-I_S6_L001'
 inAlertPath = '/path/Bells.mp3'
 
 # Input 2: Substrate Parameters
@@ -56,8 +56,8 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           excludeAA=None, excludePosition=None, minCounts=0, figEMSquares=False,
           xAxisLabels=inAAPositions, xAxisLabelsBinned=None,
           residueLabelType=inCountMapYLabel, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, findMotif=False, saveFigures=False,
-          savePath=None, savePathFigs=None, setFigureTimer=None)
+          showNValues=inShowSampleSize, findMotif=False, filePath=inFilePath, 
+          saveFigures=False, savePath=None, savePathFigs=None, setFigureTimer=None)
 
 
 

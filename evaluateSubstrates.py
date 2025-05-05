@@ -129,8 +129,8 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=inAAPositionsMotif, residueLabelType=inYLabelEnrichmentMap,
           printNumber=inPrintNumber, showNValues=inPlotWithSampleSize,
-          findMotif=False, saveFigures=inSaveFigures, savePath=inFilePath,
-          savePathFigs=inSavePathFigures, setFigureTimer=None)
+          findMotif=False, filePath=inFilePath, saveFigures=inSaveFigures,
+          savePath=inFilePath, savePathFigs=inSavePathFigures, setFigureTimer=None)
 
 
 
