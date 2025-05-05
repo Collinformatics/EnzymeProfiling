@@ -133,7 +133,7 @@ class NGS:
     def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
                  excludeAA, excludePosition, minCounts, figEMSquares, xAxisLabels,
                  xAxisLabelsBinned, residueLabelType, printNumber, showNValues, findMotif,
-                 savePath, saveFigures, savePathFigs, setFigureTimer):
+                 filePath, savePath, saveFigures, savePathFigs, setFigureTimer):
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
@@ -174,6 +174,7 @@ class NGS:
         self.nSubsTotal = 0
         self.delta = 0
         self.findMotif = findMotif
+        self.filePath = filePath
         self.savePath = savePath
         self.saveFigures = saveFigures
         self.savePathFigs = savePathFigs
@@ -1331,30 +1332,34 @@ class NGS:
 
         return countsFixedFrameAll, totalCountsFixedFrame
 
+    def filePathMotif(self, datasetTag):
+        # Define: File path
+        filePathFixedMotifSubs = os.path.join(
+            self.filePath, f'fixedMotifSubs - {self.enzymeName} - {datasetTag} - '
+                        f'FinalSort - MinCounts {self.minSubCount}')
+        filePathFixedMotifCounts = os.path.join(
+            self.filePath, f'fixedMotifCounts - {self.enzymeName} - {datasetTag} - '
+                        f'FinalSort - MinCounts {self.minSubCount}')
+        filePathFixedMotifReleasedCounts = os.path.join(
+            self.filePath, f'fixedMotifCountsRel - {self.enzymeName} - {datasetTag} - '
+                        f'FinalSort - MinCounts {self.minSubCount}')
+        paths = [filePathFixedMotifSubs, filePathFixedMotifCounts,
+                 filePathFixedMotifReleasedCounts]
 
-
-    def loadFixedMotifSubstrates(self, filePath, datasetTag, sortType):
-        print('========================= Load: Fixed Motif Substrates '
-              '==========================')
-        print(f'Dataset: {purple}{self.enzymeName} {datasetTag}{resetColor}')
-
-        # Define: File paths
-        if 'final' in sortType or 'Final' in sortType:
-            tagLabel = (f'fixedMotifSubs_{self.enzymeName}_FinalSort_'
-                        f'{datasetTag}_MinCounts {self.minSubCount}')
-        else:
-            tagLabel = (f'fixedMotifSubs_{self.enzymeName}_InitialSort_'
-                        f'{datasetTag}_MinCounts {self.minSubCount}')
-        filePathFixedMotifSubs = os.path.join(filePath, tagLabel)
+        return paths
+    
+    
+    def loadFixedMotifSubstrates(self, pathLoad, datasetTag):
+        print('============================== Load: Fixed Motifs '
+              '===============================')
         print(f'Loading substrates at path:\n'
-              f'     {greenDark}{filePathFixedMotifSubs}{resetColor}\n')
-
+              f'     {greenDark}{pathLoad}{resetColor}\n')
 
         # Load Data: Fixed substrates
-        with open(filePathFixedMotifSubs, 'rb') as file:
+        with open(pathLoad, 'rb') as file:
             loadedSubs = pk.load(file)
 
-        print(f'Loaded Substrates:{purple} {datasetTag}{resetColor}')
+        print(f'Loaded Substrates:{purple} Fixed Motif {datasetTag}{resetColor}')
         iteration = 0
         for substrate, count in loadedSubs.items():
             print(f'Substrate:{silver} {substrate}{resetColor}\n'
@@ -1368,24 +1373,29 @@ class NGS:
 
 
 
-    def calculateFixedMotifRF(self, countsTotal, datasetTag):
-        print('=========================== Calculate: Fixed Motif RF '
-              '===========================')
+    def calculateProbMotif(self, countsTotal, datasetTag):
+        print('====================== Calculate: Fixed Motif Probability '
+              '=======================')
         # Sum each column
         columnSums = np.sum(countsTotal, axis=0)
         columnSums = pd.DataFrame(columnSums, index=countsTotal.columns, columns=['Sum'])
 
+        prob = pd.DataFrame(0.0, index=countsTotal.index,
+                            columns=countsTotal.columns)
+
         # Calculate: Relative frequency
-        RF = pd.DataFrame(0.0, index=countsTotal.index, columns=countsTotal.columns)
         for position in countsTotal.columns:
-            RF.loc[:, position] = (countsTotal.loc[:, position] /
+            prob.loc[:, position] = (countsTotal.loc[:, position] /
                                    columnSums.loc[position, 'Sum'])
         pd.set_option('display.float_format', '{:,.5f}'.format)
         print(f'Relative Frequency:{purple} {datasetTag}\n'
-              f'{green}{RF}{resetColor}\n\n')
+              f'{green}{prob}{resetColor}\n\n')
         pd.set_option('display.float_format', '{:,.3f}'.format)
 
-        return RF
+        print(f'\n{red}EXIT HEERE\n\n')
+        sys.exit()
+
+        return prob
 
 
 
