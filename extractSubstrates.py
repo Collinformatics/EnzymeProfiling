@@ -20,7 +20,7 @@ from functions import NGS
 # Input 1: File Location
 inFileName = ['Fyn-I_S6_L001_R1_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inPathFolder = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inPathFolder = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder pathway
 inFileType = 'fastq' # Define the file type
 inSavePath = os.path.join(inPathFolder, 'Extracted Data')

@@ -46,7 +46,7 @@ pd.set_option('display.width', 1000)
 pd.set_option('display.float_format', '{:,.5f}'.format)
 
 # Colors: Console
-greyDark = '\033[38;5;102m'
+greyDark = '\033[38;2;144;144;144m'
 purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
 pink = '\033[38;2;255;0;242m'

@@ -17,7 +17,7 @@ import time
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inPathFolder = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
 
 # Input 2: Computational Parameters
@@ -99,7 +99,7 @@ inCompairAA = 'L' # Select AA of interest (different A than inFixedResidue)
 # =================================== Setup Parameters ===================================
 # Colors:
 white = '\033[38;2;255;255;255m'
-greyDark = '\033[38;5;102m' # ==============================================================
+greyDark = '\033[38;2;144;144;144m' # ==============================================================
 purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
 pink = '\033[38;2;255;0;242m'

@@ -16,7 +16,7 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inBasePath = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
 inFileNamesInitial, inFileNamesFinal, inAAPositions = (
@@ -130,7 +130,7 @@ global fixedSubSeq
 
 # Colors:
 white = '\033[38;2;255;255;255m'
-greyDark = '\033[38;5;102m'
+greyDark = '\033[38;2;144;144;144m'
 purple = '\033[38;2;189;22;255m'
 pink = '\033[38;2;255;0;242m'
 cyan = '\033[38;2;22;255;212m'
