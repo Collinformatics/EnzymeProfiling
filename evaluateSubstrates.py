@@ -99,7 +99,7 @@ inCompairAA = 'L' # Select AA of interest (different A than inFixedResidue)
 # =================================== Setup Parameters ===================================
 # Colors:
 white = '\033[38;2;255;255;255m'
-silver = '\033[38;2;204;204;204m'
+greyDark = '\033[38;5;102m' # ==============================================================
 purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
 pink = '\033[38;2;255;0;242m'
@@ -128,7 +128,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(labelAAPos),
           xAxisLabelsBinned=labelAAPosMotif, residueLabelType=inYLabelEnrichmentMap,
           printNumber=inPrintNumber, showNValues=inPlotWithSampleSize,
           findMotif=False, filePath=inPathFolder, filesInit=fileNamesInitial,
-          filesFinal=fileNamesFinal,saveFigures=inSaveFigures, setFigureTimer=None)
+          filesFinal=fileNamesFinal, saveFigures=inSaveFigures, setFigureTimer=None)
 
 
 
@@ -337,7 +337,7 @@ if inFixResidues:
         print(f'Loaded Substrates:{purple} {inEnzymeName} Fixed {fixedSubSeq}')
         iteration = 0
         for substrate, count in substratesFinal.items():
-            print(f'     {silver}{substrate}{resetColor}, Count:{red} {count:,}'
+            print(f'     {greyDark}{substrate}{resetColor}, Count:{red} {count:,}'
                   f'{resetColor}')
             iteration += 1
             if iteration >= 10:
@@ -533,7 +533,7 @@ if inEvaluateOS:
             for AA, datapoint in data.items():
                 print(f'     {AA}:{white} {datapoint:.6f}{resetColor}')
             print('')
-        print(f'Possible Substrate Combinations:{silver} {combinations:,}'
+        print(f'Possible Substrate Combinations:{greyDark} {combinations:,}'
               f'{resetColor}\n\n')
 
         # Use the optimal residues to determine OS
@@ -581,7 +581,7 @@ if inEvaluateOS:
                         # Replace AAOS with AA
                         newSubstrate = substrate[:indexColumn] + AA + substrate[indexColumn + 1:]
                         newES = ESMax + (ES - ESOS)
-                        # print(f'     New Substrate:{silver} {newSubstrate}{resetColor}, '
+                        # print(f'     New Substrate:{greyDark} {newSubstrate}{resetColor}, '
                         #       f'ES:{white} {newES}{resetColor}\n'
                         #       f'          ES New:{white} {ES}{resetColor}\n'
                         #       f'          ES Old:{white} {ESOS}{resetColor}\n\n')
@@ -598,7 +598,7 @@ if inEvaluateOS:
             print(f'     Substrate:{white} {substrate}{resetColor}, '
                   f'ES:{white} {ES:.6f}{resetColor}')
 
-        print(f'\nNumber of substrates:{silver} {len(substratesOS):,}{resetColor}\n\n')
+        print(f'\nNumber of substrates:{greyDark} {len(substratesOS):,}{resetColor}\n\n')
 
 
 

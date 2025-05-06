@@ -16,10 +16,10 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
-inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions = (
+inFileNamesInitial, inFileNamesFinal, inAAPositions = (
     filePaths(enzyme=inEnzymeName))
 inSaveData = False
 inSaveFigures = False
@@ -64,7 +64,7 @@ inShowMotifData = True
 inPrintNumber = 10
 inCodonSequence = 'NNS'  # Base probabilities of degenerate codons (can be N, S, or K)
 inUseCodonProb = False  # If True: use "inCodonSequence" for baseline probabilities
-# If False: use "inFileNamesInitialSort" for baseline probabilities
+# If False: use "inFileNamesInitial" for baseline probabilities
 
 # Input 5: Plot Heatmap
 inShowEnrichmentScores = True
@@ -130,7 +130,7 @@ global fixedSubSeq
 
 # Colors:
 white = '\033[38;2;255;255;255m'
-silver = '\033[38;2;204;204;204m'
+greyDark = '\033[38;5;102m'
 purple = '\033[38;2;189;22;255m'
 pink = '\033[38;2;255;0;242m'
 cyan = '\033[38;2;22;255;212m'
@@ -153,7 +153,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           xAxisLabelsBinned=None, residueLabelType=inYLabelEnrichmentMap,
           printNumber=inPrintNumber, showNValues=inShowSampleSize,
           findMotif=True, savePath=inFilePath, filePath=inFilePath,
-          filesInit=inFileNamesInitialSort, filesFinal=inFileNamesFinalSort,
+          filesInit=inFileNamesInitial, filesFinal=inFileNamesFinal,
           saveFigures=inSaveFigures, savePathFigs=inSavePathFigures,
           setFigureTimer=inSetFigureTimer)
 
@@ -163,10 +163,10 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
 # Load Data: Initial sort
 filePathsInitial = []
 if '/' in inFilePath:
-    for fileName in inFileNamesInitialSort:
+    for fileName in inFileNamesInitial:
         filePathsInitial.append(f'{inFilePath}/counts_{fileName}')
 else:
-    for fileName in inFileNamesInitialSort:
+    for fileName in inFileNamesInitial:
         filePathsInitial.append(f'{inFilePath}\\counts_{fileName}')
 
 # Verify that all files exist
@@ -187,7 +187,7 @@ if missingFile:
     sys.exit()
 else:
     countsInitial, totalSubsInitial = ngs.loadCounts(filePath=filePathsInitial,
-                                                     files=inFileNamesInitialSort,
+                                                     files=inFileNamesInitial,
                                                      printLoadedData=inPrintCounts,
                                                      fileType='Initial Sort')
     # Calculate RF
@@ -202,62 +202,6 @@ ngs.updateSampleSize(NSubs=totalSubsInitial, sortType='Initial Sort',
 
 
 # =================================== Define Functions ===================================
-def loadUnfilteredSubs(loadInitial=False):
-    # Initialize result dictionary
-    loadedResults = {}
-
-    def loadSubstrates(filePath, fileNames, fileType, printLoadedData, result):
-        subsLoaded, totalSubs = ngs.loadSubstrates(filePath=filePath,
-                                                   fileNames=fileNames,
-                                                   fileType=fileType,
-                                                   printLoadedData=printLoadedData)
-        result[fileType] = (subsLoaded, totalSubs)
-
-
-    if loadInitial:
-        # Create threads for loading initial and final substrates
-        threadInitial = threading.Thread(target=loadSubstrates,
-                                         args=(inFilePath, inFileNamesInitialSort,
-                                               'Initial Sort', inPrintCounts,
-                                               loadedResults))
-        threadFinal = threading.Thread(target=loadSubstrates,
-                                       args=(inFilePath, inFileNamesFinalSort,
-                                             'Final Sort', inPrintCounts,
-                                             loadedResults))
-
-        # Start the threads
-        threadInitial.start()
-        threadFinal.start()
-
-        # Wait for the threads to complete
-        threadInitial.join()
-        threadFinal.join()
-
-        # Retrieve the loaded substrates
-        substratesInitial, totalSubsInitial = loadedResults['Initial Sort']
-        substratesFinal, totalSubsFinal = loadedResults['Final Sort']
-
-        return substratesInitial, totalSubsInitial, substratesFinal, totalSubsFinal
-    else:
-        # Create thread for the final substrates
-        threadFinal = threading.Thread(target=loadSubstrates,
-                                       args=(inFilePath, inFileNamesFinalSort,
-                                             'Final Sort', inPrintCounts,
-                                             loadedResults))
-
-        # Start the thread
-        threadFinal.start()
-
-        # Wait for the thread to complete
-        threadFinal.join()
-
-        # Retrieve the loaded substrates
-        substratesFinal, totalSubsFinal = loadedResults['Final Sort']
-
-        return substratesFinal, totalSubsFinal
-
-
-
 def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePosition,
                  sortType, fixedTag, initialFix):
     print('==================================== Fix Substrates '
@@ -443,7 +387,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
             iteration = 0
             print(f'Selected Substrates:')
             for substrate, count in fixedSubs.items():
-                print(f'     Substrate:{silver} {substrate}{resetColor}\n'
+                print(f'     Substrate:{greyDark} {substrate}{resetColor}\n'
                       f'         Count:{red} {count:,}{resetColor}')
                 iteration += 1
                 if iteration == inPrintNumber:
@@ -902,7 +846,8 @@ inFigureTitle = f'{inEnzymeName}: {inDatasetTag}'
 # Define: File paths
 (filePathFixedMotifSubs,
  filePathFixedMotifCounts,
- filePathFixedMotifReleasedCounts) = ngs.filePathMotif(datasetTag=fixedSubSeq)
+ filePathFixedMotifReleasedCounts) = ngs.getFilePath(datasetTag=fixedSubSeq,
+                                                     motifPath=True)
 
 # Load the fixed frame if the file can be found
 if (os.path.exists(filePathFixedMotifSubs) and

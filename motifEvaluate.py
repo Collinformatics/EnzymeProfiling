@@ -16,7 +16,7 @@ import threading
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFilePath = os.path.join(inBasePath, 'Extracted Data')
 inSavePath = inFilePath
 inSavePathFigures = os.path.join(inBasePath, 'Figures')
@@ -38,7 +38,7 @@ inAAPositionsBinned = inAAPositions[inFramePositions[0]:
 
 # Input 3: Computational Parameters
 inFixedResidue = ['Q']
-inFixedPosition = [4]
+inFixedPosition = [4, 5]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -210,7 +210,7 @@ else:
 
 # Colors:
 white = '\033[38;2;255;255;255m'
-silver = '\033[38;2;204;204;204m'
+greyDark = '\033[38;5;102m'
 purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
 pink = '\033[38;2;255;0;242m'
@@ -238,8 +238,9 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=inSubstrateLength,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
           xAxisLabelsBinned=inAAPositionsBinned, residueLabelType=inYLabelEnrichmentMap,
           printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          findMotif=False, saveFigures=inSaveFigures, savePath=inFilePath,
-          savePathFigs=inSavePathFigures, setFigureTimer=inFigureTimer)
+          findMotif=False, saveFigures=inSaveFigures, filePath=inFilePath,
+          savePath=inFilePath, savePathFigs=inSavePathFigures,
+          setFigureTimer=inFigureTimer)
 
 
 
@@ -356,11 +357,11 @@ def pressKey(event):
 
 
 
-def loadSubstratesFixedMotif():
+def loadFixedMotifSubs():
     fixedMotifSubs = []
     for index in range(len(inFixedPosition)):
-        print('========================= Load: Fixed Motif Substrates '
-              '==========================')
+        print('=============================== Load: Fixed Motif '
+              '===============================')
 
         # Define: File path
         frame = f'{inFixedResidue[0]}@R{inFixedPosition[index]}'
@@ -417,12 +418,18 @@ def importFixedMotifSubs():
     fixedMotifSubs = []
 
     for position in inFixedPosition:
-        # Define: File paths
         tagFixedAA = f'{inFixedResidue[0]}@R{position}'
-        loadedSubs = ngs.loadFixedMotifSubstrates(filePath=inFilePath,
-                                                  datasetTag=tagFixedAA,
-                                                  sortType='Final Sort')
+
+        # Define: File paths
+        (filePathFixedMotifSubs,
+         filePathFixedMotifCounts,
+         filePathFixedMotifReleasedCounts) = ngs.filePathMotif(datasetTag=tagFixedAA)
+
+        # Load: substrates
+        loadedSubs = ngs.loadFixedMotifSubstrates(pathLoad=filePathFixedMotifSubs,
+                                                  datasetTag=tagFixedAA)
         fixedMotifSubs.append(loadedSubs)
+
 
         # PCA: On a single fixed frame
         if inPlotPCA:
@@ -1570,8 +1577,8 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
         datasetTag=datasetTag, sortType='Final Sort')
 
     # Calculate: Probability & Entropy
-    fixedMotifProb = ngs.calculateFixedMotifRF(countsTotal=fixedMotifCountsTotal,
-                                               datasetTag=datasetTag)
+    fixedMotifProb = ngs.calculateProbMotif(countsTotal=fixedMotifCountsTotal,
+                                            datasetTag=datasetTag)
     positionalEntropy = ngs.calculateEntropy(RF=fixedMotifProb,
                                              printEntropy=inPrintEntropy,
                                              datasetTag=datasetTag)
@@ -1768,7 +1775,7 @@ if inPredictSubstrateActivity:
 
 
 # Load: Fixed frames
-# substratesFixedMotif = loadSubstratesFixedMotif()
+# substratesFixedMotif = loadFixedMotifSubs()
 substratesFixedMotif = importFixedMotifSubs()
 
 # Evaluate substrates

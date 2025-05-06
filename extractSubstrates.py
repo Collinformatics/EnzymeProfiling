@@ -18,12 +18,12 @@ from functions import NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location
-inFileName = ['Fyn-I_S6_L001_R1_001', 'Fyn-I_S6_L001_R2_001'] # Define file name(s)
+inFileName = ['Fyn-I_S6_L001_R1_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/path/{inEnzymeName}'
-inFilePath = os.path.join(inBasePath, 'Fastq') # Define the fastq folder pathway
+inPathFolder = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inFilePath = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder pathway
 inFileType = 'fastq' # Define the file type
-inSavePath = os.path.join(inBasePath, 'Extracted Data')
+inSavePath = os.path.join(inPathFolder, 'Extracted Data')
 inSaveFileName = 'Fyn-I_S6_L001'
 inAlertPath = '/path/Bells.mp3'
 
@@ -57,14 +57,11 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           xAxisLabels=inAAPositions, xAxisLabelsBinned=None,
           residueLabelType=inCountMapYLabel, printNumber=inPrintNumber,
           showNValues=inShowSampleSize, findMotif=False, filePath=inFilePath, 
-          saveFigures=False, savePath=None, savePathFigs=None, setFigureTimer=None)
+          filesInit=None, filesFinal=None, saveFigures=False, setFigureTimer=None)
 
 
 
 # ===================================== Run The Code =====================================
-# Initialize substrate dictionary
-substrates = {}
-
 # Extract the substrates
 loadR1 = False
 loadR2 = False
@@ -111,19 +108,14 @@ else:
 
 # Count the occurrences of each residue
 counts, totalSubs = ngs.countResidues(substrates=substrates,
-                                      printCounts=inPrintCounts,
                                       datasetType=fileType)
 
 # Notification: Finish analysis
 ngs.alert(soundPath=inAlertPath)
 
 # Save the data
-if '/' in inFilePath:
-    savePathSubstrate = inSavePath+'/substrates_'+inSaveFileName
-    savePathCounts = inSavePath+'/counts_'+inSaveFileName
-else:
-    savePathSubstrate = inSavePath + '\\substrates_' + inSaveFileName
-    savePathCounts = inSavePath + '\\counts_' + inSaveFileName
+savePathSubstrate = os.path.join(inSavePath, f'substrates_{inSaveFileName}')
+savePathCounts = os.path.join(inSavePath, f'counts_{inSaveFileName}')
 with open(savePathSubstrate, 'wb') as file:
     pk.dump(substrates, file)
 counts.to_csv(savePathCounts)
@@ -138,4 +130,4 @@ ngs.extractionEffiency(files=inFileName)
 # Plot the data
 if inPlotCountsAA:
     ngs.plotCounts(countedData=counts, totalCounts=totalSubs,
-                   title=f'{inEnzymeName}\n{inSaveFileName}')
+                   datasetTag=inEnzymeName)

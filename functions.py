@@ -46,7 +46,7 @@ pd.set_option('display.width', 1000)
 pd.set_option('display.float_format', '{:,.5f}'.format)
 
 # Colors: Console
-silver = '\033[38;2;204;204;204m'
+greyDark = '\033[38;5;102m'
 purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
 pink = '\033[38;2;255;0;242m'
@@ -330,7 +330,7 @@ class NGS:
                               f'     Number of discarded sequences until {red}'
                               f'{self.printNumber} substrates{resetColor} were found in'
                               f'{purple} R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {silver}Percent throwaway{resetColor}:'
+                              f'     {greyDark}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
                         break
 
@@ -439,7 +439,7 @@ class NGS:
                               f'     Number of discarded sequences until {red}'
                               f'{self.printNumber} substrates{resetColor} were found in'
                               f'{purple} R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {silver}Percent throwaway{resetColor}:'
+                              f'     {greyDark}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
                         break
 
@@ -555,7 +555,7 @@ class NGS:
                   f'{red}{totalSeqsDNA:,}{resetColor}\n'
                   f'     Number of extracted Substrates: '
                   f'{red}{extractionCount:,}{resetColor}\n'
-                  f'     {silver}Percent throwaway{resetColor}:'
+                  f'     {greyDark}Percent throwaway{resetColor}:'
                   f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
         # sys.exit()
 
@@ -613,7 +613,7 @@ class NGS:
                               f'     Number of discarded sequences until {red}'
                               f'{self.printNumber} substrates{resetColor} were found in'
                               f'{purple} R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {silver}Percent throwaway{resetColor}:'
+                              f'     {greyDark}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
                         break
 
@@ -726,7 +726,7 @@ class NGS:
                               f'     Number of discarded sequences until {red}'
                               f'{self.printNumber} substrates{resetColor} were found in'
                               f'{purple} R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {silver}Percent throwaway{resetColor}:'
+                              f'     {greyDark}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
                         break
 
@@ -844,7 +844,7 @@ class NGS:
                   f'{red}{totalSeqsDNA:,}{resetColor}\n'
                   f'     Number of extracted Substrates: '
                   f'{red}{extractionCount:,}{resetColor}\n'
-                  f'     {silver}Percent throwaway{resetColor}:'
+                  f'     {greyDark}Percent throwaway{resetColor}:'
                   f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
 
 
@@ -937,10 +937,10 @@ class NGS:
 
         # Print counts
         columnSumsFormated = columnSums.apply(lambda col: col.map(includeCommas)).copy()
-        print(f'{silver}{columnSumsFormated}{resetColor}\n')
+        print(f'{greyDark}{columnSumsFormated}{resetColor}\n')
         countedDataPrint = countedData.apply(lambda col: col.map(includeCommas))
         print(f'Counted data:{purple} {self.enzymeName}{resetColor}\n'
-              f'{silver}{countedDataPrint}{resetColor}\n\n')
+              f'{greyDark}{countedDataPrint}{resetColor}\n\n')
 
 
         # Sanity Check: Do the sums of each column match the total number of substrates?
@@ -994,7 +994,7 @@ class NGS:
                     indexResidue = self.letters.index(substrate[indexAA])
                     countedData.iloc[indexResidue, indexAA] += counts
                 else:
-                    print(f'{silver}Outlying Substrate: {substrate}\n'
+                    print(f'{greyDark}Outlying Substrate: {substrate}\n'
                           f'     Unexpected Residue: {substrate[indexAA]}\n'
                           f'     Position: {indexAA}{resetColor}\n')
 
@@ -1017,7 +1017,7 @@ class NGS:
         if printCounts:
             countedDataPrint = countedData.apply(lambda col: col.map(includeCommas))
             print(f'Counted data:{purple} {self.enzymeName}{resetColor}\n'
-                  f'{silver}{countedDataPrint}{resetColor}\n\n')
+                  f'{greyDark}{countedDataPrint}{resetColor}\n\n')
 
 
         columnSums = columnSums.apply(lambda col: col.map(includeCommas))
@@ -1039,7 +1039,7 @@ class NGS:
         totalSubs = self.nSubsInitial + self.nSubsFinal
         print(f'Initial Sort:{red} {self.nSubsInitial:,}{resetColor}\n'
               f'Final Sort:{red} {self.nSubsFinal:,}{resetColor}\n'
-              f'Total Substrates:{pink} {totalSubs:,}{resetColor}\n\n')
+              f'Total Substrates:{greenLight} {totalSubs:,}{resetColor}\n\n')
 
 
     def sampleSizeUpdate(self, NSubs, sortType, datasetTag):
@@ -1099,11 +1099,10 @@ class NGS:
         print('================================== Load Counts '
               '==================================')
         if filter:
-            print(f'Loading Counts:{purple} {self.enzymeName} {fileType} '
-                  f'- Filter {datasetTag}{resetColor}\n')
+            labelFile = f'{self.enzymeName} {fileType} - Filter {datasetTag}'
         else:
-            print(f'Loading Counts:{purple} {self.enzymeName} '
-                  f'{fileType}{resetColor}\n')
+            labelFile = f'{self.enzymeName} {fileType}'
+        print(f'Loading Counts:{purple} {labelFile}{resetColor}\n')
         files = []
         totalCounts = 0
 
@@ -1113,26 +1112,7 @@ class NGS:
                 print(f'{orange}ERROR: {cyan}self.pathFilteredCounts {orange}needs '
                       f'to be defined before you can load the counts.{resetColor}')
                 sys.exit()
-
-            print(f'Loading counted data at path:\n'
-                  f'     {greenDark}{self.pathFilteredCounts}{resetColor}\n\n')
             files = [self.pathFilteredCounts]
-            # # Load: File
-            # fileName = self.pathFilteredCounts.replace(self.pathSaveData, '')
-            # data = pd.read_csv(self.pathFilteredCounts, index_col=0)
-            # data = data.astype(int)  # Convert datapoints to integers
-            #
-            # # Format values to have commas
-            # formattedCounts = data.to_string(
-            #     formatters={column: '{:,.0f}'.format for column in
-            #                 data.select_dtypes(include='number').columns})
-            #
-            # substrateCounts = sum(data.iloc[:, 0])
-            # totalCounts += substrateCounts
-            # print(f'Counts: {greenLightB}{fileName}{resetColor}\n'
-            #       f'{formattedCounts}\n'
-            #       f'Substrate Count: {red}'
-            #       f'{substrateCounts:,}{resetColor}\n\n')
         else:
             if 'initial' in fileType.lower():
                 fileNames = self.filesInit
@@ -1142,7 +1122,7 @@ class NGS:
             for fileName in fileNames:
                 files.append(os.path.join(self.pathSaveData, f'counts_{fileName}'))
 
-        print(f'Loading Files:')
+        print(f'Loading data:')
         for filePath in files:
             # Verify if the file exists at its specified path
             if not os.path.exists(filePath):
@@ -1192,8 +1172,7 @@ class NGS:
                       f'{substrateCounts:,}{resetColor}\n\n')
 
                 countedData += data
-        print(f'Number of substrates in{purple} {self.enzymeName} '
-              f'{purple}{fileType}{resetColor}: '
+        print(f'Number of substrates in{purple} {labelFile}{resetColor}: '
               f'{red}{totalCounts:,}{resetColor}\n')
 
         # Sum each column
@@ -1277,7 +1256,7 @@ class NGS:
         iteration = 0
         for substrate, count in substrates.items():
             iteration += 1
-            print(f'     {silver}{substrate}{resetColor}, Counts: {red}{count:,}'
+            print(f'     {greyDark}{substrate}{resetColor}, Counts: {red}{count:,}'
                   f'{resetColor}')
             if iteration >= self.printNumber:
                 break
@@ -1412,7 +1391,7 @@ class NGS:
                         totalCountsFixedFrame.select_dtypes(include='number').columns})
 
         # Print the data
-        print(f'{silver}Combined Counts{resetColor}:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n'
+        print(f'{greyDark}Combined Counts{resetColor}:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n'
               f'{formattedCounts}\n')
         print('Total Counts:')
         for index, position in enumerate(substrateFrame):
@@ -1439,7 +1418,7 @@ class NGS:
         print(f'Loaded Substrates:{purple} Fixed Motif {datasetTag}{resetColor}')
         iteration = 0
         for substrate, count in loadedSubs.items():
-            print(f'Substrate:{silver} {substrate}{resetColor}\n'
+            print(f'Substrate:{greyDark} {substrate}{resetColor}\n'
                   f'     Count:{red} {count:,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
@@ -1829,7 +1808,7 @@ class NGS:
         if selectAA in self.letters:
             residue = self.residues[self.letters.index(selectAA)][0]
         else:
-            print(f'{silver}Residue not recognized:{red} {selectAA}{silver}\n'
+            print(f'{greyDark}Residue not recognized:{red} {selectAA}{greyDark}\n'
                   f'Please check input:{red} self.fixedAA')
             sys.exit()
         print(f'Fixed Residues:{red} {self.fixedSubSeq}{resetColor}\n'
@@ -1893,7 +1872,7 @@ class NGS:
         if selectAA in self.letters:
             residue = self.residues[self.letters.index(selectAA)][0]
         else:
-            print(f'{silver}Residue not recognized:{red} {selectAA}{silver}\n'
+            print(f'{greyDark}Residue not recognized:{red} {selectAA}{greyDark}\n'
                   f'Please check input:{red} self.fixedAA')
             sys.exit()
         print(f'Fixed Residues:{red} {self.fixedSubSeq}{resetColor}\n'
@@ -2084,9 +2063,9 @@ class NGS:
         frameESStDev = frameESCombined.groupby(level=1, sort=False).agg(calcStDev)
 
         print(f'Average:{purple} Enrichment Score\n'
-              f'{silver}{frameESAvg}{resetColor}\n\n'
+              f'{greyDark}{frameESAvg}{resetColor}\n\n'
               f'Standard Deviation:{purple} Enrichment Score\n'
-              f'{silver}{frameESStDev}{resetColor}\n\n')
+              f'{greyDark}{frameESStDev}{resetColor}\n\n')
 
 
         # Plot: Standard deviation
@@ -2126,7 +2105,7 @@ class NGS:
         if printRF:
             print(f'Experimental Counts:{purple} Final Sort{resetColor}\n{counts}\n\n')
             print(f'RF:{purple} Final Sort\n'
-                  f'{silver}{RF.round(3)}{resetColor}\n\n')
+                  f'{greyDark}{RF.round(3)}{resetColor}\n\n')
 
 
         entropy = pd.DataFrame(0.0, index=RF.columns, columns=['ΔEntropy'])
@@ -2303,7 +2282,7 @@ class NGS:
                 heights.loc[value, key] = yMax
 
             print(f'Adjusted Residue Heights:{pink} log\u2082(RF Final Sort / RF '
-                  f'{baselineType})\n{silver}{heights.round(3)}{resetColor}\n')
+                  f'{baselineType})\n{greyDark}{heights.round(3)}{resetColor}\n')
 
             print(f'============================================'
                   f'============================================={greenLightB}\n'
@@ -2358,9 +2337,9 @@ class NGS:
                 divergenceMatrix.loc[:, position] = (divergenceMatrix.loc[:, position] *
                                                      scaler.loc[position, 'ΔEntropy'])
 
-        print(f'{silver}KL Divergence:'
+        print(f'{greyDark}KL Divergence:'
               f'{pink} Fixed Final Sort - {self.fixedSubSeq}{resetColor}\n'
-              f'{divergence}\n\n\n{silver}Divergency Matrix:'
+              f'{divergence}\n\n\n{greyDark}Divergency Matrix:'
               f'{pink} Fixed Final Sort - {self.fixedSubSeq}'
               f'{resetColor}\n{divergenceMatrix.round(4)}\n\n')
 
@@ -2461,7 +2440,7 @@ class NGS:
                         newSubstrate = (substrate[:indexColumn] + AA +
                                         substrate[indexColumn + 1:])
                         newES = ESMax + (score - scoreSubstrate)
-                        # print(f'{silver}New Substrate{resetColor}:'
+                        # print(f'{greyDark}New Substrate{resetColor}:'
                         #       f'{greenLightB} {newSubstrate}{resetColor}, '
                         #       f'ES:{red} {newES}{resetColor}\n'
                         #       f'     Residue Score New:{red} {score}{resetColor}\n'
@@ -2484,7 +2463,7 @@ class NGS:
             substratesOS = {key: value / topScore for key, value in substratesOS}
             # substratesOS = sorted(substratesOS.items(), key=lambda x: x[1], reverse=True)
 
-        print(f'Top {self.printNumber} Optimal Substrates:{silver} '
+        print(f'Top {self.printNumber} Optimal Substrates:{greyDark} '
               f'{matrixType}{resetColor}')
         iteration = 0
         for substrate, ES in substratesOS.items():
@@ -2776,7 +2755,7 @@ class NGS:
                       f'analysis\nwill include the complete dataset\n\n')
 
             # Print the sample sizes
-            print(f'{silver}Dataset Size{resetColor}:\n'
+            print(f'{greyDark}Dataset Size{resetColor}:\n'
                   f'     Initial Substrates:{red} {len(initialSubsDF):,}{resetColor}\n'
                   f'     Final Substrates:{red} {len(finalSubsDF):,}{resetColor}\n'
                   f'     Enriched Substrates:{red} {len(enrichedSubsDF):,}{resetColor}\n')
@@ -3072,7 +3051,7 @@ class NGS:
 
                 # Print collected substrates
                 for substrate, count in collectionSet.items():
-                    print(f'     {silver}{substrate}{resetColor}:'
+                    print(f'     {greyDark}{substrate}{resetColor}:'
                           f'{red} {count:,}{resetColor}')
                     iteration += 1
                     if iteration >= self.printNumber:
@@ -3110,7 +3089,7 @@ class NGS:
                                  reverse=True))
         for substrate, count in substrates.items():
             iteration += 1
-            print(f'Substrate:{silver} {substrate}{resetColor}\n'
+            print(f'Substrate:{greyDark} {substrate}{resetColor}\n'
                   f'     Count:{red} {count:,}{resetColor}')
             if iteration >= self.printNumber:
                 break
@@ -3206,7 +3185,8 @@ class NGS:
         ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
 
-        datasetTag = f'{self.enzymeName}\n{datasetTag}'
+        if datasetTag != self.enzymeName:
+            datasetTag = f'{self.enzymeName}\n{datasetTag}'
         if self.showSampleSize:
             if totalCounts is None:
                 ax.set_title(datasetTag, fontsize=self.labelSizeTitle, fontweight='bold')
@@ -4110,7 +4090,7 @@ class NGS:
             print(f'Substrates:{purple} {saveTag}{resetColor}')
         iteration = 0
         for substrate, count in clusterSubs.items():
-            print(f'     {silver}{substrate}{resetColor}, '
+            print(f'     {greyDark}{substrate}{resetColor}, '
                   f'Count:{red} {count:,}{resetColor}')
             iteration += 1
             if iteration == self.printNumber:
@@ -4209,7 +4189,7 @@ class NGS:
                   f'{resetColor}')
             iteration = 0
             for substrate, count in subsFixedFrame.items():
-                print(f'Substrate:{silver} {substrate}{resetColor}\n'
+                print(f'Substrate:{greyDark} {substrate}{resetColor}\n'
                       f'    Frame:{greenLight} {substrate[startSub:endSub]}{resetColor}\n'
                       f'    Count:{red} {count:,}{resetColor}')
                 iteration += 1
