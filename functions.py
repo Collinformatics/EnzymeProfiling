@@ -1027,8 +1027,22 @@ class NGS:
         return countedData, totalSubs
 
 
+    def sampleSizeDisplay(self, sortType, datasetTag):
+        print('============================== Current Sample Size '
+              '==============================')
+        if sortType is not None:
+            if datasetTag is None:
+                print(f'Sort Type:{purple} {sortType}{resetColor}')
+            else:
+                print(f'Sort Type:{purple} {sortType} {datasetTag}{resetColor}')
 
-    def updateSampleSize(self, NSubs, sortType, printCounts, fixedTag):
+        totalSubs = self.nSubsInitial + self.nSubsFinal
+        print(f'Initial Sort:{red} {self.nSubsInitial:,}{resetColor}\n'
+              f'Final Sort:{red} {self.nSubsFinal:,}{resetColor}\n'
+              f'Total Substrates:{pink} {totalSubs:,}{resetColor}\n\n')
+
+
+    def sampleSizeUpdate(self, NSubs, sortType, datasetTag):
         # Update the current sample size
         if sortType == 'Initial Sort':
             self.nSubsInitial = NSubs
@@ -1037,25 +1051,14 @@ class NGS:
         else:
             print('============================== Current Sample Size '
                   '==============================')
-            if fixedTag is None:
+            if datasetTag is None:
                 print(f'Sort Type:{purple} {sortType}{resetColor}')
             else:
-                print(f'Sort Type:{purple} {sortType} {fixedTag}{resetColor}')
+                print(f'Sort Type:{purple} {sortType} {datasetTag}{resetColor}')
             print(f'{orange}ERROR: The sample sizes were not updated\n\n')
             sys.exit()
 
-        if printCounts:
-            print('============================== Current Sample Size '
-                  '==============================')
-            if fixedTag is None:
-                print(f'Sort Type:{purple} {sortType}{resetColor}')
-            else:
-                print(f'Sort Type:{purple} {sortType} {fixedTag}{resetColor}')
-
-            totalSubs = self.nSubsInitial + self.nSubsFinal
-            print(f'Initial Sort:{silver} {self.nSubsInitial:,}{resetColor}\n'
-                  f'Final Sort:{silver} {self.nSubsFinal:,}{resetColor}\n'
-                  f'Total Substrates:{pink} {totalSubs:,}{resetColor}\n\n')
+        NGS.sampleSizeDisplay(self, sortType, datasetTag)
 
 
 
@@ -1095,13 +1098,14 @@ class NGS:
     def loadCounts(self, filter, fileType, datasetTag=None):
         print('================================== Load Counts '
               '==================================')
-        if datasetTag == None:
-            print(f'Loading Counts:{purple} {self.enzymeName} {fileType}\n')
+        if filter:
+            print(f'Loading Counts:{purple} {self.enzymeName} {fileType} '
+                  f'- Filter {datasetTag}{resetColor}\n')
         else:
-            print(f'Loading Counts:{purple} {self.enzymeName} {datasetTag} {fileType}\n')
+            print(f'Loading Counts:{purple} {self.enzymeName} '
+                  f'{fileType}{resetColor}\n')
         files = []
-        totalSubstrateCount = 0
-
+        totalCounts = 0
 
         # Define: File paths
         if filter:
@@ -1112,7 +1116,23 @@ class NGS:
 
             print(f'Loading counted data at path:\n'
                   f'     {greenDark}{self.pathFilteredCounts}{resetColor}\n\n')
-            sys.exit()
+            files = [self.pathFilteredCounts]
+            # # Load: File
+            # fileName = self.pathFilteredCounts.replace(self.pathSaveData, '')
+            # data = pd.read_csv(self.pathFilteredCounts, index_col=0)
+            # data = data.astype(int)  # Convert datapoints to integers
+            #
+            # # Format values to have commas
+            # formattedCounts = data.to_string(
+            #     formatters={column: '{:,.0f}'.format for column in
+            #                 data.select_dtypes(include='number').columns})
+            #
+            # substrateCounts = sum(data.iloc[:, 0])
+            # totalCounts += substrateCounts
+            # print(f'Counts: {greenLightB}{fileName}{resetColor}\n'
+            #       f'{formattedCounts}\n'
+            #       f'Substrate Count: {red}'
+            #       f'{substrateCounts:,}{resetColor}\n\n')
         else:
             if 'initial' in fileType.lower():
                 fileNames = self.filesInit
@@ -1121,6 +1141,7 @@ class NGS:
 
             for fileName in fileNames:
                 files.append(os.path.join(self.pathSaveData, f'counts_{fileName}'))
+
         print(f'Loading Files:')
         for filePath in files:
             # Verify if the file exists at its specified path
@@ -1138,7 +1159,7 @@ class NGS:
             fileName = filePath.replace(self.pathSaveData, '')
             if firstFile:
                 firstFile = False
-                # Access the data
+                # Load: File
                 countedData = pd.read_csv(filePath, index_col=0)
                 countedData = countedData.astype(int) # Convert datapoints to integers
 
@@ -1149,12 +1170,12 @@ class NGS:
                                     include='number').columns})
 
                 substrateCounts = sum(countedData.iloc[:, 0])
-                totalSubstrateCount += substrateCounts
+                totalCounts += substrateCounts
                 print(f'\nCounts: {greenLightB}{fileName}{resetColor}\n'
                       f'{formattedCounts}\n'
                       f'Substrate Count: {red}{substrateCounts:,}{resetColor}\n')
             else:
-                # Access the data
+                # Load: File
                 data = pd.read_csv(filePath, index_col=0)
                 data = data.astype(int)  # Convert datapoints to integers
 
@@ -1164,7 +1185,7 @@ class NGS:
                                 data.select_dtypes(include='number').columns})
 
                 substrateCounts = sum(data.iloc[:, 0])
-                totalSubstrateCount += substrateCounts
+                totalCounts += substrateCounts
                 print(f'\nCounts: {greenLightB}{fileName}{resetColor}\n'
                       f'{formattedCounts}\n'
                       f'Substrate Count: {red}'
@@ -1173,7 +1194,7 @@ class NGS:
                 countedData += data
         print(f'Number of substrates in{purple} {self.enzymeName} '
               f'{purple}{fileType}{resetColor}: '
-              f'{red}{totalSubstrateCount:,}{resetColor}\n')
+              f'{red}{totalCounts:,}{resetColor}\n')
 
         # Sum each column
         columnSums = pd.DataFrame(np.sum(countedData, axis=0), columns=['Total Counts'])
@@ -1183,23 +1204,26 @@ class NGS:
 
         # Sanity Check: Do the sums of each column match the total number of substrates?
         for indexColumn, columnSum in enumerate(columnSums.iloc[:, 0]):
-            if columnSum != totalSubstrateCount:
+            if columnSum != totalCounts:
                 columnSums = columnSums.apply(lambda x: x.map('{:,}'.format))
                 print(f'{orange}ERROR: The total number of substrates '
-                      f'({cyan}{totalSubstrateCount:,}{orange}) =/= '
+                      f'({cyan}{totalCounts:,}{orange}) =/= '
                       f'the sum of column {pink}{columnSums.index[indexColumn]}{orange} '
                       f'({cyan}{columnSum:,}{orange})')
                 sys.exit()
         print('\n')
 
-
-        # Record the number of substrates in this dataset
-        if fileType == 'Initial Sort':
-            self.nSubsInitial = totalSubstrateCount
+        # Undate sample size
+        if 'initial' in fileType.lower():
+            self.nSubsInitial = totalCounts
+        elif 'final' in fileType.lower():
+            self.nSubsFinal = totalCounts
         else:
-            self.nSubsFinal = totalSubstrateCount
+            print(f'{orange}ERROR: Unknown fileType "{cyan}{fileType}{orange}"\n'
+                  f'     Rename parameter as: "Initial Sort" or "Final Sort"\n')
+            sys.exit()
 
-        return countedData, totalSubstrateCount
+        return countedData, totalCounts
 
 
 
@@ -1539,14 +1563,14 @@ class NGS:
 
 
     def fixResidue(self, substrates, fixedString, printRankedSubs, sortType):
-        print('==================================== Fix AA '
-              '=====================================')
+        print('=============================== Filter Substrates '
+              '===============================')
         fixedSubs = {}
         fixedSubsTotal = 0
-        print(f'Fix Residue in {purple}{sortType}{resetColor}: '
-              f'{red}{fixedString} or index {self.fixedPosition} {resetColor}\n')
+        print(f'Selecting {purple}{sortType} {resetColor}substrates with: '
+              f'{red}{fixedString}{resetColor}\n')
 
-        # Sort the substrates dictionary by counts
+        # Sort the substrate dictionary by counts
         substrates = dict(sorted(substrates.items(), key=lambda x: x[1], reverse=True))
 
 

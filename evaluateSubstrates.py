@@ -168,7 +168,7 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
         countsFinal, countsFinalTotal = ngs.countResiduesBinned(
             substrates=clusterSubs,
             positions=labelAAPosMotif)
-    ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
+    ngs.sampleSizeUpdate(NSubs=countsFinalTotal, sortType='Final Sort',
                          printCounts=inPrintSampleSize, fixedTag=fixedSubSeq)
 
     # Adjust the zero counts at nonfixed positions
@@ -345,15 +345,9 @@ if inFixResidues:
                 break
     else:
         loadFilteredSubs = True
-        print(f'Fix Data: {fixedSubSeq}')
 
-        start = time.time()
         # Load: Substrates
         substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs()
-        end = time.time()
-        runtime = end - start
-        print(f'Run time:{red} {round(runtime, 3)}{resetColor}s\n\n')
-
 else:
     # Load: Substrates
     (substratesInitial, totalSubsInitial,
@@ -373,14 +367,18 @@ if inFixResidues:
             printRankedSubs=inPrintFixedSubs, sortType='Final Sort')
 
         # Count fixed substrates
-        countsFinal, _ = ngs.countResidues(substrates=substratesFinal,
-                                           datasetType='Final Sort')
+        countsFinal, countsFinalTotal = ngs.countResidues(substrates=substratesFinal,
+                                                          datasetType='Final Sort')
 
     if inEvaluateSubstrateEnrichment:
         fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
             substrates=substratesInitial, fixedString=fixedSubSeq,
             printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
 
+
+
+# Display current sample size
+ngs.sampleSizeDisplay(sortType=None, datasetTag=fixedSubSeq)
 
 # Calculate: Average initial RF
 RFsum = np.sum(initialRF, axis=1)
@@ -398,21 +396,18 @@ positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntropy
 
 
 # Save the data
-if not os.path.exists(filePathFixedSubsFinal):
+if (not os.path.exists(filePathFixedSubsFinal) or
+        not os.path.exists(filePathFixedCountsFinal)):
+    print(f'Filtered substrates saved at:\n'
+          f'     {greenDark}{filePathFixedSubsFinal}{resetColor}\n'
+          f'     {greenDark}{filePathFixedCountsFinal}{resetColor}\n\n')
+
     # Save the fixed substrate dataset
     with open(filePathFixedSubsFinal, 'wb') as file:
         pk.dump(substratesFinal, file)
-    print(f'Fixed substrates saved at:\n     {filePathFixedSubsFinal}\n\n')
 
     # Save the fixed substrate counts dataset
     countsFinal.to_csv(filePathFixedCountsFinal)
-
-
-# # Update: Current sample size
-ngs.updateSampleSize(NSubs=countsInitialTotal, sortType='Initial Sort',
-                     printCounts=inPrintSampleSize, fixedTag=None)
-ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
-                     printCounts=inPrintSampleSize, fixedTag=fixedSubSeq)
 
 
 
