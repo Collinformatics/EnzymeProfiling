@@ -125,7 +125,7 @@ print(f'Data saved at:\n'
       f'    {savePathCounts}\n\n')
 
 # Display extraction efficiency
-ngs.extractionEffiency(files=inFileName)
+ngs.extractionEfficiency(files=inFileName)
 
 # Plot the data
 if inPlotCountsAA:
