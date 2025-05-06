@@ -180,6 +180,8 @@ class NGS:
         self.pathFolder = filePath
         self.pathSaveData = os.path.join(self.pathFolder, 'Data')
         self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
+        self.pathFilteredSubs = None
+        self.pathFilteredCounts = None
 
 
 
@@ -868,13 +870,13 @@ class NGS:
 
 
 
-    def countResidues(self, substrates, datasetType, printCounts):
+    def countResidues(self, substrates, datasetType):
         beginTime = time.time()
         print('============================= Calculate: AA Counts '
               '==============================')
         print(f'Unique substrate count:{red} {len(substrates):,}{resetColor}')
 
-        # Initialize the counts matrix
+        # Initialize the count matrix
         countedData = pd.DataFrame(0,
                                    index=self.letters,
                                    columns=self.xAxisLabels,
@@ -933,14 +935,12 @@ class NGS:
                                       columns=['Total Counts'],
                                       index=self.xAxisLabels)
 
-
-        if printCounts:
-            columnSumsFormated = columnSums.apply(
-                lambda col: col.map(includeCommas)).copy()
-            print(f'{silver}{columnSumsFormated}{resetColor}\n')
-            countedDataPrint = countedData.apply(lambda col: col.map(includeCommas))
-            print(f'Counted data:{purple} {self.enzymeName}{resetColor}\n'
-                  f'{silver}{countedDataPrint}{resetColor}\n\n')
+        # Print counts
+        columnSumsFormated = columnSums.apply(lambda col: col.map(includeCommas)).copy()
+        print(f'{silver}{columnSumsFormated}{resetColor}\n')
+        countedDataPrint = countedData.apply(lambda col: col.map(includeCommas))
+        print(f'Counted data:{purple} {self.enzymeName}{resetColor}\n'
+              f'{silver}{countedDataPrint}{resetColor}\n\n')
 
 
         # Sanity Check: Do the sums of each column match the total number of substrates?
@@ -982,7 +982,7 @@ class NGS:
         print(f'Total Substrates:  {red}{totalSubs:,}{resetColor}\n'
               f'Unique Substrates: {red}{totalUniqueSubs:,}{resetColor}\n')
 
-        # Initialize the counts matrix
+        # Initialize the count matrix
         countedData = pd.DataFrame(0, index=self.letters, columns=positions,
                                    dtype=int)
 
@@ -1059,20 +1059,59 @@ class NGS:
 
 
 
-    def loadCounts(self, fileType, filter, datasetTag=None):
+    def getFilePath(self, datasetTag, motifPath=False):
+        # Define: File path
+        if motifPath:
+            pathSubs = os.path.join(
+                self.pathSaveData,
+                f'fixedMotifSubs - {self.enzymeName} - {datasetTag} - '
+                f'FinalSort - MinCounts {self.minSubCount}')
+            pathCounts = os.path.join(
+                self.pathSaveData,
+                f'fixedMotifCounts - {self.enzymeName} - {datasetTag} - '
+                f'FinalSort - MinCounts {self.minSubCount}')
+            pathCountsReleased = os.path.join(
+                self.pathSaveData,
+                f'fixedMotifCountsRel - {self.enzymeName} - {datasetTag} - '
+                f'FinalSort - MinCounts {self.minSubCount}')
+            paths = [pathSubs, pathCounts, pathCountsReleased]
+        else:
+            pathSubs = os.path.join(
+                self.pathSaveData,
+                f'fixedSubs - {self.enzymeName} - {datasetTag} - '
+                f'FinalSort - MinCounts {self.minSubCount}')
+            pathCounts = os.path.join(
+                self.pathSaveData,
+                f'counts - {self.enzymeName} - {datasetTag} - '
+                f'FinalSort - MinCounts {self.minSubCount}')
+            self.pathFilteredSubs = pathSubs
+            self.pathFilteredCounts = pathCounts
+            paths = [pathSubs, pathCounts]
+
+        return paths
+
+
+
+    def loadCounts(self, filter, fileType, datasetTag=None):
+        print('================================== Load Counts '
+              '==================================')
+        if datasetTag == None:
+            print(f'Loading Counts:{purple} {self.enzymeName} {fileType}\n')
+        else:
+            print(f'Loading Counts:{purple} {self.enzymeName} {datasetTag} {fileType}\n')
+        files = []
         totalSubstrateCount = 0
 
-        print(f'Loading Counts: {fileType}\n'
-              f'Filter: {filter}\n')
 
         # Define: File paths
-        files = []
         if filter:
-            print(f'filter data: {datasetTag}')
-            path = os.path.join(
-                self.pathFolder, f'counts - {self.enzymeName} - {datasetTag} - '
-                                    f'FinalSort - MinCounts_{self.minSubCount}')
-            print(f'     {greenDark}{path}{resetColor}')
+            if self.pathFilteredCounts is None:
+                print(f'{orange}ERROR: {cyan}self.pathFilteredCounts {orange}needs '
+                      f'to be defined before you can load the counts.{resetColor}')
+                sys.exit()
+
+            print(f'Loading counted data at path:\n'
+                  f'     {greenDark}{self.pathFilteredCounts}{resetColor}\n\n')
             sys.exit()
         else:
             if 'initial' in fileType.lower():
@@ -1153,7 +1192,6 @@ class NGS:
                 sys.exit()
         print('\n')
 
-        sys.exit()
 
         # Record the number of substrates in this dataset
         if fileType == 'Initial Sort':
@@ -1162,126 +1200,6 @@ class NGS:
             self.nSubsFinal = totalSubstrateCount
 
         return countedData, totalSubstrateCount
-
-
-    def old(self):
-        if files is None:
-            print('=========================== Load: Counted Fixed Files '
-                  '===========================')
-            # Verify that all files exist
-            if os.path.exists(filePath):
-                print(f'File path:\n     {greenDark}{filePath}{resetColor}\n')
-
-                # Load counted fixed counted substrate data
-                countedData = pd.read_csv(filePath, index_col=0)
-                if not printLoadedData:
-                    print(f'\nCounts: {red}{self.fixedSubSeq}{resetColor}\n'
-                          f'{silver}{countedData}{resetColor}')
-
-                totalSubstrateCount = sum(countedData.iloc[:, 0])
-                print(f'\nTotal substrates with {red}{self.fixedSubSeq}{resetColor}: '
-                      f'{red}{totalSubstrateCount:,}{resetColor}\n\n')
-
-            # Record the number of substrates in this dataset
-            if fileType == 'Initial Sort':
-                self.nSubsInitial = totalSubstrateCount
-            else:
-                self.nSubsFinal = totalSubstrateCount
-
-            return countedData, totalSubstrateCount
-        else:
-            print('============================== Load: Counted Files '
-                  '==============================')
-            # Load counted substrate data
-            print(f'Loading counts within these files:')
-            for fileName in files:
-                print(f'     {greenLightB}{fileName}{resetColor}')
-            print('')
-
-            for indexPath, path in enumerate(filePath):
-                print(f'File path:\n     {greenDark}{path}{resetColor}')
-                if indexPath == 0:
-                    # Access the data
-                    countedData = pd.read_csv(path, index_col=0)
-                    countedData = countedData.astype(int) # Convert datapoints to integers
-
-                    if printLoadedData:
-                        # Format values to have commas
-                        formattedCounts = countedData.to_string(
-                            formatters={column: '{:,.0f}'.format for column in
-                                        countedData.select_dtypes(
-                                            include='number').columns})
-                        print(f'\nCounts: {greenLightB}{files[indexPath]}{resetColor}\n'
-                              f'{formattedCounts}\n')
-
-                    substrateCounts = sum(countedData.iloc[:, 0])
-                    totalSubstrateCount += substrateCounts
-                    print(f'\nNumber of substrates in {greenLightB}'
-                          f'{files[indexPath]}{resetColor}: '
-                          f'{red}{substrateCounts:,}{resetColor}\n'
-                    f'Total substrates: {red}'
-                          f'{totalSubstrateCount:,}{resetColor}\n\n')
-                else:
-                    # Access the data
-                    data = pd.read_csv(path, index_col=0)
-                    data = data.astype(int) # Convert datapoints to integers
-
-
-                    # Format values to have commas
-                    formattedCounts = data.to_string(
-                        formatters={column: '{:,.0f}'.format for column in
-                                    data.select_dtypes(include='number').columns})
-                    print(f'\nCounts: {greenLightB}{files[indexPath]}{resetColor}\n'
-                          f'{formattedCounts}\n')
-
-                    substrateCounts = sum(data.iloc[:, 0])
-                    totalSubstrateCount += substrateCounts
-
-                    countedData += data
-
-                    print(f'\nNumber of substrates in {greenLightB}'
-                          f'{files[indexPath]}{resetColor}: '
-                          f'{red}{substrateCounts:,}{resetColor}\n'
-                          f'Total substrates: {red}'
-                          f'{totalSubstrateCount:,}{resetColor}\n\n')
-            print(f'{orange}All {purple}{fileType}{orange} '
-                  f'files have been loaded and counted{resetColor}\n')
-            print(f'Total counts for:')
-            for file in files:
-                print(f'     {greenLightB}{file}{resetColor}')
-            # Format values to have commas
-            countedDataFormat = countedData.apply(
-                lambda col: col.map(lambda x: f'{x:,}'))
-            print(f'{countedDataFormat}\n')
-
-            # Sanity Check: Do the sums of each column match the total number of substrates?
-            columnSums = pd.DataFrame(np.sum(countedData, axis=0), columns=['Total Counts'])
-            for indexColumn, columnSum in enumerate(columnSums.iloc[:, 0]):
-                if columnSum != totalSubstrateCount:
-                    columnSums = columnSums.apply(lambda x: x.map('{:,}'.format))
-                    print(f'{columnSums}')
-                    print(f'Number of substrates{purple} {self.enzymeName} '
-                          f'{purple}{fileType}{silver}: '
-                          f'{totalSubstrateCount:,}\n\n')
-                    print(f'{orange}ERROR: The total number of substrates '
-                          f'({totalSubstrateCount:,}) =/= the sum of column '
-                          f'{indexColumn} ({columnSum:,})\n')
-                    sys.exit()
-
-            columnSums = columnSums.apply(lambda x: x.map('{:,}'.format))
-            if printLoadedData:
-                print(f'{columnSums}\n')
-            print(f'Number of substrates in{purple} {self.enzymeName} '
-                  f'{purple}{fileType}{resetColor}: '
-                  f'{red}{totalSubstrateCount:,}{resetColor}\n\n')
-
-            # Record the number of substrates in this dataset
-            if fileType == 'Initial Sort':
-                self.nSubsInitial = totalSubstrateCount
-            else:
-                self.nSubsFinal = totalSubstrateCount
-
-            return countedData, totalSubstrateCount
 
 
 
@@ -1298,9 +1216,8 @@ class NGS:
 
         # Function to load each file
         def loadFile(fileName):
-            fileLocation = os.path.join(self.pathFolder, f'substrates_{fileName}')
+            fileLocation = os.path.join(self.pathSaveData, f'substrates_{fileName}')
             print(f'File path:\n     {greenDark}{fileLocation}{resetColor}\n')
-
             with open(fileLocation, 'rb') as openedFile:  # Open file
                 data = pk.load(openedFile)  # Access the data
                 dataTotalSubs = sum(data.values())
@@ -1331,7 +1248,6 @@ class NGS:
         # Sort loaded data
         substrates = dict(sorted(substrates.items(), key=lambda x: x[1], reverse=True))
 
-
         # Print loaded data substrates
         print(f'Loaded Data:{purple} {fileType}{resetColor}')
         iteration = 0
@@ -1345,7 +1261,6 @@ class NGS:
               f'     {red} {substrateTotal:,}{resetColor}\n\n')
 
         return substrates, substrateTotal
-
 
 
 
@@ -1485,23 +1400,8 @@ class NGS:
 
         return countsFixedFrameAll, totalCountsFixedFrame
 
-    def filePathMotif(self, datasetTag):
-        # Define: File path
-        filePathFixedMotifSubs = os.path.join(
-            self.pathFolder, f'fixedMotifSubs - {self.enzymeName} - {datasetTag} - '
-                        f'FinalSort - MinCounts {self.minSubCount}')
-        filePathFixedMotifCounts = os.path.join(
-            self.pathFolder, f'fixedMotifCounts - {self.enzymeName} - {datasetTag} - '
-                        f'FinalSort - MinCounts {self.minSubCount}')
-        filePathFixedMotifReleasedCounts = os.path.join(
-            self.pathFolder, f'fixedMotifCountsRel - {self.enzymeName} - {datasetTag} - '
-                        f'FinalSort - MinCounts {self.minSubCount}')
-        paths = [filePathFixedMotifSubs, filePathFixedMotifCounts,
-                 filePathFixedMotifReleasedCounts]
 
-        return paths
-    
-    
+
     def loadFixedMotifSubstrates(self, pathLoad, datasetTag):
         print('============================== Load: Fixed Motifs '
               '===============================')

@@ -302,64 +302,30 @@ if inFixResidues:
 else:
     fixedSubSeq = 'Unfiltered'
 
+# Load: Counts
+countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
 
+# Calculate: RF
+initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+                            fileType='Initial Sort', printRF=inPrintRF)
 
-ngs.loadCounts(fileType='Final Sort', filter=True, datasetTag=fixedSubSeq)
+filePathFixedSubsFinal = None
+if filePathFixedSubsFinal is not None:
+    print(4)
 
-
-sys.exit()
-
-ngs.loadCounts(fileType='Final Sort', filter=False)
-
-ngs.loadCounts(fileType='Initial Sort', filter=False)
-
-
-loadUnfixedSubstrates = True
+loadFilteredSubs = False
 if inFixResidues:
-    filePathFixedCountsFinal = os.path.join(
-        ngs.pathFolder, f'counts - {inEnzymeName} - {fixedSubSeq} - '
-                        f'FinalSort - MinCounts_{inMinimumSubstrateCount}')
-    filePathFixedSubsFinal = os.path.join(
-        ngs.pathFolder, f'fixedSubs - {inEnzymeName} - {fixedSubSeq} - '
-                        f'FinalSort - MinCounts_{inMinimumSubstrateCount}')
-
+    filePathFixedSubsFinal, filePathFixedCountsFinal = (
+        ngs.getFilePath(datasetTag=fixedSubSeq))
 
     # Verify that the file exists
     if (os.path.exists(filePathFixedSubsFinal) and
             os.path.exists(filePathFixedCountsFinal)):
-        loadUnfixedSubstrates = False
 
-        # # Load the data: Initial sort
-        filePathsInitial = []
-        for fileName in fileNamesInitial:
-            filePathsInitial.append(os.path.join(ngs.pathDirectory, f'counts_{fileName}'))
-
-
-        # Verify that all files exist
-        missingFile = False
-        indexMissingFile = []
-        for indexFile, path in enumerate(filePathsInitial):
-            if os.path.exists(path):
-                continue
-            else:
-                missingFile = True
-                indexMissingFile.append(indexFile)
-        if missingFile:
-            print('\033[91mERROR: File not found at path:')
-            for indexMissing in indexMissingFile:
-                print(f'     {filePathsInitial[indexMissing]}')
-            print(
-                f'\nMake sure your path is correctly named, and that you have already '
-                f'extracted and counted your NGS data\n')
-            sys.exit()
-        else:
-            countsInitial, countsInitialTotal = ngs.loadCounts(
-                filePath=filePathsInitial, files=fileNamesInitial,
-                fileType='Initial Sort')
-            # Calculate RF
-            initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
-                                        fileType='Initial Sort', printRF=inPrintRF)
-
+        # Load: Counts
+        countsFinal, countsFinalTotal = ngs.loadCounts(filter=True,
+                                                       fileType='Final Sort',
+                                                       datasetTag=fixedSubSeq)
 
         # # Load the data: Final sort
         print('================================= Load: Substrate Files '
@@ -377,92 +343,30 @@ if inFixResidues:
             if iteration >= 10:
                 print('\n')
                 break
-
-        # Load: Fixed Counts
-        print('================================== Load: Counted Files '
-              '==================================')
-        print(f'Loading file at path:\n'
-              f'     {greenDark}{filePathFixedCountsFinal}{resetColor}\n\n')
-        countsFinal = pd.read_csv(filePathFixedCountsFinal, index_col=0)
-        countsFinalTotal = sum(countsFinal.iloc[:, 0])
-        print(f'Loaded Counts:{purple} {inEnzymeName} Fixed {fixedSubSeq}'
-              f'\n{red}{countsFinal}{resetColor}\n\n'
-              f'Total substrates:{white} {countsFinalTotal:,}{resetColor}\n\n')
     else:
-        print(f'File not found:\n'
-              f'     {filePathFixedSubsFinal}'
-              f'\n\nLoading substrates and fixing the residue(s):'
-              f'{purple} {fixedSubSeq}{resetColor}\n\n')
+        loadFilteredSubs = True
+        print(f'Fix Data: {fixedSubSeq}')
 
+        start = time.time()
+        # Load: Substrates
+        substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs()
+        end = time.time()
+        runtime = end - start
+        print(f'Run time:{red} {round(runtime, 3)}{resetColor}s\n\n')
 
-if loadUnfixedSubstrates:
+else:
+    # Load: Substrates
     (substratesInitial, totalSubsInitial,
      substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs(loadInitial=True)
 
-    # Load the data: Initial sort
-    filePathsInitial = []
-    for fileName in fileNamesInitial:
-        filePathsInitial.append(os.path.join(ngs.pathDirectory, f'counts_{fileName}'))
+    # Load: Counts
+    countsFinal, countsFinalTotal = ngs.loadCounts(fileType='Final Sort', filter=False)
 
-    # Verify that all files exist
-    missingFile = False
-    indexMissingFile = []
-    for indexFile, path in enumerate(filePathsInitial):
-        if os.path.exists(path):
-            continue
-        else:
-            missingFile = True
-            indexMissingFile.append(indexFile)
-    if missingFile:
-        print('\033[91mERROR: File not found at path:')
-        for indexMissing in indexMissingFile:
-            print(f'     {filePathsInitial[indexMissing]}')
-        print(f'\nMake sure your path is correctly named, and that you '
-              f'have already extracted and counted your NGS data\n')
-        sys.exit()
-    else:
-        countsInitial, countsInitialTotal = ngs.loadCounts(filePath=filePathsInitial,
-                                                           files=fileNamesInitial,
-                                                           fileType='Initial Sort')
-        # Calculate RF
-        initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
-                                    fileType='Initial Sort', printRF=inPrintRF)
 
-    # Load the data: final sort
-    filePathsFinal = []
-    for fileName in fileNamesFinal:
-        filePathsFinal.append(os.path.join(ngs.pathDirectory, f'counts_{fileName}'))
 
-    # Verify that all files exist
-    missingFile = False
-    for indexFile, path in enumerate(filePathsFinal):
-        if os.path.exists(path):
-            continue
-        else:
-            missingFile = True
-            indexMissingFile.append(indexFile)
-    if missingFile:
-        print('\033[91mERROR: File not found at path:')
-        for indexMissing in indexMissingFile:
-            print(filePathsFinal[indexMissing])
-        print(f'\nMake sure your path is correctly named, and that you '
-              f'have already extracted and counted your NGS data\n')
-        sys.exit()
-    else:
-        countsFinal, countsFinalTotal = ngs.loadCounts(filePath=filePathsFinal,
-                                                       files=fileNamesFinal,
-                                                       fileType='Final Sort')
-        # Calculate RF
-        finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
-                                  fileType='Final Sort', printRF=inPrintRF)
-
-    # Calculate: Average initial RF
-    RFsum = np.sum(initialRF, axis=1)
-    initialRFAvg = RFsum / len(initialRF.columns)
-    initialRFAvg = pd.DataFrame(initialRFAvg, index=initialRFAvg.index,
-                                columns=['Average RF'])
-
-    if inFixResidues:
+# ================================== Evaluate The Data ===================================
+if inFixResidues:
+    if loadFilteredSubs:
         # Fix AA
         substratesFinal, countsFinalTotal = ngs.fixResidue(
             substrates=substratesFinal, fixedString=fixedSubSeq,
@@ -471,6 +375,11 @@ if loadUnfixedSubstrates:
         # Count fixed substrates
         countsFinal, _ = ngs.countResidues(substrates=substratesFinal,
                                            datasetType='Final Sort')
+
+    if inEvaluateSubstrateEnrichment:
+        fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
+            substrates=substratesInitial, fixedString=fixedSubSeq,
+            printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
 
 
 # Calculate: Average initial RF
@@ -489,7 +398,7 @@ positionalEntropy = ngs.calculateEntropy(RF=finalRF, printEntropy=inPrintEntropy
 
 
 # Save the data
-if inFixResidues and loadUnfixedSubstrates:
+if not os.path.exists(filePathFixedSubsFinal):
     # Save the fixed substrate dataset
     with open(filePathFixedSubsFinal, 'wb') as file:
         pk.dump(substratesFinal, file)
@@ -504,15 +413,6 @@ ngs.updateSampleSize(NSubs=countsInitialTotal, sortType='Initial Sort',
                      printCounts=inPrintSampleSize, fixedTag=None)
 ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
                      printCounts=inPrintSampleSize, fixedTag=fixedSubSeq)
-
-
-
-# ================================== Evaluate The Data ===================================
-if inFixResidues and inEvaluateSubstrateEnrichment:
-    fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
-        substrates=substratesInitial, fixedString=fixedSubSeq,
-        printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
-
 
 
 
