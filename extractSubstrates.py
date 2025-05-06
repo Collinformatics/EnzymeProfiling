@@ -18,7 +18,7 @@ from functions import NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location
-inFileName = ['Fyn-I_S6_L001_R1_001'] # Define file name(s)
+inFileName = ['Fyn-I_S6_L001_R1_001', 'Fyn-I_S6_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
 inPathFolder = f'/path/{inEnzymeName}'
 inFilePath = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder pathway
@@ -52,11 +52,12 @@ inCountMapYLabel = 2  # 0 for full Residue name, 1 for 3-letter code, 2 for 1 le
 
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
-          fixedAA=inFixedResidue, fixedPosition=inFixedPosition, excludeAAs=None,
-          excludeAA=None, excludePosition=None, minCounts=0, figEMSquares=False,
-          xAxisLabels=inAAPositions, xAxisLabelsBinned=None,
+          filterData=inFixedLibrary, fixedAA=inFixedResidue, 
+          fixedPosition=inFixedPosition, excludeAAs=None, excludeAA=None, 
+          excludePosition=None, minCounts=0, figEMSquares=False, 
+          xAxisLabels=inAAPositions, xAxisLabelsBinned=None, 
           residueLabelType=inCountMapYLabel, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, findMotif=False, folderPath=inFilePath, 
+          showNValues=inShowSampleSize, findMotif=False, folderPath=inFilePath,
           filesInit=None, filesFinal=None, saveFigures=False, setFigureTimer=None)
 
 
