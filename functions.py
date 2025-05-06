@@ -131,7 +131,7 @@ class NGS:
     def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
                  excludeAA, excludePosition, minCounts, figEMSquares, xAxisLabels,
                  xAxisLabelsBinned, residueLabelType, printNumber, showNValues, findMotif,
-                 filePath, filesInit, filesFinal, saveFigures, setFigureTimer):
+                 folderPath, filesInit, filesFinal, saveFigures, setFigureTimer):
         self.enzymeName = enzymeName
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
@@ -171,20 +171,14 @@ class NGS:
         self.nSubsFinal = 0
         self.delta = 0
         self.findMotif = findMotif
-
-
-
         self.filesInit = filesInit
         self.filesFinal = filesFinal
         self.saveFigures = saveFigures
-        self.pathFolder = filePath
+        self.pathFolder = folderPath
         self.pathSaveData = os.path.join(self.pathFolder, 'Data')
         self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
         self.pathFilteredSubs = None
         self.pathFilteredCounts = None
-
-
-
         self.setFigureTimer = setFigureTimer
         self.figureTimerDuration = 0.5
         self.saveFigureIteration = 0
