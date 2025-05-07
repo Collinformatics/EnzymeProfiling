@@ -49,9 +49,6 @@ inPrintNumber = 10
 # Input 5: Motif Extraction
 inMinDeltaS = 0.55
 
-inIndexNTerminus = inFixedPosition[0] - 3 # Define starting bounds for the motif
-inMotifLength = 5 # Define the length of your motif
-
 # Input 6: PCA
 inBinSubsPCA = True
 inNumberOfPCs = 2
@@ -74,17 +71,21 @@ inAddHorizontalLines = False
 inTitleMotif = inTitleEnrichmentMap
 inBigLettersOnTop = False
 
-# Input 9: Optimal Substrates
+# Input 9: Word Cloud
+inLimitWords = True
+inNWords = 100
+
+# Input 10: Optimal Substrates
 inEvaluateOS = False
 inPrintOSNumber = 10
 inMaxResidueCount = 4
 
-# Input 10: Evaluate Substrate Enrichment
+# Input 11: Evaluate Substrate Enrichment
 inEvaluateSubstrateEnrichment = False # ============= Fix: Load Initial Subs =============
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
-# Input 11: Evaluate Positional Preferences
+# Input 12: Evaluate Positional Preferences
 inPlotPosProb = False # Plot RF distributions of a given AA
 inCompairAA = 'L' # Select AA of interest (different A than inFixedResidue)
 
@@ -108,8 +109,6 @@ resetColor = '\033[0m'
 
 # Load: Dataset labels
 fileNamesInitial, fileNamesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
-inFramePositions = [inIndexNTerminus - 1, inIndexNTerminus + inMotifLength - 1]
-labelAAPosMotif = labelAAPos[inFramePositions[0]:inFramePositions[-1]]
 
 
 
@@ -442,33 +441,25 @@ if inPlotWeblogoMotif:
 
 if inPlotWordCloud or inBinSubsPCA:
     if inFixResidues:
-        fixedSubSeqMotif = (f'{fixedSubSeq} - '
-                             f'Motif {labelAAPosMotif[0]}-'
-                             f'{labelAAPosMotif[-1]}')
-
-
-
-
         # Extract motif
-        motifPos = ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS,
-                                                 fixFullFrame=True, getIndices=True)
-
-        motifs = ngs.getMotif(substrates=substratesFinal)
-        countsMotif, countsTotalMotifs = ngs.countResidues(substrates=motifs,
-                                                           datasetType='Final Sort Motifs')
-
-        sys.exit()
+        ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS,
+                          fixFullFrame=True, getIndices=True)
+        finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
+        fixedSubSeqMotif = (f'{fixedSubSeq} - Motif '
+                            f'{ngs.xAxisLabelsMotif[0]}-{ngs.xAxisLabelsMotif[-1]}')
 
         # Plot: Work cloud
         if inPlotWordCloud:
-            titleWordCloud = f'\n{inEnzymeName}: Motif {fixedSubSeq}'
-            ngs.plotWordCloud(substrates=motifs, indexSet=None,
+            titleWordCloud = f'{inEnzymeName}: Motif {fixedSubSeq}'
+            ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
+                              limitWords=inLimitWords, N=inNWords,
                               title=titleWordCloud, saveTag=fixedSubSeqMotif)
     else:
         # Plot: Work cloud
         if inPlotWordCloud:
-            titleWordCloud = f'\n{inEnzymeName}: Unfiltered'
+            titleWordCloud = f'{inEnzymeName}: Unfiltered'
             ngs.plotWordCloud(substrates=substratesFinal, indexSet=None,
+                              limitWords=inLimitWords, N=inNWords,
                               title=titleWordCloud, saveTag='Unfiltered')
 
 

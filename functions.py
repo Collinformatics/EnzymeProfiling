@@ -877,38 +877,35 @@ class NGS:
         print(f'Unique substrate count:{red} {len(substrates):,}{resetColor}')
 
         # Determine substrate length
+        countMotif = False
         for substrate in substrates.keys():
             firstSub = substrate
-            lengthFirstSub = len(substrate)
-            if lengthFirstSub != len(self.xAxisLabels):
+            lengthSubstrate = len(substrate)
+            if lengthSubstrate != len(self.xAxisLabels):
                 countMotif = True
-            else:
-                countMotif = False
             break
 
         # Initialize the count matrix
         if countMotif:
             countedData = pd.DataFrame(0,
                                        index=self.letters,
-                                       columns=self.xAxisLabels,
-                                       dtype=int)
-        else:
-            # Initialize the counts matrix
-            countedData = pd.DataFrame(0,
-                                       index=self.letters,
                                        columns=self.xAxisLabelsMotif,
                                        dtype=int)
+        else:
+            countedData = pd.DataFrame(0,
+                                       index=self.letters,
+                                       columns=self.xAxisLabels,
+                                       dtype=int)
 
-        # # Verify consistent substrate lengths
-        # countModulus = 100 # Check the Nth substrate length
-        # for index, substrate in enumerate(substrates.keys()):
-        #     if index % countModulus == 0:
-        #         if len(substrate) != lengthFirstSub:
-        #             print(f'{orange}ERROR: The substrate lengths do not match\n'
-        #                   f'     {firstSub}: {lengthFirstSub} AA\n'
-        #                   f'     {substrate}: {len(substrate)} AA{resetColor}\n')
-        #             sys.exit()
-
+        # Verify consistent substrate lengths
+        countModulus = 100 # Check the Nth substrate length
+        for index, substrate in enumerate(substrates.keys()):
+            if index % countModulus == 0:
+                if len(substrate) != lengthSubstrate:
+                    print(f'{orange}ERROR: The substrate lengths do not match\n'
+                          f'     {firstSub}: {lengthSubstrate} AA\n'
+                          f'     {substrate}: {len(substrate)} AA{resetColor}\n')
+                    sys.exit()
 
         # Count the occurrences of each residue
         if countMotif:
@@ -970,60 +967,6 @@ class NGS:
         endTime = stopTime - beginTime
         print(f'Runtime:{greenLightB} Count AA\n'
               f'     {red}{np.round(endTime, 3):,}s{resetColor}\n\n')
-
-        return countedData, totalSubs
-
-
-
-    def countResiduesBinned(self, substrates, printCounts):
-        print('============================= Calculate: AA Counts '
-              '==============================')
-        totalSubs = np.sum(list(substrates.values()))
-        totalUniqueSubs = len(substrates)
-        print(f'Total Substrates:  {red}{totalSubs:,}{resetColor}\n'
-              f'Unique Substrates: {red}{totalUniqueSubs:,}{resetColor}\n')
-
-        # Initialize the count matrix
-        countedData = pd.DataFrame(0, index=self.letters, columns=positions,
-                                   dtype=int)
-
-        # Count the occurrences of each residue
-        substrateLength = len(positions)
-        for substrate, counts in substrates.items():
-            for indexAA in range(substrateLength):
-                if substrate[indexAA] in self.letters:
-                    indexResidue = self.letters.index(substrate[indexAA])
-                    countedData.iloc[indexResidue, indexAA] += counts
-                else:
-                    print(f'{greyDark}Outlying Substrate: {substrate}\n'
-                          f'     Unexpected Residue: {substrate[indexAA]}\n'
-                          f'     Position: {indexAA}{resetColor}\n')
-
-
-        # Sanity Check: Do the sums of each column match the total number of substrates?
-        columnSums = pd.DataFrame(np.sum(countedData, axis=0),
-                                  columns=['Total AA Counts'],
-                                  index=positions)
-        for indexColumn in countedData.columns:
-            sum = np.sum(countedData.loc[:, indexColumn])
-            if sum != totalSubs:
-                print(f'Counted data:{purple} '
-                      f'{self.enzymeName}{resetColor}\n{countedData}\n\n'
-                      f'{orange}ERROR: The total number of substrates '
-                      f'({red}{totalSubs:,}{orange}) =/= the '
-                      f'sum of column {indexColumn} ({red}{sum:,}{resetColor})\n')
-                sys.exit()
-
-
-        if printCounts:
-            countedDataPrint = countedData.apply(lambda col: col.map(includeCommas))
-            print(f'Counted data:{purple} {self.enzymeName}{resetColor}\n'
-                  f'{greyDark}{countedDataPrint}{resetColor}\n\n')
-
-
-        columnSums = columnSums.apply(lambda col: col.map(includeCommas))
-        print(f'{columnSums}')
-        print(f'\nTotal number of substrates: {red}{totalSubs:,}{resetColor}\n\n')
 
         return countedData, totalSubs
 
@@ -1749,7 +1692,9 @@ class NGS:
                 break
 
         # Extract motif
+        countTotalSubstrates = 0
         for substrate, count in substrates.items():
+            countTotalSubstrates += count
             motif = substrate[indexStart:indexEnd]
             if motif in motifs.keys():
                 motifs[motif] += count
@@ -1767,7 +1712,12 @@ class NGS:
                 print('\n')
                 break
 
+        print(f'Total Substrates:{red} {countTotalSubstrates:,}{resetColor}\n'
+              f'Unique Substrates:{red} {len(motifs):,}{resetColor}\n\n')
+
         return motifs
+
+
 
     def calculateProbCodon(self, codonSeq, printProbability):
         nucleotides = ['A', 'C', 'G', 'T']
@@ -4086,7 +4036,7 @@ class NGS:
 
 
 
-    def plotWordCloud(self, substrates, indexSet, title, saveTag):
+    def plotWordCloud(self, substrates, limitWords, N, indexSet, title, saveTag):
         print('=============================== Plot: Word Cloud '
               '================================')
         if indexSet is not None:
@@ -4100,8 +4050,24 @@ class NGS:
             iteration += 1
             if iteration == self.printNumber:
                 break
-        print('\n')
+        print('')
 
+        # Adjust title
+        numLines = title.count('\n') + 1 if title else 0
+        if numLines == 1:
+            title = '\n' + title
+
+        #
+        if limitWords:
+            print(f'Selecting the top {red}{N}{resetColor} sequences\n')
+            subs = {}
+            iteration = 0
+            for substrate, count in substrates.items():
+                subs[substrate] = count
+                iteration += 1
+                if iteration >= N:
+                    break
+            substrates = subs
 
         # Create word cloud
         cmap = NGS.createCustomColorMap(self, colorType='Word Cloud')
@@ -4136,8 +4102,12 @@ class NGS:
         # Save the Figure
         if self.saveFigures:
             # Define: Save location
-            figLabel = (f'{self.enzymeName} - Words - '
-                        f'{saveTag} - MinCounts {self.minSubCount}.png')
+            if limitWords:
+                figLabel = (f'{self.enzymeName} - Words - '
+                            f'{saveTag} - N {N} - MinCounts {self.minSubCount}.png')
+            else:
+                figLabel = (f'{self.enzymeName} - Words - '
+                            f'{saveTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
@@ -4149,6 +4119,8 @@ class NGS:
                 print(f'Saving figure at path:\n'
                       f'     {greenDark}{saveLocation}{resetColor}\n\n')
                 fig.savefig(saveLocation, dpi=self.figureResolution)
+        else:
+            print()
 
 
 
