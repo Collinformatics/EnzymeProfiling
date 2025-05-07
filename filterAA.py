@@ -16,7 +16,7 @@ import time
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inPathFolder = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
 
 # Input 2: Computational Parameters
