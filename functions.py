@@ -51,6 +51,7 @@ purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
 pink = '\033[38;2;255;0;242m'
 cyan = '\033[38;2;22;255;212m'
+blue = '\033[38;5;51m'
 green = '\033[38;2;5;232;49m'
 greenLight = '\033[38;2;204;255;188m'
 greenLightB = '\033[38;2;204;255;188m'
@@ -128,11 +129,12 @@ def includeCommas(x):
 
 
 class NGS:
-    def __init__(self, enzymeName, substrateLength, fixedAA, fixedPosition, excludeAAs,
-                 excludeAA, excludePosition, minCounts, figEMSquares, xAxisLabels,
-                 xAxisLabelsBinned, residueLabelType, printNumber, showNValues, findMotif,
+    def __init__(self, enzymeName, substrateLength, filterData, fixedAA, fixedPosition,
+                 excludeAAs, excludeAA, excludePosition, minCounts, figEMSquares,
+                 xAxisLabels, residueLabelType, printNumber, showNValues, findMotif,
                  folderPath, filesInit, filesFinal, saveFigures, setFigureTimer):
         self.enzymeName = enzymeName
+        self.applyFilter = filterData
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
         self.excludeAAs = excludeAAs
@@ -149,7 +151,6 @@ class NGS:
         self.figSize = (9.5, 8)
         self.figSizeMini = (self.figSize[0], 6)
         self.xAxisLabels = xAxisLabels
-        self.xAxisLabelsBinned = xAxisLabelsBinned
         self.residueLabelType = residueLabelType
         self.labelSizeTitle = 18
         self.labelSizeAxis = 16
@@ -169,16 +170,20 @@ class NGS:
         self.showSampleSize = showNValues
         self.nSubsInitial = 0
         self.nSubsFinal = 0
-        self.delta = 0
         self.findMotif = findMotif
+        self.indexMotif = None
+        self.xAxisLabelsMotif = None
+
         self.filesInit = filesInit
         self.filesFinal = filesFinal
-        self.saveFigures = saveFigures
         self.pathFolder = folderPath
         self.pathSaveData = os.path.join(self.pathFolder, 'Data')
         self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
+
+
         self.pathFilteredSubs = None
         self.pathFilteredCounts = None
+        self.saveFigures = saveFigures
         self.setFigureTimer = setFigureTimer
         self.figureTimerDuration = 0.5
         self.saveFigureIteration = 0
@@ -194,7 +199,7 @@ class NGS:
         if not os.path.exists(self.pathFolder):
             print(f'{orange}ERROR: Folder not found\n'
                   f'Check input: "{cyan}inPathFolder{orange}"\n'
-                  f'     inPathFolder = {self.pathFolder}')
+                  f'     inPathFolder = {self.pathFolder}\n')
             sys.exit()
         if self.pathSaveData is not None:
             if os.path.exists(self.pathSaveData):
@@ -213,7 +218,7 @@ class NGS:
         if os.path.exists(soundPath):
             threading.Thread(target=playsound, args=(soundPath,)).start()
         else:
-            print(f'{orange}ERROR: The alerts sound was not found at:\n'
+            print(f'{orange}ERROR: The alerts sound was not found at\n'
                   f'     {soundPath}{resetColor}\n')
 
 
@@ -289,7 +294,7 @@ class NGS:
             else:
                 print(f'{orange}ERROR: File location does not lead to a file\n'
                       f'     {path}\n'
-                      f'     {pathZipped}')
+                      f'     {pathZipped}\n')
                 sys.exit()
         print(f'File Location:\n'
               f'     {path}\n\n')
@@ -571,8 +576,9 @@ class NGS:
         if not os.path.isfile(path):
             pathZipped = path + '.gz'
             if not os.path.isfile(pathZipped):
-                print(f'{orange}ERROR: File location does not lead to a file'
-                      f'\n     {path}\n     {pathZipped}')
+                print(f'{orange}ERROR: File location does not lead to a file\n'
+                      f'     {path}\n'
+                      f'     {pathZipped}\n')
                 sys.exit()
             else:
                 gZipped = True
@@ -849,7 +855,7 @@ class NGS:
 
 
 
-    def extractionEffiency(self, files):
+    def extractionEfficiency(self, files):
         print('======================== Substrate Extraction Efficiency '
               '========================')
         for index, file in enumerate(files):
@@ -870,42 +876,43 @@ class NGS:
               '==============================')
         print(f'Unique substrate count:{red} {len(substrates):,}{resetColor}')
 
-        # Initialize the count matrix
-        countedData = pd.DataFrame(0,
-                                   index=self.letters,
-                                   columns=self.xAxisLabels,
-                                   dtype=int)
-
-        # Determine substrate lenght
+        # Determine substrate length
         for substrate in substrates.keys():
             firstSub = substrate
             lengthFirstSub = len(substrate)
             if lengthFirstSub != len(self.xAxisLabels):
-                binnedSubs = True
+                countMotif = True
             else:
-                binnedSubs = False
+                countMotif = False
             break
 
-        # Verfy consistant substrate lenghts
-        countModulus = 100 # Check the Nth substrate length
-        for index, substrate in enumerate(substrates.keys()):
-            if index % countModulus == 0:
-                # print(f'Check:{greenLightB} {index}')
-                if len(substrate) != lengthFirstSub:
-                    print(f'{orange}ERROR: The substrate lengths do not match\n'
-                          f'     {firstSub}: {lengthFirstSub} AA\n'
-                          f'     {substrate}: {len(substrate)} AA\n\n')
-                    sys.exit()
-        # print(f'{resetColor}')
-
-
-        # Count the occurrences of each residue
-        if binnedSubs:
+        # Initialize the count matrix
+        if countMotif:
+            countedData = pd.DataFrame(0,
+                                       index=self.letters,
+                                       columns=self.xAxisLabels,
+                                       dtype=int)
+        else:
             # Initialize the counts matrix
             countedData = pd.DataFrame(0,
                                        index=self.letters,
-                                       columns=self.xAxisLabelsBinned,
+                                       columns=self.xAxisLabelsMotif,
                                        dtype=int)
+
+        # # Verify consistent substrate lengths
+        # countModulus = 100 # Check the Nth substrate length
+        # for index, substrate in enumerate(substrates.keys()):
+        #     if index % countModulus == 0:
+        #         if len(substrate) != lengthFirstSub:
+        #             print(f'{orange}ERROR: The substrate lengths do not match\n'
+        #                   f'     {firstSub}: {lengthFirstSub} AA\n'
+        #                   f'     {substrate}: {len(substrate)} AA{resetColor}\n')
+        #             sys.exit()
+
+
+        # Count the occurrences of each residue
+        if countMotif:
+
             # Count the AAs
             for substrate, counts in substrates.items():
                 indicesResidue = [self.letters.index(AA) for AA in substrate]
@@ -915,7 +922,7 @@ class NGS:
             # Sum all columns
             columnSums = pd.DataFrame(np.sum(countedData, axis=0),
                                       columns=['Total Counts'],
-                                      index=self.xAxisLabelsBinned)
+                                      index=self.xAxisLabelsMotif)
         else:
             # Count the AAs
             for substrate, counts in substrates.items():
@@ -931,10 +938,10 @@ class NGS:
 
         # Print counts
         columnSumsFormated = columnSums.apply(lambda col: col.map(includeCommas)).copy()
-        print(f'{greyDark}{columnSumsFormated}{resetColor}\n')
+        print(f'{columnSumsFormated}\n')
         countedDataPrint = countedData.apply(lambda col: col.map(includeCommas))
         print(f'Counted data:{purple} {self.enzymeName}{resetColor}\n'
-              f'{greyDark}{countedDataPrint}{resetColor}\n\n')
+              f'{countedDataPrint}\n\n')
 
 
         # Sanity Check: Do the sums of each column match the total number of substrates?
@@ -946,15 +953,14 @@ class NGS:
                     f'Counted data:{purple} {self.enzymeName}{resetColor}\n'
                     f'{countedData}\n\n'
                     f'{orange}ERROR: The total number of substrates '
-                    f'({red}{totalSubs:,}{orange}) =/= the sum of column '
-                    f'{indexColumn} ({red}{columnSum:,}{orange}){resetColor}\n')
+                    f'({cyan}{totalSubs:,}{orange}) =/= the sum of column '
+                    f'{indexColumn} ({cyan}{columnSum:,}{orange}){resetColor}\n')
                 sys.exit()
-
 
         print(f'Total substrates: {red}{totalSubs:,}{resetColor}\n'
               f'Total Unique Substrates:{red} {len(substrates):,}{resetColor}\n\n')
 
-        # Updata sample size
+        # Update sample size
         if datasetType == 'Initial Sort':
             self.nSubsInitial = totalSubs
         else:
@@ -968,7 +974,8 @@ class NGS:
         return countedData, totalSubs
 
 
-    def countResiduesBinned(self, substrates, positions, printCounts):
+
+    def countResiduesBinned(self, substrates, printCounts):
         print('============================= Calculate: AA Counts '
               '==============================')
         totalSubs = np.sum(list(substrates.values()))
@@ -1021,40 +1028,6 @@ class NGS:
         return countedData, totalSubs
 
 
-    def sampleSizeDisplay(self, sortType, datasetTag):
-        print('============================== Current Sample Size '
-              '==============================')
-        if sortType is not None:
-            if datasetTag is None:
-                print(f'Sort Type:{purple} {sortType}{resetColor}')
-            else:
-                print(f'Sort Type:{purple} {sortType} {datasetTag}{resetColor}')
-
-        totalSubs = self.nSubsInitial + self.nSubsFinal
-        print(f'Initial Sort:{red} {self.nSubsInitial:,}{resetColor}\n'
-              f'Final Sort:{red} {self.nSubsFinal:,}{resetColor}\n'
-              f'Total Substrates:{greenLight} {totalSubs:,}{resetColor}\n\n')
-
-
-    def sampleSizeUpdate(self, NSubs, sortType, datasetTag):
-        # Update the current sample size
-        if sortType == 'Initial Sort':
-            self.nSubsInitial = NSubs
-        elif 'Final' in sortType:
-            self.nSubsFinal = NSubs
-        else:
-            print('============================== Current Sample Size '
-                  '==============================')
-            if datasetTag is None:
-                print(f'Sort Type:{purple} {sortType}{resetColor}')
-            else:
-                print(f'Sort Type:{purple} {sortType} {datasetTag}{resetColor}')
-            print(f'{orange}ERROR: The sample sizes were not updated\n\n')
-            sys.exit()
-
-        NGS.sampleSizeDisplay(self, sortType, datasetTag)
-
-
 
     def getFilePath(self, datasetTag, motifPath=False):
         # Define: File path
@@ -1104,7 +1077,7 @@ class NGS:
         if filter:
             if self.pathFilteredCounts is None:
                 print(f'{orange}ERROR: {cyan}self.pathFilteredCounts {orange}needs '
-                      f'to be defined before you can load the counts.{resetColor}')
+                      f'to be defined before you can load the counts.{resetColor}\n')
                 sys.exit()
             files = [self.pathFilteredCounts]
         else:
@@ -1121,59 +1094,43 @@ class NGS:
             # Verify if the file exists at its specified path
             if not os.path.exists(filePath):
                 print(f'{orange}ERROR: File not found\n'
-                      f'     {filePath}')
+                      f'     {filePath}\n')
                 sys.exit()
             print(f'     {greenDark}{filePath}{resetColor}')
-        print('')
+        print('\n')
 
 
         #  Load: AA counts
-        firstFile = True
+        countedData = None
         for index, filePath in enumerate(files):
             fileName = filePath.replace(self.pathSaveData, '')
-            if firstFile:
-                firstFile = False
-                # Load: File
-                countedData = pd.read_csv(filePath, index_col=0)
-                countedData = countedData.astype(int) # Convert datapoints to integers
 
-                # Format values to have commas
-                formattedCounts = countedData.to_string(
-                    formatters={column: '{:,.0f}'.format for column in
-                                countedData.select_dtypes(
-                                    include='number').columns})
-
-                substrateCounts = sum(countedData.iloc[:, 0])
-                totalCounts += substrateCounts
-                print(f'\nCounts: {greenLightB}{fileName}{resetColor}\n'
-                      f'{formattedCounts}\n'
-                      f'Substrate Count: {red}{substrateCounts:,}{resetColor}\n')
-            else:
-                # Load: File
+            # Load: File
+            if index == 0:
                 data = pd.read_csv(filePath, index_col=0)
-                data = data.astype(int)  # Convert datapoints to integers
-
-                # Format values to have commas
-                formattedCounts = data.to_string(
-                    formatters={column: '{:,.0f}'.format for column in
-                                data.select_dtypes(include='number').columns})
-
-                substrateCounts = sum(data.iloc[:, 0])
-                totalCounts += substrateCounts
-                print(f'\nCounts: {greenLightB}{fileName}{resetColor}\n'
-                      f'{formattedCounts}\n'
-                      f'Substrate Count: {red}'
-                      f'{substrateCounts:,}{resetColor}\n\n')
-
+                data = data.astype(int)
+                countedData = data
+            else:
+                data = pd.read_csv(filePath, index_col=0)
+                data = data.astype(int)
                 countedData += data
-        print(f'Number of substrates in{purple} {labelFile}{resetColor}: '
-              f'{red}{totalCounts:,}{resetColor}\n')
 
+            # Format values to have commas
+            formattedCounts = data.to_string(
+                formatters={column: '{:,.0f}'.format for column in
+                            data.select_dtypes(include='number').columns})
+
+            # Print counts
+            substrateCounts = sum(data.iloc[:, 0])
+            totalCounts += substrateCounts
+            print(f'Counts: {greenLightB}{fileName}{resetColor}\n'
+                  f'{formattedCounts}\n'
+                  f'Substrate Count: {red}'
+                  f'{substrateCounts:,}{resetColor}\n\n')
         # Sum each column
         columnSums = pd.DataFrame(np.sum(countedData, axis=0), columns=['Total Counts'])
         columnSumsFormat = columnSums.apply(lambda x: x.map('{:,}'.format))
         print(f'{columnSumsFormat}')
-
 
         # Sanity Check: Do the sums of each column match the total number of substrates?
         for indexColumn, columnSum in enumerate(columnSums.iloc[:, 0]):
@@ -1182,7 +1139,7 @@ class NGS:
                 print(f'{orange}ERROR: The total number of substrates '
                       f'({cyan}{totalCounts:,}{orange}) =/= '
                       f'the sum of column {pink}{columnSums.index[indexColumn]}{orange} '
-                      f'({cyan}{columnSum:,}{orange})')
+                      f'({cyan}{columnSum:,}{orange})\n')
                 sys.exit()
         print('\n')
 
@@ -1206,7 +1163,7 @@ class NGS:
         substrates = {}
         substrateTotal = 0
 
-        print(f'Loading data in these files:')
+        print(f'Loading dataset: {purple}{self.enzymeName} {fileType}{resetColor}')
         for fileName in fileNames:
             print(f'     {greenLightB}{fileName}{resetColor}')
         print()
@@ -1250,7 +1207,7 @@ class NGS:
         iteration = 0
         for substrate, count in substrates.items():
             iteration += 1
-            print(f'     {greyDark}{substrate}{resetColor}, Counts: {red}{count:,}'
+            print(f'     {green}{substrate}{resetColor}, Counts: {red}{count:,}'
                   f'{resetColor}')
             if iteration >= self.printNumber:
                 break
@@ -1269,7 +1226,6 @@ class NGS:
 
         # Initialize result dictionary
         loadedResults = {}
-
 
         if loadInitial:
             # Create threads for loading initial and final substrates
@@ -1306,9 +1262,34 @@ class NGS:
             threadFinal.join()
 
             # Retrieve the loaded substrates
-            substratesFinal, totalSubsFinal = loadedResults['Final Sort']
+            substrates, totalSubs = loadedResults['Final Sort']
 
-            return substratesFinal, totalSubsFinal
+            return substrates, totalSubs
+
+
+
+    def loadSubstratesFiltered(self):
+        print('=========================== Load: Filtered Substrate '
+              '============================')
+        print(f'Loading substrates:{purple} {self.enzymeName} Fixed {self.fixedSubSeq}\n'
+              f'     {greenDark}{self.pathFilteredSubs}{resetColor}\n\n')
+        with open(self.pathFilteredSubs, 'rb') as file:
+            substrates = pk.load(file)
+
+        iteration = 0
+        print(f'Substrates:')
+        for substrate, count in substrates.items():
+            print(f'     {pink}{substrate}{resetColor}, Count:{red} {count:,}'
+                  f'{resetColor}')
+            iteration += 1
+            if iteration >= self.printNumber:
+                print('')
+                break
+
+        totalSubsFinal = sum(substrates.values())
+        print(f'Total substrates: {red}{totalSubsFinal:,}{resetColor}\n\n')
+
+        return substrates, totalSubsFinal
 
 
 
@@ -1371,7 +1352,7 @@ class NGS:
                     totalCountsFixedFrame += countsFixedFrame
             else:
                 print(f'{orange}ERROR: The file was not found\n'
-                      f'     {filePathFixedMotifCounts}\n\n')
+                      f'     {filePathFixedMotifCounts}\n')
                 sys.exit()
 
         # Sum the columns
@@ -1423,6 +1404,41 @@ class NGS:
 
 
 
+    def sampleSizeDisplay(self, sortType, datasetTag):
+        print('============================== Current Sample Size '
+              '==============================')
+        if sortType is not None:
+            if datasetTag is None:
+                print(f'Sort Type:{purple} {sortType}{resetColor}')
+            else:
+                print(f'Sort Type:{purple} {sortType} {datasetTag}{resetColor}')
+
+        totalSubs = self.nSubsInitial + self.nSubsFinal
+        print(f'Initial Sort:{red} {self.nSubsInitial:,}{resetColor}\n'
+              f'Final Sort:{red} {self.nSubsFinal:,}{resetColor}\n'
+              f'Total Substrates:{greenLight} {totalSubs:,}{resetColor}\n\n')
+
+
+
+    def sampleSizeUpdate(self, NSubs, sortType, datasetTag):
+        # Update the current sample size
+        if sortType == 'Initial Sort':
+            self.nSubsInitial = NSubs
+        elif 'Final' in sortType:
+            self.nSubsFinal = NSubs
+        else:
+            print('============================== Current Sample Size '
+                  '==============================')
+            if datasetTag is None:
+                print(f'Sort Type:{purple} {sortType}{resetColor}')
+            else:
+                print(f'Sort Type:{purple} {sortType} {datasetTag}{resetColor}')
+            print(f'{orange}ERROR: The sample sizes were not updated\n')
+            sys.exit()
+        NGS.sampleSizeDisplay(self, sortType, datasetTag)
+
+
+
     def calculateProbMotif(self, countsTotal, datasetTag):
         print('====================== Calculate: Fixed Motif Probability '
               '=======================')
@@ -1433,7 +1449,7 @@ class NGS:
         prob = pd.DataFrame(0.0, index=countsTotal.index,
                             columns=countsTotal.columns)
 
-        # Calculate: Relative frequency
+        # Calculate: Residue Probability
         for position in countsTotal.columns:
             prob.loc[:, position] = (countsTotal.loc[:, position] /
                                    columnSums.loc[position, 'Sum'])
@@ -1523,7 +1539,7 @@ class NGS:
                       'lightcoral','red','firebrick','darkred']
         else:
             print(f'{orange}ERROR: Cannot create colormap. '
-                  f'Unrecognized colorType parameter: {colorType}{resetColor}\n\n')
+                  f'Unrecognized colorType parameter: {colorType}{resetColor}\n')
             sys.exit()
 
         # Create colormap
@@ -1671,9 +1687,9 @@ class NGS:
             print(f'Selecting continuous motif')
         else:
             print(f'Selecting non-continuous motif')
-        print(f'Minimum ΔEntropy Value:{pink} {minEntropy} Bits{resetColor}\n\n'
+        print(f'Minimum ΔS Value:{red} {minEntropy} Bits{resetColor}\n\n'
               f'Positional Entropy:\n'
-              f'{pink}{entropy}{resetColor}\n')
+              f'{entropy}{resetColor}\n')
         subFrame = entropy.copy()
         lastPosition = len(entropy) - 1
 
@@ -1681,10 +1697,10 @@ class NGS:
         if fixFullFrame:
             for indexPos, position in enumerate(entropy.index):
                 if indexPos == 0 or indexPos == lastPosition:
-                    if entropy.loc[position, 'ΔEntropy'] < minEntropy:
+                    if entropy.loc[position, 'ΔS'] < minEntropy:
                         subFrame.drop(position, inplace=True)
                 else:
-                    if entropy.loc[position, 'ΔEntropy'] < minEntropy:
+                    if entropy.loc[position, 'ΔS'] < minEntropy:
                         if (entropy.iloc[indexPos - 1, 0] > minEntropy and
                                 entropy.iloc[indexPos + 1, 0] > minEntropy):
                             pass
@@ -1692,24 +1708,66 @@ class NGS:
                             subFrame.drop(position, inplace=True)
         else:
             for indexPos, position in enumerate(entropy.index):
-                if entropy.loc[position, 'ΔEntropy'] < minEntropy:
+                if entropy.loc[position, 'ΔS'] < minEntropy:
                     subFrame.drop(position, inplace=True)
 
         # Sort the frame
-        subFrameSorted = subFrame.sort_values(by='ΔEntropy', ascending=False).copy()
+        subFrameSorted = subFrame.sort_values(by='ΔS', ascending=False).copy()
         print(f'Motif Frame:\n'
-              f'{pink}{subFrame}{resetColor}\n\n'
+              f'{red}{subFrame}{resetColor}\n\n'
               f'Ranked Motif Frame:\n'
               f'{red}{subFrameSorted}{resetColor}\n\n')
 
-        if getIndices:
-            indexSubFrameList = list(entropy.index)
-            indexSubFrame = [indexSubFrameList.index(idx) for idx in subFrameSorted.index]
-            return subFrameSorted, indexSubFrame
-        else:
-            return subFrameSorted
+        # Define motif label
+        indexSubFrameList = list(entropy.index)
+        self.indexMotif = [indexSubFrameList.index(idx) for idx in subFrameSorted.index]
+        self.xAxisLabelsMotif = self.xAxisLabels[
+                                min(self.indexMotif):max(self.indexMotif)+1]
 
+        return subFrameSorted
 
+    
+    
+    def getMotif(self, substrates):
+        print('================================= Extract Motif '
+              '=================================')
+        motifs = {}
+        indexStart = min(self.indexMotif)
+        indexEnd = max(self.indexMotif) + 1
+        print(f'Motif Indices: {purple}{indexStart} - {indexEnd}{resetColor}\n')
+
+        # Print data
+        iteration = 0
+        print(f'Substrates:')
+        for substrate, count in substrates.items():
+            print(f'     {pink}{substrate}{resetColor}, '
+                  f'{blue}{substrate[indexStart:indexEnd]}{resetColor}, '
+                  f'Count:{red} {count:,}{resetColor}')
+            iteration += 1
+            if iteration >= self.printNumber:
+                print('')
+                break
+
+        # Extract motif
+        for substrate, count in substrates.items():
+            motif = substrate[indexStart:indexEnd]
+            if motif in motifs.keys():
+                motifs[motif] += count
+            else:
+                motifs[motif] = count
+        motifs = dict(sorted(motifs.items(), key=lambda x: x[1], reverse=True))
+
+        # Print data
+        iteration = 0
+        print(f'Motifs:')
+        for motif, count in motifs.items():
+            print(f'     {blue}{motif}{resetColor}, Count:{red} {count:,}{resetColor}')
+            iteration += 1
+            if iteration >= self.printNumber:
+                print('\n')
+                break
+
+        return motifs
 
     def calculateProbCodon(self, codonSeq, printProbability):
         nucleotides = ['A', 'C', 'G', 'T']
@@ -1782,17 +1840,20 @@ class NGS:
 
 
 
-    def calculateRF(self, counts, N, fileType, printRF):
-        # Calculate Relative Frequency of each amino acid at a given position
-        RF = counts / N
+    def calculateRF(self, counts, N, fileType):
+        print('======================== Calculate: Residue Probability '
+              '=========================')
+        if self.applyFilter and 'initial' not in fileType.lower():
+            print(f'Dataset: {purple}{self.enzymeName} {fileType} - Filter '
+                  f'{self.fixedSubSeq}{resetColor}\n')
+        else:
+            print(f'Dataset: {purple}{self.enzymeName} - {fileType}{resetColor}\n')
 
-        if printRF:
-            print('========================= Calculate: Relative Frequency '
-                  '=========================')
-            print(f'RF: {self.enzymeName} - {purple}{fileType}{resetColor}\n'
-                  f'{np.round(RF, 4)}\n\n')
+        # Calculate: Probability
+        prob = counts / N
+        print(f'{np.round(prob, 4)}\n\n')
 
-        return RF
+        return prob
 
 
 
@@ -1971,7 +2032,9 @@ class NGS:
 
 
 
-    def calculateEnrichment(self, initialSortRF, finalSortRF, printES):
+    def calculateEnrichment(self, initialSortRF, finalSortRF):
+        print('========================== Calculate: Enrichment Score '
+              '==========================')
         if len(initialSortRF.columns) == 1:
             enrichment = pd.DataFrame(0.0, index=finalSortRF.index,
                                       columns=finalSortRF.columns)
@@ -1982,13 +2045,9 @@ class NGS:
             initialSortRF.columns = finalSortRF.columns
             enrichment = np.log2(finalSortRF / initialSortRF)
             enrichment.columns = finalSortRF.columns
-        if printES:
-            print('========================== Calculate: Enrichment Score '
-                  '==========================')
-            print(f'Enrichment Score:{purple} {self.fixedSubSeq}{resetColor}\n'
-                  f'{enrichment.round(3)}\n\n')
-        else:
-            print('\n')
+
+        print(f'Enrichment Score:{purple} {self.fixedSubSeq}{resetColor}\n\n'
+              f'{enrichment.round(3)}\n\n')
 
         return enrichment
 
@@ -2071,57 +2130,34 @@ class NGS:
 
 
 
-    def heightsRF(self, counts, N, printRF):
-        print('=========================== Calculate: Letter Heights '
-              '===========================')
-        print(f'Residue heights calculated by:{red} RF * ΔS{resetColor}\n')
-
-
+    def calculateWeblogo(self, probability, entropy):
+        print('============================= Calculate: Weblogo '
+              '================================')
         fixedPos = {}
-        for indexColumn in counts.columns:
-            values = counts.loc[:, indexColumn]
-            if N in values.values:
-                indexRow = values[values == N].index[0]
+        for indexColumn in probability.columns:
+            values = probability.loc[:, indexColumn]
+            if 1.0 in values.values:
+                indexRow = values[values == 1.0].index[0]
                 fixedPos[indexColumn] = indexRow
         print(f'Fixed Residues:')
         if fixedPos:
             for key, value in fixedPos.items():
-                print(f'     Fixed Position: {red}{key}{resetColor}, '
-                      f'Residue: {red}{value}{resetColor}')
+                print(f'     {pink}{value}@{key}{resetColor}')
         else:
-            print(f'     {red}No fixed Residues{resetColor}')
-        print('\n')
+            print(f'     {pink}No fixed Residues{resetColor}')
+        print('')
 
+        entropyMax = np.log2(len(probability.index))
+        print(f'Probability:\n{probability}\n\n{entropy}\n\n'
+              f'Max Entropy: {red}{entropyMax.round(6)}{resetColor}\n\n')
 
-        RF = counts / N
-
-        # Print data
-        if printRF:
-            print(f'Experimental Counts:{purple} Final Sort{resetColor}\n{counts}\n\n')
-            print(f'RF:{purple} Final Sort\n'
-                  f'{greyDark}{RF.round(3)}{resetColor}\n\n')
-
-
-        entropy = pd.DataFrame(0.0, index=RF.columns, columns=['ΔEntropy'])
-        entropyMax = np.log2(len(RF.index))
-        for indexColumn in RF.columns:
-            S = 0 # Reset entropy total for a new position
-            for indexRow, probRatio in RF.iterrows():
-                prob = probRatio[indexColumn]
-                if prob == 0:
-                    continue
-                else:
-                    S += -prob * np.log2(prob)
-            entropy.loc[indexColumn, 'ΔEntropy'] = entropyMax - S
-        self.delta = sum(entropy.loc[:, 'ΔEntropy']) / self.substrateLength
-        print(f'{entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
-
-
-        heights = pd.DataFrame(0, index=counts.index, columns=counts.columns, dtype=float)
+        #
+        heights = pd.DataFrame(0, index=probability.index,
+                               columns=probability.columns, dtype=float)
         for indexColumn in heights.columns:
-            heights.loc[:, indexColumn] = (RF.loc[:, indexColumn] *
-                                           entropy.loc[indexColumn, 'ΔEntropy'])
-
+            heights.loc[:, indexColumn] = (probability.loc[:, indexColumn] *
+                                           entropy.loc[indexColumn, 'ΔS'])
+        # Calculate: Max and min
         columnTotals = [[], []]
         for indexColumn in heights.columns:
             totalPos = 0
@@ -2136,20 +2172,18 @@ class NGS:
         yMax = max(columnTotals[0])
         yMin = min(columnTotals[1])
 
-        if printRF:
-            print(f'Residue Heights:\n{heights.round(3)}\n\n'
-                  f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
-                  f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
-
-        # Set values for columns with fixed residues
+        # Apply correction for rounding error on fixed AAs
         for key, value in fixedPos.items():
             heights.loc[value, key] = yMax
+        print(f'Letter Heights:\n{heights}\n\n'
+              f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+              f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
-        return heights, fixedPos, yMax, yMin
+        return heights, yMax, yMin
 
 
 
-    def enrichmentMatrix(self, counts, N, baselineProb, baselineType, printRF, scaleData,
+    def enrichmentMatrix(self, counts, N, baselineProb, baselineType, scaleData,
                          normalizeFixedScores):
         print('=========================== Calculate: Letter Heights '
               '===========================')
@@ -2166,14 +2200,6 @@ class NGS:
             if N in values.values:
                 indexRow = values[values == N].index[0]
                 fixedPos[indexColumn] = indexRow
-        print(f'Fixed Residues:')
-        if fixedPos:
-            for key, value in fixedPos.items():
-                print(f'     Fixed Position: {red}{key}{resetColor}, '
-                      f'Residue: {red}{value}{resetColor}')
-        else:
-            print('     No fixed Residues')
-        print('\n')
 
         probCounts = counts / N
         probRatios = pd.DataFrame(0, index=counts.index, columns=counts.columns,
@@ -2193,9 +2219,8 @@ class NGS:
                                          baselineProb.loc[indexRow, indexColumn])
                     probRatios.loc[indexRow, indexColumn] = probRatio
         probRatios.replace(-np.inf, 0, inplace=True)
-        if printRF:
-            print(f'RF: {purple}{baselineType}{resetColor}\n{baselineProb.round(3)}\n\n')
-            print(f'RF:{purple} Final Sort{resetColor}\n{probCounts.round(3)}\n\n')
+        print(f'RF: {purple}{baselineType}{resetColor}\n{baselineProb.round(3)}\n\n')
+        print(f'RF:{purple} Final Sort{resetColor}\n{probCounts.round(3)}\n\n')
 
         if scaleData:
             entropy = pd.DataFrame(0.0, index=probCounts.columns, columns=['Entropy'])
@@ -2238,22 +2263,21 @@ class NGS:
         yMax = max(columnTotals[0])
         yMin = min(columnTotals[1])
 
-        if printRF:
-            if scaleData:
-                print(f'Residue Heights: log\u2082({cyan}RF Final Sort{resetColor} / '
-                      f'{cyan}RF {baselineType}{resetColor})\n'
-                      f'{probRatios.round(3)}\n')
+        if scaleData:
+            print(f'Residue Heights: log\u2082({cyan}RF Final Sort{resetColor} / '
+                  f'{cyan}RF {baselineType}{resetColor})\n'
+                  f'{probRatios.round(3)}\n')
 
-                print(f'{entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
-                print(f'{pink}Scaled Residue Heights{resetColor}:{cyan} '
-                      f'ΔS * log\u2082(RF Final Sort / RF  {baselineType}{resetColor})\n'
-                      f'{heights.round(5)}\n')
-            else:
-                print(f'{pink}Residue Heights{resetColor}:{cyan} '
-                      f'log\u2082(RF Final Sort / RF {baselineType}{resetColor})\n'
-                      f'{heights.round(3)}\n')
-            print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
-                  f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
+            print(f'{entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
+            print(f'{pink}Scaled Residue Heights{resetColor}:{cyan} '
+                  f'ΔS * log\u2082(RF Final Sort / RF  {baselineType}{resetColor})\n'
+                  f'{heights.round(5)}\n')
+        else:
+            print(f'{pink}Residue Heights{resetColor}:{cyan} '
+                  f'log\u2082(RF Final Sort / RF {baselineType}{resetColor})\n'
+                  f'{heights.round(3)}\n')
+        print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+              f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
         # Set values for columns with fixed residues
         if normalizeFixedScores:
@@ -2293,7 +2317,7 @@ class NGS:
                   f'============================================'
                   f'=============================================\n')
 
-        return heights, fixedPos, yMax, yMin
+        return heights, yMax, yMin
 
 
 
@@ -2329,7 +2353,7 @@ class NGS:
         if scaler is not None:
             for position in Q.columns:
                 divergenceMatrix.loc[:, position] = (divergenceMatrix.loc[:, position] *
-                                                     scaler.loc[position, 'ΔEntropy'])
+                                                     scaler.loc[position, 'ΔS'])
 
         print(f'{greyDark}KL Divergence:'
               f'{pink} Fixed Final Sort - {self.fixedSubSeq}{resetColor}\n'
@@ -2474,10 +2498,10 @@ class NGS:
 
 
 
-    def calculateEntropy(self, RF, printEntropy, datasetTag=''):
+    def calculateEntropy(self, RF, datasetTag=''):
         print('============================== Calculate: Entropy '
               '===============================')
-        entropy = pd.DataFrame(0.0, index=RF.columns, columns=['ΔEntropy'])
+        entropy = pd.DataFrame(0.0, index=RF.columns, columns=['ΔS'])
         entropyMax = np.log2(len(RF.index))
         for indexColumn in RF.columns:
             S = 0 # Reset entropy total for a new position
@@ -2487,15 +2511,10 @@ class NGS:
                     continue
                 else:
                     S += -prob * np.log2(prob)
-            entropy.loc[indexColumn, 'ΔEntropy'] = entropyMax - S
-
-        if printEntropy:
-            print(f'Positional Entropy: {datasetTag}\n{entropy}\n\nMax Entropy: '
-                  f'{entropyMax.round(6)}\n\n')
+            entropy.loc[indexColumn, 'ΔS'] = entropyMax - S
+        print(f'{entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
 
         return entropy
-
-
 
     def substrateEnrichment(self, initialSubs, finalSubs, saveData,
                             savePath, NSubs):
@@ -2519,8 +2538,8 @@ class NGS:
         iteration = 0
         totalSubstratesInitial = 0
         totalUniqueSubstratesInitial = len(initialSubs)
-        totalSubstratesFinal = 0
-        totalUniqueSubstratesFinal = len(finalSubs)
+        totalsubstrates = 0
+        totalUniquesubstrates = len(finalSubs)
 
         # Evaluate the substrates
         if self.fixedSubSeq == None:
@@ -2557,30 +2576,30 @@ class NGS:
             # Process: final sort
             print(f'Ranked Substrates:{purple} Final Sort{resetColor} -'
                   f'{red} NNS{resetColor}')
-            if totalUniqueSubstratesFinal >= self.printNumber:
+            if totalUniquesubstrates >= self.printNumber:
                 for substrate, count in finalSubs.items():
                     if iteration <= self.printNumber:
                         print(f'     {magenta}{substrate}{resetColor}, '
                               f'Counts: {red}{count:,}{resetColor}')
                         iteration += 1
-                        totalSubstratesFinal += count
+                        totalsubstrates += count
                     else:
-                        totalSubstratesFinal += count
+                        totalsubstrates += count
             else:
                 print(f'{orange}The number of unique substrates '
-                      f'({red}{totalUniqueSubstratesFinal}'
+                      f'({red}{totalUniquesubstrates}'
                       f'{orange}) is less than the number you requested to be see '
                       f'({red}{self.printNumber}{orange}){resetColor}\n')
                 for substrate, count in finalSubs.items():
                     print(f'     {magenta}{substrate}{resetColor}, '
                           f'Counts: {red}{count:,}{resetColor}')
-                    totalSubstratesFinal += count
+                    totalsubstrates += count
             iteration = 0
             # Print dataset totals
             print(f'\n     Total substrates{purple} Final Sort{resetColor}:'
-                  f'{red} {totalSubstratesFinal:,}{resetColor}\n'
+                  f'{red} {totalsubstrates:,}{resetColor}\n'
                   f'     Unique substrates{purple} Final Sort{resetColor}:'
-                  f'{red} {totalUniqueSubstratesFinal:,}{resetColor}\n\n')
+                  f'{red} {totalUniquesubstrates:,}{resetColor}\n\n')
         else:
             fixedSort = True
 
@@ -2614,28 +2633,28 @@ class NGS:
             # Process: Final sort
             print(f'Ranked Substrates:{purple} Final Sort{resetColor} -'
                   f'{red} Fixed {self.fixedSubSeq}{resetColor}')
-            if totalUniqueSubstratesFinal >= self.printNumber:
+            if totalUniquesubstrates >= self.printNumber:
                 for substrate, count in finalSubs.items():
                     if iteration < self.printNumber:
                         print(f'     {magenta}{substrate}{resetColor}, '
                               f'Counts: {red}{count:,}{resetColor}')
                         iteration += 1
-                        totalSubstratesFinal += count
+                        totalsubstrates += count
                     else:
-                        totalSubstratesFinal += count
+                        totalsubstrates += count
             else:
                 print(f'{orange}The number of unique substrates '
-                      f'({red}{totalUniqueSubstratesFinal}'
+                      f'({red}{totalUniquesubstrates}'
                       f'{orange}) is less than the number you requested to be see '
                       f'({red}{self.printNumber}{orange}){resetColor}')
                 for substrate, count in finalSubs.items():
                     print(f'     {magenta}{substrate}{resetColor}, Counts: {red}{count:,}'
                           f'{resetColor}')
-                    totalSubstratesFinal += count
+                    totalsubstrates += count
             print(f'\n     Total substrates{purple} Final Sort{resetColor}:'
-                  f'{red} {totalSubstratesFinal:,}{resetColor}\n'
+                  f'{red} {totalsubstrates:,}{resetColor}\n'
                   f'     Unique substrates{purple} Final Sort{resetColor}:'
-                  f'{red} {totalUniqueSubstratesFinal:,}{resetColor}\n\n')
+                  f'{red} {totalUniquesubstrates:,}{resetColor}\n\n')
             iteration = 0
 
 
@@ -2652,7 +2671,7 @@ class NGS:
                     countInitial = initialSubs[substrate]
                 else:
                     countInitial = 1
-                probFinal = count / totalSubstratesFinal
+                probFinal = count / totalsubstrates
                 probInitial = countInitial / totalSubstratesInitial
                 enrichment = np.log2(probFinal/probInitial)
                 enrichedSubs[substrate] = enrichment
@@ -2662,7 +2681,7 @@ class NGS:
                     countInitial = initialSubs[substrate]
                 else:
                     countInitial = 1
-                probFinal = count / totalSubstratesFinal
+                probFinal = count / totalsubstrates
                 probInitial = countInitial / totalSubstratesInitial
                 enrichment = np.log2(probFinal/probInitial)
                 enrichedSubs[substrate] = enrichment
@@ -2686,12 +2705,9 @@ class NGS:
 
         if saveData:
             # Define file path
-            if '/' in savePath:
-                filePathCSV = (f'{savePath}/{self.enzymeName} '
-                               f'--- {datasetType} --- Enriched Subs.csv')
-            else:
-                filePathCSV = (f'{savePath}\\{self.enzymeName} '
-                               f'--- {datasetType} --- Enriched Subs.csv')
+            filePathCSV = os.path.join(
+                savePath, f'{self.enzymeName} - Enriched Subs - {self.fixedSubSeq} - '
+                          f'MinCounts {self.minSubCount}.csv')
 
             # Convert dictionaries to a data frame and save as an Excel file
             clipDataset = False
@@ -2716,7 +2732,7 @@ class NGS:
             else:
                 initialSubsDF = pd.DataFrame.from_dict(initialSubs.items())
                 initialSubsDF.columns = headersInitial
-            if totalSubstratesFinal > NSubs:
+            if totalsubstrates > NSubs:
                 clipDataset = True
 
                 # Did you ask for too many substrates?
@@ -2829,7 +2845,7 @@ class NGS:
                   f'Exception:\n{exc}\n\n'
                   f'Suggestion:'
                   f'     Try replacing: {cyan}esm.pretrained.esm2_t36_3B_UR50D()'
-                  f'{resetColor}\n'
+                  f'{orange}\n'
                   f'     With: {cyan}esm.pretrained.esm2_t33_650M_UR50D()'
                   f'{resetColor}\n')
             sys.exit()
@@ -3092,7 +3108,7 @@ class NGS:
         # Find motif positions based on the entropy threshold
         indexPos = []
         for index in entropySubFrame.index:
-            posEntropy = entropySubFrame.loc[index, 'ΔEntropy']
+            posEntropy = entropySubFrame.loc[index, 'ΔS']
             if posEntropy >= entropyMin:
                 indexPos.append(int(index.replace('R', '')) - 1)
         print(f'Index Pos: {indexPos}')
@@ -3133,7 +3149,7 @@ class NGS:
         # Print motifs
         print(f'Extracted Motifs:')
         for index, (motif, count) in enumerate(motifs.items()):
-            print(f'{index+1}:{yellow} {motif}{resetColor} '
+            print(f'{index+1}:{blue} {motif}{resetColor} '
                   f'Count:{red} {count:,}{resetColor}')
         print('\n')
 
@@ -3229,18 +3245,16 @@ class NGS:
 
 
 
-    def plotPositionalEntropy(self, entropy, fixedDataset, fixedTag, avgDelta):
-        # Figure parameters
-        maxS = np.log2(len(self.letters))
-        yMax = maxS + 0.2
-        entropyMax = maxS # max(entropy.loc[:, "ΔEntropy"])
-        self.delta = entropy['ΔEntropy'].mean()
-        # deltaStDev = entropy['ΔEntropy'].std()
-        if fixedDataset:
+    def plotPositionalEntropy(self, entropy, fixedTag):
+        if self.applyFilter:
             title = f'{self.enzymeName}: Fixed {fixedTag}'
         else:
             title = f'{self.enzymeName}: Unfiltered'
 
+        # Figure parameters
+        maxS = np.log2(len(self.letters))
+        yMax = maxS + 0.2
+        entropyMax = maxS
 
         # Map entropy values to colors using the colormap
         colors = [(0, 'navy'),
@@ -3257,20 +3271,15 @@ class NGS:
 
         # Map entropy values to colors using the colormap
         normalize = Normalize(vmin=0, vmax=yMax) # Normalize the entropy values
-        cMap = [colorBar(normalize(value)) for value in entropy['ΔEntropy'].astype(float)]
+        cMap = [colorBar(normalize(value)) for value in entropy['ΔS'].astype(float)]
 
         # Plotting the entropy values as a bar graph
         fig, ax = plt.subplots(figsize=self.figSizeMini)
-        plt.bar(entropy.index, entropy['ΔEntropy'], color=cMap,
+        plt.bar(entropy.index, entropy['ΔS'], color=cMap,
                 edgecolor='black', linewidth=self.lineThickness, width=0.8)
         plt.xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         plt.ylabel('ΔS', fontsize=self.labelSizeAxis, rotation=0, labelpad=15)
-        if avgDelta:
-            plt.title(f'{title}\nAverage ΔS = {self.delta:.5f}',
-                      fontsize=self.labelSizeTitle, fontweight='bold')
-        else:
-            plt.title(f'\n{title}',
-                      fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.title(f'\n{title}', fontsize=self.labelSizeTitle, fontweight='bold')
         plt.subplots_adjust(top=0.898, bottom=0.098, left=0.121, right=0.917)
 
         # Set tick parameters
@@ -3322,7 +3331,7 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             # Define: Save location
-            if fixedDataset:
+            if self.applyFilter:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
                             f'Filter {fixedTag} - MinCounts {self.minSubCount}.png')
             else:
@@ -3346,7 +3355,7 @@ class NGS:
         # Inspect data
         if probInitial is None and probFinal is None:
             print(f'{orange}ERROR: both of the inputs for probInitial and '
-                  f'probFinal cannot be None.{resetColor}\n\n')
+                  f'probFinal cannot be None.{resetColor}\n')
             sys.exit()
 
         # Initialize parameters
@@ -3539,13 +3548,13 @@ class NGS:
             if notNumber:
                 plt.title(f'{self.enzymeName}: '
                           f'Amino Acid Distribution at {position}\n'
-                          f'ΔS = {entropyScores.loc[position, "ΔEntropy"]:.3f}, '
+                          f'ΔS = {entropyScores.loc[position, "ΔS"]:.3f}, '
                           f'Shannon Entropy = {shannonS:.0f}',
                           fontsize=self.labelSizeTitle, fontweight='bold')
             else:
                 plt.title(f'{self.enzymeName}: '
                           f'Amino Acid Distribution at {position}\n'
-                          f'ΔS = {entropyScores.loc[position, "ΔEntropy"]:.3f}, '
+                          f'ΔS = {entropyScores.loc[position, "ΔS"]:.3f}, '
                           f'Shannon Entropy = {shannonS:.3f}',
                           fontsize=self.labelSizeTitle, fontweight='bold')
             plt.subplots_adjust(top=0.898, bottom=0.1, left=0.129, right=0.936)
@@ -3609,7 +3618,8 @@ class NGS:
                              duplicateFigure, saveTag):
         print('============================ Plot: Enrichment Score '
               '=============================')
-        print(f'Dataset:{purple} {saveTag}{resetColor}\n\n')
+        print(f'Dataset:{purple} {saveTag}{resetColor}\n\n'
+              f'{scores}\n\n')
 
         # Create heatmap
         cMapCustom = NGS.createCustomColorMap(self, colorType='EM')
@@ -3708,7 +3718,7 @@ class NGS:
                 datasetType = 'EM'
             else:
                 print(f'{orange}ERROR: What do I do with this dataset type -'
-                      f'{cyan} {dataType}{resetColor}\n\n')
+                      f'{cyan} {dataType}{resetColor}\n')
                 sys.exit()
 
             # Define: Save location
@@ -3769,8 +3779,9 @@ class NGS:
                   addHorizontalLines, motifFilter, duplicateFigure, saveTag):
         print('============================= Plot: Sequence Motif '
               '==============================')
-        print(f'Motif type:{purple} {dataType}{resetColor}\n'
-              f'Dataset:{purple} {saveTag}{resetColor}\n\n')
+        print(f'Dataset type:{purple} {dataType}{resetColor}\n'
+              f'Dataset:{purple} {saveTag}{resetColor}\n\n'
+              f'Data:\n{data}\n\n')
 
         # Set local parameters
         if bigLettersOnTop:
@@ -3910,7 +3921,7 @@ class NGS:
                 datasetType = 'Logo'
             else:
                 print(f'{orange}ERROR: What do I do with this dataset type -'
-                      f'{red} {dataType}{resetColor}\n\n')
+                      f'{red} {dataType}{resetColor}\n')
                 sys.exit()
 
             # Define: Save location
@@ -4037,7 +4048,7 @@ class NGS:
                     cbarLabels.append(int(labelValue))  # Append as an integer
             except ValueError:
                 print(f'{orange}ERROR: Unable to plot the{cyan} {dataType}{orange} '
-                      f'label{cyan} {label}\n\n')
+                      f'label{cyan} {label}\n')
                 sys.exit()
         cbar.set_ticks(cbarLabels)  # Set the positions of the ticks
         cbar.set_ticklabels(cbarLabels)
@@ -4075,16 +4086,16 @@ class NGS:
 
 
 
-    def plotWordCloud(self, clusterSubs, clusterIndex, title, saveTag):
+    def plotWordCloud(self, substrates, indexSet, title, saveTag):
         print('=============================== Plot: Word Cloud '
               '================================')
-        if clusterIndex is not None:
-            print(f'Selecting PCA Population:{red} {clusterIndex + 1}{resetColor}')
+        if indexSet is not None:
+            print(f'Selecting PCA Population:{red} {indexSet + 1}{resetColor}')
         else:
             print(f'Substrates:{purple} {saveTag}{resetColor}')
         iteration = 0
-        for substrate, count in clusterSubs.items():
-            print(f'     {greyDark}{substrate}{resetColor}, '
+        for substrate, count in substrates.items():
+            print(f'     {blue}{substrate}{resetColor}, '
                   f'Count:{red} {count:,}{resetColor}')
             iteration += 1
             if iteration == self.printNumber:
@@ -4102,7 +4113,7 @@ class NGS:
             max_font_size=120, # Maximum font size
             scale=5,  # Increase scale for larger words
             colormap=cmap
-        ).generate_from_frequencies(clusterSubs))
+        ).generate_from_frequencies(substrates))
 
 
         # Display the word cloud
