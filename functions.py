@@ -2794,16 +2794,16 @@ class NGS:
         print('====================================== PCA '
               '======================================')
         print(f'Dataset: {purple}{saveTag}{resetColor}\n')
+
         import matplotlib.patheffects as path_effects
         from matplotlib.widgets import RectangleSelector
         from sklearn.decomposition import PCA
-
+        from sklearn.preprocessing import StandardScaler
 
         # Initialize lists for the clustered substrates
         self.selectedSubstrates = []
         self.selectedDatapoints = []
         rectangles = []
-
 
         # Define component labels
         pcaHeaders = []
@@ -2815,7 +2815,6 @@ class NGS:
         # # Cluster the datapoints
         # Step 1: Apply PCA on the standardized data
         pca = PCA(n_components=numberOfPCs) # Adjust the number of components as needed
-        from sklearn.preprocessing import StandardScaler
         scaler = StandardScaler()
         data = scaler.fit_transform(data)
         dataPCA = pca.fit_transform(data)
@@ -2996,6 +2995,117 @@ class NGS:
             return None
 
 
+    # ====================================================================================
+
+
+    def plotSubstratePopulations(self, substrates, clusterIndex, numClusters,
+                                 datasetTag, saveTag):
+        print('=============================== Plot PCA Clusters '
+              '===============================')
+        print(f'Dataset: {purple}{datasetTag}{resetColor}\n'
+              f'Save Tag: {purple}{saveTag}{resetColor}\n\n'
+              f'Total Clusters:{red} {numClusters}{resetColor}\n'
+              f'     Cluster Number:{red} {clusterIndex + 1}{resetColor}\n\n')
+
+        # Define figure titles
+        if numClusters == 1:
+            figureTitleEM = (f'\n{inTitleEnrichmentMap}: PCA Population\n'
+                             f'{self.fixedSubSeq}')
+            figureTitleMotif = (f'{inTitleMotif}: PCA Population\n'
+                                f'{self.fixedSubSeq}')
+            figureTitleWordCloud = (f'{inTitleEnrichmentMap}: '
+                                    f'PCA Population\n{self.fixedSubSeq}')
+            datasetTag = f'PCA Pop - {self.fixedSubSeq}'
+        else:
+            figureTitleEM = (
+                f'\n{inTitleEnrichmentMap}: PCA Population {clusterIndex + 1}\n'
+                f'{self.fixedSubSeq}')
+            figureTitleMotif = (f'{inTitleMotif}: PCA Population {clusterIndex + 1}\n'
+                                f'{self.fixedSubSeq}')
+            figureTitleWordCloud = (f'{inTitleEnrichmentMap}: '
+                                    f'PCA Population {clusterIndex + 1}\n{self.fixedSubSeq}')
+            datasetTag = f'PCA Pop {clusterIndex + 1} - {self.fixedSubSeq}'
+
+        # Count fixed substrates
+        countFullSubstrate = False
+        if countFullSubstrate:
+            countsFinal, countsTotalFinal = NGS.countResidues(substrates=substrates,
+                                                              datasetType='')
+        else:
+            countsFinal, countsTotalFinal = NGS.countResidues(substrates=substrates,
+                                                              datasetType='')
+        NGS.sampleSizeUpdate(NSubs=countsTotalFinal, sortType='Final Sort',
+                             datasetTag=self.fixedSubSeq)
+
+        # Adjust the zero counts at nonfixed positions
+        countsFinalAdjusted = countsFinal.copy()
+        if inAdjustZeroCounts:
+            for indexColumn in countsFinalAdjusted.columns:
+                for AA in countsFinalAdjusted.index:
+                    if countsFinalAdjusted.loc[AA, indexColumn] == 0:
+                        countsFinalAdjusted.loc[AA, indexColumn] = 1
+            print(f'Adjusted Final Counts:{pink} {self.enzymeName}\n'
+                  f'{red}{countsFinalAdjusted}{resetColor}\n\n')
+
+        # Calculate: RF
+        finalRF = NGS.calculateRF(counts=countsFinal, N=countsTotalFinal,
+                                  fileType='Final Sort')
+        finalRFAdjusted = NGS.calculateRF(counts=countsFinalAdjusted, N=countsTotalFinal,
+                                          fileType='Final Sort')
+
+        if inPlotEntropyPCAPopulations:
+            # Plot: Positional entropy
+            NGS.plotPositionalEntropy(entropy=entropy, fixedTag=fixedSubSeq)
+
+        # Calculate: Enrichment scores
+        fixedFramePopES = NGS.calculateEnrichment(initialSortRF=initialRFAvg,
+                                                  finalSortRF=finalRF)
+        fixedFramePopESAdjusted = NGS.calculateEnrichment(initialSortRF=initialRFAvg,
+                                                          finalSortRF=finalRFAdjusted)
+
+        # Calculate: Enrichment scores scaled
+        fixedFramePCAESScaled = pd.DataFrame(0.0, index=fixedFramePopES.index,
+                                             columns=fixedFramePopES.columns)
+        fixedFramePCAESScaledAdjusted = pd.DataFrame(0.0, index=fixedFramePopES.index,
+                                                     columns=fixedFramePopES.columns)
+
+        # Scale enrichment scores with Shannon Entropy
+        for positon in fixedFramePopES.columns:
+            fixedFramePCAESScaled.loc[:, positon] = (fixedFramePopES.loc[:, positon] *
+                                                     entropy.loc[
+                                                         positon, 'ΔS'])
+            fixedFramePCAESScaledAdjusted.loc[:, positon] = (
+                    fixedFramePopESAdjusted.loc[:, positon] *
+                    entropy.loc[positon, 'ΔS'])
+        print(f'Motif:{greenLight} Scaled{resetColor}\n{fixedFramePCAESScaled}\n\n')
+        yMax = max(fixedFramePCAESScaled[fixedFramePopES > 0].sum())
+        yMin = min(fixedFramePCAESScaled[fixedFramePopES < 0].sum())
+
+        # # Plot data
+        # Plot: Enrichment Map
+        NGS.plotEnrichmentScores(scores=fixedFramePopESAdjusted, dataType='Enrichment',
+                                 motifFilter=False, duplicateFigure=False,
+                                 saveTag=datasetTag)
+
+        # Plot: Enrichment Map Scaled
+        NGS.plotEnrichmentScores(scores=fixedFramePCAESScaledAdjusted,
+                                 dataType='Scaled Enrichment', motifFilter=False,
+                                 duplicateFigure=False, saveTag=datasetTag)
+
+        # Plot: Sequence Motif
+        NGS.plotMotif(data=fixedFramePCAESScaled.copy(), dataType='Scaled Enrichment',
+                      bigLettersOnTop=inBigLettersOnTop, yMax=yMax, yMin=yMin,
+                      showYTicks=False, addHorizontalLines=inAddHorizontalLines,
+                      motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
+
+        # Plot: Work cloud
+        NGS.plotWordCloud(substrates=substrates,
+                          title=figureTitleWordCloud,
+                          saveTag=datasetTag)
+
+
+    # ====================================================================================
+
 
     def suffixTree(self, substrates, N, entropySubFrame, indexSubFrame, entropyMin,
                    datasetTag, dataType):
@@ -3093,10 +3203,17 @@ class NGS:
 
 
     def plotCounts(self, countedData, totalCounts, datasetTag):
+        # Set figure title
+        if self.showSampleSize:
+            title = f'\n{self.enzymeName}\n{datasetTag}\nN={totalCounts:,}'
+        else:
+            title = f'\n\n{self.enzymeName}\n{datasetTag}'
+
         # Remove commas from string values and convert to float
         countedData = countedData.applymap(lambda x:
                                            float(x.replace(',', ''))
                                            if isinstance(x, str) else x)
+
 
         # Create heatmap
         cMapCustom = NGS.createCustomColorMap(self, colorType='Counts')
@@ -3117,17 +3234,7 @@ class NGS:
                               annot_kws={'fontweight': 'bold'})
         ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
-
-        if datasetTag != self.enzymeName:
-            datasetTag = f'{self.enzymeName}\n{datasetTag}'
-        if self.showSampleSize:
-            if totalCounts is None:
-                ax.set_title(datasetTag, fontsize=self.labelSizeTitle, fontweight='bold')
-            else:
-                ax.set_title(f'{datasetTag}\nN={totalCounts:,}',
-                             fontsize=self.labelSizeTitle, fontweight='bold')
-        else:
-            ax.set_title(datasetTag, fontsize=self.labelSizeTitle, fontweight='bold')
+        ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         figBorders = [0.852, 0.075, 0.117, 1]
         plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
                             left=figBorders[2], right=figBorders[3])
@@ -3537,12 +3644,20 @@ class NGS:
 
 
 
-    def plotEnrichmentScores(self, scores, dataType, title, motifFilter,
+    def plotEnrichmentScores(self, scores, dataType, motifFilter,
                              duplicateFigure, saveTag):
         print('============================ Plot: Enrichment Score '
               '=============================')
         print(f'Dataset:{purple} {saveTag}{resetColor}\n\n'
               f'{scores}\n\n')
+
+        # Set figure title
+        if self.showSampleSize:
+            title = (f'{self.enzymeName}\n'
+                     f'N Unsorted = {self.nSubsInitial:,}\n'
+                     f'N Sorted = {self.nSubsFinal:,}')
+        else:
+            title = f'\n\n{self.enzymeName}'
 
         # Create heatmap
         cMapCustom = NGS.createCustomColorMap(self, colorType='EM')
@@ -3579,9 +3694,6 @@ class NGS:
                                   annot_kws={'fontweight': 'bold'})
         ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
-        if self.showSampleSize:
-            title += (f'\nN Unsorted = {self.nSubsInitial:,}\n'
-                      f'N Sorted = {self.nSubsFinal:,}')
         ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         if self.figEMSquares:
             figBorders = [0.852, 0.075, 0, 0.895]
@@ -3698,13 +3810,34 @@ class NGS:
 
 
 
-    def plotMotif(self, data, dataType, bigLettersOnTop, title, yMax, yMin, showYTicks,
+    def plotMotif(self, data, dataType, bigLettersOnTop, yMax, yMin, showYTicks,
                   addHorizontalLines, motifFilter, duplicateFigure, saveTag):
         print('============================= Plot: Sequence Motif '
               '==============================')
         print(f'Dataset type:{purple} {dataType}{resetColor}\n'
               f'Dataset:{purple} {saveTag}{resetColor}\n\n'
               f'Data:\n{data}\n\n')
+
+        # Set figure title
+        if self.showSampleSize:
+            if dataType.lower() == 'weblogo':
+                title = f'{self.enzymeName}\nN = {self.nSubsFinal:,}'
+                if showYTicks:
+                    figBorders = [0.852, 0.075, 0.112, 0.938]
+                else:
+                    figBorders = [0.852, 0.075, 0.112, 0.938]
+            else:
+                title = (f'{self.enzymeName}\n'
+                         f'N Unsorted = {self.nSubsInitial:,}\n'
+                          f'N Sorted = {self.nSubsFinal:,}')
+                figBorders = [0.852, 0.075, 0.164, 0.938]
+        else:
+            title = f'\n\n{self.enzymeName}'
+            if dataType.lower() == 'weblogo':
+                figBorders = [0.852, 0.075, 0.112, 0.938]
+            else:
+                figBorders = [0.852, 0.075, 0.164, 0.938]
+
 
         # Set local parameters
         if bigLettersOnTop:
@@ -3726,23 +3859,6 @@ class NGS:
         fig, ax = plt.subplots(figsize=self.figSize)
         motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=self.colorsAA,
                                width=0.95, stack_order=stackOrder)
-        # Set figure title
-        if self.showSampleSize:
-            if dataType.lower() == 'weblogo':
-                title += f'\nN = {self.nSubsFinal:,}'
-                if showYTicks:
-                    figBorders = [0.852, 0.075, 0.112, 0.938]
-                else:
-                    figBorders = [0.852, 0.075, 0.112, 0.938]
-            else:
-                title +=  (f'\nN Unsorted = {self.nSubsInitial:,}\n'
-                           f'N Sorted = {self.nSubsFinal:,}')
-                figBorders = [0.852, 0.075, 0.164, 0.938]
-        else:
-            if dataType.lower() == 'weblogo':
-                figBorders = [0.852, 0.075, 0.112, 0.938]
-            else:
-                figBorders = [0.852, 0.075, 0.164, 0.938]
         motif.ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
                             left=figBorders[2], right=figBorders[3])
@@ -3900,9 +4016,16 @@ class NGS:
 
 
 
-    def plotStats(self, countedData, totalCounts, title, datasetTag, dataType):
+    def plotStats(self, countedData, totalCounts, datasetTag, dataType):
         print('========================= Plot: Statistical Evaluation '
               '==========================')
+        # Set figure title
+        if self.showSampleSize:
+            title = f'\n{self.enzymeName}\nAverage ES\nN={totalCounts:,}'
+        else:
+            title = f'\n\n{self.enzymeName}\nAverage ES'
+
+
         # Create heatmap
         cMapCustom = NGS.createCustomColorMap(self, colorType=dataType)
 
@@ -3922,14 +4045,7 @@ class NGS:
                               annot_kws={'fontweight': 'bold'})
         ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
-        if self.showSampleSize:
-            if totalCounts is None:
-                ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-            else:
-                ax.set_title(f'{title}\nN={totalCounts:,}',
-                             fontsize=self.labelSizeTitle, fontweight='bold')
-        else:
-            ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         figBorders = [0.852, 0.075, 0.117, 1]
         plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
                             left=figBorders[2], right=figBorders[3])
