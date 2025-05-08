@@ -15,7 +15,7 @@ import pandas as pd
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inPathFolder = f'/path/{inEnzymeName}'
+inPathFolder = f'/page/{inEnzymeName}'
 inSaveFigures = True
 
 # Input 2: Computational Parameters
@@ -117,9 +117,8 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(labelAAPos),
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
-          residueLabelType=inYLabelEnrichmentMap, printNumber=inPrintNumber,
-          showNValues=inPlotWithSampleSize, findMotif=False, folderPath=inPathFolder,
-          filesInit=fileNamesInitial, filesFinal=fileNamesFinal,
+          printNumber=inPrintNumber, showNValues=inPlotWithSampleSize, findMotif=False,
+          folderPath=inPathFolder, filesInit=fileNamesInitial, filesFinal=fileNamesFinal,
           saveFigures=inSaveFigures, setFigureTimer=None)
 
 

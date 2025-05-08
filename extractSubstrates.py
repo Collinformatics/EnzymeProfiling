@@ -45,18 +45,15 @@ inPrintQualityScores = False # QSs are "phred quality" scores
 
 # Input 4: Plotting The Data
 inPlotCountsAA = True
-inPrintCounts = True
-inCountMapYLabel = 2  # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
 
 
 
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
-          filterData=inFixedLibrary, fixedAA=inFixedResidue, 
-          fixedPosition=inFixedPosition, excludeAAs=None, excludeAA=None, 
-          excludePosition=None, minCounts=0, figEMSquares=False, 
-          xAxisLabels=inAAPositions, xAxisLabelsBinned=None, 
-          residueLabelType=inCountMapYLabel, printNumber=inPrintNumber,
+          filterData=inFixedLibrary, fixedAA=inFixedResidue,
+          fixedPosition=inFixedPosition, excludeAAs=None, excludeAA=None,
+          excludePosition=None, minCounts=0, figEMSquares=False,
+          xAxisLabels=inAAPositions,printNumber=inPrintNumber,
           showNValues=inShowSampleSize, findMotif=False, folderPath=inFilePath,
           filesInit=None, filesFinal=None, saveFigures=False, setFigureTimer=None)
 

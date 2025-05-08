@@ -131,8 +131,8 @@ def includeCommas(x):
 class NGS:
     def __init__(self, enzymeName, substrateLength, filterData, fixedAA, fixedPosition,
                  excludeAAs, excludeAA, excludePosition, minCounts, figEMSquares,
-                 xAxisLabels, residueLabelType, printNumber, showNValues, findMotif,
-                 folderPath, filesInit, filesFinal, saveFigures, setFigureTimer):
+                 xAxisLabels, printNumber, showNValues, findMotif, folderPath,
+                 filesInit, filesFinal, saveFigures, setFigureTimer):
         self.enzymeName = enzymeName
         self.applyFilter = filterData
         self.fixedAA = fixedAA
@@ -151,7 +151,7 @@ class NGS:
         self.figSize = (9.5, 8)
         self.figSizeMini = (self.figSize[0], 6)
         self.xAxisLabels = xAxisLabels
-        self.residueLabelType = residueLabelType
+        self.residueLabelType = 2 # 0 = full AA name, 1 = 3-letter code, 2 = 1 letter
         self.labelSizeTitle = 18
         self.labelSizeAxis = 16
         self.labelSizeTicks = 13
