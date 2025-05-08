@@ -173,14 +173,12 @@ class NGS:
         self.findMotif = findMotif
         self.indexMotif = None
         self.xAxisLabelsMotif = None
-
+        self.datasetTagMotif = ''
         self.filesInit = filesInit
         self.filesFinal = filesFinal
         self.pathFolder = folderPath
         self.pathSaveData = os.path.join(self.pathFolder, 'Data')
         self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
-
-
         self.pathFilteredSubs = None
         self.pathFilteredCounts = None
         self.saveFigures = saveFigures
@@ -1150,7 +1148,7 @@ class NGS:
         iteration = 0
         for substrate, count in substrates.items():
             iteration += 1
-            print(f'     {green}{substrate}{resetColor}, Counts: {red}{count:,}'
+            print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
                   f'{resetColor}')
             if iteration >= self.printNumber:
                 break
@@ -1336,8 +1334,8 @@ class NGS:
         print(f'Loaded Substrates:{purple} Fixed Motif {datasetTag}{resetColor}')
         iteration = 0
         for substrate, count in loadedSubs.items():
-            print(f'Substrate:{greyDark} {substrate}{resetColor}\n'
-                  f'     Count:{red} {count:,}{resetColor}')
+            print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
+                  f'{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
                 print('\n')
@@ -1508,7 +1506,7 @@ class NGS:
 
         # Select substrates that contain selected AA at a specified position in the substrate
         if self.excludeAAs:
-            # Verify if the substrates are contain the residue(s) you wish to remove
+            # Verify if the substrates contain the residue(s) you wish to remove
             for substrate, count in substrates.items():
                 # Inspect substrate count
                 if count < self.minSubCount:
@@ -1609,8 +1607,8 @@ class NGS:
                 sys.exit()
             else:
                 for substrate, count in rankedFixedSubstrates.items():
-                    print(f'     {pink}{substrate}{resetColor}, '
-                          f'Counts:{red} {count:,}{resetColor}')
+                    print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
+                          f'{resetColor}')
                     iteration += 1
                     if iteration >= self.printNumber:
                         break
@@ -1657,15 +1655,17 @@ class NGS:
         # Sort the frame
         subFrameSorted = subFrame.sort_values(by='ΔS', ascending=False).copy()
         print(f'Motif Frame:\n'
-              f'{red}{subFrame}{resetColor}\n\n'
+              f'{blue}{subFrame}{resetColor}\n\n'
               f'Ranked Motif Frame:\n'
-              f'{red}{subFrameSorted}{resetColor}\n\n')
+              f'{blue}{subFrameSorted}{resetColor}\n\n')
 
         # Define motif label
         indexSubFrameList = list(entropy.index)
         self.indexMotif = [indexSubFrameList.index(idx) for idx in subFrameSorted.index]
         self.xAxisLabelsMotif = self.xAxisLabels[
                                 min(self.indexMotif):max(self.indexMotif)+1]
+        self.datasetTagMotif = (f'{self.fixedSubSeq} - Motif '
+                                f'{self.xAxisLabelsMotif[0]}-{self.xAxisLabelsMotif[-1]}')
 
         return subFrameSorted
 
@@ -1677,8 +1677,7 @@ class NGS:
         motifs = {}
         indexStart = min(self.indexMotif)
         indexEnd = max(self.indexMotif) + 1
-        print(f'Motif Indices: {purple}{self.xAxisLabels[indexStart]} - '
-              f'{self.xAxisLabels[indexEnd]}{resetColor}\n')
+        print(f'Motif Indices: {purple}{self.datasetTagMotif}{resetColor}\n')
 
         # Print data
         iteration = 0
@@ -2500,9 +2499,8 @@ class NGS:
             if totalUniqueSubstratesInitial >= self.printNumber:
                 for substrate, count in initialSubs.items():
                     if iteration <= self.printNumber:
-                        print(f'     {magenta}{substrate}{resetColor}, '
-                              f'Counts: {greenLight}{count:,}'
-                              f'{resetColor}')
+                        print(f'     {pink}{substrate}{resetColor}, '
+                              f'Counts: {red}{count:,}{resetColor}')
                         iteration += 1
                         totalSubstratesInitial += count
                     else:
@@ -2513,7 +2511,7 @@ class NGS:
                       f'{orange}) is less than the number you requested to be see '
                       f'({red}{self.printNumber}{orange}){resetColor}')
                 for substrate, count in initialSubs.items():
-                    print(f'     {magenta}{substrate}{resetColor}, Counts: {red}{count:,}'
+                    print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
                           f'{resetColor}')
                     totalSubstratesInitial += count
             iteration = 0
@@ -2530,7 +2528,7 @@ class NGS:
             if totalUniquesubstrates >= self.printNumber:
                 for substrate, count in finalSubs.items():
                     if iteration <= self.printNumber:
-                        print(f'     {magenta}{substrate}{resetColor}, '
+                        print(f'     {pink}{substrate}{resetColor}, '
                               f'Counts: {red}{count:,}{resetColor}')
                         iteration += 1
                         totalsubstrates += count
@@ -2542,7 +2540,7 @@ class NGS:
                       f'{orange}) is less than the number you requested to be see '
                       f'({red}{self.printNumber}{orange}){resetColor}\n')
                 for substrate, count in finalSubs.items():
-                    print(f'     {magenta}{substrate}{resetColor}, '
+                    print(f'     {pink}{substrate}{resetColor}, '
                           f'Counts: {red}{count:,}{resetColor}')
                     totalsubstrates += count
             iteration = 0
@@ -2559,7 +2557,7 @@ class NGS:
             if totalUniqueSubstratesInitial >= self.printNumber:
                 for substrate, count in initialSubs.items():
                     if iteration < self.printNumber:
-                        print(f'     {magenta}{substrate}{resetColor}, '
+                        print(f'     {pink}{substrate}{resetColor}, '
                               f'Counts: {red}{count:,}{resetColor}')
                         iteration += 1
                         totalSubstratesInitial += count
@@ -2571,8 +2569,8 @@ class NGS:
                       f'{orange}) is less than the number you requested to be see '
                       f'({red}{self.printNumber}{orange}){resetColor}')
                 for substrate, count in initialSubs.items():
-                    print(f'     {magenta}{substrate}{resetColor}, Counts: {red}{count:,}'
-                          f'{resetColor}')
+                    print(f'     {pink}{substrate}{resetColor}, '
+                          f'Counts: {red}{count:,}{resetColor}')
                     totalSubstratesInitial += count
             print(f'\n     Total substrates{purple} Initial Sort{resetColor}:'
                   f'{red} {totalSubstratesInitial:,}{resetColor}\n'
@@ -2587,7 +2585,7 @@ class NGS:
             if totalUniquesubstrates >= self.printNumber:
                 for substrate, count in finalSubs.items():
                     if iteration < self.printNumber:
-                        print(f'     {magenta}{substrate}{resetColor}, '
+                        print(f'     {pink}{substrate}{resetColor}, '
                               f'Counts: {red}{count:,}{resetColor}')
                         iteration += 1
                         totalsubstrates += count
@@ -2599,8 +2597,8 @@ class NGS:
                       f'{orange}) is less than the number you requested to be see '
                       f'({red}{self.printNumber}{orange}){resetColor}')
                 for substrate, count in finalSubs.items():
-                    print(f'     {magenta}{substrate}{resetColor}, Counts: {red}{count:,}'
-                          f'{resetColor}')
+                    print(f'     {pink}{substrate}{resetColor}, '
+                              f'Counts: {red}{count:,}{resetColor}')
                     totalsubstrates += count
             print(f'\n     Total substrates{purple} Final Sort{resetColor}:'
                   f'{red} {totalsubstrates:,}{resetColor}\n'
@@ -2815,11 +2813,11 @@ class NGS:
 
 
 
-    def plotPCA(self, substrates, data, indices, numberOfPCs, fixedTag, N, fixedSubs,
-            saveTag):
+    def plotPCA(self, substrates, data, indices, numberOfPCs, N, fixedSubs,
+                datasetTag, saveTag):
         print('====================================== PCA '
               '======================================')
-        print(f'Tag: {fixedTag}\n'
+        print(f'Tag: {datasetTag}\n'
               f'Save: {saveTag}\n')
         import matplotlib.patheffects as path_effects
         from matplotlib.widgets import RectangleSelector
@@ -2832,12 +2830,12 @@ class NGS:
         rectangles = []
 
         # Define: Dataset tag
-        if fixedTag is None:
+        if datasetTag is None:
             print(f'Dataset:{purple} {self.enzymeName} - Unfiltered{resetColor}\n')
         else:
-            print(f'Dataset:{purple} {self.enzymeName} - {fixedTag}{resetColor}\n')
-            if 'Excl' in fixedTag:
-                fixedTag = fixedTag.replace('Excl', 'Exclude')
+            print(f'Dataset:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n')
+            if 'Excl' in datasetTag:
+                datasetTag = datasetTag.replace('Excl', 'Exclude')
 
         # Define component labels
         pcaHeaders = []
@@ -2869,7 +2867,7 @@ class NGS:
         # Define: Figure parameters
         if fixedSubs:
             title = (f'{self.enzymeName}\n'
-                     f'{fixedTag}\n'
+                     f'{datasetTag}\n'
                      f'{N:,} Unique Substrates')
         else:
             title = (f'{self.enzymeName}\n'
@@ -2978,7 +2976,7 @@ class NGS:
         # Save the Figure
         if self.saveFigures:
             # Define: Save location
-            figLabel = (f'{self.enzymeName} - PCA - {fixedTag} - '
+            figLabel = (f'{self.enzymeName} - PCA - {datasetTag} - '
                         f'{N} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
@@ -3012,8 +3010,8 @@ class NGS:
 
                 # Print collected substrates
                 for substrate, count in collectionSet.items():
-                    print(f'     {greyDark}{substrate}{resetColor}:'
-                          f'{red} {count:,}{resetColor}')
+                    print(f'     {pink}{substrate}{resetColor}, '
+                          f'Counts: {red}{count:,}{resetColor}')
                     iteration += 1
                     if iteration >= self.printNumber:
                         print('\n')
@@ -3050,8 +3048,8 @@ class NGS:
                                  reverse=True))
         for substrate, count in substrates.items():
             iteration += 1
-            print(f'Substrate:{greyDark} {substrate}{resetColor}\n'
-                  f'     Count:{red} {count:,}{resetColor}')
+            print(f'     {pink}{substrate}{resetColor}, '
+                  f'Counts: {red}{count:,}{resetColor}')
             if iteration >= self.printNumber:
                 break
         print('\n')
@@ -3196,9 +3194,9 @@ class NGS:
 
 
 
-    def plotPositionalEntropy(self, entropy, fixedTag):
+    def plotPositionalEntropy(self, entropy, datasetTag):
         if self.applyFilter:
-            title = f'{self.enzymeName}: Fixed {fixedTag}'
+            title = f'{self.enzymeName}: Fixed {datasetTag}'
         else:
             title = f'{self.enzymeName}: Unfiltered'
 
@@ -3284,7 +3282,7 @@ class NGS:
             # Define: Save location
             if self.applyFilter:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
-                            f'Filter {fixedTag} - MinCounts {self.minSubCount}.png')
+                            f'Filter {datasetTag} - MinCounts {self.minSubCount}.png')
             else:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
                             f'Unfiltered - MinCounts {self.minSubCount}.png')
@@ -3302,7 +3300,7 @@ class NGS:
 
 
 
-    def plotLibraryProbDist(self, probInitial, probFinal, codonType, fixedTag):
+    def plotLibraryProbDist(self, probInitial, probFinal, codonType, datasetTag):
         # Inspect data
         if probInitial is None and probFinal is None:
             print(f'{orange}ERROR: both of the inputs for probInitial and '
@@ -3343,14 +3341,14 @@ class NGS:
             if yMax < maxY:
                 while yMax < maxY:
                     yMax += tickStepSize
-        if codonType == fixedTag:
+        if codonType == datasetTag:
             yMax = np.ceil(probFinal.values.max() * 10) / 10
 
 
         def plotFig(probability, sortType):
             print('======================= Plot: AA Probability Distribution '
                   '=======================')
-            if codonType == fixedTag:
+            if codonType == datasetTag:
                 print(f'Plotting Probability Distribution:'
                       f'{purple} {codonType} codon{resetColor}')
             else:
@@ -3364,16 +3362,16 @@ class NGS:
                 plt.title(f'Unsorted {self.enzymeName} Library',
                           fontsize=self.labelSizeTitle, fontweight='bold')
             else:
-                if fixedTag is None:
+                if datasetTag is None:
                     plt.title(f'Sorted {self.enzymeName} Library',
                               fontsize=self.labelSizeTitle, fontweight='bold')
                 else:
-                    if codonType == fixedTag:
+                    if codonType == datasetTag:
                         plt.title(f'{codonType} Codon',
                         fontsize=self.labelSizeTitle, fontweight='bold')
                     else:
                         plt.title(f'Sorted {self.enzymeName} Library - '
-                                  f'{fixedTag}', fontsize=self.labelSizeTitle,
+                                  f'{datasetTag}', fontsize=self.labelSizeTitle,
                                   fontweight='bold')
             plt.subplots_adjust(top=0.926, bottom=0.068, left=0.102, right=0.979)
 
@@ -3383,7 +3381,7 @@ class NGS:
                            width=self.lineThickness)
 
             # Set x-ticks
-            if codonType == fixedTag:
+            if codonType == datasetTag:
                 widthBar = 9
             else:
                 widthBar = 2
@@ -3427,15 +3425,15 @@ class NGS:
 
             if self.saveFigures:
                 # Define: Save location
-                if fixedTag is None:
+                if datasetTag is None:
                     figLabel = (f'AA Distribution - {self.enzymeName} - Unfiltered - '
                                 f'{sortType} - Y Max {yMax} - {codonType} - '
                                 f'MinCounts {self.minSubCount}.png')
                 else:
-                    if codonType == fixedTag:
+                    if codonType == datasetTag:
                         figLabel = f'AA Distribution - {codonType} Codon.png'
                     else:
-                        figLabel = (f'AA Distribution - {self.enzymeName} - {fixedTag} - '
+                        figLabel = (f'AA Distribution - {self.enzymeName} - {datasetTag} - '
                                     f'{sortType} - Y Max {yMax} - {codonType} - '
                                     f'MinCounts {self.minSubCount}.png')
                 saveLocation = os.path.join(self.pathSaveFigs, figLabel)
@@ -3454,8 +3452,8 @@ class NGS:
         if plotInitial:
             plotFig(probability=probInitial, sortType='Initial Sort')
         if plotFinal:
-            if codonType == fixedTag:
-                plotFig(probability=probFinal, sortType=fixedTag)
+            if codonType == datasetTag:
+                plotFig(probability=probFinal, sortType=datasetTag)
             else:
                 plotFig(probability=probFinal, sortType='Final Sort')
 
@@ -4059,9 +4057,8 @@ class NGS:
             title = '\n' + title
 
         # Limit the number of words
-        totalWords = None
         if limitWords:
-            print(f'Selecting: {red}{N}{resetColor} sequences')
+            print(f'Selecting: {red}{N}{resetColor} words')
             subs = {}
             iteration = 0
             for substrate, count in substrates.items():
@@ -4072,7 +4069,7 @@ class NGS:
                     break
             substrates = subs
         totalWords = len(substrates)
-        print(f'Plotting: {red}{totalWords:,}{resetColor} sequences\n')
+        print(f'Plotting: {red}{totalWords:,}{resetColor} words\n\n')
 
         # Create word cloud
         cmap = NGS.createCustomColorMap(self, colorType='Word Cloud')
@@ -4125,8 +4122,6 @@ class NGS:
                 print(f'Saving figure at path:\n'
                       f'     {greenDark}{saveLocation}{resetColor}\n\n')
                 fig.savefig(saveLocation, dpi=self.figureResolution)
-        else:
-            print()
 
 
 
@@ -4174,8 +4169,8 @@ class NGS:
                   f'{resetColor}')
             iteration = 0
             for substrate, count in subsFixedFrame.items():
-                print(f'Substrate:{greyDark} {substrate}{resetColor}\n'
-                      f'    Frame:{greenLight} {substrate[startSub:endSub]}{resetColor}\n'
+                print(f'Substrate:{pink} {substrate}{resetColor}\n'
+                      f'    Frame:{blue} {substrate[startSub:endSub]}{resetColor}\n'
                       f'    Count:{red} {count:,}{resetColor}')
                 iteration += 1
                 if iteration == self.printNumber:
@@ -4199,8 +4194,8 @@ class NGS:
         iteration = 0
         print(f'Binned Substrates{resetColor}:{purple} {datasetTag}{resetColor}')
         for substrate, count in motifs.items():
-            print(f'Substrate:{yellow} {substrate}{resetColor}\n'
-                  f'    Count:{red} {count:,}{resetColor}')
+            print(f'     {pink} {substrate}{resetColor}, '
+                  f'Count:{red} {count:,}{resetColor}')
             iteration += 1
             if iteration == self.printNumber:
                 print('\n')

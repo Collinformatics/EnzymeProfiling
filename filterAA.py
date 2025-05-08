@@ -9,7 +9,6 @@ import os
 import sys
 import pickle as pk
 import pandas as pd
-import time
 
 
 
@@ -23,7 +22,7 @@ inSaveFigures = True
 inFixResidues = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
-inExcludeResidues = False
+inExcludeResidues = True
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
@@ -32,10 +31,10 @@ inPlotWithSampleSize = True
 inEvaluateSubstrateEnrichment = False
 
 # Input 3: Processing The Data
-inPlotEntropy = False
-inPlotEnrichmentMap = False
-inPlotEnrichmentMotif = False
-inPlotWeblogoMotif = False
+inPlotEntropy = True
+inPlotEnrichmentMap = True
+inPlotEnrichmentMotif = True
+inPlotWeblogoMotif = True
 inPlotWordCloud = True
 inPlotPCA = False
 inPlotAADistribution = False
@@ -72,8 +71,8 @@ inTitleMotif = inTitleEnrichmentMap
 inBigLettersOnTop = False
 
 # Input 9: Word Cloud
-inLimitWords = False
-inNWords = 100
+inLimitWords = True
+inNWords = 50
 
 # Input 10: Optimal Substrates
 inEvaluateOS = False
@@ -94,7 +93,7 @@ inCompairAA = 'L' # Select AA of interest (different A than inFixedResidue)
 # =================================== Setup Parameters ===================================
 # Colors:
 white = '\033[38;2;255;255;255m'
-greyDark = '\033[38;2;144;144;144m' # ==============================================================
+greyDark = '\033[38;2;144;144;144m'
 purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
 pink = '\033[38;2;255;0;242m'
@@ -298,7 +297,7 @@ countsInitial, countsTotalInitial = ngs.loadCounts(filter=False, fileType='Initi
 initialRF = ngs.calculateRF(counts=countsInitial, N=countsTotalInitial,
                             fileType='Initial Sort')
 
-filePathFixedSubsFinal = None
+filePathFixedSubsFinal = ''
 loadFilteredSubs = False
 if inFixResidues:
     filePathFixedSubsFinal, filePathFixedCountsFinal = (
@@ -374,18 +373,19 @@ entropy = ngs.calculateEntropy(RF=finalRF, datasetTag=fixedSubSeq)
 
 
 # Save the data
-if (not os.path.exists(filePathFixedSubsFinal) or
-        not os.path.exists(filePathFixedCountsFinal)):
-    print(f'Filtered substrates saved at:\n'
-          f'     {greenDark}{filePathFixedSubsFinal}{resetColor}\n'
-          f'     {greenDark}{filePathFixedCountsFinal}{resetColor}\n\n')
+if inFixResidues:
+    if (not os.path.exists(filePathFixedSubsFinal) or
+            not os.path.exists(filePathFixedCountsFinal)):
+        print(f'Filtered substrates saved at:\n'
+              f'     {greenDark}{filePathFixedSubsFinal}{resetColor}\n'
+              f'     {greenDark}{filePathFixedCountsFinal}{resetColor}\n\n')
 
-    # Save the fixed substrate dataset
-    with open(filePathFixedSubsFinal, 'wb') as file:
-        pk.dump(substratesFinal, file)
+        # Save the fixed substrate dataset
+        with open(filePathFixedSubsFinal, 'wb') as file:
+            pk.dump(substratesFinal, file)
 
-    # Save the fixed substrate counts dataset
-    countsFinal.to_csv(filePathFixedCountsFinal)
+        # Save the fixed substrate counts dataset
+        countsFinal.to_csv(filePathFixedCountsFinal)
 
 
 
@@ -445,15 +445,13 @@ if inPlotWordCloud or inBinSubsPCA:
         ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS,
                           fixFullFrame=True, getIndices=True)
         finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
-        fixedSubSeqMotif = (f'{fixedSubSeq} - Motif '
-                            f'{ngs.xAxisLabelsMotif[0]}-{ngs.xAxisLabelsMotif[-1]}')
 
         # Plot: Work cloud
         if inPlotWordCloud:
             titleWordCloud = f'{inEnzymeName}: Motif {fixedSubSeq}'
             ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
                               limitWords=inLimitWords, N=inNWords,
-                              title=titleWordCloud, saveTag=fixedSubSeqMotif)
+                              title=titleWordCloud, saveTag=ngs.datasetTagMotif)
     else:
         # Plot: Work cloud
         if inPlotWordCloud:
