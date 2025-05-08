@@ -16,13 +16,13 @@ import pandas as pd
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
-inSaveFigures = True
+inSaveFigures = False
 
 # Input 2: Computational Parameters
 inFixResidues = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
-inExcludeResidues = True
+inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
@@ -31,12 +31,12 @@ inPlotWithSampleSize = True
 inEvaluateSubstrateEnrichment = False
 
 # Input 3: Processing The Data
-inPlotEntropy = True
-inPlotEnrichmentMap = True
-inPlotEnrichmentMotif = True
-inPlotWeblogoMotif = True
-inPlotWordCloud = True
-inPlotPCA = False
+inPlotEntropy = False
+inPlotEnrichmentMap = False
+inPlotEnrichmentMotif = False
+inPlotWeblogoMotif = False
+inPlotWordCloud = False
+inPlotPCA = True
 inPlotAADistribution = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotCountsAA = False
@@ -49,7 +49,7 @@ inPrintNumber = 10
 inMinDeltaS = 0.55
 
 # Input 6: PCA
-inBinSubsPCA = True
+inPCAMotif = True
 inNumberOfPCs = 2
 inTotalSubsPCA = 10000
 inIncludeSubCountsESM = False
@@ -438,26 +438,59 @@ if inPlotWeblogoMotif:
             duplicateFigure=False, saveTag=fixedSubSeq)
 
 
-if inPlotWordCloud or inBinSubsPCA:
-    if inFixResidues:
-        # Extract motif
-        ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS,
-                          fixFullFrame=True, getIndices=True)
-        finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
+if inPlotWordCloud or inPlotPCA:
+    # Extract motif
+    ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS,
+                      fixFullFrame=True, getIndices=True)
+    finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
 
-        # Plot: Work cloud
-        if inPlotWordCloud:
+    # Plot: Work cloud
+    if inPlotWordCloud:
+        if inFixResidues:
             titleWordCloud = f'{inEnzymeName}: Motif {fixedSubSeq}'
             ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
                               limitWords=inLimitWords, N=inNWords,
                               title=titleWordCloud, saveTag=ngs.datasetTagMotif)
-    else:
-        # Plot: Work cloud
-        if inPlotWordCloud:
+        else:
             titleWordCloud = f'{inEnzymeName}: Unfiltered'
             ngs.plotWordCloud(substrates=substratesFinal, indexSet=None,
                               limitWords=inLimitWords, N=inNWords,
                               title=titleWordCloud, saveTag='Unfiltered')
+
+    # Plot: PCA
+    if inPlotPCA:
+        if inPCAMotif:
+            datasetTag = ngs.datasetTagMotif
+            saveTag = ngs.saveTagMotif
+            labelPos = ngs.xAxisLabelsMotif
+            subsPCA = finalSubsMotif
+        else:
+            datasetTag =  fixedSubSeq
+            saveTag = datasetTag
+            labelPos = labelAAPos
+            subsPCA = substratesFinal
+
+        # Convert substrate data to numerical
+        tokensESM, subsESM, subCountsESM = ngs.ESM(
+            substrates=subsPCA, collectionNumber=int(inTotalSubsPCA),
+            useSubCounts=inIncludeSubCountsESM, subPositions=labelPos,
+            datasetTag=saveTag)
+
+        # Cluster substrates
+        subPopulations = ngs.plotPCA(substrates=finalSubsMotif, data=tokensESM,
+                                     indices=subsESM, numberOfPCs=inNumberOfPCs,
+                                     N=subCountsESM, fixedSubs=inFixResidues,
+                                     datasetTag=datasetTag, saveTag=saveTag)
+
+        # Plot: Substrate clusters
+        if subPopulations is not None:
+            clusterCount = len(subPopulations)
+            for index, subCluster in enumerate(subPopulations):
+                # Plot data
+                plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
+                                         numClusters=clusterCount)
+            print(f'Debug PCA')
+            sys.exit()
 
 
 
@@ -567,55 +600,15 @@ if inEvaluateOS:
         print(f'\nNumber of substrates:{greyDark} {len(substratesOS):,}{resetColor}\n\n')
 
 
-
 if inEvaluateSubstrateEnrichment:
     ngs.substrateEnrichment(initialSubs=substratesInitial, finalSubs=substratesFinal,
                             NSubs=inNumberOfSavedSubstrates,
-                            saveData=inSaveEnrichedSubstrates, savePath=inFilePath)
+                            saveData=inSaveEnrichedSubstrates)
 
     if inFixResidues:
         ngs.substrateEnrichment(initialSubs=substratesInitial, finalSubs=substratesFinal,
                                 NSubs=inNumberOfSavedSubstrates,
-                                saveData=inSaveEnrichedSubstrates, savePath=inFilePath)
-
-
-if inPlotPCA:
-    # Bin substrates before PCA, or don't
-    if inBinSubsPCA:
-        # Convert substrate data to numerical
-        tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=finalSubsMotif,
-                                                   collectionNumber=int(inTotalSubsPCA),
-                                                   useSubCounts=inIncludeSubCountsESM,
-                                                   subPositions=labelAAPosMotif,
-                                                   datasetTag=fixedSubSeqMotif)
-
-        # Cluster substrates
-        subPopulations = ngs.plotPCA(substrates=finalSubsMotif, data=tokensESM,
-                                     indices=subsESM, numberOfPCs=inNumberOfPCs,
-                                     fixedTag=fixedSubSeq, N=subCountsESM,
-                                     fixedSubs=True, saveTag=fixedSubSeqMotif)
-    else:
-        # Convert substrate data to numerical
-        tokensESM, subsESM, subCountsESM = ngs.ESM(substrates=substratesFinal,
-                                                   collectionNumber=int(inTotalSubsPCA),
-                                                   useSubCounts=inIncludeSubCountsESM,
-                                                   subPositions=labelAAPos,
-                                                   datasetTag=fixedSubSeq)
-
-        # Cluster substrates
-        subPopulations = ngs.plotPCA(substrates=substratesFinal, data=tokensESM,
-                                 indices=subsESM, numberOfPCs=inNumberOfPCs,
-                                 fixedTag=fixedSubSeq, N=subCountsESM, fixedSubs=True,
-                                 saveTag=fixedSubSeq)
-
-    # Plot: Substrate clusters
-    if subPopulations != None:
-        clusterCount = len(subPopulations)
-        for index, subCluster in enumerate(subPopulations):
-            # Plot data
-            plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
-                                     numClusters=clusterCount)
-        print(f'Debug PCA')
+                                saveData=inSaveEnrichedSubstrates)
 
 
 if inPlotAADistribution:

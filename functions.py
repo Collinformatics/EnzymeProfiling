@@ -174,6 +174,7 @@ class NGS:
         self.indexMotif = None
         self.xAxisLabelsMotif = None
         self.datasetTagMotif = ''
+        self.saveTagMotif = ''
         self.filesInit = filesInit
         self.filesFinal = filesFinal
         self.pathFolder = folderPath
@@ -1664,8 +1665,10 @@ class NGS:
         self.indexMotif = [indexSubFrameList.index(idx) for idx in subFrameSorted.index]
         self.xAxisLabelsMotif = self.xAxisLabels[
                                 min(self.indexMotif):max(self.indexMotif)+1]
-        self.datasetTagMotif = (f'{self.fixedSubSeq} - Motif '
-                                f'{self.xAxisLabelsMotif[0]}-{self.xAxisLabelsMotif[-1]}')
+
+        self.datasetTagMotif = f'Motif {self.fixedSubSeq}'
+        self.saveTagMotif = (f'{self.fixedSubSeq} - Motif '
+                             f'{self.xAxisLabelsMotif[0]}-{self.xAxisLabelsMotif[-1]}')
 
         return subFrameSorted
 
@@ -1688,8 +1691,8 @@ class NGS:
                   f'Count:{red} {count:,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
-                print('')
                 break
+        print(f'\nUnique Substrates:{red} {len(substrates):,}{resetColor}\n\n')
 
         # Extract motif
         countTotalSubstrates = 0
@@ -1712,8 +1715,7 @@ class NGS:
                 print()
                 break
 
-        print(f'Total Substrates:{red} {countTotalSubstrates:,}{resetColor}\n'
-              f'Unique Substrates:{red} {len(motifs):,}{resetColor}\n\n')
+        print(f'Unique Motifs:{red} {len(motifs):,}{resetColor}\n\n')
 
         return motifs
 
@@ -1831,7 +1833,6 @@ class NGS:
         # Determine yMax
         yMin = 0
         yMax = 1
-
 
         # Set the positions of the bars on the x-axis
         x = np.arange(len(final.columns))
@@ -2441,8 +2442,7 @@ class NGS:
 
         return entropy
 
-    def substrateEnrichment(self, initialSubs, finalSubs, saveData,
-                            savePath, NSubs):
+    def substrateEnrichment(self, initialSubs, finalSubs, NSubs, saveData):
         print('========================= Evaluate Substrate Enrichment '
               '=========================')
         if self.fixedSubSeq == None:
@@ -2630,8 +2630,9 @@ class NGS:
         if saveData:
             # Define file path
             filePathCSV = os.path.join(
-                savePath, f'{self.enzymeName} - Enriched Subs - {self.fixedSubSeq} - '
-                          f'MinCounts {self.minSubCount}.csv')
+                self.pathSaveData,
+                f'{self.enzymeName} - Enriched Subs - {self.fixedSubSeq} - '
+                f'MinCounts {self.minSubCount}.csv')
 
             # Convert dictionaries to a data frame and save as an Excel file
             clipDataset = False
@@ -2722,7 +2723,7 @@ class NGS:
     def ESM(self, substrates, collectionNumber, useSubCounts, subPositions, datasetTag):
         print('=========================== Convert To Numerical: ESM '
               '===========================')
-        print(f'Dataset:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n\n'
+        print(f'Dataset:{purple} {datasetTag}{resetColor}\n\n'
               f'Collecting{red} {collectionNumber:,}{resetColor} substrates\n'
               f'Total unique substrates:{red} {len(substrates):,}{resetColor}\n')
 
@@ -2792,8 +2793,7 @@ class NGS:
                 datasetTag, saveTag):
         print('====================================== PCA '
               '======================================')
-        print(f'Tag: {datasetTag}\n'
-              f'Save: {saveTag}\n')
+        print(f'Dataset: {purple}{saveTag}{resetColor}\n')
         import matplotlib.patheffects as path_effects
         from matplotlib.widgets import RectangleSelector
         from sklearn.decomposition import PCA
@@ -2804,24 +2804,17 @@ class NGS:
         self.selectedDatapoints = []
         rectangles = []
 
-        # Define: Dataset tag
-        if datasetTag is None:
-            print(f'Dataset:{purple} {self.enzymeName} - Unfiltered{resetColor}\n')
-        else:
-            print(f'Dataset:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n')
-            if 'Excl' in datasetTag:
-                datasetTag = datasetTag.replace('Excl', 'Exclude')
 
         # Define component labels
         pcaHeaders = []
-        for componetNumber in range(1, numberOfPCs + 1):
-            pcaHeaders.append(f'PC{componetNumber}')
+        for componentNumber in range(1, numberOfPCs + 1):
+            pcaHeaders.append(f'PC{componentNumber}')
         headerCombinations = list(combinations(pcaHeaders, 2))
 
 
         # # Cluster the datapoints
         # Step 1: Apply PCA on the standardized data
-        pca = PCA(n_components=numberOfPCs)  # Adjust the number of components as needed
+        pca = PCA(n_components=numberOfPCs) # Adjust the number of components as needed
         from sklearn.preprocessing import StandardScaler
         scaler = StandardScaler()
         data = scaler.fit_transform(data)
@@ -2830,7 +2823,7 @@ class NGS:
 
         # Step 2: Create a DataFrame for PCA results
         dataPCA = pd.DataFrame(dataPCA, columns=pcaHeaders, index=indices)
-        print(f'PCA Data:{red} # of componets = {numberOfPCs}\n'
+        print(f'PCA Data:{red} # of components = {numberOfPCs}\n'
               f'{greenLight}{dataPCA}{resetColor}\n\n')
 
         # Step 3: Print explained variance ratio
@@ -2841,16 +2834,20 @@ class NGS:
 
         # Define: Figure parameters
         if fixedSubs:
+            # Modify dataset tag
+            if 'Excl' in datasetTag:
+                datasetTag = datasetTag.replace('Excl', 'Exclude')
+
             title = (f'{self.enzymeName}\n'
                      f'{datasetTag}\n'
                      f'{N:,} Unique Substrates')
         else:
-            title = (f'{self.enzymeName}\n'
+            title = (f'\n{self.enzymeName}\n'
                      f'{N:,} Unique Substrates'),
 
 
         # Plot the data
-        for componets in headerCombinations:
+        for components in headerCombinations:
             fig, ax = plt.subplots(figsize=self.figSize)
 
             def selectDatapoints(eClick, eRelease):
@@ -2879,7 +2876,7 @@ class NGS:
                 if self.selectedDatapoints:
                     for index, box in enumerate(self.selectedDatapoints):
                         # Calculate the bounding box for the selected points
-                        padding = 0.4
+                        padding = 0.05
                         xMinBox = min(x for x, y in box) - padding
                         xMaxBox = max(x for x, y in box) + padding
                         yMinBox = min(y for x, y in box) - padding
@@ -2912,11 +2909,13 @@ class NGS:
                                 [path_effects.Stroke(linewidth=2, foreground='black'),
                                  path_effects.Normal()])
                 plt.draw()
-            plt.scatter(dataPCA[componets[0]], dataPCA[componets[1]],
+            plt.scatter(dataPCA[components[0]], dataPCA[components[1]],
                         c='#CC5500', edgecolor='black')
-            plt.xlabel(f'Principal Component {componets[0][-1]} ({varRatio[0]})',
+            plt.xlabel(f'Principal Component {components[0][-1]} '
+                       f'({np.round(varRatio[0], 3)} %)',
                        fontsize=self.labelSizeAxis)
-            plt.ylabel(f'Principal Component {componets[1][-1]} ({varRatio[1]})',
+            plt.ylabel(f'Principal Component {components[1][-1]} '
+                       f'({np.round(varRatio[1], 3)} %)',
                        fontsize=self.labelSizeAxis)
             plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
 
@@ -2951,7 +2950,7 @@ class NGS:
         # Save the Figure
         if self.saveFigures:
             # Define: Save location
-            figLabel = (f'{self.enzymeName} - PCA - {datasetTag} - '
+            figLabel = (f'{self.enzymeName} - PCA - {saveTag} - '
                         f'{N} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
