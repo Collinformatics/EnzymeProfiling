@@ -15,7 +15,7 @@ import pandas as pd
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inPathFolder = f'/page/{inEnzymeName}'
+inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
 
 # Input 2: Computational Parameters
@@ -391,7 +391,7 @@ if inFixResidues:
 # ==================================== Plot The Data =====================================
 # Plot: Positional entropy
 if inPlotEntropy:
-    ngs.plotPositionalEntropy(entropy=entropy, fixedTag=fixedSubSeq)
+    ngs.plotPositionalEntropy(entropy=entropy, datasetTag=fixedSubSeq)
 
 
 if inPlotEnrichmentMap:

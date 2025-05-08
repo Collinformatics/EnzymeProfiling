@@ -2231,41 +2231,16 @@ class NGS:
 
         # Set values for columns with fixed residues
         if normalizeFixedScores:
-            print(f'============================================'
-                  f'============================================={greenLightB}\n'
-                  f'============================================'
-                  f'============================================={resetColor}\n'
-                  f'============================================'
-                  f'=============================================\n\n'
-                  f'{yellow}Readjusting the fixed residue heights '
-                  f'to be equal to the tallest stack{resetColor}\n\n'
-                  f'============================================'
-                  f'============================================={greenLightB}\n'
-                  f'============================================'
-                  f'============================================={resetColor}\n'
-                  f'============================================'
-                  f'=============================================\n')
+            print(f'{yellow}Readjusting the fixed residue heights '
+                  f'to be equal to the tallest stack{resetColor}')
 
             for key, value in fixedPos.items():
                 heights.loc[value, key] = yMax
 
             print(f'Adjusted Residue Heights:{pink} log\u2082(RF Final Sort / RF '
-                  f'{baselineType})\n{greyDark}{heights.round(3)}{resetColor}\n')
-
-            print(f'============================================'
-                  f'============================================={greenLightB}\n'
-                  f'============================================'
-                  f'============================================={resetColor}\n'
-                  f'============================================'
-                  f'=============================================\n\n'
-                  f'{yellow}Readjusting the fixed residue heights '
-                  f'to be equal to the tallest stack{resetColor}\n\n'
-                  f'============================================'
-                  f'============================================={greenLightB}\n'
-                  f'============================================'
-                  f'============================================={resetColor}\n'
-                  f'============================================'
-                  f'=============================================\n')
+                  f'{baselineType}){resetColor}\n{heights.round(3)}')
+            print(f'{yellow}Readjusting the fixed residue heights '
+                  f'to be equal to the tallest stack{resetColor}\n\n')
 
         return heights, yMax, yMin
 
