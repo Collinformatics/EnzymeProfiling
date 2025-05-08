@@ -1677,7 +1677,8 @@ class NGS:
         motifs = {}
         indexStart = min(self.indexMotif)
         indexEnd = max(self.indexMotif) + 1
-        print(f'Motif Indices: {purple}{indexStart} - {indexEnd}{resetColor}\n')
+        print(f'Motif Indices: {purple}{self.xAxisLabels[indexStart]} - '
+              f'{self.xAxisLabels[indexEnd]}{resetColor}\n')
 
         # Print data
         iteration = 0
@@ -1709,7 +1710,7 @@ class NGS:
             print(f'     {blue}{motif}{resetColor}, Count:{red} {count:,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
-                print('\n')
+                print()
                 break
 
         print(f'Total Substrates:{red} {countTotalSubstrates:,}{resetColor}\n'
@@ -4057,17 +4058,21 @@ class NGS:
         if numLines == 1:
             title = '\n' + title
 
-        #
+        # Limit the number of words
+        totalWords = None
         if limitWords:
-            print(f'Selecting the top {red}{N}{resetColor} sequences\n')
+            print(f'Selecting: {red}{N}{resetColor} sequences')
             subs = {}
             iteration = 0
             for substrate, count in substrates.items():
                 subs[substrate] = count
                 iteration += 1
                 if iteration >= N:
+
                     break
             substrates = subs
+        totalWords = len(substrates)
+        print(f'Plotting: {red}{totalWords:,}{resetColor} sequences\n')
 
         # Create word cloud
         cmap = NGS.createCustomColorMap(self, colorType='Word Cloud')
@@ -4103,11 +4108,12 @@ class NGS:
         if self.saveFigures:
             # Define: Save location
             if limitWords:
-                figLabel = (f'{self.enzymeName} - Words - '
-                            f'{saveTag} - N {N} - MinCounts {self.minSubCount}.png')
+                figLabel = (f'{self.enzymeName} - Words - {saveTag} - '
+                            f'Select {N} Plot {totalWords} - '
+                            f'MinCounts {self.minSubCount}.png')
             else:
-                figLabel = (f'{self.enzymeName} - Words - '
-                            f'{saveTag} - MinCounts {self.minSubCount}.png')
+                figLabel = (f'{self.enzymeName} - Words - {saveTag} - '
+                            f'Plot {totalWords} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
@@ -4128,9 +4134,11 @@ class NGS:
         print('================================= Extract Motif '
               '=================================')
         print(f'Binning Substrates:{purple} {datasetTag}{resetColor}\n'
-              f'Start Position:{greenLightB} {substrateFrame[frameIndicies[0]]}{resetColor}\n'
+              f'Start Position:{greenLightB} {substrateFrame[frameIndicies[0]]}'
+              f'{resetColor}\n'
               f'   Start Index:{greenLightB} {frameIndicies[0]}{resetColor}\n'
-              f'End Position:{greenLightB} {substrateFrame[frameIndicies[-1]]}{resetColor}\n'
+              f'End Position:{greenLightB} {substrateFrame[frameIndicies[-1]]}'
+              f'{resetColor}\n'
               f'   End Index:{greenLightB} {frameIndicies[-1]}{resetColor}\n\n')
         frameLength = len(substrateFrame)
         sys.exit()

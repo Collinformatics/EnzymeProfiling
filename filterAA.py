@@ -72,7 +72,7 @@ inTitleMotif = inTitleEnrichmentMap
 inBigLettersOnTop = False
 
 # Input 9: Word Cloud
-inLimitWords = True
+inLimitWords = False
 inNWords = 100
 
 # Input 10: Optimal Substrates
