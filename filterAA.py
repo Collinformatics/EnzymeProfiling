@@ -23,8 +23,8 @@ inFixResidues = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
-inExcludedResidue = ['Q']
-inExcludedPosition = [8]
+inExcludedResidue = ['']
+inExcludedPosition = []
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inPlotWithSampleSize = True
@@ -33,10 +33,10 @@ inEvaluateSubstrateEnrichment = False
 # Input 3: Processing The Data
 inPlotEntropy = False
 inPlotEnrichmentMap = False
-inPlotEnrichmentMotif = False
-inPlotWeblogoMotif = False
-inPlotWordCloud = False
-inPlotPCA = True
+inPlotLogo = True
+inPlotWeblogo = True
+inPlotWordCloud = True
+inPlotPCA = False
 inPlotAADistribution = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotCountsAA = False
@@ -105,12 +105,12 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 # Load: Dataset labels
-fileNamesInitial, fileNamesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
+enzymeName, fileNamesInitial, fileNamesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
 
 
 
 # =================================== Initialize Class ===================================
-ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(labelAAPos),
+ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           filterData=inFixResidues, fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
@@ -118,8 +118,8 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(labelAAPos),
           printNumber=inPrintNumber, showNValues=inPlotWithSampleSize, findMotif=False,
           folderPath=inPathFolder, filesInit=fileNamesInitial, filesFinal=fileNamesFinal,
 
-
-          plotPosS=inPlotEntropy,
+          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap, plotFigLogo=inPlotLogo,
+          plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud, plotFig=False,
 
 
           saveFigures=inSaveFigures, setFigureTimer=None)
@@ -128,7 +128,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(labelAAPos),
 
 # ====================================== Load Data =======================================
 if inFixResidues:
-    fixedSubSeq = ngs.genDatasetTag()
+    fixedSubSeq = ngs.getDatasetTag()
 else:
     fixedSubSeq = 'Unfiltered'
 
@@ -139,9 +139,9 @@ countsInitial, countsTotalInitial = ngs.loadCounts(filter=False, fileType='Initi
 initialRF = ngs.calculateRF(counts=countsInitial, N=countsTotalInitial,
                             fileType='Initial Sort')
 
-filePathFixedSubsFinal = None
-filePathFixedCountsFinal = None
 loadFilteredSubs = False
+filePathFixedCountsFinal, filePathFixedSubsFinal = None, None
+countsFinal, countsTotalFinal = None, None
 if inFixResidues:
     filePathFixedSubsFinal, filePathFixedCountsFinal = (
         ngs.getFilePath(datasetTag=fixedSubSeq))
@@ -168,11 +168,11 @@ if inFixResidues:
         loadFilteredSubs = True
 
         # Load: Substrates
-        substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs()
+        substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
 else:
     # Load: Substrates
     (substratesInitial, totalSubsInitial,
-     substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs(loadInitial=True)
+     substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs()
 
     # Load: Counts
     countsFinal, countsTotalFinal = ngs.loadCounts(fileType='Final Sort', filter=False)
@@ -192,18 +192,18 @@ if inFixResidues:
                                                           datasetType='Final Sort')
 
     if inEvaluateSubstrateEnrichment:
+        substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
+
         fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
             substrates=substratesInitial, fixedString=fixedSubSeq,
             printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
 
 
-
 # Display current sample size
-ngs.sampleSizeDisplay(sortType=None, datasetTag=fixedSubSeq)
+ngs.recordSampleSize(NInitial=countsTotalInitial, NFinal=countsTotalFinal)
 
 # Calculate: Average initial RF
-RFsum = np.sum(initialRF, axis=1)
-initialRFAvg = RFsum / len(initialRF.columns)
+initialRFAvg = np.sum(initialRF, axis=1) / len(initialRF.columns)
 initialRFAvg = pd.DataFrame(initialRFAvg, index=initialRFAvg.index,
                             columns=['Average RF'])
 
@@ -218,6 +218,8 @@ entropy = ngs.calculateEntropy(probability=finalRF)
 if inFixResidues:
     if (not os.path.exists(filePathFixedSubsFinal) or
             not os.path.exists(filePathFixedCountsFinal)):
+        print('================================= Save The Data '
+              '=================================')
         print(f'Filtered substrates saved at:\n'
               f'     {greenDark}{filePathFixedSubsFinal}{resetColor}\n'
               f'     {greenDark}{filePathFixedCountsFinal}{resetColor}\n\n')
@@ -232,25 +234,15 @@ if inFixResidues:
 
 
 # ==================================== Plot The Data =====================================
-# Plot: Positional entropy
-if inPlotEntropy:
-    ngs.plotEntropy(entropy=entropy, datasetTag=fixedSubSeq)
+# Calculate: Enrichment scores
+enrichmentScores = ngs.enrichmentMatrix(initialRF=initialRF, finalRF=finalRF,
+                                        bigLettersOnTop=inBigLettersOnTop)
+ngs.enrichmentLogo(scores=enrichmentScores)
 
 
-if inPlotEnrichmentMap:
+if inPlotLogo:
     # Calculate: Enrichment scores
-    enrichmentScores = ngs.calculateEnrichment(initialSortRF=initialRF,
-                                               finalSortRF=finalRF)
-
-    # Plot: Enrichment Map
-    ngs.plotEnrichmentScores(scores=enrichmentScores, dataType='Enrichment',
-                             motifFilter=False, duplicateFigure=False,
-                             saveTag=fixedSubSeq)
-
-
-if inPlotEnrichmentMotif:
-    # Calculate: Enrichment scores
-    heights, yMax, yMin = ngs.enrichmentMatrix(
+    heights, yMax, yMin = ngs.makeLogo(
         counts=countsFinal.copy(), N=countsTotalFinal, baselineProb=initialRF,
         baselineType='Initial Sort', scaleData=True, normalizeFixedScores=inNormLetters)
 
@@ -262,7 +254,7 @@ if inPlotEnrichmentMotif:
                   motifFilter=False, duplicateFigure=False, saveTag=fixedSubSeq)
 
 
-if inPlotWeblogoMotif:
+if inPlotWeblogo:
     weblogo, yMax, yMin = ngs.calculateWeblogo(probability=finalRF, entropy=entropy)
 
     if inShowWeblogoYTicks:
@@ -343,7 +335,7 @@ if inEvaluateOS:
           '==============================')
     if inFixResidues:
         # Calculate: Enrichment scores and scale with Shannon Entropy
-        heights, yMax, yMin = ngs.enrichmentMatrix(
+        heights, yMax, yMin = ngs.makeLogo(
             counts=countsFinal.copy(), N=countsTotalFinal, baselineProb=initialRF,
             baselineType='Initial Sort', scaleData=True,
             normalizeFixedScores=inNormLetters)

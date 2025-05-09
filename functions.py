@@ -11,7 +11,6 @@ from itertools import combinations, product
 import logomaker
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
-from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
@@ -67,45 +66,47 @@ resetColor = '\033[0m'
 
 # =================================== Define Functions ===================================
 def filePaths(enzyme):
-    if enzyme == 'ELN' or enzyme == 'hNE':
+    if enzyme.lower() == 'eln' or enzyme.lower() == 'hne':
         inFileNamesInitialSort = ['ELN-I_S1_L001', 'ELN-I_S1_L002']
         inFileNamesFinalSort = ['ELN-R4_S2_L001', 'ELN-R4_S2_L002']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'IDE Prev':
+    elif enzyme.lower() == 'ide prev':
         inFileNamesInitialSort = ['IDE-S1_L001', 'IDE-S1_L002',
                                   'IDE-S1_L003', 'IDE-S1_L004']
         inFileNamesFinalSort = ['IDE-S2_L001', 'IDE-S2_L002',
                                 'IDE-S2_L003', 'IDE-S2_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7']
-    elif enzyme == 'IDE':
+    elif enzyme.lower() == 'ide':
         inFileNamesInitialSort = ['IDE-I_S3_L001', 'IDE-I_S3_L002']
         inFileNamesFinalSort = ['IDE-F_S5_L001', 'IDE-F_S5_L002']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'Mpro':
+    elif enzyme.lower() == 'mpro':
+        enzyme = f'SARS-CoV-2 M{'ᵖʳᵒ'}'
         inFileNamesInitialSort = ['Mpro-I_S1_L001', 'Mpro-I_S1_L002',
                                   'Mpro-I_S1_L003', 'Mpro-I_S1_L004']
         inFileNamesFinalSort = ['Mpro-R4_S3_L001', 'Mpro-R4_S3_L002',
                                 'Mpro-R4_S3_L003', 'Mpro-R4_S3_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'Mpro2':
+    elif enzyme.lower() == 'mpro2':
+        enzyme = f'SARS-CoV-2 M{'ᵖʳᵒ'}2'
         inFileNamesInitialSort = ['Mpro2-I_S1_L001', 'Mpro2-I_S1_L002',
                                   'Mpro2-I_S1_L003', 'Mpro2-I_S1_L004']
         inFileNamesFinalSort = ['Mpro2-R4_S3_L001', 'Mpro2-R4_S3_L002',
                                 'Mpro2-R4_S3_L003', 'Mpro2-R4_S3_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'MMP7':
+    elif enzyme.lower() == 'mmp7':
         inFileNamesInitialSort = ['MMP7-I_S3_L001', 'MMP7-I_S3_L002']
         inFileNamesFinalSort = ['MMP7-R4_S4_L001', 'MMP7-R4_S4_L002']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-    elif enzyme == 'Fyn':
+    elif enzyme.lower() == 'fyn':
         inFileNamesInitialSort = ['Fyn-I_S6_L001', 'Fyn-I_S6_L002']
         inFileNamesFinalSort = ['Fyn-F_S1_L001', 'Fyn-F_S1_L002']
         inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
-    elif enzyme == 'Src':
+    elif enzyme.lower() == 'src':
         inFileNamesInitialSort = ['Src-I_S4_L001', 'Src-I_S4_L002']
         inFileNamesFinalSort = ['Src-F_S2_L001', 'Src-F_S2_L002']
         inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
-    elif enzyme == 'VEEV':
+    elif enzyme.lower() == 'veev':
         inFileNamesInitialSort = ['VE-I_S1_L001']
         inFileNamesFinalSort = ['VE-R4_S2_L001']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
@@ -115,7 +116,7 @@ def filePaths(enzyme):
               f'{os.path.basename(__file__)}\n')
         sys.exit()
 
-    return inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions
+    return enzyme, inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions
 
 
 
@@ -134,7 +135,8 @@ class NGS:
     def __init__(self, enzymeName, substrateLength, filterData, fixedAA, fixedPosition,
                  excludeAAs, excludeAA, excludePosition, minCounts, figEMSquares,
                  xAxisLabels, printNumber, showNValues, findMotif, folderPath,
-                 filesInit, filesFinal, plotPosS, saveFigures, setFigureTimer):
+                 filesInit, filesFinal, plotPosS, plotFigEM, plotFigLogo, plotFigWebLogo,
+                 plotFigWords, plotFig, saveFigures, setFigureTimer):
         self.enzymeName = enzymeName
         self.applyFilter = filterData
         self.fixedAA = fixedAA
@@ -144,7 +146,13 @@ class NGS:
         self.excludePosition = excludePosition
         self.minSubCount = minCounts
 
+
         self.plotFigEntropy = plotPosS
+        self.plotFigEM = plotFigEM
+        self.plotFigLogo = plotFigLogo
+        self.plotFigWebLogo = plotFigWebLogo
+        self.plotFigWords = plotFigWords
+        self.plotFig = plotFig
 
 
         self.fixedSubSeq = None
@@ -192,8 +200,8 @@ class NGS:
         self.filesInit = filesInit
         self.filesFinal = filesFinal
         self.pathFolder = folderPath
-        self.pathSaveData = os.path.join(self.pathFolder, 'Data')
-        self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
+        self.pathSaveData = os.path.join(self.pathFolder, 'DataTest')
+        self.pathSaveFigs = os.path.join(self.pathFolder, 'FiguresTest')
         self.pathFilteredSubs = None
         self.pathFilteredCounts = None
         self.saveFigures = saveFigures
@@ -215,11 +223,12 @@ class NGS:
                   f'     inPathFolder = {self.pathFolder}\n')
             sys.exit()
         if self.pathSaveData is not None:
-            if os.path.exists(self.pathSaveData):
+            if not os.path.exists(self.pathSaveData):
                 os.makedirs(self.pathSaveData, exist_ok=True)
         if self.pathSaveFigs is not None:
-            if os.path.exists(self.pathSaveFigs):
+            if not os.path.exists(self.pathSaveFigs):
                 os.makedirs(self.pathSaveFigs, exist_ok=True)
+
 
 
 
@@ -275,15 +284,15 @@ class NGS:
         else:
             fileLocation = filePath + '\\' + fileName + '.' + fileType
 
-        # Determine read direction
+        # Determine the read direction
         if '_R1_' in fileName:
             # Extract the substrates
-            subSequence = NGS.translate(self, path=fileLocation, type=fileType,
+            subSequence = self.translate(self, path=fileLocation, type=fileType,
                                         fixData=fixedSubs, startSeq=startSeq,
                                         endSeq=endSeq, printQS=printQS)
         elif '_R2_' in fileName:
             # Extract the substrates
-            subSequence = NGS.reverseTranslate(self, path=fileLocation, type=fileType,
+            subSequence = self.reverseTranslate(self, path=fileLocation, type=fileType,
                                                fixData=fixedSubs, startSeq=startSeq,
                                                endSeq=endSeq, printQS=printQS)
 
@@ -297,7 +306,7 @@ class NGS:
         subSequence = {}
         totalSeqsDNA = 0
 
-        # Evaluate file path
+        # Evaluate the file path
         gZipped = False
         if not os.path.isfile(path):
             pathZipped = path + '.gz'
@@ -315,7 +324,7 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = NGS.genDatasetTag(self)
+            fixedSubSeq = self.getDatasetTag(self)
             print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
 
 
@@ -584,7 +593,7 @@ class NGS:
         subSequence = {}
         totalSeqsDNA = 0
 
-        # Evaluate file path
+        # Evaluate the file path
         gZipped = False
         if not os.path.isfile(path):
             pathZipped = path + '.gz'
@@ -601,7 +610,7 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = NGS.genDatasetTag(self)
+            fixedSubSeq = self.getDatasetTag(self)
             print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
 
 
@@ -970,17 +979,6 @@ class NGS:
         print(f'Total substrates: {red}{totalSubs:,}{resetColor}\n'
               f'Total Unique Substrates:{red} {len(substrates):,}{resetColor}\n\n')
 
-        # Update sample size
-        if datasetType == 'Initial Sort':
-            self.nSubsInitial = totalSubs
-        else:
-            self.nSubsFinal = totalSubs
-
-        stopTime = time.time()
-        endTime = stopTime - beginTime
-        print(f'Runtime:{greenLightB} Count AA\n'
-              f'     {red}{np.round(endTime, 3):,}s{resetColor}\n\n')
-
         return countedData, totalSubs
 
 
@@ -1099,16 +1097,6 @@ class NGS:
                 sys.exit()
         print('\n')
 
-        # Undate sample size
-        if 'initial' in fileType.lower():
-            self.nSubsInitial = totalCounts
-        elif 'final' in fileType.lower():
-            self.nSubsFinal = totalCounts
-        else:
-            print(f'{orange}ERROR: Unknown fileType "{cyan}{fileType}{orange}"\n'
-                  f'     Rename parameter as: "Initial Sort" or "Final Sort"\n')
-            sys.exit()
-
         return countedData, totalCounts
 
 
@@ -1174,16 +1162,48 @@ class NGS:
 
 
 
-    def loadUnfilteredSubs(self, loadInitial=False):
+    def loadUnfilteredSubs(self, loadInitial=False, loadFinal=False):
         def loadSubsThread(fileNames, fileType, result):
-            subsLoaded, totalSubs = NGS.loadSubstrates(self, fileNames=fileNames,
+            subsLoaded, totalSubs = self.loadSubstrates(self, fileNames=fileNames,
                                                        fileType=fileType)
             result[fileType] = (subsLoaded, totalSubs)
 
         # Initialize result dictionary
         loadedResults = {}
-
         if loadInitial:
+            # Create threads for loading initial and final substrates
+            threadInitial = threading.Thread(target=loadSubsThread,
+                                             args=(self.filesInit, 'Initial Sort',
+                                                   loadedResults))
+
+            # Start the threads
+            threadInitial.start()
+
+            # Wait for the threads to complete
+            threadInitial.join()
+
+            # Retrieve the loaded substrates
+            substratesInitial, totalSubsInitial = loadedResults['Initial Sort']
+
+            return substratesInitial, totalSubsInitial
+        elif loadFinal:
+            # Create thread for the final substrates
+            threadFinal = threading.Thread(target=loadSubsThread,
+                                           args=(self.filesFinal, 'Final Sort',
+                                                 loadedResults))
+
+            # Start the thread
+            threadFinal.start()
+
+            # Wait for the thread to complete
+            threadFinal.join()
+
+            # Retrieve the loaded substrates
+            substrates, totalSubs = loadedResults['Final Sort']
+
+            return substrates, totalSubs
+
+        else:
             # Create threads for loading initial and final substrates
             threadInitial = threading.Thread(target=loadSubsThread,
                                              args=(self.filesInit, 'Initial Sort',
@@ -1205,24 +1225,6 @@ class NGS:
             substratesFinal, totalSubsFinal = loadedResults['Final Sort']
 
             return substratesInitial, totalSubsInitial, substratesFinal, totalSubsFinal
-        else:
-            # Create thread for the final substrates
-            threadFinal = threading.Thread(target=loadSubsThread,
-                                           args=(self.filesFinal, 'Final Sort',
-                                                 loadedResults))
-
-            # Start the thread
-            threadFinal.start()
-
-            # Wait for the thread to complete
-            threadFinal.join()
-
-            # Retrieve the loaded substrates
-            substrates, totalSubs = loadedResults['Final Sort']
-
-            return substrates, totalSubs
-
-
 
     def loadSubstratesFiltered(self):
         print('=========================== Load: Filtered Substrate '
@@ -1247,8 +1249,6 @@ class NGS:
 
         return substrates, totalSubsFinal
 
-
-
     def loadFixedMotifCounts(self, filePath, substrateFrame, substrateFrameAAPos,
                              frameIndices, datasetTag, sortType):
         print('=========================== Load: Fixed Motif Counts '
@@ -1257,6 +1257,7 @@ class NGS:
 
         frameLength = len(substrateFrame)
         countsFixedFrameAll = []
+        totalCountsFixedFrame = None
 
         # Load the counts
         for index, position in enumerate(self.fixedPosition):
@@ -1322,14 +1323,14 @@ class NGS:
                         totalCountsFixedFrame.select_dtypes(include='number').columns})
 
         # Print the data
-        print(f'{greyDark}Combined Counts{resetColor}:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n'
-              f'{formattedCounts}\n')
+        print(f'{greyDark}Combined Counts{resetColor}:{purple} {self.enzymeName} - '
+              f'{datasetTag}{resetColor}\n{formattedCounts}\n')
         print('Total Counts:')
         for index, position in enumerate(substrateFrame):
             print(f'     {position}: {red}{fixedFrameColumnSums[index]:,}{resetColor}')
         print('\n')
 
-        # Convert list into 3D array
+        # Convert a list into 3D array
         countsFixedFrameAll = np.stack(countsFixedFrameAll, axis=0)
 
         return countsFixedFrameAll, totalCountsFixedFrame
@@ -1360,38 +1361,25 @@ class NGS:
 
 
 
-    def sampleSizeDisplay(self, sortType, datasetTag):
+    def recordSampleSize(self, NInitial, NFinal):
         print('============================== Current Sample Size '
               '==============================')
-        if sortType is not None:
-            if datasetTag is None:
-                print(f'Sort Type:{purple} {sortType}{resetColor}')
-            else:
-                print(f'Sort Type:{purple} {sortType} {datasetTag}{resetColor}')
+        # Update: Sample size
+        self.nSubsInitial = NInitial
+        self.nSubsFinal = NFinal
+        print(f'Dataset: {purple}{self.fixedSubSeq}{resetColor}\n'
+              f'Initial Sort: {red}{self.nSubsInitial:,}{resetColor}\n'
+              f'Final Sort: {red}{self.nSubsFinal:,}{resetColor}\n')
 
-        totalSubs = self.nSubsInitial + self.nSubsFinal
-        print(f'Initial Sort:{red} {self.nSubsInitial:,}{resetColor}\n'
-              f'Final Sort:{red} {self.nSubsFinal:,}{resetColor}\n'
-              f'Total Substrates:{greenLight} {totalSubs:,}{resetColor}\n\n')
-
-
-
-    def sampleSizeUpdate(self, NSubs, sortType, datasetTag):
-        # Update the current sample size
-        if sortType == 'Initial Sort':
-            self.nSubsInitial = NSubs
-        elif 'Final' in sortType:
-            self.nSubsFinal = NSubs
+        # Set figure title
+        if self.showSampleSize:
+            self.title = (f'\n{self.enzymeName}\n'
+                     f'N Unsorted = {self.nSubsInitial:,}\n'
+                     f'N Sorted = {self.nSubsFinal:,}')
+            self.titleWeblogo = f'\n\n{self.enzymeName}\nN = {self.nSubsFinal:,}'
         else:
-            print('============================== Current Sample Size '
-                  '==============================')
-            if datasetTag is None:
-                print(f'Sort Type:{purple} {sortType}{resetColor}')
-            else:
-                print(f'Sort Type:{purple} {sortType} {datasetTag}{resetColor}')
-            print(f'{orange}ERROR: The sample sizes were not updated\n')
-            sys.exit()
-        NGS.sampleSizeDisplay(self, sortType, datasetTag)
+            self.title = f'\n\n\n{self.enzymeName}'
+            self.titleWeblogo = f'\n\n\n{self.enzymeName}'
 
 
 
@@ -1421,7 +1409,7 @@ class NGS:
 
 
 
-    def genDatasetTag(self):
+    def getDatasetTag(self):
         fixResidueList = []
         if self.excludeAAs:
             # Exclude residues
@@ -1462,21 +1450,14 @@ class NGS:
             self.fixedSubSeq = self.fixedSubSeq.replace("'", '')
 
         # Clean up fixed sequence tag
-        removeTag = ('Excl-Y@R1_Excl-Y@R2_Excl-Y@R3_Excl-Y@R4_Excl-Y@R6_'
-                    'Excl-Y@R7_Excl-Y@R8_Excl-Y@R9')
-        if removeTag in self.fixedSubSeq:
-            self.fixedSubSeq = self.fixedSubSeq.replace(removeTag, '')
-            self.fixedSubSeq = f'Excl Y {self.fixedSubSeq}'
+        print(f'Dataset: {orange}{self.fixedSubSeq}{resetColor}\n')
 
-        # Set figure title
-        if self.showSampleSize:
-            self.title = (f'\n{self.enzymeName}\n'
-                     f'N Unsorted = {self.nSubsInitial:,}\n'
-                     f'N Sorted = {self.nSubsFinal:,}')
-            self.titleWeblogo = f'\n\n{self.enzymeName}\nN = {self.nSubsFinal:,}'
-        else:
-            self.title = f'\n\n\n{self.enzymeName}'
-            self.titleWeblogo = f'\n\n\n{self.enzymeName}'
+        print(f'Len: {self.substrateLength}\n')
+        if self.substrateLength == 9:
+            removeTag = 'Excl-Y@R1_Y@R2_Y@R3_Y@R4_Y@R6_Y@R7_Y@R8_Y@R9'
+            if removeTag in self.fixedSubSeq:
+                self.fixedSubSeq = self.fixedSubSeq.replace(removeTag, '')
+                self.fixedSubSeq = f'Excl-Y{self.fixedSubSeq}'
 
         # Update: Save tag
         self.saveTag = f'{self.fixedSubSeq} - MinCounts {self.minSubCount}'
@@ -2010,24 +1991,460 @@ class NGS:
 
 
 
-    def calculateEnrichment(self, initialSortRF, finalSortRF):
+    def enrichmentMatrix(self, initialRF, finalRF, bigLettersOnTop,
+                            motifFilter=False, duplicateFigure=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
-        if len(initialSortRF.columns) == 1:
-            enrichment = pd.DataFrame(0.0, index=finalSortRF.index,
-                                      columns=finalSortRF.columns)
-            for position in finalSortRF.columns:
-                enrichment.loc[:, position] = np.log2(finalSortRF.loc[:, position] /
-                                                      initialSortRF.iloc[:, 0])
+        if len(initialRF.columns) == 1:
+            enrichment = pd.DataFrame(0.0, index=finalRF.index,
+                                      columns=finalRF.columns)
+            for position in finalRF.columns:
+                enrichment.loc[:, position] = np.log2(finalRF.loc[:, position] /
+                                                      initialRF.iloc[:, 0])
         else:
-            initialSortRF.columns = finalSortRF.columns
-            enrichment = np.log2(finalSortRF / initialSortRF)
-            enrichment.columns = finalSortRF.columns
+            initialRF.columns = finalRF.columns
+            enrichment = np.log2(finalRF / initialRF)
+            enrichment.columns = finalRF.columns
 
         print(f'Enrichment Score:{purple} {self.fixedSubSeq}{resetColor}\n\n'
               f'{enrichment.round(3)}\n\n')
 
+        # Plot: Enrichment Map
+        if self.plotFigEM:
+            self.plotEnrichmentScores(
+                scores=enrichment, dataType='Enrichment', motifFilter=motifFilter,
+                duplicateFigure=duplicateFigure, saveTag=self.fixedSubSeq)
+
+        #
+        heights = pd.DataFrame(0, index=enrichment.index,
+                               columns=enrichment.columns, dtype=float)
+        for indexColumn in heights.columns:
+            heights.loc[:, indexColumn] = (enrichment.loc[:, indexColumn] *
+                                           self.entropy.loc[indexColumn, 'ΔS'])
+
+        if self.plotFigLogo:
+            self.plotEnrichmentLogo(self, heights=heights, )
+
         return enrichment
+
+
+    def plotEnrichmentLogo(self, heights):
+        print('=========================== Calculate: Letter Heights '
+              '===========================')
+        print(f'Residue heights calculated by: '
+              f'{red}Enrichment Scores * ΔS{resetColor}\n')
+
+        # Calculate: Max and min
+        columnTotals = [[], []]
+        for indexColumn in heights.columns:
+            totalPos = 0
+            totalNeg = 0
+            for value in heights.loc[:, indexColumn]:
+                if value > 0:
+                    totalPos += value
+                elif value < 0:
+                    totalNeg += value
+            columnTotals[0].append(totalPos)
+            columnTotals[1].append(totalNeg)
+        yMax = max(columnTotals[0])
+        yMin = min(columnTotals[1])
+        
+        print(f'Letter Heights:\n{heights}\n\n'
+              f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+              f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
+
+        self.plotLogo(heights, bigLettersOnTop)
+        
+        sys.exit()
+
+        return heights, yMax, yMin
+
+
+    def plotLogo(self, heights, bigLettersOnTop):
+        print('============================= Plot: Enrichment Logo '
+              '=============================')
+        print(f'Dataset type:{purple} {dataType}{resetColor}\n'
+              f'Dataset:{purple} {saveTag}{resetColor}\n\n'
+              f'Letter Heights:\n{heights}\n\n')
+
+        # Set: Figure borders
+        if self.showSampleSize:
+            figBorders = [0.852, 0.075, 0.164, 0.938]
+        else:
+            figBorders = [0.852, 0.075, 0.164, 0.938]
+            
+        # Set local parameters
+        if bigLettersOnTop:
+            stackOrder = 'big_on_top'
+        else:
+            stackOrder = 'small_on_top'
+        
+
+
+    def plotMotif(self, data, dataType, bigLettersOnTop, yMax, yMin, showYTicks,
+                  addHorizontalLines, motifFilter, duplicateFigure, saveTag):
+        print('============================= Plot: Sequence Motif '
+              '==============================')
+        print(f'Dataset type:{purple} {dataType}{resetColor}\n'
+              f'Dataset:{purple} {saveTag}{resetColor}\n\n'
+              f'Data:\n{data}\n\n')
+
+        # Set figure title
+        if 'weblogo' in dataType.lower():
+            title = self.titleWeblogo
+        else:
+            title = self.title
+
+        # Set: Figure borders
+        if self.showSampleSize:
+            if 'weblogo' in dataType.lower():
+                if showYTicks:
+                    figBorders = [0.852, 0.075, 0.112, 0.938]
+                else:
+                    figBorders = [0.852, 0.075, 0.112, 0.938]
+            else:
+                figBorders = [0.852, 0.075, 0.164, 0.938]
+        else:
+            if 'weblogo' in dataType.lower():
+                figBorders = [0.852, 0.075, 0.112, 0.938]
+            else:
+                figBorders = [0.852, 0.075, 0.164, 0.938]
+
+        # Set local parameters
+        if bigLettersOnTop:
+            stackOrder = 'big_on_top'
+        else:
+            stackOrder = 'small_on_top'
+
+        # Rename column headers
+        dataColumnsReceived = data.columns
+        data.columns = range(len(data.columns))
+
+        # Set -inf to zero
+        if data.isin([np.inf, -np.inf]).any().any():
+            data.replace([np.inf, -np.inf], 0, inplace=True)
+            yMin = min(data[data < 0].sum())
+
+        # Plot the sequence motif
+        fig, ax = plt.subplots(figsize=self.figSize)
+        motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=self.colorsAA,
+                               width=0.95, stack_order=stackOrder)
+        motif.ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
+                            left=figBorders[2], right=figBorders[3])
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks)
+
+        # Set borders
+        motif.style_spines(visible=False)
+        motif.style_spines(spines=['left', 'bottom'], visible=True)
+        for spine in motif.ax.spines.values():
+            spine.set_linewidth(self.lineThickness)
+
+        # Set x-ticks
+        if len(dataColumnsReceived) == len(self.xAxisLabels):
+            motif.ax.set_xticks([pos for pos in range(len(self.xAxisLabels))])
+            motif.ax.set_xticklabels(self.xAxisLabels, fontsize=self.labelSizeTicks,
+                                     rotation=0, ha='center')
+        else:
+            motif.ax.set_xticks([pos for pos in range(len(dataColumnsReceived))])
+            motif.ax.set_xticklabels(dataColumnsReceived, fontsize=self.labelSizeTicks,
+                                     rotation=0, ha='center')
+
+        for tick in motif.ax.xaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness)  # Set tick width
+
+        # Set y-ticks
+        if 'enrichment' in dataType.lower():
+            yTicks = [yMin, 0, yMax]
+            yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}'
+                           for tick in yTicks]
+            yLimitUpper = yMax
+            yLimitLower = yMin
+        else:
+            if showYTicks:
+                yTicks = range(0, 5)
+                yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}'
+                               for tick in yTicks]
+                yLimitUpper = 4.32
+                yLimitLower = 0
+
+                if addHorizontalLines:
+                    for tick in yTicks:
+                        motif.ax.axhline(y=tick, color='black', linestyle='--',
+                                         linewidth=self.lineThickness)
+            else:
+                yTicks = [yMin, 0, yMax]
+                yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}'
+                               for tick in yTicks]
+                yLimitUpper = yMax
+                yLimitLower = yMin
+
+        motif.ax.set_yticks(yTicks)
+        motif.ax.set_yticklabels(yTickLabels, fontsize=self.labelSizeTicks)
+        motif.ax.set_ylim(yLimitLower, yLimitUpper)
+        for tick in motif.ax.yaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness)  # Set tick width
+
+        # Label the axes
+        motif.ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
+        if dataType.lower() == 'weblogo':
+            motif.ax.set_ylabel('Bits', fontsize=self.labelSizeAxis)
+        else:
+            motif.ax.set_ylabel(dataType, fontsize=self.labelSizeAxis)
+
+        # Set horizontal line
+        motif.ax.axhline(y=0, color='black', linestyle='-', linewidth=self.lineThickness)
+
+        # Evaluate dataset for fixed residues
+        spacer = np.diff(motif.ax.get_xticks())  # Find the space between each tick
+        spacer = spacer[0] / 2
+
+        # Use the spacer to set a gray background to fixed residues
+        for index, position in enumerate(self.xAxisLabels):
+            if position in self.fixedPosition:
+                # Plot grey boxes on each side of the xtick
+                motif.ax.axvspan(index - spacer, index + spacer,
+                                 facecolor='darkgrey', alpha=0.2)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        if self.setFigureTimer:
+            plt.ion()
+            plt.show()
+            plt.pause(self.figureTimerDuration)
+            plt.close(fig)
+            plt.ioff()
+        else:
+            plt.show()
+
+        # Inspect dataset
+        duplicate = False
+        # Save the figure
+        if self.saveFigures:
+            if dataType.lower() == 'weblogo':
+                datasetType = dataType
+            elif 'scaled' in dataType.lower():
+                datasetType = 'Logo'
+            else:
+                print(f'{orange}ERROR: What do I do with this dataset type -'
+                      f'{red} {dataType}{resetColor}\n')
+                sys.exit()
+
+            # Define: Save location
+            if motifFilter:
+                duplicate = True
+                figLabel = (f'{self.enzymeName} - {datasetType} '
+                            f'{self.saveFigureIteration} - {saveTag} - MinCounts '
+                            f'{self.minSubCount}.png')
+            else:
+                figLabel = (f'{self.enzymeName} - {datasetType} - '
+                            f'{saveTag} - MinCounts {self.minSubCount}.png')
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                if self.findMotif and duplicate:
+                    # Turn off figure autosave
+                    self.saveFigures = False
+                    print(f'{yellow}WARNING{resetColor}: '
+                          f'{yellow}The figure already exists at the path\n'
+                          f'     {saveLocation}\n\n'
+                          f'We will not overwrite the figure{resetColor}\n\n')
+                else:
+                    # Save duplicate figures
+                    if duplicateFigure:
+                        copyNumber = 1
+                        fileFound = True
+                        while fileFound:
+                            # Define: Save location
+                            figLabel = (f'{self.enzymeName} - {figLabel} {copyNumber} - '
+                                        f'{saveTag} - MinCounts {self.minSubCount}.png')
+                            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+                            if not os.path.exists(saveLocation):
+                                print(f'Saving figure at path:\n'
+                                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                                fig.savefig(saveLocation, dpi=self.figureResolution)
+                                self.saveFigureIteration = copyNumber
+                                fileFound = False
+                            else:
+                                copyNumber += 1
+                    else:
+                        # Dont save the duplicated figure
+                        print(f'{yellow}WARNING{resetColor}: '
+                              f'{yellow}The figure already exists at the path\n'
+                              f'     {saveLocation}\n\n'
+                              f'We will not overwrite the figure{resetColor}\n\n')
+            else:
+                self.findMotif = False
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
+    def makeLogo(self, counts, N, baselineProb, baselineType, scaleData,
+                 normalizeFixedScores):
+        print('=========================== Calculate: Letter Heights '
+              '===========================')
+        print(f'Residue heights calculated by: '
+              f'{red}log\u2082(Prob Final / Prob Initial){resetColor}\n'
+              f'Baseline Probability: {purple}{baselineType}{resetColor}\n')
+
+        if len(baselineProb.columns) != 1:
+            baselineProb.columns = counts.columns
+
+        fixedPos = {}
+        for indexColumn in counts.columns:
+            values = counts.loc[:, indexColumn]
+            if N in values.values:
+                indexRow = values[values == N].index[0]
+                fixedPos[indexColumn] = indexRow
+
+        probCounts = counts / N
+        probRatios = pd.DataFrame(0, index=counts.index, columns=counts.columns,
+                                  dtype=float)
+        if len(baselineProb.columns) == 1:
+            for indexColumn in counts.columns:
+                # print(f'Position: {indexColumn}')
+                for indexRow in counts.index:
+                    probRatio = np.log2(probCounts.loc[indexRow, indexColumn] /
+                                        baselineProb.loc[
+                                            indexRow, baselineProb.columns[0]])
+                    probRatios.loc[indexRow, indexColumn] = probRatio
+        else:
+            for indexColumn in counts.columns:
+                # print(f'Position: {indexColumn}')
+                for indexRow in counts.index:
+                    probRatio = np.log2(probCounts.loc[indexRow, indexColumn] /
+                                        baselineProb.loc[indexRow, indexColumn])
+                    probRatios.loc[indexRow, indexColumn] = probRatio
+        probRatios.replace(-np.inf, 0, inplace=True)
+        print(f'RF: {purple}{baselineType}{resetColor}\n{baselineProb.round(3)}\n\n')
+        print(f'RF:{purple} Final Sort{resetColor}\n{probCounts.round(3)}\n\n')
+
+        if scaleData:
+            entropy = pd.DataFrame(0.0, index=probCounts.columns, columns=['Entropy'])
+            entropy['Entropy'] = entropy['Entropy'].astype(float)
+            entropyMax = np.log2(len(probCounts.index))
+            for indexColumn in probCounts.columns:
+                S = 0  # Reset entropy total for a new position
+                for indexRow, probRatio in probCounts.iterrows():
+                    prob = probRatio[indexColumn]
+                    if prob == 0:
+                        continue
+                    else:
+                        S += -prob * np.log2(prob)
+                entropy.loc[indexColumn, 'Entropy'] = float(entropyMax - S)
+
+            heights = pd.DataFrame(0,
+                                   index=counts.index,
+                                   columns=counts.columns,
+                                   dtype=float)
+            for indexColumn in heights.columns:
+                heights.loc[:, indexColumn] = (probRatios.loc[:, indexColumn] *
+                                               entropy.loc[indexColumn, 'Entropy'])
+        else:
+            heights = probRatios
+        heights = heights.fillna(0.0)
+
+        columnTotals = [[], []]
+        for indexColumn in heights.columns:
+            totalPos = 0
+            totalNeg = 0
+            for value in heights.loc[:, indexColumn]:
+                if value > 0:
+                    totalPos += value
+                elif value < 0:
+                    totalNeg += value
+            columnTotals[0].append(totalPos)
+            columnTotals[1].append(totalNeg)
+        yMax = max(columnTotals[0])
+        yMin = min(columnTotals[1])
+
+        if scaleData:
+            print(f'Residue Heights: log\u2082({cyan}RF Final Sort{resetColor} / '
+                  f'{cyan}RF {baselineType}{resetColor})\n'
+                  f'{probRatios.round(3)}\n')
+
+            print(f'{entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
+            print(f'{pink}Scaled Residue Heights{resetColor}:{cyan} '
+                  f'ΔS * log\u2082(RF Final Sort / RF  {baselineType}{resetColor})\n'
+                  f'{heights.round(5)}\n')
+        else:
+            print(f'{pink}Residue Heights{resetColor}:{cyan} '
+                  f'log\u2082(RF Final Sort / RF {baselineType}{resetColor})\n'
+                  f'{heights.round(3)}\n')
+        print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+              f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
+
+        # Set values for columns with fixed residues
+        if normalizeFixedScores:
+            print(f'{yellow}Readjusting the fixed residue heights '
+                  f'to be equal to the tallest stack{resetColor}')
+
+            for key, value in fixedPos.items():
+                heights.loc[value, key] = yMax
+
+            print(f'Adjusted Residue Heights:{pink} log\u2082(RF Final Sort / RF '
+                  f'{baselineType}){resetColor}\n{heights.round(3)}')
+            print(f'{yellow}Readjusting the fixed residue heights '
+                  f'to be equal to the tallest stack{resetColor}\n\n')
+
+        return heights, yMax, yMin
+
+
+
+    def calculateWeblogo(self, probability, entropy):
+        print('============================= Calculate: Weblogo '
+              '================================')
+        fixedPos = {}
+        for indexColumn in probability.columns:
+            values = probability.loc[:, indexColumn]
+            if 1.0 in values.values:
+                indexRow = values[values == 1.0].index[0]
+                fixedPos[indexColumn] = indexRow
+        print(f'Fixed Residues:')
+        if fixedPos:
+            for key, value in fixedPos.items():
+                print(f'     {pink}{value}@{key}{resetColor}')
+        else:
+            print(f'     {pink}No fixed Residues{resetColor}')
+        print('')
+
+        entropyMax = np.log2(len(probability.index))
+        print(f'Probability:\n{probability}\n\n{entropy}\n\n'
+              f'Max Entropy: {red}{entropyMax.round(6)}{resetColor}\n\n')
+
+        #
+        heights = pd.DataFrame(0, index=probability.index,
+                               columns=probability.columns, dtype=float)
+        for indexColumn in heights.columns:
+            heights.loc[:, indexColumn] = (probability.loc[:, indexColumn] *
+                                           entropy.loc[indexColumn, 'ΔS'])
+        # Calculate: Max and min
+        columnTotals = [[], []]
+        for indexColumn in heights.columns:
+            totalPos = 0
+            totalNeg = 0
+            for value in heights.loc[:, indexColumn]:
+                if value > 0:
+                    totalPos += value
+                elif value < 0:
+                    totalNeg += value
+            columnTotals[0].append(totalPos)
+            columnTotals[1].append(totalNeg)
+        yMax = max(columnTotals[0])
+        yMin = min(columnTotals[1])
+
+        # Apply correction for rounding error on fixed AAs
+        for key, value in fixedPos.items():
+            heights.loc[value, key] = yMax
+        print(f'Letter Heights:\n{heights}\n\n'
+              f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+              f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
+
+        return heights, yMax, yMin
 
 
 
@@ -2100,177 +2517,11 @@ class NGS:
 
 
         # Plot: Standard deviation
-        NGS.plotStats(
+        self.plotStats(
             self, countedData=frameESStDev, totalCounts=None,
             title=f'{self.enzymeName}\nFixed Motif {self.fixedAA[0]}@R'
                   f'{self.fixedPosition[0]}-R{self.fixedPosition[-1]}\n'
                   f'Standard Deviation', datasetTag=datasetTag, dataType='StDev')
-
-
-
-    def calculateWeblogo(self, probability, entropy):
-        print('============================= Calculate: Weblogo '
-              '================================')
-        fixedPos = {}
-        for indexColumn in probability.columns:
-            values = probability.loc[:, indexColumn]
-            if 1.0 in values.values:
-                indexRow = values[values == 1.0].index[0]
-                fixedPos[indexColumn] = indexRow
-        print(f'Fixed Residues:')
-        if fixedPos:
-            for key, value in fixedPos.items():
-                print(f'     {pink}{value}@{key}{resetColor}')
-        else:
-            print(f'     {pink}No fixed Residues{resetColor}')
-        print('')
-
-        entropyMax = np.log2(len(probability.index))
-        print(f'Probability:\n{probability}\n\n{entropy}\n\n'
-              f'Max Entropy: {red}{entropyMax.round(6)}{resetColor}\n\n')
-
-        #
-        heights = pd.DataFrame(0, index=probability.index,
-                               columns=probability.columns, dtype=float)
-        for indexColumn in heights.columns:
-            heights.loc[:, indexColumn] = (probability.loc[:, indexColumn] *
-                                           entropy.loc[indexColumn, 'ΔS'])
-        # Calculate: Max and min
-        columnTotals = [[], []]
-        for indexColumn in heights.columns:
-            totalPos = 0
-            totalNeg = 0
-            for value in heights.loc[:, indexColumn]:
-                if value > 0:
-                    totalPos += value
-                elif value < 0:
-                    totalNeg += value
-            columnTotals[0].append(totalPos)
-            columnTotals[1].append(totalNeg)
-        yMax = max(columnTotals[0])
-        yMin = min(columnTotals[1])
-
-        # Apply correction for rounding error on fixed AAs
-        for key, value in fixedPos.items():
-            heights.loc[value, key] = yMax
-        print(f'Letter Heights:\n{heights}\n\n'
-              f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
-              f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
-
-        return heights, yMax, yMin
-
-
-
-    def enrichmentMatrix(self, counts, N, baselineProb, baselineType, scaleData,
-                         normalizeFixedScores):
-        print('=========================== Calculate: Letter Heights '
-              '===========================')
-        print(f'Residue heights calculated by: {red}log\u2082(RF Ratios){resetColor}\n'
-              f'Baseline Probability: {purple}{baselineType}{resetColor}\n')
-
-        if len(baselineProb.columns) != 1:
-            baselineProb.columns = counts.columns
-
-
-        fixedPos = {}
-        for indexColumn in counts.columns:
-            values = counts.loc[:, indexColumn]
-            if N in values.values:
-                indexRow = values[values == N].index[0]
-                fixedPos[indexColumn] = indexRow
-
-        probCounts = counts / N
-        probRatios = pd.DataFrame(0, index=counts.index, columns=counts.columns,
-                                  dtype=float)
-        if len(baselineProb.columns) == 1:
-            for indexColumn in counts.columns:
-                # print(f'Position: {indexColumn}')
-                for indexRow in counts.index:
-                    probRatio = np.log2(probCounts.loc[indexRow, indexColumn] /
-                                         baselineProb.loc[indexRow, baselineProb.columns[0]])
-                    probRatios.loc[indexRow, indexColumn] = probRatio
-        else:
-            for indexColumn in counts.columns:
-                # print(f'Position: {indexColumn}')
-                for indexRow in counts.index:
-                    probRatio = np.log2(probCounts.loc[indexRow, indexColumn] /
-                                         baselineProb.loc[indexRow, indexColumn])
-                    probRatios.loc[indexRow, indexColumn] = probRatio
-        probRatios.replace(-np.inf, 0, inplace=True)
-        print(f'RF: {purple}{baselineType}{resetColor}\n{baselineProb.round(3)}\n\n')
-        print(f'RF:{purple} Final Sort{resetColor}\n{probCounts.round(3)}\n\n')
-
-        if scaleData:
-            entropy = pd.DataFrame(0.0, index=probCounts.columns, columns=['Entropy'])
-            entropy['Entropy'] = entropy['Entropy'].astype(float)
-            entropyMax = np.log2(len(probCounts.index))
-            for indexColumn in probCounts.columns:
-                S = 0 # Reset entropy total for a new position
-                for indexRow, probRatio in probCounts.iterrows():
-                    prob = probRatio[indexColumn]
-                    if prob == 0:
-                        continue
-                    else:
-                        S += -prob * np.log2(prob)
-                entropy.loc[indexColumn, 'Entropy'] = float(entropyMax - S)
-
-
-            heights = pd.DataFrame(0,
-                                   index=counts.index,
-                                   columns=counts.columns,
-                                   dtype=float)
-            for indexColumn in heights.columns:
-                heights.loc[:, indexColumn] = (probRatios.loc[:, indexColumn] *
-                                               entropy.loc[indexColumn, 'Entropy'])
-        else:
-            heights = probRatios
-        heights = heights.fillna(0.0)
-
-
-        columnTotals = [[], []]
-        for indexColumn in heights.columns:
-            totalPos = 0
-            totalNeg = 0
-            for value in heights.loc[:, indexColumn]:
-                if value > 0:
-                    totalPos += value
-                elif value < 0:
-                    totalNeg += value
-            columnTotals[0].append(totalPos)
-            columnTotals[1].append(totalNeg)
-        yMax = max(columnTotals[0])
-        yMin = min(columnTotals[1])
-
-        if scaleData:
-            print(f'Residue Heights: log\u2082({cyan}RF Final Sort{resetColor} / '
-                  f'{cyan}RF {baselineType}{resetColor})\n'
-                  f'{probRatios.round(3)}\n')
-
-            print(f'{entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
-            print(f'{pink}Scaled Residue Heights{resetColor}:{cyan} '
-                  f'ΔS * log\u2082(RF Final Sort / RF  {baselineType}{resetColor})\n'
-                  f'{heights.round(5)}\n')
-        else:
-            print(f'{pink}Residue Heights{resetColor}:{cyan} '
-                  f'log\u2082(RF Final Sort / RF {baselineType}{resetColor})\n'
-                  f'{heights.round(3)}\n')
-        print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
-              f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
-
-        # Set values for columns with fixed residues
-        if normalizeFixedScores:
-            print(f'{yellow}Readjusting the fixed residue heights '
-                  f'to be equal to the tallest stack{resetColor}')
-
-            for key, value in fixedPos.items():
-                heights.loc[value, key] = yMax
-
-            print(f'Adjusted Residue Heights:{pink} log\u2082(RF Final Sort / RF '
-                  f'{baselineType}){resetColor}\n{heights.round(3)}')
-            print(f'{yellow}Readjusting the fixed residue heights '
-                  f'to be equal to the tallest stack{resetColor}\n\n')
-
-        return heights, yMax, yMin
 
 
 
@@ -3038,12 +3289,12 @@ class NGS:
         # Count fixed substrates
         countFullSubstrate = False
         if countFullSubstrate:
-            countsFinal, countsTotalFinal = NGS.countResidues(substrates=substrates,
+            countsFinal, countsTotalFinal = self.countResidues(substrates=substrates,
                                                               datasetType='')
         else:
-            countsFinal, countsTotalFinal = NGS.countResidues(substrates=substrates,
+            countsFinal, countsTotalFinal = self.countResidues(substrates=substrates,
                                                               datasetType='')
-        NGS.sampleSizeUpdate(NSubs=countsTotalFinal, sortType='Final Sort',
+        self.sampleSizeUpdate(NSubs=countsTotalFinal, sortType='Final Sort',
                              datasetTag=self.fixedSubSeq)
 
         # Adjust the zero counts at nonfixed positions
@@ -3057,19 +3308,19 @@ class NGS:
                   f'{red}{countsFinalAdjusted}{resetColor}\n\n')
 
         # Calculate: RF
-        finalRF = NGS.calculateRF(counts=countsFinal, N=countsTotalFinal,
+        finalRF = self.calculateRF(counts=countsFinal, N=countsTotalFinal,
                                   fileType='Final Sort')
-        finalRFAdjusted = NGS.calculateRF(counts=countsFinalAdjusted, N=countsTotalFinal,
+        finalRFAdjusted = self.calculateRF(counts=countsFinalAdjusted, N=countsTotalFinal,
                                           fileType='Final Sort')
 
         if inPlotEntropyPCAPopulations:
             # Plot: Positional entropy
-            NGS.plotPositionalEntropy(entropy=entropy, fixedTag=fixedSubSeq)
+            self.plotPositionalEntropy(entropy=entropy, fixedTag=fixedSubSeq)
 
         # Calculate: Enrichment scores
-        fixedFramePopES = NGS.calculateEnrichment(initialSortRF=initialRFAvg,
+        fixedFramePopES = self.enrichmentMatrix(initialSortRF=initialRFAvg,
                                                   finalSortRF=finalRF)
-        fixedFramePopESAdjusted = NGS.calculateEnrichment(initialSortRF=initialRFAvg,
+        fixedFramePopESAdjusted = self.enrichmentMatrix(initialSortRF=initialRFAvg,
                                                           finalSortRF=finalRFAdjusted)
 
         # Calculate: Enrichment scores scaled
@@ -3092,25 +3343,25 @@ class NGS:
 
         # # Plot data
         # Plot: Enrichment Map
-        NGS.plotEnrichmentScores(scores=fixedFramePopESAdjusted, dataType='Enrichment',
-                                 motifFilter=False, duplicateFigure=False,
-                                 saveTag=datasetTag)
+        self.plotEnrichmentScores(scores=fixedFramePopESAdjusted, dataType='Enrichment',
+                                  motifFilter=False, duplicateFigure=False,
+                                  saveTag=datasetTag)
 
         # Plot: Enrichment Map Scaled
-        NGS.plotEnrichmentScores(scores=fixedFramePCAESScaledAdjusted,
-                                 dataType='Scaled Enrichment', motifFilter=False,
-                                 duplicateFigure=False, saveTag=datasetTag)
+        self.plotEnrichmentScores(scores=fixedFramePCAESScaledAdjusted,
+                                  dataType='Scaled Enrichment', motifFilter=False,
+                                  duplicateFigure=False, saveTag=datasetTag)
 
         # Plot: Sequence Motif
-        NGS.plotMotif(data=fixedFramePCAESScaled.copy(), dataType='Scaled Enrichment',
-                      bigLettersOnTop=inBigLettersOnTop, yMax=yMax, yMin=yMin,
-                      showYTicks=False, addHorizontalLines=inAddHorizontalLines,
-                      motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
+        self.plotMotif(data=fixedFramePCAESScaled.copy(), dataType='Scaled Enrichment',
+                       bigLettersOnTop=inBigLettersOnTop, yMax=yMax, yMin=yMin,
+                       showYTicks=False, addHorizontalLines=inAddHorizontalLines,
+                       motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
 
         # Plot: Work cloud
-        NGS.plotWordCloud(substrates=substrates,
-                          title=figureTitleWordCloud,
-                          saveTag=datasetTag)
+        self.plotWordCloud(substrates=substrates,
+                           title=figureTitleWordCloud,
+                           saveTag=datasetTag)
 
 
     # ====================================================================================
@@ -3203,11 +3454,11 @@ class NGS:
         print('\n')
 
         # Calculate: RF
-        motifTable = NGS.evaluateSubtrees(self, trie=trie, motifTrie=motifTrie)
+        motifTable = self.evaluateSubtrees(self, trie=trie, motifTrie=motifTrie)
 
         # Plot the Trie
-        NGS.plotTrie(self, trie=trie, motifTable=motifTable, countsMotif=countsMotif,
-                     datasetTag=datasetTag)
+        self.plotTrie(self, trie=trie, motifTable=motifTable, countsMotif=countsMotif,
+                      datasetTag=datasetTag)
 
 
 
@@ -3218,7 +3469,7 @@ class NGS:
                                            if isinstance(x, str) else x)
 
         # Create heatmap
-        cMapCustom = NGS.createCustomColorMap(self, colorType='Counts')
+        cMapCustom = self.createCustomColorMap(self, colorType='Counts')
 
         # Convert the counts to a data frame for Seaborn heatmap
         if self.residueLabelType == 0:
@@ -3296,20 +3547,23 @@ class NGS:
             self.entropy.loc[indexColumn, 'ΔS'] = entropyMax - S
         print(f'{self.entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
 
-        if self.applyFilter:
-            self.titleEntropy = f'\n{self.enzymeName}: {self.fixedSubSeq}'
-        else:
-            self.titleEntropy = f'\n{self.enzymeName}'
-
-        if
+        if self.plotFigEntropy:
             self.plotEntropy(entropy=self.entropy)
-        sys.exit()
 
         return self.entropy
 
 
 
     def plotEntropy(self, entropy):
+        print('================================= Plot: Entropy '
+              '=================================')
+        if self.applyFilter:
+            self.titleEntropy = f'\n{self.enzymeName}: {self.fixedSubSeq}'
+        else:
+            self.titleEntropy = f'\n{self.enzymeName}'
+        print(f'Dataset: {purple}{self.fixedSubSeq}{resetColor}\n'
+              f'{entropy}\n\n')
+
         # Figure parameters
         maxS = np.log2(len(self.letters))
         yMax = maxS + 0.2
@@ -3393,7 +3647,7 @@ class NGS:
             # Define: Save location
             if self.applyFilter:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
-                            f'Filter {datasetTag} - MinCounts {self.minSubCount}.png')
+                            f'{self.fixedSubSeq} - MinCounts {self.minSubCount}.png')
             else:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
                             f'Unfiltered - MinCounts {self.minSubCount}.png')
@@ -3682,7 +3936,7 @@ class NGS:
               f'{scores}\n\n')
 
         # Create heatmap
-        cMapCustom = NGS.createCustomColorMap(self, colorType='EM')
+        cMapCustom = self.createCustomColorMap(self, colorType='EM')
 
         # Define the yLabel
         if self.residueLabelType == 0:
@@ -3716,7 +3970,7 @@ class NGS:
                                   annot_kws={'fontweight': 'bold'})
         ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
-        ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        ax.set_title(self.title, fontsize=self.labelSizeTitle, fontweight='bold')
         if self.figEMSquares:
             figBorders = [0.852, 0.075, 0, 0.895]
         else:
@@ -4050,7 +4304,7 @@ class NGS:
 
 
         # Create heatmap
-        cMapCustom = NGS.createCustomColorMap(self, colorType=dataType)
+        cMapCustom = self.createCustomColorMap(self, colorType=dataType)
 
         # Convert the counts to a data frame for Seaborn heatmap
         if self.residueLabelType == 0:
@@ -4185,7 +4439,7 @@ class NGS:
         print(f'Plotting: {red}{totalWords:,}{resetColor} words\n\n')
 
         # Create word cloud
-        cmap = NGS.createCustomColorMap(self, colorType='Word Cloud')
+        cmap = self.createCustomColorMap(self, colorType='Word Cloud')
         wordcloud = (WordCloud(
             width=950,
             height=800,
