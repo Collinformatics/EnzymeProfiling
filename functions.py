@@ -22,6 +22,8 @@ import sys
 import time
 import threading
 import warnings
+
+from pandas.core.reshape.util import tile_compat
 from wordcloud import WordCloud
 
 
@@ -132,7 +134,7 @@ class NGS:
     def __init__(self, enzymeName, substrateLength, filterData, fixedAA, fixedPosition,
                  excludeAAs, excludeAA, excludePosition, minCounts, figEMSquares,
                  xAxisLabels, printNumber, showNValues, findMotif, folderPath,
-                 filesInit, filesFinal, saveFigures, setFigureTimer):
+                 filesInit, filesFinal, plotPosS, saveFigures, setFigureTimer):
         self.enzymeName = enzymeName
         self.applyFilter = filterData
         self.fixedAA = fixedAA
@@ -141,7 +143,23 @@ class NGS:
         self.excludeAA = excludeAA
         self.excludePosition = excludePosition
         self.minSubCount = minCounts
+
+        self.plotFigEntropy = plotPosS
+
+
         self.fixedSubSeq = None
+        self.xAxisLabels = xAxisLabels
+        self.xAxisLabelsMotif = None
+        self.datasetTagMotif = ''
+        self.title = ''
+        self.titleEntropy = ''
+        self.titleMotif = ''
+        self.titleWeblogo = ''
+        self.saveTag = ''
+        self.saveTagMotif = ''
+
+
+
         self.substrateLength = substrateLength
         self.figEMSquares = figEMSquares
         if figEMSquares:
@@ -150,7 +168,6 @@ class NGS:
             self.figSizeEM = (9.5, 8)
         self.figSize = (9.5, 8)
         self.figSizeMini = (self.figSize[0], 6)
-        self.xAxisLabels = xAxisLabels
         self.residueLabelType = 2 # 0 = full AA name, 1 = 3-letter code, 2 = 1 letter
         self.labelSizeTitle = 18
         self.labelSizeAxis = 16
@@ -172,9 +189,6 @@ class NGS:
         self.nSubsFinal = 0
         self.findMotif = findMotif
         self.indexMotif = None
-        self.xAxisLabelsMotif = None
-        self.datasetTagMotif = ''
-        self.saveTagMotif = ''
         self.filesInit = filesInit
         self.filesFinal = filesFinal
         self.pathFolder = folderPath
@@ -1454,6 +1468,19 @@ class NGS:
             self.fixedSubSeq = self.fixedSubSeq.replace(removeTag, '')
             self.fixedSubSeq = f'Excl Y {self.fixedSubSeq}'
 
+        # Set figure title
+        if self.showSampleSize:
+            self.title = (f'\n{self.enzymeName}\n'
+                     f'N Unsorted = {self.nSubsInitial:,}\n'
+                     f'N Sorted = {self.nSubsFinal:,}')
+            self.titleWeblogo = f'\n\n{self.enzymeName}\nN = {self.nSubsFinal:,}'
+        else:
+            self.title = f'\n\n\n{self.enzymeName}'
+            self.titleWeblogo = f'\n\n\n{self.enzymeName}'
+
+        # Update: Save tag
+        self.saveTag = f'{self.fixedSubSeq} - MinCounts {self.minSubCount}'
+
         return self.fixedSubSeq
 
 
@@ -1622,7 +1649,7 @@ class NGS:
 
 
 
-    def identifyMotif(self, entropy, minEntropy, fixFullFrame, getIndices):
+    def identifyMotif(self, entropy, minEntropy, fixFullFrame):
         print('================================ Identify Motif '
               '=================================')
         if fixFullFrame:
@@ -2424,24 +2451,6 @@ class NGS:
 
 
 
-    def calculateEntropy(self, RF, datasetTag=''):
-        print('============================== Calculate: Entropy '
-              '===============================')
-        entropy = pd.DataFrame(0.0, index=RF.columns, columns=['ΔS'])
-        entropyMax = np.log2(len(RF.index))
-        for indexColumn in RF.columns:
-            S = 0 # Reset entropy total for a new position
-            for indexRow, probRatio in RF.iterrows():
-                prob = probRatio[indexColumn]
-                if prob == 0:
-                    continue
-                else:
-                    S += -prob * np.log2(prob)
-            entropy.loc[indexColumn, 'ΔS'] = entropyMax - S
-        print(f'{entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
-
-        return entropy
-
     def substrateEnrichment(self, initialSubs, finalSubs, NSubs, saveData):
         print('========================= Evaluate Substrate Enrichment '
               '=========================')
@@ -3203,17 +3212,10 @@ class NGS:
 
 
     def plotCounts(self, countedData, totalCounts, datasetTag):
-        # Set figure title
-        if self.showSampleSize:
-            title = f'\n{self.enzymeName}\n{datasetTag}\nN={totalCounts:,}'
-        else:
-            title = f'\n\n{self.enzymeName}\n{datasetTag}'
-
         # Remove commas from string values and convert to float
         countedData = countedData.applymap(lambda x:
                                            float(x.replace(',', ''))
                                            if isinstance(x, str) else x)
-
 
         # Create heatmap
         cMapCustom = NGS.createCustomColorMap(self, colorType='Counts')
@@ -3225,6 +3227,9 @@ class NGS:
             countedData.index = [residue[1] for residue in self.residues]
         elif self.residueLabelType == 2:
             countedData.index = [residue[2] for residue in self.residues]
+
+        # Set figure title
+        title = f'\n{self.enzymeName}\n{datasetTag}\nN={totalCounts:,}'
 
         # Plot the heatmap with numbers centered inside the squares
         fig, ax = plt.subplots(figsize=self.figSize)
@@ -3275,12 +3280,36 @@ class NGS:
 
 
 
-    def plotPositionalEntropy(self, entropy, datasetTag):
-        if self.applyFilter:
-            title = f'{self.enzymeName}: Fixed {datasetTag}'
-        else:
-            title = f'{self.enzymeName}: Unfiltered'
+    def calculateEntropy(self, probability):
+        print('============================== Calculate: Entropy '
+              '===============================')
+        self.entropy = pd.DataFrame(0.0, index=probability.columns, columns=['ΔS'])
+        entropyMax = np.log2(len(probability.index))
+        for indexColumn in probability.columns:
+            S = 0  # Reset entropy total for a new position
+            for indexRow, probRatio in probability.iterrows():
+                prob = probRatio[indexColumn]
+                if prob == 0:
+                    continue
+                else:
+                    S += -prob * np.log2(prob)
+            self.entropy.loc[indexColumn, 'ΔS'] = entropyMax - S
+        print(f'{self.entropy}\n\nMax Entropy: {entropyMax.round(6)}\n\n')
 
+        if self.applyFilter:
+            self.titleEntropy = f'\n{self.enzymeName}: {self.fixedSubSeq}'
+        else:
+            self.titleEntropy = f'\n{self.enzymeName}'
+
+        if
+            self.plotEntropy(entropy=self.entropy)
+        sys.exit()
+
+        return self.entropy
+
+
+
+    def plotEntropy(self, entropy):
         # Figure parameters
         maxS = np.log2(len(self.letters))
         yMax = maxS + 0.2
@@ -3309,7 +3338,8 @@ class NGS:
                 edgecolor='black', linewidth=self.lineThickness, width=0.8)
         plt.xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         plt.ylabel('ΔS', fontsize=self.labelSizeAxis, rotation=0, labelpad=15)
-        plt.title(f'\n{title}', fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.title(f'\n{self.titleEntropy}', fontsize=self.labelSizeTitle,
+                  fontweight='bold')
         plt.subplots_adjust(top=0.898, bottom=0.098, left=0.121, right=0.917)
 
         # Set tick parameters
@@ -3651,14 +3681,6 @@ class NGS:
         print(f'Dataset:{purple} {saveTag}{resetColor}\n\n'
               f'{scores}\n\n')
 
-        # Set figure title
-        if self.showSampleSize:
-            title = (f'{self.enzymeName}\n'
-                     f'N Unsorted = {self.nSubsInitial:,}\n'
-                     f'N Sorted = {self.nSubsFinal:,}')
-        else:
-            title = f'\n\n{self.enzymeName}'
-
         # Create heatmap
         cMapCustom = NGS.createCustomColorMap(self, colorType='EM')
 
@@ -3819,21 +3841,22 @@ class NGS:
               f'Data:\n{data}\n\n')
 
         # Set figure title
+        if 'weblogo' in dataType.lower():
+            title = self.titleWeblogo
+        else:
+            title = self.title
+
+        # Set: Figure borders
         if self.showSampleSize:
-            if dataType.lower() == 'weblogo':
-                title = f'{self.enzymeName}\nN = {self.nSubsFinal:,}'
+            if 'weblogo' in dataType.lower():
                 if showYTicks:
                     figBorders = [0.852, 0.075, 0.112, 0.938]
                 else:
                     figBorders = [0.852, 0.075, 0.112, 0.938]
             else:
-                title = (f'{self.enzymeName}\n'
-                         f'N Unsorted = {self.nSubsInitial:,}\n'
-                          f'N Sorted = {self.nSubsFinal:,}')
                 figBorders = [0.852, 0.075, 0.164, 0.938]
         else:
-            title = f'\n\n{self.enzymeName}'
-            if dataType.lower() == 'weblogo':
+            if 'weblogo' in dataType.lower():
                 figBorders = [0.852, 0.075, 0.112, 0.938]
             else:
                 figBorders = [0.852, 0.075, 0.164, 0.938]

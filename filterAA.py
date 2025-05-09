@@ -117,6 +117,11 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(labelAAPos),
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
           printNumber=inPrintNumber, showNValues=inPlotWithSampleSize, findMotif=False,
           folderPath=inPathFolder, filesInit=fileNamesInitial, filesFinal=fileNamesFinal,
+
+
+          plotPosS=inPlotEntropy,
+
+
           saveFigures=inSaveFigures, setFigureTimer=None)
 
 
@@ -134,7 +139,8 @@ countsInitial, countsTotalInitial = ngs.loadCounts(filter=False, fileType='Initi
 initialRF = ngs.calculateRF(counts=countsInitial, N=countsTotalInitial,
                             fileType='Initial Sort')
 
-filePathFixedSubsFinal = ''
+filePathFixedSubsFinal = None
+filePathFixedCountsFinal = None
 loadFilteredSubs = False
 if inFixResidues:
     filePathFixedSubsFinal, filePathFixedCountsFinal = (
@@ -202,11 +208,10 @@ initialRFAvg = pd.DataFrame(initialRFAvg, index=initialRFAvg.index,
                             columns=['Average RF'])
 
 # Calculate: RF
-finalRF = ngs.calculateRF(counts=countsFinal, N=countsTotalFinal,
-                          fileType='Final Sort')
+finalRF = ngs.calculateRF(counts=countsFinal, N=countsTotalFinal, fileType='Final Sort')
 
 # Calculate: Positional entropy
-entropy = ngs.calculateEntropy(RF=finalRF, datasetTag=fixedSubSeq)
+entropy = ngs.calculateEntropy(probability=finalRF)
 
 
 # Save the data
@@ -229,7 +234,7 @@ if inFixResidues:
 # ==================================== Plot The Data =====================================
 # Plot: Positional entropy
 if inPlotEntropy:
-    ngs.plotPositionalEntropy(entropy=entropy, datasetTag=fixedSubSeq)
+    ngs.plotEntropy(entropy=entropy, datasetTag=fixedSubSeq)
 
 
 if inPlotEnrichmentMap:
@@ -277,8 +282,7 @@ if inPlotWeblogoMotif:
 
 if inPlotWordCloud or inPlotPCA:
     # Extract motif
-    ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS,
-                      fixFullFrame=True, getIndices=True)
+    ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS, fixFullFrame=True)
     finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
 
     # Plot: Work cloud
