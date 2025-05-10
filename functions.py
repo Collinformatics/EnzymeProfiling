@@ -145,8 +145,9 @@ class NGS:
         self.excludeAA = excludeAA
         self.excludePosition = excludePosition
         self.minSubCount = minCounts
-
-
+        self.entropy = None
+        self.EMap, self.EMapMotif = None, None
+        self.heights, self.heightsMotif = None, None
         self.plotFigEntropy = plotPosS
         self.plotFigEM = plotFigEM
         self.plotFigLogo = plotFigLogo
@@ -154,18 +155,15 @@ class NGS:
         self.plotFigWords = plotFigWords
         self.plotFig = plotFig
 
-
         self.fixedSubSeq = None
-        self.xAxisLabels = xAxisLabels
-        self.xAxisLabelsMotif = None
         self.datasetTagMotif = ''
         self.title = ''
+        self.xAxisLabels = xAxisLabels
+        self.xAxisLabelsMotif = None
+
         self.titleEntropy = ''
         self.titleMotif = ''
         self.titleWeblogo = ''
-        self.saveTag = ''
-        self.saveTagMotif = ''
-
 
 
         self.substrateLength = substrateLength
@@ -287,12 +285,12 @@ class NGS:
         # Determine the read direction
         if '_R1_' in fileName:
             # Extract the substrates
-            subSequence = self.translate(self, path=fileLocation, type=fileType,
+            subSequence = self.translate(path=fileLocation, type=fileType,
                                         fixData=fixedSubs, startSeq=startSeq,
                                         endSeq=endSeq, printQS=printQS)
         elif '_R2_' in fileName:
             # Extract the substrates
-            subSequence = self.reverseTranslate(self, path=fileLocation, type=fileType,
+            subSequence = self.reverseTranslate(path=fileLocation, type=fileType,
                                                fixData=fixedSubs, startSeq=startSeq,
                                                endSeq=endSeq, printQS=printQS)
 
@@ -324,8 +322,8 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = self.getDatasetTag(self)
-            print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
+            fixedSubSeq = self.getDatasetTag()
+            print(f'Evaluating fixed Library: {purple}{fixedSubSeq}{resetColor}\n')
 
 
         # Load the data & extract the substrates
@@ -340,17 +338,17 @@ class NGS:
                 for datapoint in data:
                     if printedSeqs == self.printNumber:
                         if fixData:
-                            print(f'\nNote: The displayed substrates were not selected for fixed'
-                                  f'{purple} {fixedSubSeq}{resetColor}\n'
-                                  f'      However the extracted substrates will meet this '
-                                  f'restriction\n')
+                            print(f'\nNote: The displayed substrates were not selected '
+                                  f'for fixed {purple}{self.fixedSubSeq}{resetColor}\n'
+                                  f'      However the extracted substrates will meet '
+                                  f'this restriction\n')
 
                         throwaway = totalSeqsDNA - self.printNumber
                         throwawayPercent = (throwaway / totalSeqsDNA) * 100
                         print(f'\nExtracting {self.printNumber} Substrates\n'
                               f'     Number of discarded sequences until {red}'
-                              f'{self.printNumber} substrates{resetColor} were found in'
-                              f'{purple} R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
+                              f'{self.printNumber} substrates{resetColor} were found in '
+                              f'{purple}R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
                               f'     {greyDark}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
                         break
@@ -430,7 +428,7 @@ class NGS:
                         if startSeq in DNA and endSeq in DNA:
                             # Find begining & end indices for the substrate
                             start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)  # Find the substate end index
+                            end = DNA.find(endSeq) # Find the substate end index
 
                             # Extract substrate DNA seq
                             substrate = DNA[start:end].strip()
@@ -458,8 +456,8 @@ class NGS:
                         throwawayPercent = (throwaway / totalSeqsDNA) * 100
                         print(f'\nExtracting {self.printNumber} Substrates\n'
                               f'     Number of discarded sequences until {red}'
-                              f'{self.printNumber} substrates{resetColor} were found in'
-                              f'{purple} R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
+                              f'{self.printNumber} substrates{resetColor} were found in '
+                              f'{purple}R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
                               f'     {greyDark}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
                         break
@@ -571,7 +569,7 @@ class NGS:
             self.fileSize.append(totalSeqsDNA)
             self.countExtractedSubs.append(extractionCount)
             self.percentUnusableDNASeqs.append(throwawayPercent)
-            print(f'Evaluate All DNA Sequences in{purple} R1{resetColor}:\n'
+            print(f'Evaluate All DNA Sequences in {purple}R1{resetColor}:\n'
                   f'     Total DNA sequences in the file: '
                   f'{red}{totalSeqsDNA:,}{resetColor}\n'
                   f'     Number of extracted Substrates: '
@@ -610,8 +608,8 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = self.getDatasetTag(self)
-            print(f'Evaluating fixed Library:{purple} {fixedSubSeq}{resetColor}\n')
+            fixedSubSeq = self.getDatasetTag()
+            print(f'Evaluating fixed Library: {purple}{fixedSubSeq}{resetColor}\n')
 
 
         if gZipped:
@@ -625,7 +623,7 @@ class NGS:
                     if printedSeqs == self.printNumber:
                         if fixData:
                             print(f'\nNote: The displayed substrates were not selected '
-                                  f'for fixed{purple} {fixedSubSeq}{resetColor}\n'
+                                  f'for fixed {purple}{fixedSubSeq}{resetColor}\n'
                                   f'      However the extracted substrates will meet '
                                   f'this restriction\n')
 
@@ -633,8 +631,8 @@ class NGS:
                         throwawayPercent = (throwaway / totalSeqsDNA) * 100
                         print(f'\nExtracting {self.printNumber} Substrates\n'
                               f'     Number of discarded sequences until {red}'
-                              f'{self.printNumber} substrates{resetColor} were found in'
-                              f'{purple} R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
+                              f'{self.printNumber} substrates{resetColor} were found in '
+                              f'{purple}R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
                               f'     {greyDark}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
                         break
@@ -746,8 +744,8 @@ class NGS:
                         throwawayPercent = (throwaway / totalSeqsDNA) * 100
                         print(f'\nExtracting {self.printNumber} Substrates\n'
                               f'     Number of discarded sequences until {red}'
-                              f'{self.printNumber} substrates{resetColor} were found in'
-                              f'{purple} R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
+                              f'{self.printNumber} substrates{resetColor} were found in '
+                              f'{purple}R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
                               f'     {greyDark}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
                         break
@@ -861,7 +859,7 @@ class NGS:
             self.fileSize.append(totalSeqsDNA)
             self.countExtractedSubs.append(extractionCount)
             self.percentUnusableDNASeqs.append(throwawayPercent)
-            print(f'Evaluate All DNA Sequences in{purple} R2{resetColor}:\n'
+            print(f'Evaluate All DNA Sequences in {purple}R2{resetColor}:\n'
                   f'     Total DNA sequences in the file: '
                   f'{red}{totalSeqsDNA:,}{resetColor}\n'
                   f'     Number of extracted Substrates: '
@@ -892,13 +890,14 @@ class NGS:
 
 
 
-    def countResidues(self, substrates, datasetType):
+    def countResidues(self, substrates):
         beginTime = time.time()
         print('============================= Calculate: AA Counts '
               '==============================')
         print(f'Unique substrate count:{red} {len(substrates):,}{resetColor}')
 
         # Determine substrate length
+        firstSub, lengthSubstrate = None, None
         countMotif = False
         for substrate in substrates.keys():
             firstSub = substrate
@@ -959,7 +958,7 @@ class NGS:
         columnSumsFormated = columnSums.apply(lambda col: col.map(includeCommas)).copy()
         print(f'{columnSumsFormated}\n')
         countedDataPrint = countedData.apply(lambda col: col.map(includeCommas))
-        print(f'Counted data:{purple} {self.enzymeName}{resetColor}\n'
+        print(f'Counted data: {purple}{self.enzymeName}{resetColor}\n'
               f'{countedDataPrint}\n\n')
 
 
@@ -969,7 +968,7 @@ class NGS:
             columnSum = sum(countedData.loc[:, indexColumn])
             if columnSum != totalSubs:
                 print(
-                    f'Counted data:{purple} {self.enzymeName}{resetColor}\n'
+                    f'Counted data: {purple}{self.enzymeName}{resetColor}\n'
                     f'{countedData}\n\n'
                     f'{orange}ERROR: The total number of substrates '
                     f'({cyan}{totalSubs:,}{orange}) =/= the sum of column '
@@ -1023,7 +1022,7 @@ class NGS:
             labelFile = f'{self.enzymeName} {fileType} - Filter {datasetTag}'
         else:
             labelFile = f'{self.enzymeName} {fileType}'
-        print(f'Loading Counts:{purple} {labelFile}{resetColor}\n')
+        print(f'Loading Counts: {purple}{labelFile}{resetColor}\n')
         files = []
         totalCounts = 0
 
@@ -1117,7 +1116,7 @@ class NGS:
             fileLocation = os.path.join(self.pathSaveData, f'substrates_{fileName}')
             print(f'File path:\n     {greenDark}{fileLocation}{resetColor}\n')
             with open(fileLocation, 'rb') as openedFile:  # Open file
-                data = pk.load(openedFile)  # Access the data
+                data = pk.load(openedFile) # Access the data
                 dataTotalSubs = sum(data.values())
                 print(f'     Total substrates in {greenLightB}{fileName}{resetColor}: '
                       f'{red}{dataTotalSubs:,}{resetColor}\n')
@@ -1147,7 +1146,7 @@ class NGS:
         substrates = dict(sorted(substrates.items(), key=lambda x: x[1], reverse=True))
 
         # Print loaded data substrates
-        print(f'Loaded Data:{purple} {fileType}{resetColor}')
+        print(f'Loaded Data: {purple}{fileType}{resetColor}')
         iteration = 0
         for substrate, count in substrates.items():
             iteration += 1
@@ -1155,7 +1154,7 @@ class NGS:
                   f'{resetColor}')
             if iteration >= self.printNumber:
                 break
-        print(f'\nTotal substrates:{purple} {fileType}\n'
+        print(f'\nTotal substrates: {purple}{fileType}\n'
               f'     {red} {substrateTotal:,}{resetColor}\n\n')
 
         return substrates, substrateTotal
@@ -1164,8 +1163,8 @@ class NGS:
 
     def loadUnfilteredSubs(self, loadInitial=False, loadFinal=False):
         def loadSubsThread(fileNames, fileType, result):
-            subsLoaded, totalSubs = self.loadSubstrates(self, fileNames=fileNames,
-                                                       fileType=fileType)
+            subsLoaded, totalSubs = self.loadSubstrates(fileNames=fileNames,
+                                                        fileType=fileType)
             result[fileType] = (subsLoaded, totalSubs)
 
         # Initialize result dictionary
@@ -1229,7 +1228,7 @@ class NGS:
     def loadSubstratesFiltered(self):
         print('=========================== Load: Filtered Substrate '
               '============================')
-        print(f'Loading substrates:{purple} {self.enzymeName} Fixed {self.fixedSubSeq}\n'
+        print(f'Loading substrates: {purple}{self.enzymeName} Fixed {self.fixedSubSeq}\n'
               f'     {greenDark}{self.pathFilteredSubs}{resetColor}\n\n')
         with open(self.pathFilteredSubs, 'rb') as file:
             substrates = pk.load(file)
@@ -1253,7 +1252,7 @@ class NGS:
                              frameIndices, datasetTag, sortType):
         print('=========================== Load: Fixed Motif Counts '
               '============================')
-        print(f'Loading counts:{purple} {self.enzymeName} - {datasetTag}{resetColor}\n')
+        print(f'Loading counts: {purple}{self.enzymeName} - {datasetTag}{resetColor}\n')
 
         frameLength = len(substrateFrame)
         countsFixedFrameAll = []
@@ -1297,7 +1296,7 @@ class NGS:
                 formattedCounts = countsFixedFrame.to_string(
                     formatters={column: '{:,.0f}'.format for column in
                                 countsFixedFrame.select_dtypes(include='number').columns})
-                print(f'Selecting Positions:{purple} Fixed Motif {tagFixedAA}\n'
+                print(f'Selecting Positions: {purple}Fixed Motif {tagFixedAA}\n'
                       f'     {greenLightB}{fixedFramePos}{resetColor}\n'
                       f'Counts:\n'
                       f'{greenLight}{formattedCounts}{resetColor}\n\n')
@@ -1323,7 +1322,7 @@ class NGS:
                         totalCountsFixedFrame.select_dtypes(include='number').columns})
 
         # Print the data
-        print(f'{greyDark}Combined Counts{resetColor}:{purple} {self.enzymeName} - '
+        print(f'{greyDark}Combined Counts{resetColor}: {purple}{self.enzymeName} - '
               f'{datasetTag}{resetColor}\n{formattedCounts}\n')
         print('Total Counts:')
         for index, position in enumerate(substrateFrame):
@@ -1347,7 +1346,7 @@ class NGS:
         with open(pathLoad, 'rb') as file:
             loadedSubs = pk.load(file)
 
-        print(f'Loaded Substrates:{purple} Fixed Motif {datasetTag}{resetColor}')
+        print(f'Loaded Substrates: {purple}Fixed Motif {datasetTag}{resetColor}')
         iteration = 0
         for substrate, count in loadedSubs.items():
             print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
@@ -1398,7 +1397,7 @@ class NGS:
             prob.loc[:, position] = (countsTotal.loc[:, position] /
                                    columnSums.loc[position, 'Sum'])
         pd.set_option('display.float_format', '{:,.5f}'.format)
-        print(f'Relative Frequency:{purple} {datasetTag}\n'
+        print(f'Relative Frequency: {purple}{datasetTag}\n'
               f'{green}{prob}{resetColor}\n\n')
         pd.set_option('display.float_format', '{:,.3f}'.format)
 
@@ -1410,57 +1409,58 @@ class NGS:
 
 
     def getDatasetTag(self):
-        fixResidueList = []
-        if self.excludeAAs:
-            # Exclude residues
-            for index, removedAA in enumerate(self.excludeAA):
-                if index == 0:
-                    fixResidueList.append(
-                        f'Excl-{removedAA}@R{self.excludePosition[index]}'.replace(
-                            ' ', ''))
-                else:
-                    fixResidueList.append(
-                        f'{removedAA}@R{self.excludePosition[index]}'.replace(
-                            ' ', ''))
+        if self.applyFilter:
+            fixResidueList = []
+            if self.excludeAAs:
+                # Exclude residues
+                for index, removedAA in enumerate(self.excludeAA):
+                    if index == 0:
+                        fixResidueList.append(
+                            f'Excl-{removedAA}@R{self.excludePosition[index]}'.replace(
+                                ' ', ''))
+                    else:
+                        fixResidueList.append(
+                            f'{removedAA}@R{self.excludePosition[index]}'.replace(
+                                ' ', ''))
 
-            # Fix residues
-            for index in range(len(self.fixedAA)):
-                if index == 0:
-                    fixResidueList.append(
-                        f'Fixed-{self.fixedAA[index]}@R'
-                        f'{self.fixedPosition[index]}'.replace(' ', ''))
-                else:
+                # Fix residues
+                for index in range(len(self.fixedAA)):
+                    if index == 0:
+                        fixResidueList.append(
+                            f'Fixed-{self.fixedAA[index]}@R'
+                            f'{self.fixedPosition[index]}'.replace(' ', ''))
+                    else:
+                        fixResidueList.append(
+                            f'{self.fixedAA[index]}@R'
+                            f'{self.fixedPosition[index]}'.replace(' ', ''))
+
+                self.fixedSubSeq = '_'.join(fixResidueList)
+                self.fixedSubSeq = self.fixedSubSeq.replace("_Fixed",
+                                                            ' Fixed')
+            else:
+                # Fix residues
+                for index in range(len(self.fixedAA)):
                     fixResidueList.append(
                         f'{self.fixedAA[index]}@R'
                         f'{self.fixedPosition[index]}'.replace(' ', ''))
 
-            self.fixedSubSeq = '_'.join(fixResidueList)
-            self.fixedSubSeq = self.fixedSubSeq.replace("_Fixed", ' Fixed')
+                self.fixedSubSeq = '_'.join(fixResidueList)
+
+            # Condense the string
+            if "'" in self.fixedSubSeq:
+                self.fixedSubSeq = self.fixedSubSeq.replace("'", '')
+
+            # Clean up fixed sequence tag
+            print(f'Dataset: {orange}{self.fixedSubSeq}{resetColor}\n')
+
+            print(f'Len: {self.substrateLength}\n')
+            if self.substrateLength == 9:
+                removeTag = 'Excl-Y@R1_Y@R2_Y@R3_Y@R4_Y@R6_Y@R7_Y@R8_Y@R9'
+                if removeTag in self.fixedSubSeq:
+                    self.fixedSubSeq = self.fixedSubSeq.replace(removeTag, '')
+                    self.fixedSubSeq = f'Excl-Y{self.fixedSubSeq}'
         else:
-            # Fix residues
-            for index in range(len(self.fixedAA)):
-                fixResidueList.append(
-                    f'{self.fixedAA[index]}@R'
-                    f'{self.fixedPosition[index]}'.replace(' ', ''))
-
-            self.fixedSubSeq = '_'.join(fixResidueList)
-
-        # Condense the string
-        if "'" in self.fixedSubSeq:
-            self.fixedSubSeq = self.fixedSubSeq.replace("'", '')
-
-        # Clean up fixed sequence tag
-        print(f'Dataset: {orange}{self.fixedSubSeq}{resetColor}\n')
-
-        print(f'Len: {self.substrateLength}\n')
-        if self.substrateLength == 9:
-            removeTag = 'Excl-Y@R1_Y@R2_Y@R3_Y@R4_Y@R6_Y@R7_Y@R8_Y@R9'
-            if removeTag in self.fixedSubSeq:
-                self.fixedSubSeq = self.fixedSubSeq.replace(removeTag, '')
-                self.fixedSubSeq = f'Excl-Y{self.fixedSubSeq}'
-
-        # Update: Save tag
-        self.saveTag = f'{self.fixedSubSeq} - MinCounts {self.minSubCount}'
+            self.fixedSubSeq = 'Unfiltered'
 
         return self.fixedSubSeq
 
@@ -1899,7 +1899,7 @@ class NGS:
         print(f'{purple}Final Sort{resetColor}:\n{final}\n\n')
         print(f'Pos: {self.fixedPosition}')
         final = final.drop(final.index[[int(pos) - 1 for pos in self.fixedPosition]])
-        print(f'Remove fixed residues:{purple} Final Sort{resetColor}\n{final}\n\n')
+        print(f'Remove fixed residues: {purple}Final Sort{resetColor}\n{final}\n\n')
 
         # Set local parameters
         self.tickLength, self.lineThickness = 4, 1
@@ -1934,21 +1934,21 @@ class NGS:
 
         # Print the outliers
         if len(outliersInitial) != 0:
-            print(f'Outliers:{purple} Initial Sort{resetColor}')
+            print(f'Outliers: {purple}Initial Sort{resetColor}')
             for outlierPosition in outliersInitial:
                 print(f'     {outlierPosition}')
             print()
         else:
-            print(f'There were no{red} {residue}{resetColor} RF outliers in:'
-                  f'{purple} Initial Sort{resetColor}\n')
+            print(f'There were no{red} {residue}{resetColor} RF outliers in: '
+                  f'{purple}Initial Sort{resetColor}\n')
         if len(outliersFinal) != 0:
-            print(f'Outliers:{purple} Final Sort{resetColor}')
+            print(f'Outliers: {purple}Final Sort{resetColor}')
             for outlierPosition in outliersFinal:
                 print(f'     {outlierPosition}')
             print('\n')
         else:
-            print(f'There were no{red} {residue}{resetColor} RF outliers in:'
-                  f'{purple} Final Sort{resetColor} '
+            print(f'There were no{red} {residue}{resetColor} RF outliers in: '
+                  f'{purple}Final Sort{resetColor} '
                   f'fixed{red} {self.fixedSubSeq}{resetColor} \n\n')
 
         # Create a figure and axes
@@ -1991,55 +1991,67 @@ class NGS:
 
 
 
-    def enrichmentMatrix(self, initialRF, finalRF, bigLettersOnTop,
+    def enrichmentMatrix(self, probInitial, probFinal, bigLettersOnTop,
                             motifFilter=False, duplicateFigure=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
-        if len(initialRF.columns) == 1:
-            enrichment = pd.DataFrame(0.0, index=finalRF.index,
-                                      columns=finalRF.columns)
-            for position in finalRF.columns:
-                enrichment.loc[:, position] = np.log2(finalRF.loc[:, position] /
-                                                      initialRF.iloc[:, 0])
-        else:
-            initialRF.columns = finalRF.columns
-            enrichment = np.log2(finalRF / initialRF)
-            enrichment.columns = finalRF.columns
 
-        print(f'Enrichment Score:{purple} {self.fixedSubSeq}{resetColor}\n\n'
-              f'{enrichment.round(3)}\n\n')
+        # Calculate: Enrichment scores
+        if len(probInitial.columns) == 1:
+            self.EMap  = pd.DataFrame(0.0, index=probFinal.index,
+                                      columns=probFinal.columns)
+            for position in probFinal.columns:
+                self.EMap.loc[:, position] = np.log2(probFinal.loc[:, position] /
+                                                      probInitial.iloc[:, 0])
+        else:
+            probInitial.columns = probFinal.columns
+            self.EMap  = np.log2(probFinal / probInitial)
+            self.EMap .columns = probFinal.columns
+
+        print(f'Enrichment Score: {purple}{self.fixedSubSeq}{resetColor}\n\n'
+              f'{self.EMap.round(3)}\n\n')
 
         # Plot: Enrichment Map
         if self.plotFigEM:
             self.plotEnrichmentScores(
-                scores=enrichment, dataType='Enrichment', motifFilter=motifFilter,
-                duplicateFigure=duplicateFigure, saveTag=self.fixedSubSeq)
-
-        #
-        heights = pd.DataFrame(0, index=enrichment.index,
-                               columns=enrichment.columns, dtype=float)
-        for indexColumn in heights.columns:
-            heights.loc[:, indexColumn] = (enrichment.loc[:, indexColumn] *
-                                           self.entropy.loc[indexColumn, 'ΔS'])
+                dataType='Enrichment', motifFilter=motifFilter,
+                duplicateFigure=duplicateFigure)
 
         if self.plotFigLogo:
-            self.plotEnrichmentLogo(self, heights=heights, )
+            print('=========================== Calculate: Letter Heights '
+                  '===========================')
+            print(f'Residue heights calculated by: '
+                  f'{pink}Enrichment Scores * ΔS{resetColor}\n')
 
-        return enrichment
+            # Calculate: Letter heights
+            heights = pd.DataFrame(0, index=self.EMap.index,
+                                   columns=self.EMap.columns, dtype=float)
+            for indexColumn in heights.columns:
+                heights.loc[:, indexColumn] = (self.EMap.loc[:, indexColumn] *
+                                               self.entropy.loc[indexColumn, 'ΔS'])
+            heights.replace([np.inf, -np.inf], 0, inplace=True)
+            self.heights = heights
+            print(f'Residue Heights: {purple}{self.fixedSubSeq}{resetColor}\n'
+                  f'{heights}\n\n')
+
+            # Plot: Enrichment logo
+            self.plotEnrichmentLogo(bigLettersOnTop, motifFilter, duplicateFigure)
 
 
-    def plotEnrichmentLogo(self, heights):
-        print('=========================== Calculate: Letter Heights '
-              '===========================')
-        print(f'Residue heights calculated by: '
-              f'{red}Enrichment Scores * ΔS{resetColor}\n')
+
+    def plotEnrichmentLogo(self, bigLettersOnTop, motifFilter, duplicateFigure):
+        print('============================= Plot: Enrichment Logo '
+              '=============================')
+        self.heights.replace([np.inf, -np.inf], 0, inplace=True)
+        print(f'Residue heights:\n'
+              f'{self.heights}\n')
 
         # Calculate: Max and min
         columnTotals = [[], []]
-        for indexColumn in heights.columns:
+        for indexColumn in self.heights.columns:
             totalPos = 0
             totalNeg = 0
-            for value in heights.loc[:, indexColumn]:
+            for value in self.heights.loc[:, indexColumn]:
                 if value > 0:
                     totalPos += value
                 elif value < 0:
@@ -2048,45 +2060,159 @@ class NGS:
             columnTotals[1].append(totalNeg)
         yMax = max(columnTotals[0])
         yMin = min(columnTotals[1])
-        
-        print(f'Letter Heights:\n{heights}\n\n'
-              f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+        print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
-        self.plotLogo(heights, bigLettersOnTop)
-        
-        sys.exit()
+        # Rename columns for logomaker script
+        data = self.heights.copy()
+        data.columns = range(len(data.columns))
 
-        return heights, yMax, yMin
-
-
-    def plotLogo(self, heights, bigLettersOnTop):
-        print('============================= Plot: Enrichment Logo '
-              '=============================')
-        print(f'Dataset type:{purple} {dataType}{resetColor}\n'
-              f'Dataset:{purple} {saveTag}{resetColor}\n\n'
-              f'Letter Heights:\n{heights}\n\n')
+        # Set local parameters
+        if bigLettersOnTop:
+            stackOrder = 'big_on_top'
+        else:
+            stackOrder = 'small_on_top'
 
         # Set: Figure borders
         if self.showSampleSize:
             figBorders = [0.852, 0.075, 0.164, 0.938]
         else:
             figBorders = [0.852, 0.075, 0.164, 0.938]
-            
-        # Set local parameters
-        if bigLettersOnTop:
-            stackOrder = 'big_on_top'
+
+        # Plot the sequence motif
+        fig, ax = plt.subplots(figsize=self.figSize)
+        motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=self.colorsAA,
+                               width=0.95, stack_order=stackOrder)
+        motif.ax.set_title(self.title, fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
+                            left=figBorders[2], right=figBorders[3])
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks)
+
+        # Set borders
+        motif.style_spines(visible=False)
+        motif.style_spines(spines=['left', 'bottom'], visible=True)
+        for spine in motif.ax.spines.values():
+            spine.set_linewidth(self.lineThickness)
+
+        # Set x-ticks
+        if len(self.heights.columns) == len(self.xAxisLabels):
+            motif.ax.set_xticks([pos for pos in range(len(self.xAxisLabels))])
+            motif.ax.set_xticklabels(self.xAxisLabels, fontsize=self.labelSizeTicks,
+                                     rotation=0, ha='center')
         else:
-            stackOrder = 'small_on_top'
-        
+            motif.ax.set_xticks([pos for pos in range(len(self.xAxisLabelsMotif))])
+            motif.ax.set_xticklabels(self.heights.columns, fontsize=self.labelSizeTicks,
+                                     rotation=0, ha='center')
+
+        # Set y-ticks
+        yTicks = [yMin, 0, yMax]
+        yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}' for tick in yTicks]
+        motif.ax.set_yticks(yTicks)
+        motif.ax.set_yticklabels(yTickLabels, fontsize=self.labelSizeTicks)
+        motif.ax.set_ylim(yMin, yMax)
+
+        # Set tick width
+        for tick in motif.ax.xaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness)
+        for tick in motif.ax.yaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness)
+
+        # Label the axes
+        motif.ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
+        motif.ax.set_ylabel('Scaled Enrichment', fontsize=self.labelSizeAxis)
+
+        # Set horizontal line
+        motif.ax.axhline(y=0, color='black', linestyle='-', linewidth=self.lineThickness)
+
+        # Evaluate dataset for fixed residues
+        spacer = np.diff(motif.ax.get_xticks()) # Find the space between each tick
+        spacer = spacer[0] / 2
+
+        # Use the spacer to set a gray background to fixed residues
+        for index, position in enumerate(self.xAxisLabels):
+            if position in self.fixedPosition:
+                # Plot gray boxes on each side of the xtick
+                motif.ax.axvspan(index - spacer, index + spacer,
+                                 facecolor='darkgrey', alpha=0.2)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        if self.setFigureTimer:
+            plt.ion()
+            plt.show()
+            plt.pause(self.figureTimerDuration)
+            plt.close(fig)
+            plt.ioff()
+        else:
+            plt.show()
+
+        # Inspect dataset
+        duplicate = False
+        # Save the figure
+        if self.saveFigures:
+            # Define: Save location
+            if motifFilter:
+                duplicate = True
+                figLabel = (f'{self.enzymeName} - Logo {self.saveFigureIteration} - '
+                            f'{self.fixedSubSeq} - MinCounts {self.minSubCount}.png')
+            else:
+                figLabel = (f'{self.enzymeName} - Logo - '
+                            f'{self.fixedSubSeq} - MinCounts {self.minSubCount}.png')
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                if self.findMotif and duplicate:
+                    # Turn off figure autosave
+                    self.saveFigures = False
+                    print(f'{yellow}WARNING{resetColor}: '
+                          f'{yellow}The figure already exists at the path\n'
+                          f'     {saveLocation}\n\n'
+                          f'We will not overwrite the figure{resetColor}\n\n')
+                else:
+                    # Save duplicate figures
+                    if duplicateFigure:
+                        copyNumber = 1
+                        fileFound = True
+                        while fileFound:
+                            # Define: Save location
+                            figLabel = (f'{self.enzymeName} - Logo {copyNumber} - '
+                                        f'{self.fixedSubSeq} - MinCounts '
+                                        f'{self.minSubCount}.png')
+                            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+                            if not os.path.exists(saveLocation):
+                                print(f'Saving figure at path:\n'
+                                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                                fig.savefig(saveLocation, dpi=self.figureResolution)
+                                self.saveFigureIteration = copyNumber
+                                fileFound = False
+                            else:
+                                copyNumber += 1
+                    else:
+                        # Dont save the duplicated figure
+                        print(f'{yellow}WARNING{resetColor}: '
+                              f'{yellow}The figure already exists at the path\n'
+                              f'     {saveLocation}\n\n'
+                              f'We will not overwrite the figure{resetColor}\n\n')
+            else:
+                self.findMotif = False
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
 
 
     def plotMotif(self, data, dataType, bigLettersOnTop, yMax, yMin, showYTicks,
                   addHorizontalLines, motifFilter, duplicateFigure, saveTag):
+        # =================================== Removing ===================================
+
         print('============================= Plot: Sequence Motif '
               '==============================')
-        print(f'Dataset type:{purple} {dataType}{resetColor}\n'
-              f'Dataset:{purple} {saveTag}{resetColor}\n\n'
+        print(f'Dataset type: {purple}{dataType}{resetColor}\n'
+              f'Dataset: {purple}{saveTag}{resetColor}\n\n'
               f'Data:\n{data}\n\n')
 
         # Set figure title
@@ -2153,8 +2279,11 @@ class NGS:
             motif.ax.set_xticklabels(dataColumnsReceived, fontsize=self.labelSizeTicks,
                                      rotation=0, ha='center')
 
+        # Set tick width
         for tick in motif.ax.xaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness)  # Set tick width
+            tick.tick1line.set_markeredgewidth(self.lineThickness)
+        for tick in motif.ax.yaxis.get_major_ticks():
+            tick.tick1line.set_markeredgewidth(self.lineThickness)
 
         # Set y-ticks
         if 'enrichment' in dataType.lower():
@@ -2181,12 +2310,10 @@ class NGS:
                                for tick in yTicks]
                 yLimitUpper = yMax
                 yLimitLower = yMin
-
         motif.ax.set_yticks(yTicks)
         motif.ax.set_yticklabels(yTickLabels, fontsize=self.labelSizeTicks)
         motif.ax.set_ylim(yLimitLower, yLimitUpper)
-        for tick in motif.ax.yaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness)  # Set tick width
+
 
         # Label the axes
         motif.ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
@@ -2199,7 +2326,7 @@ class NGS:
         motif.ax.axhline(y=0, color='black', linestyle='-', linewidth=self.lineThickness)
 
         # Evaluate dataset for fixed residues
-        spacer = np.diff(motif.ax.get_xticks())  # Find the space between each tick
+        spacer = np.diff(motif.ax.get_xticks()) # Find the space between each tick
         spacer = spacer[0] / 2
 
         # Use the spacer to set a gray background to fixed residues
@@ -2283,8 +2410,12 @@ class NGS:
                       f'     {greenDark}{saveLocation}{resetColor}\n\n')
                 fig.savefig(saveLocation, dpi=self.figureResolution)
 
+
+
     def makeLogo(self, counts, N, baselineProb, baselineType, scaleData,
                  normalizeFixedScores):
+        # =================================== Removing ===================================
+
         print('=========================== Calculate: Letter Heights '
               '===========================')
         print(f'Residue heights calculated by: '
@@ -2321,7 +2452,7 @@ class NGS:
                     probRatios.loc[indexRow, indexColumn] = probRatio
         probRatios.replace(-np.inf, 0, inplace=True)
         print(f'RF: {purple}{baselineType}{resetColor}\n{baselineProb.round(3)}\n\n')
-        print(f'RF:{purple} Final Sort{resetColor}\n{probCounts.round(3)}\n\n')
+        print(f'RF: {purple}Final Sort{resetColor}\n{probCounts.round(3)}\n\n')
 
         if scaleData:
             entropy = pd.DataFrame(0.0, index=probCounts.columns, columns=['Entropy'])
@@ -2451,7 +2582,7 @@ class NGS:
     def fixedMotifStats(self, countsList, initialProb, substrateFrame, datasetTag):
         print('================== Statistical Evaluation: Fixed Motif Counts '
               '===================')
-        print(f'Evaluate:{purple} {datasetTag}{resetColor}\n')
+        print(f'Evaluate: {purple}{datasetTag}{resetColor}\n')
         countsFrameTotal = pd.DataFrame(0, index=range(0, len(self.fixedPosition)),
                                         columns=substrateFrame)
         frameProb = pd.DataFrame(0.0, index=initialProb.index,
@@ -2467,7 +2598,7 @@ class NGS:
             formattedCounts = countsFrame.to_string(
                 formatters={column: '{:,.0f}'.format for column in
                             countsFrame.select_dtypes(include='number').columns})
-            print(f'Counts:{purple} Fixed Motif '
+            print(f'Counts: {purple}Fixed Motif '
                   f'{self.fixedAA[0]}@R{self.fixedPosition[index]}{resetColor}\n'
                   f'{formattedCounts}\n')
 
@@ -2482,8 +2613,8 @@ class NGS:
                 frameES.loc[:, column] = np.log2(
                     frameProb.loc[:, column] / initialProb['Average RF'])
 
-            print(f'Enrichment Score:{purple} '
-                  f'Fixed Motif {self.fixedAA[0]}@R{self.fixedPosition[index]}\n'
+            print(f'Enrichment Score:'
+                  f'{purple}Fixed Motif {self.fixedAA[0]}@R{self.fixedPosition[index]}\n'
                   f'{greenLight}{frameES}{resetColor}\n\n')
             frameESList.append(frameES.copy())
 
@@ -2510,9 +2641,9 @@ class NGS:
         frameESAvg = frameESCombined.groupby(level=1, sort=False).agg(calcAverage)
         frameESStDev = frameESCombined.groupby(level=1, sort=False).agg(calcStDev)
 
-        print(f'Average:{purple} Enrichment Score\n'
+        print(f'Average: {purple}Enrichment Score\n'
               f'{greyDark}{frameESAvg}{resetColor}\n\n'
-              f'Standard Deviation:{purple} Enrichment Score\n'
+              f'Standard Deviation: {purple}Enrichment Score\n'
               f'{greyDark}{frameESStDev}{resetColor}\n\n')
 
 
@@ -2603,7 +2734,7 @@ class NGS:
 
 
         if printOptimalAA:
-            print(f'Optimal Residues:{purple} {self.enzymeName} - '
+            print(f'Optimal Residues: {purple}{self.enzymeName} - '
                   f'Fixed {self.fixedSubSeq}{resetColor}')
             for index, data in enumerate(optimalAA, start=1):
                 # Determine the number of variable residues at this position
@@ -2612,7 +2743,7 @@ class NGS:
 
                 # Define substrate position
                 positionSub = self.xAxisLabels[index-1]
-                print(f'Position:{purple} {positionSub}{resetColor}')
+                print(f'Position: {purple}{positionSub}{resetColor}')
 
                 for AA, datapoint in data.items():
                     print(f'     {AA}:{red} {datapoint:.6f}{resetColor}')
@@ -2729,7 +2860,7 @@ class NGS:
         # Evaluate the substrates
         if self.fixedSubSeq == None:
             # Process: initial sort
-            print(f'Ranked Substrates:{purple} Initial Sort{resetColor} -'
+            print(f'Ranked Substrates: {purple}Initial Sort{resetColor} -'
                   f'{red} NNS{resetColor}')
             if totalUniqueSubstratesInitial >= self.printNumber:
                 for substrate, count in initialSubs.items():
@@ -2751,14 +2882,14 @@ class NGS:
                     totalSubstratesInitial += count
             iteration = 0
             # Print dataset totals
-            print(f'\n     Total substrates{purple} Initial Sort{resetColor}:'
+            print(f'\n     Total substrates {purple}Initial Sort{resetColor}:'
                   f'{red} {totalSubstratesInitial:,}{resetColor}\n'
-                  f'     Unique substrates{purple} Initial Sort{resetColor}:'
+                  f'     Unique substrates {purple}Initial Sort{resetColor}:'
                   f'{red} {totalUniqueSubstratesInitial:,}{resetColor}\n\n')
 
 
             # Process: final sort
-            print(f'Ranked Substrates:{purple} Final Sort{resetColor} -'
+            print(f'Ranked Substrates: {purple}Final Sort{resetColor} -'
                   f'{red} NNS{resetColor}')
             if totalUniquesubstrates >= self.printNumber:
                 for substrate, count in finalSubs.items():
@@ -2780,15 +2911,15 @@ class NGS:
                     totalsubstrates += count
             iteration = 0
             # Print dataset totals
-            print(f'\n     Total substrates{purple} Final Sort{resetColor}:'
+            print(f'\n     Total substrates {purple}Final Sort{resetColor}:'
                   f'{red} {totalsubstrates:,}{resetColor}\n'
-                  f'     Unique substrates{purple} Final Sort{resetColor}:'
+                  f'     Unique substrates {purple}Final Sort{resetColor}:'
                   f'{red} {totalUniquesubstrates:,}{resetColor}\n\n')
         else:
             fixedSort = True
 
             # Print: Initial sort
-            print(f'Ranked Substrates:{purple} Initial Sort{resetColor}{resetColor}')
+            print(f'Ranked Substrates: {purple}Initial Sort{resetColor}{resetColor}')
             if totalUniqueSubstratesInitial >= self.printNumber:
                 for substrate, count in initialSubs.items():
                     if iteration < self.printNumber:
@@ -2807,15 +2938,15 @@ class NGS:
                     print(f'     {pink}{substrate}{resetColor}, '
                           f'Counts: {red}{count:,}{resetColor}')
                     totalSubstratesInitial += count
-            print(f'\n     Total substrates{purple} Initial Sort{resetColor}:'
+            print(f'\n     Total substrates {purple}Initial Sort{resetColor}:'
                   f'{red} {totalSubstratesInitial:,}{resetColor}\n'
-                  f'     Unique substrates{purple} Initial Sort{resetColor}:'
+                  f'     Unique substrates {purple}Initial Sort{resetColor}:'
                   f'{red} {totalUniqueSubstratesInitial:,}{resetColor}\n\n')
             iteration = 0
 
 
             # Process: Final sort
-            print(f'Ranked Substrates:{purple} Final Sort{resetColor} -'
+            print(f'Ranked Substrates: {purple}Final Sort{resetColor} -'
                   f'{red} Fixed {self.fixedSubSeq}{resetColor}')
             if totalUniquesubstrates >= self.printNumber:
                 for substrate, count in finalSubs.items():
@@ -2835,9 +2966,9 @@ class NGS:
                     print(f'     {pink}{substrate}{resetColor}, '
                               f'Counts: {red}{count:,}{resetColor}')
                     totalsubstrates += count
-            print(f'\n     Total substrates{purple} Final Sort{resetColor}:'
+            print(f'\n     Total substrates {purple}Final Sort{resetColor}:'
                   f'{red} {totalsubstrates:,}{resetColor}\n'
-                  f'     Unique substrates{purple} Final Sort{resetColor}:'
+                  f'     Unique substrates {purple}Final Sort{resetColor}:'
                   f'{red} {totalUniquesubstrates:,}{resetColor}\n\n')
             iteration = 0
 
@@ -2903,7 +3034,7 @@ class NGS:
                 if NSubs == 10**6:
                     NSubs -= 1
                 elif NSubs > 10**6:
-                    print(f'     The list of substrates in the {purple} Initial Sort'
+                    print(f'     The list of substrates in the  {purple}Initial Sort'
                           f'{resetColor} that you attempted to save '
                           f'({red}N = {NSubs:,}{resetColor}) '
                           f'is to large to save in an Excel file.\n'
@@ -2922,7 +3053,7 @@ class NGS:
 
                 # Did you ask for too many substrates?
                 if NSubs > 10**6:
-                    print(f'     The list of substrates in the {purple} Final Sort'
+                    print(f'     The list of substrates in the  {purple}Final Sort'
                           f'{resetColor} that you attempted to save '
                           f'({red}N = {NSubs:,}{resetColor}) '
                           f'is to large to save in an Excel file.\n'
@@ -2983,7 +3114,7 @@ class NGS:
     def ESM(self, substrates, collectionNumber, useSubCounts, subPositions, datasetTag):
         print('=========================== Convert To Numerical: ESM '
               '===========================')
-        print(f'Dataset:{purple} {datasetTag}{resetColor}\n\n'
+        print(f'Dataset: {purple}{datasetTag}{resetColor}\n\n'
               f'Collecting{red} {collectionNumber:,}{resetColor} substrates\n'
               f'Total unique substrates:{red} {len(substrates):,}{resetColor}\n')
 
@@ -3372,9 +3503,9 @@ class NGS:
         print('================================== Suffix Tree '
               '==================================')
         if datasetTag is None:
-            print(f'Dataset:{purple} {self.enzymeName} - Unfixed{resetColor}\n')
+            print(f'Dataset: {purple}{self.enzymeName} - Unfixed{resetColor}\n')
         else:
-            print(f'Dataset:{purple} {self.enzymeName} {dataType} {datasetTag}'
+            print(f'Dataset: {purple}{self.enzymeName} {dataType} {datasetTag}'
                   f'{resetColor}\n')
 
 
@@ -3454,10 +3585,10 @@ class NGS:
         print('\n')
 
         # Calculate: RF
-        motifTable = self.evaluateSubtrees(self, trie=trie, motifTrie=motifTrie)
+        motifTable = self.evaluateSubtrees(trie=trie, motifTrie=motifTrie)
 
         # Plot the Trie
-        self.plotTrie(self, trie=trie, motifTable=motifTable, countsMotif=countsMotif,
+        self.plotTrie(trie=trie, motifTable=motifTable, countsMotif=countsMotif,
                       datasetTag=datasetTag)
 
 
@@ -3469,7 +3600,7 @@ class NGS:
                                            if isinstance(x, str) else x)
 
         # Create heatmap
-        cMapCustom = self.createCustomColorMap(self, colorType='Counts')
+        cMapCustom = self.createCustomColorMap(colorType='Counts')
 
         # Convert the counts to a data frame for Seaborn heatmap
         if self.residueLabelType == 0:
@@ -3592,7 +3723,7 @@ class NGS:
                 edgecolor='black', linewidth=self.lineThickness, width=0.8)
         plt.xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         plt.ylabel('ΔS', fontsize=self.labelSizeAxis, rotation=0, labelpad=15)
-        plt.title(f'\n{self.titleEntropy}', fontsize=self.labelSizeTitle,
+        plt.title(self.titleEntropy, fontsize=self.labelSizeTitle,
                   fontweight='bold')
         plt.subplots_adjust(top=0.898, bottom=0.098, left=0.121, right=0.917)
 
@@ -3715,10 +3846,10 @@ class NGS:
                   '=======================')
             if codonType == datasetTag:
                 print(f'Plotting Probability Distribution:'
-                      f'{purple} {codonType} codon{resetColor}')
+                      f' {purple}{codonType} codon{resetColor}')
             else:
                 print(f'Plotting Probability Distribution:'
-                      f'{purple} {self.enzymeName} {sortType}{resetColor}')
+                      f' {purple}{self.enzymeName} {sortType}{resetColor}')
             print(f'{probability}\n')
 
             fig, ax = plt.subplots(figsize=self.figSize)
@@ -3880,7 +4011,7 @@ class NGS:
 
             # Set x-ticks
             xTicks = np.arange(0, len(self.letters), 1)
-            ax.set_xticks(xTicks)  # Set the positions of the ticks
+            ax.set_xticks(xTicks) # Set the positions of the ticks
             ax.set_xticklabels(self.letters, rotation=0, ha='center',
                                fontsize=self.labelSizeTicks)
             for tick in ax.xaxis.get_major_ticks():
@@ -3891,7 +4022,7 @@ class NGS:
             yTicks = np.arange(0, yMax + tickStepSize, tickStepSize)
             yTickLabels = [f'{tick:.0f}' if tick == 0 or tick == 1 else f'{tick:.1f}'
                            for tick in yTicks]
-            ax.set_yticks(yTicks)  # Set the positions of the ticks
+            ax.set_yticks(yTicks) # Set the positions of the ticks
             ax.set_yticklabels(yTickLabels)
             for tick in ax.yaxis.get_major_ticks():
                 tick.tick1line.set_markeredgewidth(self.lineThickness)
@@ -3928,15 +4059,20 @@ class NGS:
 
 
 
-    def plotEnrichmentScores(self, scores, dataType, motifFilter,
-                             duplicateFigure, saveTag):
+    def plotEnrichmentScores(self, dataType, motifFilter, duplicateFigure):
         print('============================ Plot: Enrichment Score '
               '=============================')
-        print(f'Dataset:{purple} {saveTag}{resetColor}\n\n'
+
+        if 'motif' in dataType.lower():
+            scores = self.EMapMotif
+        else:
+            scores = self.EMap
+
+        print(f'Dataset: {purple}{self.fixedSubSeq}{resetColor}\n\n'
               f'{scores}\n\n')
 
         # Create heatmap
-        cMapCustom = self.createCustomColorMap(self, colorType='EM')
+        cMapCustom = self.createCustomColorMap(colorType='EM')
 
         # Define the yLabel
         if self.residueLabelType == 0:
@@ -4036,11 +4172,11 @@ class NGS:
             if motifFilter:
                 duplicate = True
                 figLabel = (f'{self.enzymeName} - {datasetType} '
-                            f'{self.saveFigureIteration} - {saveTag} - '
+                            f'{self.saveFigureIteration} - {self.fixedSubSeq} - '
                             f'MinCounts {self.minSubCount}.png')
             else:
                 figLabel = (f'{self.enzymeName} - {datasetType} - '
-                            f'{saveTag} - MinCounts {self.minSubCount}.png')
+                            f'{self.fixedSubSeq} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
@@ -4090,8 +4226,8 @@ class NGS:
                   addHorizontalLines, motifFilter, duplicateFigure, saveTag):
         print('============================= Plot: Sequence Motif '
               '==============================')
-        print(f'Dataset type:{purple} {dataType}{resetColor}\n'
-              f'Dataset:{purple} {saveTag}{resetColor}\n\n'
+        print(f'Dataset type: {purple}{dataType}{resetColor}\n'
+              f'Dataset: {purple}{saveTag}{resetColor}\n\n'
               f'Data:\n{data}\n\n')
 
         # Set figure title
@@ -4304,7 +4440,7 @@ class NGS:
 
 
         # Create heatmap
-        cMapCustom = self.createCustomColorMap(self, colorType=dataType)
+        cMapCustom = self.createCustomColorMap(colorType=dataType)
 
         # Convert the counts to a data frame for Seaborn heatmap
         if self.residueLabelType == 0:
@@ -4357,16 +4493,16 @@ class NGS:
         tickLabels = cbar.ax.get_yticklabels()
         cbarLabels = []
         for label in tickLabels:
-            labelText = label.get_text()  # Get the text of the label
+            labelText = label.get_text() # Get the text of the label
             try:
-                labelValue = float(labelText)  # Convert to a float
+                labelValue = float(labelText) # Convert to a float
                 if labelValue.is_integer():  # Check if it's an integer
-                    cbarLabels.append(int(labelValue))  # Append as an integer
+                    cbarLabels.append(int(labelValue)) # Append as an integer
             except ValueError:
                 print(f'{orange}ERROR: Unable to plot the{cyan} {dataType}{orange} '
                       f'label{cyan} {label}\n')
                 sys.exit()
-        cbar.set_ticks(cbarLabels)  # Set the positions of the ticks
+        cbar.set_ticks(cbarLabels) # Set the positions of the ticks
         cbar.set_ticklabels(cbarLabels)
         cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
                             length=self.tickLength, width=self.lineThickness)
@@ -4408,7 +4544,7 @@ class NGS:
         if indexSet is not None:
             print(f'Selecting PCA Population:{red} {indexSet + 1}{resetColor}')
         else:
-            print(f'Substrates:{purple} {saveTag}{resetColor}')
+            print(f'Substrates: {purple}{saveTag}{resetColor}')
         iteration = 0
         for substrate, count in substrates.items():
             print(f'     {blue}{substrate}{resetColor}, '
@@ -4439,7 +4575,7 @@ class NGS:
         print(f'Plotting: {red}{totalWords:,}{resetColor} words\n\n')
 
         # Create word cloud
-        cmap = self.createCustomColorMap(self, colorType='Word Cloud')
+        cmap = self.createCustomColorMap(colorType='Word Cloud')
         wordcloud = (WordCloud(
             width=950,
             height=800,
@@ -4495,7 +4631,7 @@ class NGS:
     def extractMotif(self, substrates, substrateFrame, frameIndicies, datasetTag):
         print('================================= Extract Motif '
               '=================================')
-        print(f'Binning Substrates:{purple} {datasetTag}{resetColor}\n'
+        print(f'Binning Substrates: {purple}{datasetTag}{resetColor}\n'
               f'Start Position:{greenLightB} {substrateFrame[frameIndicies[0]]}'
               f'{resetColor}\n'
               f'   Start Index:{greenLightB} {frameIndicies[0]}{resetColor}\n'
@@ -4519,8 +4655,8 @@ class NGS:
                 fixedPosDifference = (self.fixedPosition[index] -
                                       self.fixedPosition[index - 1])
                 startSubPrevious += fixedPosDifference
-                # print(f'Pos Curr:{purple} {self.fixedPosition[index]}{resetColor}\n'
-                #       f'Pos Prev:{purple} {self.fixedPosition[index - 1]}{resetColor}')
+                # print(f'Pos Curr: {purple}{self.fixedPosition[index]}{resetColor}\n'
+                #       f'Pos Prev: {purple}{self.fixedPosition[index - 1]}{resetColor}')
                 # print(f'     Start Diff:{greenLightB} {fixedPosDifference}{resetColor}\n'
                 #       f'     Start Prev:{greenLightB} {startSubPrevious}{resetColor}')
                 startSub = index + startSubPrevious - 1
@@ -4532,7 +4668,7 @@ class NGS:
             #       f'Stop:{red} {endSub}{resetColor}\n\n')
 
             # Print substrates
-            print(f'Fixed Motif:{purple} {self.fixedAA[0]}@{self.fixedPosition[index]}'
+            print(f'Fixed Motif: {purple}{self.fixedAA[0]}@{self.fixedPosition[index]}'
                   f'{resetColor}')
             iteration = 0
             for substrate, count in subsFixedFrame.items():
@@ -4559,7 +4695,7 @@ class NGS:
 
         # Print binned substrates
         iteration = 0
-        print(f'Binned Substrates{resetColor}:{purple} {datasetTag}{resetColor}')
+        print(f'Binned Substrates{resetColor}: {purple}{datasetTag}{resetColor}')
         for substrate, count in motifs.items():
             print(f'     {pink} {substrate}{resetColor}, '
                   f'Count:{red} {count:,}{resetColor}')
@@ -4710,7 +4846,7 @@ class NGS:
                 for length in sorted(motifGroups.keys()):
                     motifs = motifGroups[length]
                     row.append(motifs[i] if i < len(
-                        motifs) else "")  # Fill missing values with empty strings
+                        motifs) else "") # Fill missing values with empty strings
                 tableData.append(row)
 
             # Convert to DataFrame

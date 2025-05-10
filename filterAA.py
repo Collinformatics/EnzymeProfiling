@@ -32,8 +32,8 @@ inEvaluateSubstrateEnrichment = False
 
 # Input 3: Processing The Data
 inPlotEntropy = False
-inPlotEnrichmentMap = False
-inPlotLogo = True
+inPlotEnrichmentMap = True
+inPlotLogo = False
 inPlotWeblogo = True
 inPlotWordCloud = True
 inPlotPCA = False
@@ -117,20 +117,15 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
           printNumber=inPrintNumber, showNValues=inPlotWithSampleSize, findMotif=False,
           folderPath=inPathFolder, filesInit=fileNamesInitial, filesFinal=fileNamesFinal,
-
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud, plotFig=False,
-
-
           saveFigures=inSaveFigures, setFigureTimer=None)
 
 
 
 # ====================================== Load Data =======================================
-if inFixResidues:
-    fixedSubSeq = ngs.getDatasetTag()
-else:
-    fixedSubSeq = 'Unfiltered'
+# Get dataset tag
+fixedSubSeq = ngs.getDatasetTag()
 
 # Load: Counts
 countsInitial, countsTotalInitial = ngs.loadCounts(filter=False, fileType='Initial Sort')
@@ -235,41 +230,13 @@ if inFixResidues:
 
 # ==================================== Plot The Data =====================================
 # Calculate: Enrichment scores
-enrichmentScores = ngs.enrichmentMatrix(initialRF=initialRF, finalRF=finalRF,
+enrichmentScores = ngs.enrichmentMatrix(probInitial=initialRF, probFinal=finalRF,
                                         bigLettersOnTop=inBigLettersOnTop)
-ngs.enrichmentLogo(scores=enrichmentScores)
-
-
-if inPlotLogo:
-    # Calculate: Enrichment scores
-    heights, yMax, yMin = ngs.makeLogo(
-        counts=countsFinal.copy(), N=countsTotalFinal, baselineProb=initialRF,
-        baselineType='Initial Sort', scaleData=True, normalizeFixedScores=inNormLetters)
-
-
-    # Plot: Sequence Motif
-    ngs.plotMotif(data=heights, dataType='Scaled Enrichment',
-                  bigLettersOnTop=inBigLettersOnTop, yMax=yMax, yMin=yMin,
-                  showYTicks=False, addHorizontalLines=inAddHorizontalLines,
-                  motifFilter=False, duplicateFigure=False, saveTag=fixedSubSeq)
 
 
 if inPlotWeblogo:
     weblogo, yMax, yMin = ngs.calculateWeblogo(probability=finalRF, entropy=entropy)
 
-    if inShowWeblogoYTicks:
-        # Plot: Sequence Motif
-        ngs.plotMotif(
-            data=weblogo, dataType='WebLogo', bigLettersOnTop=inBigLettersOnTop,
-            yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
-            addHorizontalLines=inAddHorizontalLines, motifFilter=False,
-            duplicateFigure=False, saveTag=fixedSubSeq)
-    else:
-        ngs.plotMotif(
-            data=weblogo, dataType='WebLogo', bigLettersOnTop=inBigLettersOnTop,
-            yMax=yMax, yMin=yMin, showYTicks=inShowWeblogoYTicks,
-            addHorizontalLines=inAddHorizontalLines, motifFilter=False,
-            duplicateFigure=False, saveTag=fixedSubSeq)
 
 
 if inPlotWordCloud or inPlotPCA:
