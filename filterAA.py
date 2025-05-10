@@ -32,7 +32,7 @@ inEvaluateSubstrateEnrichment = False
 
 # Input 3: Processing The Data
 inPlotEntropy = False
-inPlotEnrichmentMap = True
+inPlotEnrichmentMap = False
 inPlotLogo = False
 inPlotWeblogo = True
 inPlotWordCloud = True
@@ -115,9 +115,10 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
-          printNumber=inPrintNumber, showNValues=inPlotWithSampleSize, findMotif=False,
-          folderPath=inPathFolder, filesInit=fileNamesInitial, filesFinal=fileNamesFinal,
-          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap, plotFigLogo=inPlotLogo,
+          printNumber=inPrintNumber, showNValues=inPlotWithSampleSize,
+          bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
+          filesInit=fileNamesInitial, filesFinal=fileNamesFinal, plotPosS=inPlotEntropy,
+          plotFigEM=inPlotEnrichmentMap, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud, plotFig=False,
           saveFigures=inSaveFigures, setFigureTimer=None)
 
@@ -230,14 +231,11 @@ if inFixResidues:
 
 # ==================================== Plot The Data =====================================
 # Calculate: Enrichment scores
-enrichmentScores = ngs.enrichmentMatrix(probInitial=initialRF, probFinal=finalRF,
-                                        bigLettersOnTop=inBigLettersOnTop)
+enrichmentScores = ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalRF)
 
-
+# Calculate: Weblogo
 if inPlotWeblogo:
-    weblogo, yMax, yMin = ngs.calculateWeblogo(probability=finalRF, entropy=entropy)
-
-
+    weblogo = ngs.calculateWeblogo(probability=finalRF)
 
 if inPlotWordCloud or inPlotPCA:
     # Extract motif
@@ -301,12 +299,6 @@ if inEvaluateOS:
     print('============================== Evaluate Optimal Substrates '
           '==============================')
     if inFixResidues:
-        # Calculate: Enrichment scores and scale with Shannon Entropy
-        heights, yMax, yMin = ngs.makeLogo(
-            counts=countsFinal.copy(), N=countsTotalFinal, baselineProb=initialRF,
-            baselineType='Initial Sort', scaleData=True,
-            normalizeFixedScores=inNormLetters)
-
         # Determine the OS
         combinations = 1
         optimalAA = []
