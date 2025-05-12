@@ -14,7 +14,7 @@ import pandas as pd
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'mpro2'
-inPathFolder = f'/path'
+inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
 
 # Input 2: Computational Parameters
