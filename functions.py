@@ -88,7 +88,7 @@ def filePaths(enzyme):
                                 'Mpro-R4_S3_L003', 'Mpro-R4_S3_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
     elif enzyme.lower() == 'mpro2':
-        enzyme = f'SARS-CoV-2 M{'ᵖʳᵒ'}2'
+        enzyme = f'SARS-CoV-2 M{'ᵖʳᵒ'}'
         inFileNamesInitialSort = ['Mpro2-I_S1_L001', 'Mpro2-I_S1_L002',
                                   'Mpro2-I_S1_L003', 'Mpro2-I_S1_L004']
         inFileNamesFinalSort = ['Mpro2-R4_S3_L001', 'Mpro2-R4_S3_L002',
@@ -154,17 +154,13 @@ class NGS:
         self.plotFigWebLogo = plotFigWebLogo
         self.plotFigWords = plotFigWords
         self.plotFig = plotFig
-
         self.datasetTag = None
         self.datasetTagMotif = ''
-        self.title = ''
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsMotif = None
-
-        self.titleEntropy = ''
+        self.title = ''
         self.titleMotif = ''
         self.titleWeblogo = ''
-
 
         self.substrateLength = substrateLength
         self.figEMSquares = figEMSquares
@@ -887,11 +883,11 @@ class NGS:
 
 
 
-    def countResidues(self, substrates):
-        beginTime = time.time()
+    def countResidues(self, substrates, datasetType):
         print('============================= Calculate: AA Counts '
               '==============================')
-        print(f'Unique substrate count:{red} {len(substrates):,}{resetColor}')
+        print(f'Dataset: {purple}{datasetType}{resetColor}\n'
+              f'Unique substrate count:{red} {len(substrates):,}{resetColor}')
 
         # Determine substrate length
         firstSub, lengthSubstrate = None, None
@@ -927,7 +923,6 @@ class NGS:
 
         # Count the occurrences of each residue
         if countMotif:
-
             # Count the AAs
             for substrate, counts in substrates.items():
                 indicesResidue = [self.letters.index(AA) for AA in substrate]
@@ -1354,6 +1349,28 @@ class NGS:
                 break
 
         return loadedSubs
+
+
+
+    def saveData(self, substrates, counts, filePathSubs, filePathCounts):
+        print(type(substrates), type(counts))
+        if type(substrates) == 'dict':
+            print('match')
+
+        sys.exit()
+        if not os.path.exists(filePathSubs) or not os.path.exists(filePathCounts):
+            print('================================= Save The Data '
+                  '=================================')
+            print(f'Substrate data saved at:\n'
+                  f'     {greenDark}{filePathSubs}{resetColor}\n'
+                  f'     {greenDark}{filePathCounts}{resetColor}\n\n')
+
+            # Save the fixed substrate dataset
+            with open(filePathSubs, 'wb') as file:
+                pk.dump(substrates, file)
+
+            # Save the substrate counts dataframe
+            counts.to_csv(filePathCounts)
 
 
 
@@ -3482,9 +3499,9 @@ class NGS:
         print('================================= Plot: Entropy '
               '=================================')
         if self.applyFilter:
-            self.titleEntropy = f'\n{self.enzymeName}: {self.datasetTag}'
+            title = f'\n{self.enzymeName}: {self.datasetTag}'
         else:
-            self.titleEntropy = f'\n{self.enzymeName}'
+            title = f'\n{self.enzymeName}'
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
               f'{entropy}\n\n')
 
@@ -3514,7 +3531,7 @@ class NGS:
                 edgecolor='black', linewidth=self.lineThickness, width=0.8)
         plt.xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         plt.ylabel('ΔS', fontsize=self.labelSizeAxis, rotation=0, labelpad=15)
-        plt.title(self.titleEntropy, fontsize=self.labelSizeTitle,
+        plt.title(title, fontsize=self.labelSizeTitle,
                   fontweight='bold')
         plt.subplots_adjust(top=0.898, bottom=0.098, left=0.121, right=0.917)
 

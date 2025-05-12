@@ -7,15 +7,14 @@ from functions import filePaths, NGS
 import numpy as np
 import os
 import sys
-import pickle as pk
 import pandas as pd
 
 
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
-inPathFolder = f'/path/{inEnzymeName}'
+inEnzymeName = 'mpro2'
+inPathFolder = f'/path'
 inSaveFigures = True
 
 # Input 2: Computational Parameters
@@ -23,17 +22,17 @@ inFixResidues = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
-inExcludedResidue = ['']
-inExcludedPosition = []
+inExcludedResidue = ['Q']
+inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
 inPlotWithSampleSize = True
 inEvaluateSubstrateEnrichment = False
 
 # Input 3: Processing The Data
-inPlotEntropy = False
-inPlotEnrichmentMap = False
-inPlotLogo = False
+inPlotEntropy = True
+inPlotEnrichmentMap = True
+inPlotLogo = True
 inPlotWeblogo = True
 inPlotWordCloud = True
 inPlotPCA = False
@@ -194,6 +193,13 @@ if inFixResidues:
             substrates=substratesInitial, fixedString=fixedSubSeq,
             printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
 
+# Save the data
+if inFixResidues:
+    ngs.saveData(substrates=substratesFinal, counts=countsFinal,
+                 filePathSubs=filePathFixedSubsFinal,
+                 filePathCounts=filePathFixedCountsFinal)
+
+
 
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsTotalInitial, NFinal=countsTotalFinal)
@@ -206,32 +212,14 @@ initialRFAvg = pd.DataFrame(initialRFAvg, index=initialRFAvg.index,
 # Calculate: RF
 finalRF = ngs.calculateRF(counts=countsFinal, N=countsTotalFinal, fileType='Final Sort')
 
+
 # Calculate: Positional entropy
 entropy = ngs.calculateEntropy(probability=finalRF)
 
-
-# Save the data
-if inFixResidues:
-    if (not os.path.exists(filePathFixedSubsFinal) or
-            not os.path.exists(filePathFixedCountsFinal)):
-        print('================================= Save The Data '
-              '=================================')
-        print(f'Filtered substrates saved at:\n'
-              f'     {greenDark}{filePathFixedSubsFinal}{resetColor}\n'
-              f'     {greenDark}{filePathFixedCountsFinal}{resetColor}\n\n')
-
-        # Save the fixed substrate dataset
-        with open(filePathFixedSubsFinal, 'wb') as file:
-            pk.dump(substratesFinal, file)
-
-        # Save the fixed substrate counts dataset
-        countsFinal.to_csv(filePathFixedCountsFinal)
-
-
-
-# ==================================== Plot The Data =====================================
 # Calculate: Enrichment scores
 enrichmentScores = ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalRF)
+
+
 
 # Calculate: Weblogo
 if inPlotWeblogo:
