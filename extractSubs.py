@@ -49,7 +49,7 @@ inPrintQualityScores = False # Phred quality scores
 
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
-          filterData=inFixedLibrary, fixedAA=inFixedResidue,
+          filterSubs=inFixedLibrary, fixedAA=inFixedResidue,
           fixedPosition=inFixedPosition, excludeAAs=None, excludeAA=None,
           excludePosition=None, minCounts=0, figEMSquares=False,
           xAxisLabels=inAAPositions, printNumber=inPrintNumber, showNValues=True,
