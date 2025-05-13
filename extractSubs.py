@@ -11,7 +11,6 @@
 
 
 import os
-import pickle as pk
 from functions import NGS
 
 
@@ -21,30 +20,30 @@ from functions import NGS
 inFileName = ['Fyn-I_S6_L001_R1_001', 'Fyn-I_S6_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
 inPathFolder = f'/path/{inEnzymeName}'
-inFilePath = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder pathway
+inFilePath = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder name
 inFileType = 'fastq' # Define the file type
-inSavePath = os.path.join(inPathFolder, 'Extracted Data')
-inSaveFileName = 'Fyn-I_S6_L001'
-inAlertPath = '/path/Bells.mp3'
 
-# Input 2: Substrate Parameters
+# Input 2: Saving The Data
+inSaveFileName = 'Fyn-I_S6_L001' # Add this name to filePaths(enzyme) in functions.py
+
+# Input 3: Substrate Parameters
 inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
-inShowSampleSize = True # Include the sample size in your figures
-inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
 
-# Input 3: Define Variables Used To Extract The Substrates
+# Input 4: Substrate Recognition
+inPrintNumber = 10
+inStartSeqR1 = 'AAAGGCAGT' # Define DNA sequences that flank your substrate
+inEndSeqR1 = 'GGTGGAAGT' # KGS: AAAGGCAGT, GGS: GGTGGAAGT
+inStartSeqR2 = inStartSeqR1
+inEndSeqR2 = inEndSeqR1
+
+# Input 5: Define Variables Used To Extract The Substrates
 inFixedLibrary = False
 inFixedResidue = ['']
-inFixedPosition = ['']
-inPrintNumber = 10 # Print peptide sequences to validate substrate extraction
-inStartSeqR1 = 'AAAGGCAGT' # Define DNA sequences that flank your substrate
-inEndSeqR1 = 'GGTGGAAGT'
-inStartSeqR2 = inStartSeqR1 # KGS: AAAGGCAGT
-inEndSeqR2 = inEndSeqR1 # GGS: GGTGGAAGT
-inPrintQualityScores = False # QSs are "phred quality" scores
+inFixedPosition = []
 
-# Input 4: Plotting The Data
-inPlotCountsAA = True
+# Input 6: Miscellaneous
+inAlertPath = '/path/Bells.mp3' # Play a sound to let you know the script is done
+inPrintQualityScores = False # Phred quality scores
 
 
 
@@ -53,9 +52,11 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           filterData=inFixedLibrary, fixedAA=inFixedResidue,
           fixedPosition=inFixedPosition, excludeAAs=None, excludeAA=None,
           excludePosition=None, minCounts=0, figEMSquares=False,
-          xAxisLabels=inAAPositions,printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, findMotif=False, folderPath=inFilePath,
-          filesInit=None, filesFinal=None, saveFigures=False, setFigureTimer=None)
+          xAxisLabels=inAAPositions, printNumber=inPrintNumber, showNValues=True,
+          bigAAonTop=False, findMotif=False, folderPath=inPathFolder, filesInit=None,
+          filesFinal=None, plotPosS=False, plotFigEM=False, plotFigLogo=False,
+          plotFigWebLogo=False, plotFigWords=False, plotFig=False, saveFigures=False,
+          setFigureTimer=None, expressDNA=True)
 
 
 
@@ -112,20 +113,10 @@ counts, totalSubs = ngs.countResidues(substrates=substrates,
 ngs.alert(soundPath=inAlertPath)
 
 # Save the data
-savePathSubstrate = os.path.join(inSavePath, f'substrates_{inSaveFileName}')
-savePathCounts = os.path.join(inSavePath, f'counts_{inSaveFileName}')
-with open(savePathSubstrate, 'wb') as file:
-    pk.dump(substrates, file)
-counts.to_csv(savePathCounts)
-print('================================ Saving The Data ================================')
-print(f'Data saved at:\n'
-      f'    {savePathSubstrate}\n'
-      f'    {savePathCounts}\n\n')
+ngs.saveData(substrates=substrates, counts=counts, saveTag=inSaveFileName)
 
 # Display extraction efficiency
 ngs.extractionEfficiency(files=inFileName)
 
 # Plot the data
-if inPlotCountsAA:
-    ngs.plotCounts(countedData=counts, totalCounts=totalSubs,
-                   datasetTag=inEnzymeName)
+ngs.plotCounts(countedData=counts, totalCounts=totalSubs)
