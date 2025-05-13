@@ -13,7 +13,7 @@ import pandas as pd
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'mpro2'
+inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
 
@@ -128,15 +128,15 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
 fixedSubSeq = ngs.getDatasetTag()
 
 # Load: Counts
-countsInitial, countsTotalInitial = ngs.loadCounts(filter=False, fileType='Initial Sort')
+countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
 
 # Calculate: RF
-initialRF = ngs.calculateRF(counts=countsInitial, N=countsTotalInitial,
+initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
                             fileType='Initial Sort')
 
 loadFilteredSubs = False
 filePathFixedCountsFinal, filePathFixedSubsFinal = None, None
-countsFinal, countsTotalFinal = None, None
+countsFinal, countsFinalTotal = None, None
 if inFixResidues:
     filePathFixedSubsFinal, filePathFixedCountsFinal = (
         ngs.getFilePath(datasetTag=fixedSubSeq))
@@ -146,16 +146,16 @@ if inFixResidues:
             os.path.exists(filePathFixedCountsFinal)):
 
         # Load: Counts
-        countsFinal, countsTotalFinal = ngs.loadCounts(filter=True,
+        countsFinal, countsFinalTotal = ngs.loadCounts(filter=True,
                                                        fileType='Final Sort',
                                                        datasetTag=fixedSubSeq)
 
         # Load: Substrates
         substratesFinal, totalSubsFinal = ngs.loadSubstratesFiltered()
 
-        if countsTotalFinal != totalSubsFinal:
+        if countsFinalTotal != totalSubsFinal:
             print(f'{orange}ERROR: '
-                  f'The total number of Loaded Counts ({cyan}{countsTotalFinal:,}'
+                  f'The total number of Loaded Counts ({cyan}{countsFinalTotal:,}'
                   f'{orange}) =/= number of Total Substrates '
                   f'({cyan}{totalSubsFinal:,}{orange})\n')
             sys.exit()
@@ -170,7 +170,7 @@ else:
      substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs()
 
     # Load: Counts
-    countsFinal, countsTotalFinal = ngs.loadCounts(fileType='Final Sort', filter=False)
+    countsFinal, countsFinalTotal = ngs.loadCounts(fileType='Final Sort', filter=False)
 
 
 
@@ -178,31 +178,28 @@ else:
 if inFixResidues:
     if loadFilteredSubs:
         # Fix AA
-        substratesFinal, countsTotalFinal = ngs.fixResidue(
+        substratesFinal, countsFinalTotal = ngs.fixResidue(
             substrates=substratesFinal, fixedString=fixedSubSeq,
             printRankedSubs=inPrintFixedSubs, sortType='Final Sort')
 
         # Count fixed substrates
-        countsFinal, countsTotalFinal = ngs.countResidues(substrates=substratesFinal,
+        countsFinal, countsFinalTotal = ngs.countResidues(substrates=substratesFinal,
                                                           datasetType='Final Sort')
 
     if inEvaluateSubstrateEnrichment:
         substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
-        fixedSubsInitial, totalFixedSubstratesInitial = ngs.fixResidue(
+        fixedSubsInitial, countsInitialFixedTotal = ngs.fixResidue(
             substrates=substratesInitial, fixedString=fixedSubSeq,
             printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
 
 # Save the data
-if inFixResidues:
-    ngs.saveData(substrates=substratesFinal, counts=countsFinal,
-                 filePathSubs=filePathFixedSubsFinal,
-                 filePathCounts=filePathFixedCountsFinal)
+ngs.saveData(substrates=substratesFinal, counts=countsFinal)
 
 
 
 # Display current sample size
-ngs.recordSampleSize(NInitial=countsTotalInitial, NFinal=countsTotalFinal)
+ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalTotal)
 
 # Calculate: Average initial RF
 initialRFAvg = np.sum(initialRF, axis=1) / len(initialRF.columns)
@@ -210,7 +207,7 @@ initialRFAvg = pd.DataFrame(initialRFAvg, index=initialRFAvg.index,
                             columns=['Average RF'])
 
 # Calculate: RF
-finalRF = ngs.calculateRF(counts=countsFinal, N=countsTotalFinal, fileType='Final Sort')
+finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal, fileType='Final Sort')
 
 
 # Calculate: Positional entropy
@@ -218,8 +215,6 @@ entropy = ngs.calculateEntropy(probability=finalRF)
 
 # Calculate: Enrichment scores
 enrichmentScores = ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalRF)
-
-
 
 # Calculate: Weblogo
 if inPlotWeblogo:
@@ -406,7 +401,7 @@ if inPlotAADistribution:
 
 if inPlotCountsAA:
     # Plot the data
-    ngs.plotCounts(countedData=countsFinal, totalCounts=countsTotalFinal,
+    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal,
                    datasetTag=fixedSubSeq)
 
 if inPlotPositionalProbDist:
