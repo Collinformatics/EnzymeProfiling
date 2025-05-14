@@ -129,6 +129,8 @@ def filePaths(enzyme):
 def pressKey(event):
     if event.key == 'escape':
         plt.close()
+    if event.key == 'backspace':
+        sys.exit()
 
 
 
