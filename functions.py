@@ -3,7 +3,6 @@
 
 
 from Bio import SeqIO
-from Bio.PDB.vectors import set_Y_homog_rot_mtx
 from Bio.Seq import Seq
 from Bio import BiopythonWarning
 import gzip
@@ -19,7 +18,6 @@ import pandas as pd
 import pickle as pk
 import seaborn as sns
 import sys
-import time
 import threading
 import warnings
 from wordcloud import WordCloud
@@ -129,9 +127,11 @@ def filePaths(enzyme):
 def pressKey(event):
     if event.key == 'escape':
         plt.close()
-    if event.key == 'backspace':
+    elif event.key == 'backspace':
         sys.exit()
-
+    elif event.key == 'f12':
+        import subprocess
+        subprocess.Popen([sys.executable] + sys.argv)
 
 
 def includeCommas(x):
