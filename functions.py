@@ -182,6 +182,8 @@ class NGS:
         self.titleReleased = ''
         self.titleMotif = ''
         self.titleWeblogo = ''
+        self.titleWeblogoReleased = ''
+        self.titleWords = ''
         self.substrateLength = substrateLength
         self.figEMSquares = figEMSquares
         if figEMSquares:
@@ -339,8 +341,8 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = self.getDatasetTag()
-            print(f'Evaluating fixed Library: {purple}{fixedSubSeq}{resetColor}\n')
+            self.getDatasetTag()
+            print(f'Evaluating fixed Library: {purple}{self.datasetTag}{resetColor}\n')
 
 
         # Load the data & extract the substrates
@@ -625,8 +627,8 @@ class NGS:
 
         # Define fixed substrate tag
         if fixData:
-            fixedSubSeq = self.getDatasetTag()
-            print(f'Evaluating fixed Library: {purple}{fixedSubSeq}{resetColor}\n')
+            self.getDatasetTag()
+            print(f'Evaluating fixed Library: {purple}{self.datasetTag}{resetColor}\n')
 
 
         if gZipped:
@@ -640,7 +642,7 @@ class NGS:
                     if printedSeqs == self.printNumber:
                         if fixData:
                             print(f'\nNote: The displayed substrates were not selected '
-                                  f'for fixed {purple}{fixedSubSeq}{resetColor}\n'
+                                  f'for fixed {purple}{self.datasetTag}{resetColor}\n'
                                   f'      However the extracted substrates will meet '
                                   f'this restriction\n')
 
@@ -1461,6 +1463,13 @@ class NGS:
             self.titleWeblogo = f'\n\n\n{self.enzymeName}'
             self.titleWeblogoReleased = f'\n\n{self.enzymeName}\nReleased Counts'
 
+        if self.filterSubs:
+            if self.motifFilter:
+                self.titleWords = f'\n{self.enzymeName}: Motif {self.motifTag}'
+            else:
+                self.titleWords = f'\n{self.enzymeName}: {self.datasetTag}'
+        else:
+            self.titleWords = f'{self.enzymeName}: Unfiltered'
 
 
     def calculateProbMotif(self, countsTotal, datasetTag):
@@ -2126,7 +2135,7 @@ class NGS:
 
         # Calculate & Plot: Weblogo
         if self.plotFigWebLogo:
-            self.calculateWeblogo(probability=probFinal, releasedCounts=True)
+            self.calculateWeblogo(probability=probFinal, releasedCounts=releasedCounts)
 
         return self.eMap
 
@@ -2148,11 +2157,12 @@ class NGS:
             title = self.titleReleased
         else:
             title = self.title
+        if self.motifFilter:
+            print(f'Figure Number: '
+                  f'{magenta}{self.saveFigureIteration}{resetColor}')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
               f'{scores}\n\n')
-        if self.motifFilter:
-            print(f'Figure Iteration: '
-                  f'{magenta}{self.saveFigureIteration}{resetColor}\n\n')
+
 
         # Create heatmap
         cMapCustom = self.createCustomColorMap(colorType='EM')
@@ -2247,7 +2257,6 @@ class NGS:
                 print(f'{orange}ERROR: What do I do with this dataset type -'
                       f'{cyan} {dataType}{resetColor}\n')
                 sys.exit(1)
-
             self.saveFigure(fig=fig, figType=datasetType, releasedCounts=releasedCounts)
 
 
@@ -2290,11 +2299,12 @@ class NGS:
             title = self.title
 
         # Print data
+        if self.motifFilter:
+            print(f'Figure Number: '
+                  f'{magenta}{self.saveFigureIteration}{resetColor}')
         print(f'Residue heights:\n'
               f'{self.heights}\n')
-        if self.motifFilter:
-            print(f'Figure Iteration: '
-                  f'{magenta}{self.saveFigureIteration}{resetColor}\n\n')
+
 
         # Calculate: Max and min
         columnTotals = [[], []]
@@ -2401,7 +2411,6 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Logo'
-
             self.saveFigure(fig=fig, figType=datasetType, releasedCounts=releasedCounts)
 
 
@@ -2430,17 +2439,19 @@ class NGS:
     def plotWeblogo(self, releasedCounts=False):
         print('================================= Plot: Weblogo '
               '=================================')
+        if self.motifFilter:
+            print(f'Figure Number: '
+                  f'{magenta}{self.saveFigureIteration}{resetColor}')
         print(f'Letter Heights: {purple}{self.datasetTag}{resetColor}\n'
               f'{self.weblogo}\n\n')
-        if self.motifFilter:
-            print(f'Figure Iteration: '
-                  f'{magenta}{self.saveFigureIteration}{resetColor}\n\n')
 
         # Define: Title
         if releasedCounts:
+            print(0)
             title = self.titleWeblogoReleased
         else:
             title = self.titleWeblogo
+            print(1)
 
         # Set: Figure borders
         figBorders = [0.852, 0.075, 0.112, 0.938]
@@ -3401,7 +3412,7 @@ class NGS:
 
         if inPlotEntropyPCAPopulations:
             # Plot: Positional entropy
-            self.plotPositionalEntropy(entropy=entropy, fixedTag=fixedSubSeq)
+            self.plotPositionalEntropy(entropy=entropy, fixedTag=self.datasetTag)
 
         # Calculate: Enrichment scores
         fixedFramePopES = self.enrichmentMatrix(initialSortRF=initialRFAvg,
@@ -3444,9 +3455,7 @@ class NGS:
                        motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
 
         # Plot: Work cloud
-        self.plotWordCloud(substrates=substrates,
-                           title=figureTitleWordCloud,
-                           saveTag=datasetTag)
+        self.plotWordCloud(substrates=substrates, saveTag=datasetTag)
 
 
     # ====================================================================================
@@ -4108,7 +4117,7 @@ class NGS:
 
 
 
-    def plotWordCloud(self, substrates, limitWords, N, indexSet, title, saveTag):
+    def plotWordCloud(self, substrates, limitWords, N, indexSet, saveTag):
         print('=============================== Plot: Word Cloud '
               '================================')
         if indexSet is not None:
@@ -4125,9 +4134,9 @@ class NGS:
         print('')
 
         # Adjust title
-        numLines = title.count('\n') + 1 if title else 0
+        numLines = self.titleWords.count('\n') + 1 if self.titleWords else 0
         if numLines == 1:
-            title = '\n' + title
+            self.titleWords = '\n' + self.titleWords
 
         # Limit the number of words
         if limitWords:
@@ -4160,7 +4169,7 @@ class NGS:
         # Display the word cloud
         fig = plt.figure(figsize=self.figSize, facecolor='white')
         plt.imshow(wordcloud, interpolation='bilinear')
-        plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.title(self.titleWords, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.axis('off')
         fig.canvas.mpl_connect('key_press_event', pressKey)
         fig.tight_layout()

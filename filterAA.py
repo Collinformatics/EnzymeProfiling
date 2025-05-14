@@ -32,6 +32,7 @@ inEvaluateSubstrateEnrichment = False
 # Input 3: Processing The Data
 inPlotEntropy = True
 inPlotEnrichmentMap = True
+inPlotEnrichmentMapScaled = True
 inPlotLogo = True
 inPlotWeblogo = True
 inPlotWordCloud = True
@@ -110,16 +111,16 @@ enzymeName, fileNamesInitial, fileNamesFinal, labelAAPos = filePaths(enzyme=inEn
 
 # =================================== Initialize Class ===================================
 ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
-          filterData=inFixResidues, fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
+          filterSubs=inFixResidues, fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
           printNumber=inPrintNumber, showNValues=inPlotWithSampleSize,
           bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
           filesInit=fileNamesInitial, filesFinal=fileNamesFinal, plotPosS=inPlotEntropy,
-          plotFigEM=inPlotEnrichmentMap, plotFigLogo=inPlotLogo,
-          plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud, plotFig=False,
-          saveFigures=inSaveFigures, setFigureTimer=None)
+          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
+          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
+          plotFigWords=inPlotWordCloud, saveFigures=inSaveFigures, setFigureTimer=None)
 
 
 
@@ -216,10 +217,6 @@ entropy = ngs.calculateEntropy(probability=finalRF)
 # Calculate: Enrichment scores
 enrichmentScores = ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalRF)
 
-# Calculate: Weblogo
-if inPlotWeblogo:
-    weblogo = ngs.calculateWeblogo(probability=finalRF)
-
 if inPlotWordCloud or inPlotPCA:
     # Extract motif
     ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS, fixFullFrame=True)
@@ -228,15 +225,13 @@ if inPlotWordCloud or inPlotPCA:
     # Plot: Work cloud
     if inPlotWordCloud:
         if inFixResidues:
-            titleWordCloud = f'{inEnzymeName}: Motif {fixedSubSeq}'
             ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
                               limitWords=inLimitWords, N=inNWords,
-                              title=titleWordCloud, saveTag=ngs.datasetTagMotif)
+                              saveTag=ngs.datasetTagMotif)
         else:
-            titleWordCloud = f'{inEnzymeName}: Unfiltered'
             ngs.plotWordCloud(substrates=substratesFinal, indexSet=None,
                               limitWords=inLimitWords, N=inNWords,
-                              title=titleWordCloud, saveTag='Unfiltered')
+                              saveTag='Unfiltered')
 
     # Plot: PCA
     if inPlotPCA:
