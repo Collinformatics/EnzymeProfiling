@@ -18,7 +18,7 @@ inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
 
 # Input 2: Computational Parameters
-inFixResidues = True
+inFixResidues = False
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
@@ -37,7 +37,7 @@ inPlotLogo = True
 inPlotWeblogo = True
 inPlotWordCloud = True
 inPlotPCA = False
-inPlotAADistribution = False
+inPlotAADistribution = True
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotCountsAA = False
 inPlotPositionalProbDist = False # For understanding shannon entropy
@@ -70,7 +70,7 @@ inBigLettersOnTop = False
 
 # Input 9: Word Cloud
 inLimitWords = True
-inNWords = 50
+inNWords = 100
 
 # Input 10: Optimal Substrates
 inEvaluateOS = False
@@ -386,18 +386,17 @@ if inEvaluateSubstrateEnrichment:
 if inPlotAADistribution:
     # Plot: AA probabilities in initial & final sorts
     ngs.plotLibraryProbDist(probInitial=initialRF, probFinal=finalRF,
-                            codonType=inCodonSequence, fixedTag=fixedSubSeq)
+                            codonType=inCodonSequence, datasetTag=fixedSubSeq)
 
     # Evaluate: Degenerate codon probabilities
     codonProbs = ngs.calculateProbCodon(codonSeq=inCodonSequence)
     # Plot: Codon probabilities
     ngs.plotLibraryProbDist(probInitial=None, probFinal=codonProbs,
-                            codonType=inCodonSequence, fixedTag=inCodonSequence)
+                            codonType=inCodonSequence, datasetTag=inCodonSequence)
 
 if inPlotCountsAA:
     # Plot the data
-    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal,
-                   datasetTag=fixedSubSeq)
+    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal)
 
 if inPlotPositionalProbDist:
     ngs.plotPositionalProbDist(probability=finalRF, entropyScores=entropy,

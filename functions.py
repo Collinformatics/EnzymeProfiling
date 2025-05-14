@@ -1824,7 +1824,10 @@ class NGS:
 
 
 
-    def calculateProbCodon(self, codonSeq, printProbability):
+    def calculateProbCodon(self, codonSeq):
+        print('======================= Calculate: Residue Probabilities '
+              '========================')
+        print(f'Possible codons for {codonSeq}:')
         nucleotides = ['A', 'C', 'G', 'T']
         S = ['C', 'G']
         K = ['G', 'T']
@@ -1863,10 +1866,6 @@ class NGS:
                    for c, s in zip(codonSeq, combination)):
                 codons.append(''.join(combination))
 
-        if printProbability:
-            print('======================= Calculate: Residue Probabilities '
-                  '========================')
-            print(f'Possible codons for {codonSeq}:')
             # Print all possible codon combinations
             for index, codon in enumerate(codons, 1):
                 print(f'Codon {index}: {codon}')
@@ -1883,13 +1882,12 @@ class NGS:
         codonProbability = pd.DataFrame(index=self.letters, columns=['Probability'], data=0)
         codonProbability['Probability'] = codonCounts['Counts'] / len(codons)
 
-        if printProbability:
-            print('Amino Acid Probabilities:')
-            for index, row in codonProbability.iterrows():
-                print(f'     {index}    {round(row["Probability"] * 100, 2)} %')
-            codonProb = round(sum(codonProbability["Probability"]) * 100, 2)
-            print(f'Total probability of AA with {codonSeq}: {codonProb} %')
-            print(f'Stop codon probability: {round(100 - codonProb, 2)} %\n\n')
+        print('Amino Acid Probabilities:')
+        for index, row in codonProbability.iterrows():
+            print(f'     {index}    {round(row["Probability"] * 100, 2)} %')
+        codonProb = round(sum(codonProbability["Probability"]) * 100, 2)
+        print(f'Total probability of AA with {codonSeq}: {codonProb} %')
+        print(f'Stop codon probability: {round(100 - codonProb, 2)} %\n\n')
 
         return codonProbability
 

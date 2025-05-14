@@ -19,7 +19,7 @@ inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inMinDeltaS = 0.6
-inRefixMotif = True
+inRefixMotif = False
 inFixedResidue = ['Q'] # Only use 1 AA
 inFixedPosition = [4]
 inExcludeResidues = False
@@ -38,12 +38,12 @@ inDuplicateFigure = True
 
 # Input 3: Figure Parameters
 inShowSampleSize = True
-inPlotEntropy = True
-inPlotEnrichmentMap = True
+inPlotEntropy = False
+inPlotEnrichmentMap = False
 inPlotEnrichmentMapScaled = False
-inPlotLogo = True
-inPlotWeblogo = True
-inPlotWordCloud = False
+inPlotLogo = False
+inPlotWeblogo = False
+inPlotWordCloud = True
 inPlotUnscaledScatter = True
 inPlotScaledScatter = True
 
@@ -644,6 +644,17 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     # Calculate enrichment scores
     ngs.calculateEnrichment(probInitial=initialRF, probFinal=releasedRF,
                             releasedCounts=True)
+    
+    # Extract motif
+    ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS, fixFullFrame=True)
+    finalSubsMotif = ngs.getMotif(substrates=substratesFinalFixed)
+
+    # Plot: Work cloud
+    if inPlotWordCloud:
+        titleWordCloud = f'\n{inEnzymeName}: Motif {ngs.motifTag}'
+        ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
+                          limitWords=inLimitWords, N=inNWords,
+                          title=titleWordCloud, saveTag=ngs.datasetTagMotif)
 
     # Save the data
     ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed,
@@ -682,7 +693,7 @@ if (os.path.exists(filePathFixedMotifSubs) and
 
     # Load Data: Fixed substrates
     with open(filePathFixedMotifSubs, 'rb') as file:
-        fixedMotifFinalSubs = pk.load(file)
+        substratesFinalFixed = pk.load(file)
 
     # Load Data: Fixed counts
     countsFinalFixed = pd.read_csv(filePathFixedMotifCounts, index_col=0)
@@ -696,14 +707,16 @@ if (os.path.exists(filePathFixedMotifSubs) and
           f'Number of Total Substrates:'
           f'{greenLightB} {countsFinalFixedTotal:,}{resetColor}\n'
           f'Number of Unique Substrates:'
-          f'{greenLightB} {len(fixedMotifFinalSubs):,}{resetColor}\n')
-    for substrate, count in fixedMotifFinalSubs.items():
+          f'{greenLightB} {len(substratesFinalFixed):,}{resetColor}\n')
+    for substrate, count in substratesFinalFixed.items():
         print(f'Substrate:{green} {substrate}{resetColor}\n'
               f'     Count:{pink} {count:,}{resetColor}')
         iteration += 1
         if iteration == inPrintNumber:
             break
     print('\n')
+
+    ngs.saveFigures = False
 
     # Display current sample size
     ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
@@ -716,6 +729,16 @@ if (os.path.exists(filePathFixedMotifSubs) and
 
     # Calculate enrichment scores
     ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalFixedRF)
+
+    # Extract motif
+    ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS, fixFullFrame=True)
+    finalSubsMotif = ngs.getMotif(substrates=substratesFinalFixed)
+
+    # Plot: Work cloud
+    if inPlotWordCloud:
+        ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
+                          limitWords=inLimitWords, N=inNWords,
+                          saveTag=ngs.datasetTagMotif)
 else:
     # Load: Unfiltered substates
     substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
