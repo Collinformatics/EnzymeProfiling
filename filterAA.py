@@ -29,7 +29,7 @@ inPrintFixedSubs = True
 inShowSampleSize = True
 inEvaluateSubstrateEnrichment = False
 
-# Input 3: Processing The Data
+# Input 3: Making Figures
 inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = True
