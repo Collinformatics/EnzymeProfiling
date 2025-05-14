@@ -130,8 +130,8 @@ def pressKey(event):
     elif event.key == 'backspace':
         sys.exit()
     elif event.key == 'f12':
-        import subprocess
-        subprocess.Popen([sys.executable] + sys.argv)
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
 
 
 def includeCommas(x):
