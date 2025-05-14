@@ -18,7 +18,7 @@ inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
 
 # Input 2: Computational Parameters
-inFixResidues = False
+inFixResidues = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
@@ -26,7 +26,7 @@ inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inPrintFixedSubs = True
-inPlotWithSampleSize = True
+inShowSampleSize = True
 inEvaluateSubstrateEnrichment = False
 
 # Input 3: Processing The Data
@@ -37,7 +37,7 @@ inPlotLogo = True
 inPlotWeblogo = True
 inPlotWordCloud = True
 inPlotPCA = False
-inPlotAADistribution = True
+inPlotAADistribution = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotCountsAA = False
 inPlotPositionalProbDist = False # For understanding shannon entropy
@@ -115,7 +115,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
-          printNumber=inPrintNumber, showNValues=inPlotWithSampleSize,
+          printNumber=inPrintNumber, showNValues=inShowSampleSize,
           bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
           filesInit=fileNamesInitial, filesFinal=fileNamesFinal, plotPosS=inPlotEntropy,
           plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,

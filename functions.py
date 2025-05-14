@@ -1467,11 +1467,11 @@ class NGS:
 
         if self.filterSubs:
             if self.motifFilter:
-                self.titleWords = f'\n{self.enzymeName}: Motif {self.motifTag}'
+                self.titleWords = f'\n{self.enzymeName}\nMotif {self.motifTag}'
             else:
-                self.titleWords = f'\n{self.enzymeName}: {self.datasetTag}'
+                self.titleWords = f'\n{self.enzymeName}\n{self.datasetTag}'
         else:
-            self.titleWords = f'{self.enzymeName}: Unfiltered'
+            self.titleWords = f'{self.enzymeName}\nUnfiltered'
 
 
     def calculateProbMotif(self, countsTotal, datasetTag):
