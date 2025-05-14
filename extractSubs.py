@@ -54,9 +54,9 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           excludePosition=None, minCounts=0, figEMSquares=False,
           xAxisLabels=inAAPositions, printNumber=inPrintNumber, showNValues=True,
           bigAAonTop=False, findMotif=False, folderPath=inPathFolder, filesInit=None,
-          filesFinal=None, plotPosS=False, plotFigEM=False, plotFigLogo=False,
-          plotFigWebLogo=False, plotFigWords=False, saveFigures=False,
-          setFigureTimer=None, expressDNA=True)
+          filesFinal=None, plotPosS=False, plotFigEM=False, plotFigEMScaled=False,
+          plotFigLogo=False, plotFigWebLogo=False, plotFigWords=False,
+          saveFigures=False, setFigureTimer=None, expressDNA=True)
 
 
 

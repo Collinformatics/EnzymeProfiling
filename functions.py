@@ -3,6 +3,7 @@
 
 
 from Bio import SeqIO
+from Bio.PDB.vectors import set_Y_homog_rot_mtx
 from Bio.Seq import Seq
 from Bio import BiopythonWarning
 import gzip
@@ -21,8 +22,6 @@ import sys
 import time
 import threading
 import warnings
-
-from pandas.core.reshape.util import tile_compat
 from wordcloud import WordCloud
 
 
@@ -67,21 +66,24 @@ resetColor = '\033[0m'
 # =================================== Define Functions ===================================
 def filePaths(enzyme):
     if enzyme.lower() == 'eln' or enzyme.lower() == 'hne':
+        enzyme = 'ELN'
         inFileNamesInitialSort = ['ELN-I_S1_L001', 'ELN-I_S1_L002']
         inFileNamesFinalSort = ['ELN-R4_S2_L001', 'ELN-R4_S2_L002']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+    elif enzyme.lower() == 'ide':
+        enzyme = 'IDE'
+        inFileNamesInitialSort = ['IDE-I_S3_L001', 'IDE-I_S3_L002']
+        inFileNamesFinalSort = ['IDE-F_S5_L001', 'IDE-F_S5_L002']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
     elif enzyme.lower() == 'ide prev':
+        enzyme = 'IDE Prev'
         inFileNamesInitialSort = ['IDE-S1_L001', 'IDE-S1_L002',
                                   'IDE-S1_L003', 'IDE-S1_L004']
         inFileNamesFinalSort = ['IDE-S2_L001', 'IDE-S2_L002',
                                 'IDE-S2_L003', 'IDE-S2_L004']
-        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7']
-    elif enzyme.lower() == 'ide':
-        inFileNamesInitialSort = ['IDE-I_S3_L001', 'IDE-I_S3_L002']
-        inFileNamesFinalSort = ['IDE-F_S5_L001', 'IDE-F_S5_L002']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
     elif enzyme.lower() == 'mpro':
-        enzyme = f'SARS-CoV-2 M{'ᵖʳᵒ'}'
+        enzyme = f'SARS-CoV M{'ᵖʳᵒ'}'
         inFileNamesInitialSort = ['Mpro-I_S1_L001', 'Mpro-I_S1_L002',
                                   'Mpro-I_S1_L003', 'Mpro-I_S1_L004']
         inFileNamesFinalSort = ['Mpro-R4_S3_L001', 'Mpro-R4_S3_L002',
@@ -95,18 +97,22 @@ def filePaths(enzyme):
                                 'Mpro2-R4_S3_L003', 'Mpro2-R4_S3_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
     elif enzyme.lower() == 'mmp7':
+        enzyme = 'MMP7'
         inFileNamesInitialSort = ['MMP7-I_S3_L001', 'MMP7-I_S3_L002']
         inFileNamesFinalSort = ['MMP7-R4_S4_L001', 'MMP7-R4_S4_L002']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
     elif enzyme.lower() == 'fyn':
+        enzyme = 'Fyn'
         inFileNamesInitialSort = ['Fyn-I_S6_L001', 'Fyn-I_S6_L002']
         inFileNamesFinalSort = ['Fyn-F_S1_L001', 'Fyn-F_S1_L002']
         inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
     elif enzyme.lower() == 'src':
+        enzyme = 'Src'
         inFileNamesInitialSort = ['Src-I_S4_L001', 'Src-I_S4_L002']
         inFileNamesFinalSort = ['Src-F_S2_L001', 'Src-F_S2_L002']
         inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
     elif enzyme.lower() == 'veev':
+        enzyme = 'VEEV'
         inFileNamesInitialSort = ['VE-I_S1_L001']
         inFileNamesFinalSort = ['VE-R4_S2_L001']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
@@ -114,7 +120,7 @@ def filePaths(enzyme):
         print(f'{orange}ERROR: There are no file names for {cyan}{enzyme}{orange}\n'
               f'       Add information to the "filePaths" function in '
               f'{os.path.basename(__file__)}\n')
-        sys.exit()
+        sys.exit(1)
 
     return enzyme, inFileNamesInitialSort, inFileNamesFinalSort, inAAPositions
 
@@ -132,36 +138,50 @@ def includeCommas(x):
 
 
 class NGS:
-    def __init__(self, enzymeName, substrateLength, filterData, fixedAA, fixedPosition,
+    def __init__(self, enzymeName, substrateLength, filterSubs, fixedAA, fixedPosition,
                  excludeAAs, excludeAA, excludePosition, minCounts, figEMSquares,
                  xAxisLabels, printNumber, showNValues, bigAAonTop, findMotif, folderPath,
-                 filesInit, filesFinal, plotPosS, plotFigEM, plotFigLogo, plotFigWebLogo,
-                 plotFigWords, plotFig, saveFigures, setFigureTimer):
+                 filesInit, filesFinal, plotPosS, plotFigEM, plotFigEMScaled, plotFigLogo,
+                 plotFigWebLogo, plotFigWords, saveFigures, setFigureTimer,
+                 expressDNA=False):
+        # Parameters: Dataset
         self.enzymeName = enzymeName
-        self.applyFilter = filterData
+        self.filterSubs = filterSubs
         self.fixedAA = fixedAA
         self.fixedPosition = fixedPosition
         self.excludeAAs = excludeAAs
         self.excludeAA = excludeAA
         self.excludePosition = excludePosition
         self.minSubCount = minCounts
+        self.printNumber = printNumber
+        self.selectedSubstrates = []
+        self.selectedDatapoints = []
+        self.rectangles = []
+
+        # Parameters: DNA Processing
+        self.expressDNA = expressDNA # Only define this input when processing DNA seqs
+        self.fileSize = []
+        self.countExtractedSubs = []
+        self.percentUnusableDNASeqs = []
+
+        # Parameters: Figures
         self.entropy, self.entropyMax = None, None
-        self.EMap, self.EMapMotif = None, None
+        self.eMap, self.eMapMotif = None, None
         self.heights, self.weblogo = None, None
         self.plotFigEntropy = plotPosS
         self.plotFigEM = plotFigEM
+        self.plotFigEMScaled = plotFigEMScaled
         self.plotFigLogo = plotFigLogo
         self.plotFigWebLogo = plotFigWebLogo
         self.plotFigWords = plotFigWords
-        self.plotFig = plotFig
         self.datasetTag = None
         self.datasetTagMotif = ''
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsMotif = None
         self.title = ''
+        self.titleReleased = ''
         self.titleMotif = ''
         self.titleWeblogo = ''
-
         self.substrateLength = substrateLength
         self.figEMSquares = figEMSquares
         if figEMSquares:
@@ -178,17 +198,23 @@ class NGS:
         self.tickLength = 4
         self.residues = defaultResidues
         self.letters = [residue[2] for residue in self.residues]
-        self.colorsAA = NGS.residueColors(self)
-        self.printNumber = printNumber
-        self.fileSize = []
-        self.countExtractedSubs = []
-        self.percentUnusableDNASeqs = []
+        self.colorsAA = NGS.residueColors()
         self.showSampleSize = showNValues
         self.nSubsInitial = 0
         self.nSubsFinal = 0
         self.bigAAonTop = bigAAonTop
         self.findMotif = findMotif
-        self.indexMotif = None
+        self.motifFilter = False
+        self.motifInit = True
+        self.motifTag = ''
+        self.motifIndex = None
+        self.saveFigures = saveFigures
+        self.setFigureTimer = setFigureTimer
+        self.figureTimerDuration = 0.5
+        self.saveFigureIteration = 0
+        self.figureResolution = 300
+
+        # Parameters: Files
         self.filesInit = filesInit
         self.filesFinal = filesFinal
         self.pathFolder = folderPath
@@ -196,24 +222,18 @@ class NGS:
         self.pathSaveFigs = os.path.join(self.pathFolder, 'FiguresTest')
         self.pathFilteredSubs = None
         self.pathFilteredCounts = None
-        self.saveFigures = saveFigures
-        self.setFigureTimer = setFigureTimer
-        self.figureTimerDuration = 0.5
-        self.saveFigureIteration = 0
-        self.figureResolution = 300
-        self.selectedSubstrates = []
-        self.selectedDatapoints = []
-        self.rectangles = []
 
+        # Parameters: Misc
         np.set_printoptions(suppress=True) # Prevent data from printing in sci notation
         np.seterr(divide='ignore')
+
 
         # Verify directory paths
         if not os.path.exists(self.pathFolder):
             print(f'{orange}ERROR: Folder not found\n'
                   f'Check input: "{cyan}inPathFolder{orange}"\n'
                   f'     inPathFolder = {self.pathFolder}\n')
-            sys.exit()
+            sys.exit(1)
         if self.pathSaveData is not None:
             if not os.path.exists(self.pathSaveData):
                 os.makedirs(self.pathSaveData, exist_ok=True)
@@ -223,7 +243,8 @@ class NGS:
 
 
 
-    def alert(self, soundPath):
+    @staticmethod
+    def alert(soundPath):
         # This function can be used to play .mp3 files
         # Used it to let you know when a process has been completed
         from playsound import playsound
@@ -236,11 +257,12 @@ class NGS:
 
 
 
-    def residueColors(self):
+    @staticmethod
+    def residueColors():
         color = ['darkgreen', 'firebrick', 'deepskyblue', 'pink', 'navy', 'black', 'gold']
                  # Aliphatic, Acidic, Basic, Hydroxyl, Amide, Aromatic, Sulfur
 
-        colorsAA = {
+        return {
             'A': color[0],
             'R': color[2],
             'N': color[4],
@@ -263,35 +285,37 @@ class NGS:
             'V': color[0]
         }
 
-        return colorsAA
-
 
 
     def loadAndTranslate(self, filePath, fileName, fileType, fixedSubs,
                          startSeq, endSeq, printQS):
         # Define file location
-        if '/' in filePath:
-            fileLocation = filePath + '/' + fileName + '.' + fileType
-        else:
-            fileLocation = filePath + '\\' + fileName + '.' + fileType
+        fileLocation = os.path.join(filePath, f'{fileName}.{fileType}')
 
         # Determine the read direction
+        subSequence = None
         if '_R1_' in fileName:
             # Extract the substrates
-            subSequence = self.translate(path=fileLocation, type=fileType,
+            subSequence = self.translate(path=fileLocation, fileType=fileType,
                                         fixData=fixedSubs, startSeq=startSeq,
                                         endSeq=endSeq, printQS=printQS)
         elif '_R2_' in fileName:
             # Extract the substrates
-            subSequence = self.reverseTranslate(path=fileLocation, type=fileType,
+            subSequence = self.reverseTranslate(path=fileLocation, fileType=fileType,
                                                fixData=fixedSubs, startSeq=startSeq,
                                                endSeq=endSeq, printQS=printQS)
+        else:
+            print(f'{orange}ERROR: The file {cyan}{fileName}{orange} does not contain '
+                  f'a forward read (R1) or reverse read (R2) label.\n\n'
+                  f'Please update the file name, or expand the conditional statements'
+                  f'in NGS.loadAndTranslate() so that the file can be processed.')
+            sys.exit(1)
 
         return subSequence
 
 
 
-    def translate(self, path, type, fixData, startSeq, endSeq, printQS):
+    def translate(self, path, fileType, fixData, startSeq, endSeq, printQS):
         print('============================ Translate: Forward Read '
               '============================')
         subSequence = {}
@@ -308,7 +332,7 @@ class NGS:
                 print(f'{orange}ERROR: File location does not lead to a file\n'
                       f'     {path}\n'
                       f'     {pathZipped}\n')
-                sys.exit()
+                sys.exit(1)
         print(f'File Location:\n'
               f'     {path}\n\n')
 
@@ -323,7 +347,7 @@ class NGS:
         if gZipped:
             # Open the file
             with (gzip.open(path, 'rt', encoding='utf-8') as file):
-                data = SeqIO.parse(file, type)
+                data = SeqIO.parse(file, fileType)
                 warnings.simplefilter('ignore', BiopythonWarning)
 
                 # Print expressed DNA sequences
@@ -419,7 +443,7 @@ class NGS:
 
                         # Inspect full DNA seq
                         if startSeq in DNA and endSeq in DNA:
-                            # Find begining & end indices for the substrate
+                            # Find beginning & end indices for the substrate
                             start = DNA.find(startSeq) + len(startSeq)
                             end = DNA.find(endSeq) # Find the substate end index
 
@@ -438,7 +462,7 @@ class NGS:
         else:
             # Open the file
             with open(path, 'r') as file:
-                data = SeqIO.parse(file, type)
+                data = SeqIO.parse(file, fileType)
                 warnings.simplefilter('ignore', BiopythonWarning)
 
                 # Print expressed DNA sequences
@@ -468,7 +492,7 @@ class NGS:
 
                     # Inspect full DNA seq
                     if startSeq in DNA and endSeq in DNA:
-                        # Find begining & end indices for the substrate
+                        # Find beginning & end indices for the substrate
                         start = DNA.find(startSeq) + len(startSeq)
                         end = DNA.find(endSeq)
 
@@ -497,7 +521,7 @@ class NGS:
 
                         # Inspect full DNA seq
                         if startSeq in DNA and endSeq in DNA:
-                            # Find begining & end indices for the substrate
+                            # Find beginning & end indices for the substrate
                             start = DNA.find(startSeq) + len(startSeq)
                             end = DNA.find(endSeq)
 
@@ -532,7 +556,7 @@ class NGS:
 
                         # Inspect full DNA seq
                         if startSeq in DNA and endSeq in DNA:
-                            # Find begining & end indices for the substrate
+                            # Find beginning & end indices for the substrate
                             start = DNA.find(startSeq) + len(startSeq)
                             end = DNA.find(endSeq)
 
@@ -554,7 +578,7 @@ class NGS:
                   f'Recommend: adjust variables\n'
                   f'     startSeq: {red}{startSeq}{resetColor}\n'
                   f'     endSeq: {red}{endSeq}{resetColor}')
-            sys.exit()
+            sys.exit(1)
         else:
             extractionCount = sum(subSequence.values())
             throwaway = (totalSeqsDNA - extractionCount)
@@ -569,7 +593,7 @@ class NGS:
                   f'{red}{extractionCount:,}{resetColor}\n'
                   f'     {greyDark}Percent throwaway{resetColor}:'
                   f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
-        # sys.exit()
+        # sys.exit(1)
 
         # Rank the substrates
         subSequence = dict(sorted(subSequence.items(), key=lambda x: x[1], reverse=True))
@@ -578,7 +602,7 @@ class NGS:
 
 
 
-    def reverseTranslate(self, path, type, fixData, startSeq, endSeq, printQS):
+    def reverseTranslate(self, path, fileType, fixData, startSeq, endSeq, printQS):
         print('============================ Translate: Reverse Read '
               '============================')
         subSequence = {}
@@ -592,7 +616,7 @@ class NGS:
                 print(f'{orange}ERROR: File location does not lead to a file\n'
                       f'     {path}\n'
                       f'     {pathZipped}\n')
-                sys.exit()
+                sys.exit(1)
             else:
                 gZipped = True
                 path = pathZipped
@@ -607,7 +631,7 @@ class NGS:
 
         if gZipped:
             with gzip.open(path, 'rt', encoding='utf-8') as file: # Open the file
-                data = SeqIO.parse(file, type)
+                data = SeqIO.parse(file, fileType)
                 warnings.simplefilter('ignore', BiopythonWarning)
 
                 # Print expressed DNA sequences
@@ -643,7 +667,7 @@ class NGS:
 
                     # Inspect full DNA seq
                     if startSeq in DNA and endSeq in DNA:
-                        # Find begining & end indices for the substrate
+                        # Find beginning & end indices for the substrate
                         start = DNA.find(startSeq) + len(startSeq)
                         end = DNA.find(endSeq)
 
@@ -708,7 +732,7 @@ class NGS:
 
                         # Inspect full DNA seq
                         if startSeq in DNA:  # and endSeq in DNA:
-                            # Find begining & end indices for the substrate
+                            # Find beginning & end indices for the substrate
                             start = DNA.find(startSeq) + len(startSeq)
                             end = DNA.find(endSeq)
 
@@ -726,7 +750,7 @@ class NGS:
                                         subSequence[substrate] = 1
         else:
             with open(path, 'r') as file: # Open the file
-                data = SeqIO.parse(file, type)
+                data = SeqIO.parse(file, fileType)
                 warnings.simplefilter('ignore', BiopythonWarning)
 
                 # Print expressed DNA sequences
@@ -756,7 +780,7 @@ class NGS:
 
                     # Inspect full DNA seq
                     if startSeq in DNA and endSeq in DNA:
-                        # Find begining & end indices for the substrate
+                        # Find beginning & end indices for the substrate
                         start = DNA.find(startSeq) + len(startSeq)
                         end = DNA.find(endSeq)
 
@@ -786,7 +810,7 @@ class NGS:
 
                         # Inspect full DNA seq
                         if startSeq in DNA and endSeq in DNA:
-                            # Find begining & end indices for the substrate
+                            # Find beginning & end indices for the substrate
                             start = DNA.find(startSeq) + len(startSeq)
                             end = DNA.find(endSeq)
 
@@ -844,7 +868,7 @@ class NGS:
                   f'Recommend: adjust variables\n'
                   f'     startSeq: {red}{startSeq}{resetColor}\n'
                   f'     endSeq: {red}{endSeq}{resetColor}')
-            sys.exit()
+            sys.exit(1)
         else:
             extractionCount = sum(subSequence.values())
             throwaway = (totalSeqsDNA - extractionCount)
@@ -919,7 +943,7 @@ class NGS:
                     print(f'{orange}ERROR: The substrate lengths do not match\n'
                           f'     {firstSub}: {lengthSubstrate} AA\n'
                           f'     {substrate}: {len(substrate)} AA{resetColor}\n')
-                    sys.exit()
+                    sys.exit(1)
 
         # Count the occurrences of each residue
         if countMotif:
@@ -965,7 +989,7 @@ class NGS:
                     f'{orange}ERROR: The total number of substrates '
                     f'({cyan}{totalSubs:,}{orange}) =/= the sum of column '
                     f'{indexColumn} ({cyan}{columnSum:,}{orange}){resetColor}\n')
-                sys.exit()
+                sys.exit(1)
 
         print(f'Total substrates: {red}{totalSubs:,}{resetColor}\n'
               f'Total Unique Substrates:{red} {len(substrates):,}{resetColor}\n\n')
@@ -979,15 +1003,15 @@ class NGS:
         if motifPath:
             pathSubs = os.path.join(
                 self.pathSaveData,
-                f'fixedMotifSubs - {self.enzymeName} - {datasetTag} - '
+                f'fixedMotifSubs - {self.enzymeName} - {self.motifTag} - '
                 f'FinalSort - MinCounts {self.minSubCount}')
             pathCounts = os.path.join(
                 self.pathSaveData,
-                f'fixedMotifCounts - {self.enzymeName} - {datasetTag} - '
+                f'fixedMotifCounts - {self.enzymeName} - {self.motifTag} - '
                 f'FinalSort - MinCounts {self.minSubCount}')
             pathCountsReleased = os.path.join(
                 self.pathSaveData,
-                f'fixedMotifCountsRel - {self.enzymeName} - {datasetTag} - '
+                f'fixedMotifCountsRel - {self.enzymeName} - {self.motifTag} - '
                 f'FinalSort - MinCounts {self.minSubCount}')
             paths = [pathSubs, pathCounts, pathCountsReleased]
         else:
@@ -1023,7 +1047,7 @@ class NGS:
             if self.pathFilteredCounts is None:
                 print(f'{orange}ERROR: {cyan}self.pathFilteredCounts {orange}needs '
                       f'to be defined before you can load the counts.{resetColor}\n')
-                sys.exit()
+                sys.exit(1)
             files = [self.pathFilteredCounts]
         else:
             if 'initial' in fileType.lower():
@@ -1040,7 +1064,7 @@ class NGS:
             if not os.path.exists(filePath):
                 print(f'{orange}ERROR: File not found\n'
                       f'     {filePath}\n')
-                sys.exit()
+                sys.exit(1)
             print(f'     {greenDark}{filePath}{resetColor}')
         print('\n')
 
@@ -1085,7 +1109,7 @@ class NGS:
                       f'({cyan}{totalCounts:,}{orange}) =/= '
                       f'the sum of column {pink}{columnSums.index[indexColumn]}{orange} '
                       f'({cyan}{columnSum:,}{orange})\n')
-                sys.exit()
+                sys.exit(1)
         print('\n')
 
         return countedData, totalCounts
@@ -1301,7 +1325,7 @@ class NGS:
             else:
                 print(f'{orange}ERROR: The file was not found\n'
                       f'     {filePathFixedMotifCounts}\n')
-                sys.exit()
+                sys.exit(1)
 
         # Sum the columns
         fixedFrameColumnSums = []
@@ -1352,25 +1376,59 @@ class NGS:
 
 
 
-    def saveData(self, substrates, counts, filePathSubs, filePathCounts):
-        print(type(substrates), type(counts))
-        if type(substrates) == 'dict':
-            print('match')
+    def saveData(self, substrates, counts, saveTag=None, countsReleased=None):
+        if not isinstance(substrates, dict):
+            print(f'{orange}ERROR: The substrates need to be stored in a dictionary\n'
+                  f'     Current data structure: {type(substrates)}')
+            sys.exit(1)
+        if not isinstance(counts, pd.DataFrame):
+            print(f'{orange}ERROR: The counts need to be stored in a Pandas DataFrame\n'
+                  f'     Current data structure: {type(counts)}')
+            sys.exit(1)
 
-        sys.exit()
+        # Define: Save path
+        filePathCountsReleased = None
+        if self.expressDNA:
+            filePathSubs = os.path.join(self.pathSaveData, f'substrates_{saveTag}')
+            filePathCounts = os.path.join(self.pathSaveData, f'counts_{saveTag}')
+        else:
+            if countsReleased is None:
+                (filePathSubs,
+                 filePathCounts) = self.getFilePath(datasetTag=self.datasetTag)
+            else:
+                # Define: File paths
+                (filePathSubs,
+                 filePathCounts,
+                 filePathCountsReleased) = self.getFilePath(datasetTag=self.datasetTag,
+                                                            motifPath=True)
+
         if not os.path.exists(filePathSubs) or not os.path.exists(filePathCounts):
             print('================================= Save The Data '
                   '=================================')
-            print(f'Substrate data saved at:\n'
-                  f'     {greenDark}{filePathSubs}{resetColor}\n'
-                  f'     {greenDark}{filePathCounts}{resetColor}\n\n')
+            if countsReleased is None:
+                print(f'Substrate data saved at:\n'
+                      f'     {greenDark}{filePathSubs}\n'
+                      f'     {filePathCounts}{resetColor}\n\n')
 
-            # Save the fixed substrate dataset
-            with open(filePathSubs, 'wb') as file:
-                pk.dump(substrates, file)
+                # Save the substrates
+                with open(filePathSubs, 'wb') as file:
+                    pk.dump(substrates, file)
 
-            # Save the substrate counts dataframe
-            counts.to_csv(filePathCounts)
+                # Save the counts
+                counts.to_csv(filePathCounts)
+            else:
+                print(f'Substrate data saved at:\n'
+                      f'     {greenDark}{filePathSubs}\n'
+                      f'     {filePathCounts}\n'
+                      f'     {filePathCountsReleased}{resetColor}\n\n')
+
+                # Save the substrates
+                with open(filePathSubs, 'wb') as file:
+                    pk.dump(substrates, file)
+
+                # Save the counts
+                counts.to_csv(filePathCounts)
+                countsReleased.to_csv(filePathCountsReleased)
 
 
 
@@ -1382,17 +1440,26 @@ class NGS:
         self.nSubsFinal = NFinal
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
               f'Initial Sort: {red}{self.nSubsInitial:,}{resetColor}\n'
-              f'Final Sort: {red}{self.nSubsFinal:,}{resetColor}\n')
+              f'Final Sort: {red}{self.nSubsFinal:,}{resetColor}\n\n')
 
         # Set figure title
         if self.showSampleSize:
             self.title = (f'\n{self.enzymeName}\n'
                      f'N Unsorted = {self.nSubsInitial:,}\n'
                      f'N Sorted = {self.nSubsFinal:,}')
+            self.titleReleased = (f'{self.enzymeName}\n'
+                                  f'Released Counts\n'
+                                  f'N Unsorted = {self.nSubsInitial:,}\n'
+                                  f'N Sorted = {self.nSubsFinal:,}')
             self.titleWeblogo = f'\n\n{self.enzymeName}\nN = {self.nSubsFinal:,}'
+            self.titleWeblogoReleased = (f'\n{self.enzymeName}\nReleased Counts\n'
+                                         f'N = {self.nSubsFinal:,}')
         else:
             self.title = f'\n\n\n{self.enzymeName}'
+            self.titleReleased = (f'{self.enzymeName}\n'
+                                  f'Released Counts\n')
             self.titleWeblogo = f'\n\n\n{self.enzymeName}'
+            self.titleWeblogoReleased = f'\n\n{self.enzymeName}\nReleased Counts'
 
 
 
@@ -1416,14 +1483,14 @@ class NGS:
         pd.set_option('display.float_format', '{:,.3f}'.format)
 
         print(f'\n{red}EXIT HEERE\n\n')
-        sys.exit()
+        sys.exit(1)
 
         return prob
 
 
 
     def getDatasetTag(self):
-        if self.applyFilter:
+        if self.filterSubs:
             fixResidueList = []
             if self.excludeAAs:
                 # Exclude residues
@@ -1474,6 +1541,10 @@ class NGS:
         else:
             self.datasetTag = 'Unfiltered'
 
+        # Define: Motif tag
+        if self.motifInit:
+            self.motifTag = self.datasetTag
+
         return self.datasetTag
 
 
@@ -1502,7 +1573,7 @@ class NGS:
         else:
             print(f'{orange}ERROR: Cannot create colormap. '
                   f'Unrecognized colorType parameter: {colorType}{resetColor}\n')
-            sys.exit()
+            sys.exit(1)
 
         # Create colormap
         if len(colors) == 1:
@@ -1613,7 +1684,8 @@ class NGS:
 
 
         # Rank fixed substrates
-        rankedFixedSubstrates = dict(sorted(fixedSubs.items(), key=lambda x: x[1], reverse=True))
+        rankedFixedSubstrates = dict(sorted(fixedSubs.items(),
+                                            key=lambda x: x[1], reverse=True))
 
         # Print fixed substrates
         if printRankedSubs:
@@ -1625,7 +1697,7 @@ class NGS:
                 print(f'{orange}ERROR:\n'
                       f'     No substrates in {purple}{sortType}{orange} contained: '
                       f'{red}{fixedString}{resetColor}\n')
-                sys.exit()
+                sys.exit(1)
             else:
                 for substrate, count in rankedFixedSubstrates.items():
                     print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
@@ -1682,9 +1754,9 @@ class NGS:
 
         # Define motif label
         indexSubFrameList = list(entropy.index)
-        self.indexMotif = [indexSubFrameList.index(idx) for idx in subFrameSorted.index]
+        self.motifIndex = [indexSubFrameList.index(idx) for idx in subFrameSorted.index]
         self.xAxisLabelsMotif = self.xAxisLabels[
-                                min(self.indexMotif):max(self.indexMotif)+1]
+                                min(self.motifIndex):max(self.motifIndex)+1]
 
         self.datasetTagMotif = f'Motif {self.datasetTag}'
         self.saveTagMotif = (f'{self.datasetTag} - Motif '
@@ -1698,8 +1770,8 @@ class NGS:
         print('================================= Extract Motif '
               '=================================')
         motifs = {}
-        indexStart = min(self.indexMotif)
-        indexEnd = max(self.indexMotif) + 1
+        indexStart = min(self.motifIndex)
+        indexEnd = max(self.motifIndex) + 1
         print(f'Motif Indices: {purple}{self.datasetTagMotif}{resetColor}\n')
 
         # Print data
@@ -1815,7 +1887,7 @@ class NGS:
     def calculateRF(self, counts, N, fileType):
         print('======================== Calculate: Residue Probability '
               '=========================')
-        if self.applyFilter and 'initial' not in fileType.lower():
+        if self.filterSubs and 'initial' not in fileType.lower():
             print(f'Dataset: {purple}{self.enzymeName} {fileType} - Filter '
                   f'{self.datasetTag}{resetColor}\n')
         else:
@@ -1837,7 +1909,7 @@ class NGS:
         else:
             print(f'{greyDark}Residue not recognized:{red} {selectAA}{greyDark}\n'
                   f'Please check input:{red} self.fixedAA')
-            sys.exit()
+            sys.exit(1)
         print(f'Fixed Residues:{red} {self.datasetTag}{resetColor}\n'
               f'Selected Residue:{red} {residue}{resetColor}\n')
 
@@ -1900,7 +1972,7 @@ class NGS:
         else:
             print(f'{greyDark}Residue not recognized:{red} {selectAA}{greyDark}\n'
                   f'Please check input:{red} self.fixedAA')
-            sys.exit()
+            sys.exit(1)
         print(f'Fixed Residues:{red} {self.datasetTag}{resetColor}\n'
               f'Selected Residue:{red} {residue}{resetColor}\n')
 
@@ -2003,60 +2075,226 @@ class NGS:
 
 
 
-    def calculateEnrichment(self, probInitial, probFinal,
-                         motifFilter=False, duplicateFigure=False):
+    def calculateEnrichment(self, probInitial, probFinal, releasedCounts=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
-
+        print(f'Ent:\n{self.entropy}\n\n')
         # Calculate: Enrichment scores
         if len(probInitial.columns) == 1:
-            self.EMap  = pd.DataFrame(0.0, index=probFinal.index,
+            self.eMap  = pd.DataFrame(0.0, index=probFinal.index,
                                       columns=probFinal.columns)
             for position in probFinal.columns:
-                self.EMap.loc[:, position] = np.log2(probFinal.loc[:, position] /
+                self.eMap.loc[:, position] = np.log2(probFinal.loc[:, position] /
                                                       probInitial.iloc[:, 0])
         else:
             probInitial.columns = probFinal.columns
-            self.EMap  = np.log2(probFinal / probInitial)
-            self.EMap .columns = probFinal.columns
+            self.eMap  = np.log2(probFinal / probInitial)
+            self.eMap .columns = probFinal.columns
 
         print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n\n'
-              f'{self.EMap.round(3)}\n\n')
+              f'{self.eMap.round(3)}\n\n')
 
-        # Plot: Enrichment Map
-        if self.plotFigEM:
-            self.plotEnrichmentScores(
-                dataType='Enrichment', motifFilter=motifFilter,
-                duplicateFigure=duplicateFigure)
 
-        if self.plotFigLogo:
+        if self.plotFigEMScaled or self.plotFigLogo:
             print('=========================== Calculate: Letter Heights '
                   '===========================')
             print(f'Residue heights calculated by: '
                   f'{pink}Enrichment Scores * ΔS{resetColor}\n')
-
             # Calculate: Letter heights
-            heights = pd.DataFrame(0, index=self.EMap.index,
-                                   columns=self.EMap.columns, dtype=float)
+            heights = pd.DataFrame(0, index=self.eMap.index,
+                                   columns=self.eMap.columns, dtype=float)
             for indexColumn in heights.columns:
-                heights.loc[:, indexColumn] = (self.EMap.loc[:, indexColumn] *
+                heights.loc[:, indexColumn] = (self.eMap.loc[:, indexColumn] *
                                                self.entropy.loc[indexColumn, 'ΔS'])
             heights.replace([np.inf, -np.inf], 0, inplace=True)
             self.heights = heights
             print(f'Residue Heights: {purple}{self.datasetTag}{resetColor}\n'
                   f'{heights}\n\n')
 
-            # Plot: Enrichment logo
-            self.plotEnrichmentLogo(motifFilter, duplicateFigure)
+
+        # Plot: Enrichment Map
+        if self.plotFigEM:
+            self.plotEnrichmentScores(dataType='Enrichment',
+                                      releasedCounts=releasedCounts)
+        if self.plotFigEMScaled:
+            self.plotEnrichmentScores(dataType='Scaled Enrichment',
+                                      releasedCounts=releasedCounts)
+
+        # Plot: Enrichment Logo
+        if self.plotFigLogo:
+            self.plotEnrichmentLogo(releasedCounts=releasedCounts)
+
+        # Calculate & Plot: Weblogo
+        if self.plotFigWebLogo:
+            self.calculateWeblogo(probability=probFinal, releasedCounts=True)
+
+        return self.eMap
 
 
 
-    def plotEnrichmentLogo(self, motifFilter, duplicateFigure):
+    def plotEnrichmentScores(self, dataType, releasedCounts=False):
+        print('============================ Plot: Enrichment Score '
+              '=============================')
+        if 'motif' in dataType.lower() and 'scaled' in dataType.lower():
+            print('How do I process this?')
+            sys.exit(1)
+        elif 'scaled' in dataType.lower():
+            scores = self.heights
+        elif 'motif' in dataType.lower():
+            scores = self.eMapMotif
+        else:
+            scores = self.eMap
+        if releasedCounts:
+            title = self.titleReleased
+        else:
+            title = self.title
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
+              f'{scores}\n\n')
+        if self.motifFilter:
+            print(f'Figure Iteration: '
+                  f'{magenta}{self.saveFigureIteration}{resetColor}\n\n')
+
+        # Create heatmap
+        cMapCustom = self.createCustomColorMap(colorType='EM')
+
+        # Define the yLabel
+        if self.residueLabelType == 0:
+            scores.index = [residue[0] for residue in self.residues]
+        elif self.residueLabelType == 1:
+            scores.index = [residue[1] for residue in self.residues]
+        elif self.residueLabelType == 2:
+            scores.index = [residue[2] for residue in self.residues]
+
+        # Define color bar limits
+        if np.max(scores) >= np.min(scores):
+            cBarMax = np.max(scores)
+            cBarMin = -1 * cBarMax
+        else:
+            cBarMin = np.min(scores)
+            cBarMax = -1 * cBarMin
+
+        # Plot the heatmap with numbers centered inside the squares
+        fig, ax = plt.subplots(figsize=self.figSizeEM)
+        if self.figEMSquares:
+            heatmap = sns.heatmap(scores, annot=False, cmap=cMapCustom, cbar=True,
+                                  linewidths=self.lineThickness - 1, linecolor='black',
+                                  square=self.figEMSquares, center=None,
+                                  vmax=cBarMax, vmin=cBarMin)
+        else:
+            heatmap = sns.heatmap(scores, annot=True, fmt='.3f', cmap=cMapCustom,
+                                  cbar=True, linewidths=self.lineThickness - 1,
+                                  linecolor='black', square=self.figEMSquares,
+                                  center=None, vmax=cBarMax, vmin=cBarMin,
+                                  annot_kws={'fontweight': 'bold'})
+        ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
+        ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
+        ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        if self.figEMSquares:
+            figBorders = [0.852, 0.075, 0, 0.895]
+        else:
+            figBorders = [0.852, 0.075, 0.117, 1]  # Top, bottom, left, right
+        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
+                            left=figBorders[2], right=figBorders[3])
+
+        # Set the thickness of the figure border
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+            spine.set_linewidth(self.lineThickness)
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', rotation=0, length=self.tickLength,
+                       labelsize=self.labelSizeTicks, width=self.lineThickness)
+
+        # Set x-ticks
+        xTicks = np.arange(len(scores.columns)) + 0.5
+        ax.set_xticks(xTicks)
+        ax.set_xticklabels(scores.columns)
+
+        # Set y-ticks
+        yTicks = np.arange(len(scores.index)) + 0.5
+        ax.set_yticks(yTicks)
+        ax.set_yticklabels(scores.index)
+
+        # Set invalid values to grey
+        cmap = plt.cm.get_cmap(cMapCustom)
+        cmap.set_bad(color='lightgrey')
+
+        # Modify the colorbar
+        cbar = heatmap.collections[0].colorbar
+        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
+                            length=self.tickLength, width=self.lineThickness)
+        cbar.outline.set_linewidth(self.lineThickness)
+        cbar.outline.set_edgecolor('black')
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        if self.setFigureTimer:
+            plt.ion()
+            plt.show()
+            plt.pause(self.figureTimerDuration)
+            plt.close(fig)
+            plt.ioff()
+        else:
+            plt.show()
+
+
+        # Save the figure
+        if self.saveFigures:
+            if 'Scaled' in dataType:
+                datasetType = 'EM Scaled'
+            elif 'Enrichment' in dataType:
+                datasetType = 'EM'
+            else:
+                print(f'{orange}ERROR: What do I do with this dataset type -'
+                      f'{cyan} {dataType}{resetColor}\n')
+                sys.exit(1)
+
+            self.saveFigure(fig=fig, figType=datasetType, releasedCounts=releasedCounts)
+
+
+
+    def saveFigure(self, fig, figType, releasedCounts=False):
+        # Define: Save location
+        if self.motifFilter:
+            if releasedCounts:
+                figLabel = (f'{self.enzymeName} -  {figType} Rel Counts - '
+                            f'{self.motifTag} - MinCounts {self.minSubCount}.png')
+            else:
+                figLabel = (f'{self.enzymeName} - {figType} '
+                            f'{self.saveFigureIteration} - {self.motifTag} - '
+                            f'MinCounts {self.minSubCount}.png')
+        else:
+            figLabel = (f'{self.enzymeName} - {figType} - '
+                        f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+        saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+
+        # Save figure
+        if os.path.exists(saveLocation):
+            print(f'{yellow}WARNING{resetColor}: '
+                  f'{yellow}The figure already exists at the path\n'
+                  f'     {saveLocation}\n\n'
+                  f'We will not overwrite the figure{resetColor}\n\n')
+        else:
+            print(f'Saving figure at path:\n'
+                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
+            fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+
+    def plotEnrichmentLogo(self, releasedCounts=False):
         print('============================= Plot: Enrichment Logo '
               '=============================')
-        self.heights.replace([np.inf, -np.inf], 0, inplace=True)
+        if releasedCounts:
+            title = self.titleReleased
+        else:
+            title = self.title
+
+        # Print data
         print(f'Residue heights:\n'
               f'{self.heights}\n')
+        if self.motifFilter:
+            print(f'Figure Iteration: '
+                  f'{magenta}{self.saveFigureIteration}{resetColor}\n\n')
 
         # Calculate: Max and min
         columnTotals = [[], []]
@@ -2095,7 +2333,7 @@ class NGS:
         fig, ax = plt.subplots(figsize=self.figSize)
         motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=self.colorsAA,
                                width=0.95, stack_order=stackOrder)
-        motif.ax.set_title(self.title, fontsize=self.labelSizeTitle, fontweight='bold')
+        motif.ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
                             left=figBorders[2], right=figBorders[3])
 
@@ -2160,64 +2398,15 @@ class NGS:
         else:
             plt.show()
 
-        # Inspect dataset
-        duplicate = False
         # Save the figure
         if self.saveFigures:
-            # Define: Save location
-            if motifFilter:
-                duplicate = True
-                figLabel = (f'{self.enzymeName} - Logo {self.saveFigureIteration} - '
-                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
-            else:
-                figLabel = (f'{self.enzymeName} - Logo - '
-                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+            datasetType = 'Logo'
 
-            # Save figure
-            if os.path.exists(saveLocation):
-                if self.findMotif and duplicate:
-                    # Turn off figure autosave
-                    self.saveFigures = False
-                    print(f'{yellow}WARNING{resetColor}: '
-                          f'{yellow}The figure already exists at the path\n'
-                          f'     {saveLocation}\n\n'
-                          f'We will not overwrite the figure{resetColor}\n\n')
-                else:
-                    # Save duplicate figures
-                    if duplicateFigure:
-                        copyNumber = 1
-                        fileFound = True
-                        while fileFound:
-                            # Define: Save location
-                            figLabel = (f'{self.enzymeName} - Logo {copyNumber} - '
-                                        f'{self.datasetTag} - MinCounts '
-                                        f'{self.minSubCount}.png')
-                            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-                            if not os.path.exists(saveLocation):
-                                print(f'Saving figure at path:\n'
-                                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                                fig.savefig(saveLocation, dpi=self.figureResolution)
-                                self.saveFigureIteration = copyNumber
-                                fileFound = False
-                            else:
-                                copyNumber += 1
-                    else:
-                        # Dont save the duplicated figure
-                        print(f'{yellow}WARNING{resetColor}: '
-                              f'{yellow}The figure already exists at the path\n'
-                              f'     {saveLocation}\n\n'
-                              f'We will not overwrite the figure{resetColor}\n\n')
-            else:
-                self.findMotif = False
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
+            self.saveFigure(fig=fig, figType=datasetType, releasedCounts=releasedCounts)
 
 
 
-    def calculateWeblogo(self, probability):
+    def calculateWeblogo(self, probability, releasedCounts=False):
         print('============================= Calculate: Weblogo '
               '================================')
         print(f'Probability: {self.datasetTag}\n{probability}\n\n'
@@ -2232,17 +2421,26 @@ class NGS:
                                                 self.entropy.loc[indexColumn, 'ΔS'])
 
         if self.plotFigWebLogo:
-            self.plotWeblogo()
+            self.plotWeblogo(releasedCounts=releasedCounts)
 
         return self.weblogo
 
 
 
-    def plotWeblogo(self, motifFilter=False, duplicateFigure=False):
+    def plotWeblogo(self, releasedCounts=False):
         print('================================= Plot: Weblogo '
               '=================================')
         print(f'Letter Heights: {purple}{self.datasetTag}{resetColor}\n'
               f'{self.weblogo}\n\n')
+        if self.motifFilter:
+            print(f'Figure Iteration: '
+                  f'{magenta}{self.saveFigureIteration}{resetColor}\n\n')
+
+        # Define: Title
+        if releasedCounts:
+            title = self.titleWeblogoReleased
+        else:
+            title = self.titleWeblogo
 
         # Set: Figure borders
         figBorders = [0.852, 0.075, 0.112, 0.938]
@@ -2266,7 +2464,7 @@ class NGS:
         motif = logomaker.Logo(self.weblogo.transpose(), ax=ax,
                                color_scheme=self.colorsAA, width=0.95,
                                stack_order=stackOrder)
-        motif.ax.set_title(self.titleWeblogo, fontsize=self.labelSizeTitle, 
+        motif.ax.set_title(title, fontsize=self.labelSizeTitle,
                            fontweight='bold')
         plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
                             left=figBorders[2], right=figBorders[3])
@@ -2332,60 +2530,11 @@ class NGS:
         else:
             plt.show()
 
-        # Inspect dataset
-        duplicate = False
+
         # Save the figure
         if self.saveFigures:
-            # Define: Save location
-            if motifFilter:
-                duplicate = True
-                figLabel = (f'{self.enzymeName} - Weblogo {self.saveFigureIteration} - '
-                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
-            else:
-                figLabel = (f'{self.enzymeName} - Weblogo - '
-                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                if self.findMotif and duplicate:
-                    # Turn off figure autosave
-                    self.saveFigures = False
-                    print(f'{yellow}WARNING{resetColor}: '
-                          f'{yellow}The figure already exists at the path\n'
-                          f'     {saveLocation}\n\n'
-                          f'We will not overwrite the figure{resetColor}\n\n')
-                else:
-                    # Save duplicate figures
-                    if duplicateFigure:
-                        copyNumber = 1
-                        fileFound = True
-                        while fileFound:
-                            # Define: Save location
-                            figLabel = (f'{self.enzymeName} - Weblogo {copyNumber} - '
-                                        f'{self.datasetTag} - MinCounts '
-                                        f'{self.minSubCount}.png')
-                            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-                            if not os.path.exists(saveLocation):
-                                print(f'Saving figure at path:\n'
-                                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                                fig.savefig(saveLocation, dpi=self.figureResolution)
-                                self.saveFigureIteration = copyNumber
-                                fileFound = False
-                            else:
-                                copyNumber += 1
-                    else:
-                        # Dont save the duplicated figure
-                        print(f'{yellow}WARNING{resetColor}: '
-                              f'{yellow}The figure already exists at the path\n'
-                              f'     {saveLocation}\n\n'
-                              f'We will not overwrite the figure{resetColor}\n\n')
-            else:
-                self.findMotif = False
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
+            datasetType = 'Weblogo'
+            self.saveFigure(fig=fig, figType=datasetType)
 
 
 
@@ -2458,11 +2607,7 @@ class NGS:
 
 
         # Plot: Standard deviation
-        self.plotStats(
-            self, countedData=frameESStDev, totalCounts=None,
-            title=f'{self.enzymeName}\nFixed Motif {self.fixedAA[0]}@R'
-                  f'{self.fixedPosition[0]}-R{self.fixedPosition[-1]}\n'
-                  f'Standard Deviation', datasetTag=datasetTag, dataType='StDev')
+        self.plotStats(countedData=frameESStDev, totalCounts=None, dataType='StDev')
 
 
 
@@ -2810,7 +2955,7 @@ class NGS:
                 probInitial = countInitial / totalSubstratesInitial
                 enrichment = np.log2(probFinal/probInitial)
                 enrichedSubs[substrate] = enrichment
-        # sys.exit()
+        # sys.exit(1)
 
         # Sort enrichment dictionary
         enrichedSubs = dict(sorted(enrichedSubs.items(),
@@ -2974,7 +3119,7 @@ class NGS:
                   f'{orange}\n'
                   f'     With: {cyan}esm.pretrained.esm2_t33_650M_UR50D()'
                   f'{resetColor}\n')
-            sys.exit()
+            sys.exit(1)
 
         print(f'Batch Tokens:{greenLightB} {batchTokens.shape}{resetColor}\n'
               f'{greenLight}{batchTokens}{resetColor}\n\n')
@@ -3290,8 +3435,7 @@ class NGS:
 
         # Plot: Enrichment Map Scaled
         self.plotEnrichmentScores(scores=fixedFramePCAESScaledAdjusted,
-                                  dataType='Scaled Enrichment', motifFilter=False,
-                                  duplicateFigure=False, saveTag=datasetTag)
+                                  dataType='Scaled Enrichment')
 
         # Plot: Sequence Motif
         self.plotMotif(data=fixedFramePCAESScaled.copy(), dataType='Scaled Enrichment',
@@ -3403,7 +3547,7 @@ class NGS:
 
 
 
-    def plotCounts(self, countedData, totalCounts, datasetTag):
+    def plotCounts(self, countedData, totalCounts):
         # Remove commas from string values and convert to float
         countedData = countedData.applymap(lambda x:
                                            float(x.replace(',', ''))
@@ -3421,7 +3565,8 @@ class NGS:
             countedData.index = [residue[2] for residue in self.residues]
 
         # Set figure title
-        title = f'\n{self.enzymeName}\n{datasetTag}\nN={totalCounts:,}'
+        title = f'\n\n{self.enzymeName}\nN={totalCounts:,}'
+
 
         # Plot the heatmap with numbers centered inside the squares
         fig, ax = plt.subplots(figsize=self.figSize)
@@ -3498,7 +3643,7 @@ class NGS:
     def plotEntropy(self, entropy):
         print('================================= Plot: Entropy '
               '=================================')
-        if self.applyFilter:
+        if self.filterSubs:
             title = f'\n{self.enzymeName}: {self.datasetTag}'
         else:
             title = f'\n{self.enzymeName}'
@@ -3584,7 +3729,7 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             # Define: Save location
-            if self.applyFilter:
+            if self.filterSubs:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
                             f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
             else:
@@ -3609,7 +3754,7 @@ class NGS:
         if probInitial is None and probFinal is None:
             print(f'{orange}ERROR: both of the inputs for probInitial and '
                   f'probFinal cannot be None.{resetColor}\n')
-            sys.exit()
+            sys.exit(1)
 
         # Initialize parameters
         plotInitial, plotFinal = False, False
@@ -3867,170 +4012,7 @@ class NGS:
 
 
 
-    def plotEnrichmentScores(self, dataType, motifFilter, duplicateFigure):
-        print('============================ Plot: Enrichment Score '
-              '=============================')
-
-        if 'motif' in dataType.lower():
-            scores = self.EMapMotif
-        else:
-            scores = self.EMap
-
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
-              f'{scores}\n\n')
-
-        # Create heatmap
-        cMapCustom = self.createCustomColorMap(colorType='EM')
-
-        # Define the yLabel
-        if self.residueLabelType == 0:
-            scores.index = [residue[0] for residue in self.residues]
-        elif self.residueLabelType == 1:
-            scores.index = [residue[1] for residue in self.residues]
-        elif self.residueLabelType == 2:
-            scores.index = [residue[2] for residue in self.residues]
-
-        # Define color bar limits
-        if np.max(scores) >= np.min(scores):
-            cBarMax = np.max(scores)
-            cBarMin = -1 * cBarMax
-        else:
-            cBarMin = np.min(scores)
-            cBarMax = -1 * cBarMin
-
-
-        # Plot the heatmap with numbers centered inside the squares
-        fig, ax = plt.subplots(figsize=self.figSizeEM)
-        if self.figEMSquares:
-            heatmap = sns.heatmap(scores, annot=False, cmap=cMapCustom, cbar=True,
-                                  linewidths=self.lineThickness - 1, linecolor='black',
-                                  square=self.figEMSquares, center=None,
-                                  vmax=cBarMax, vmin=cBarMin)
-        else:
-            heatmap = sns.heatmap(scores, annot=True, fmt='.3f', cmap=cMapCustom,
-                                  cbar=True, linewidths=self.lineThickness-1,
-                                  linecolor='black', square=self.figEMSquares,
-                                  center=None, vmax=cBarMax, vmin=cBarMin,
-                                  annot_kws={'fontweight': 'bold'})
-        ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
-        ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
-        ax.set_title(self.title, fontsize=self.labelSizeTitle, fontweight='bold')
-        if self.figEMSquares:
-            figBorders = [0.852, 0.075, 0, 0.895]
-        else:
-            figBorders = [0.852, 0.075, 0.117, 1]  # Top, bottom, left, right
-        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
-                            left=figBorders[2], right=figBorders[3])
-
-        # Set the thickness of the figure border
-        for _, spine in ax.spines.items():
-            spine.set_visible(True)
-            spine.set_linewidth(self.lineThickness)
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', rotation=0, length=self.tickLength,
-                       labelsize=self.labelSizeTicks, width=self.lineThickness)
-
-        # Set x-ticks
-        xTicks = np.arange(len(scores.columns)) + 0.5
-        ax.set_xticks(xTicks)
-        ax.set_xticklabels(scores.columns)
-
-        # Set y-ticks
-        yTicks = np.arange(len(scores.index)) + 0.5
-        ax.set_yticks(yTicks)
-        ax.set_yticklabels(scores.index)
-
-        # Set invalid values to grey
-        cmap = plt.cm.get_cmap(cMapCustom)
-        cmap.set_bad(color='lightgrey')
-
-        # Modify the colorbar
-        cbar = heatmap.collections[0].colorbar
-        cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
-                            length=self.tickLength, width=self.lineThickness)
-        cbar.outline.set_linewidth(self.lineThickness)
-        cbar.outline.set_edgecolor('black')
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        if self.setFigureTimer:
-            plt.ion()
-            plt.show()
-            plt.pause(self.figureTimerDuration)
-            plt.close(fig)
-            plt.ioff()
-        else:
-            plt.show()
-
-
-        # Inspect dataset
-        duplicate = False
-        # Save the figure
-        if self.saveFigures:
-            if 'Scaled' in dataType:
-                datasetType = 'EM Scaled'
-            elif 'Enrichment' in dataType:
-                datasetType = 'EM'
-            else:
-                print(f'{orange}ERROR: What do I do with this dataset type -'
-                      f'{cyan} {dataType}{resetColor}\n')
-                sys.exit()
-
-            # Define: Save location
-            if motifFilter:
-                duplicate = True
-                figLabel = (f'{self.enzymeName} - {datasetType} '
-                            f'{self.saveFigureIteration} - {self.datasetTag} - '
-                            f'MinCounts {self.minSubCount}.png')
-            else:
-                figLabel = (f'{self.enzymeName} - {datasetType} - '
-                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                if self.findMotif and duplicate:
-                    # Turn off figure autosave
-                    self.saveFigures = False
-                    print(f'{yellow}WARNING{resetColor}: '
-                          f'{yellow}The figure already exists at the path\n'
-                          f'     {saveLocation}\n\n'
-                          f'We will not overwrite the figure{resetColor}\n\n')
-                else:
-                    # Save duplicate figures
-                    if duplicateFigure:
-                        copyNumber = 1
-                        fileFound = True
-                        while fileFound:
-                            # Define: Save location
-                            figLabel = (f'{self.enzymeName} - {datasetType} '
-                                        f'{copyNumber} - {saveTag} - '
-                                        f'MinCounts {self.minSubCount}.png')
-                            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-                            if not os.path.exists(saveLocation):
-                                print(f'Saving figure at path:\n'
-                                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                                fig.savefig(saveLocation, dpi=self.figureResolution)
-                                self.saveFigureIteration = copyNumber
-                                fileFound = False
-                            else:
-                                copyNumber += 1
-                    else:
-                        # Dont save the duplicated figure
-                        print(f'{yellow}WARNING{resetColor}: '
-                              f'{yellow}The figure already exists at the path\n'
-                              f'     {saveLocation}\n\n'
-                              f'We will not overwrite the figure{resetColor}\n\n')
-            else:
-                self.findMotif = False
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
-
-
-
-    def plotStats(self, countedData, totalCounts, datasetTag, dataType):
+    def plotStats(self, countedData, totalCounts, dataType):
         print('========================= Plot: Statistical Evaluation '
               '==========================')
         # Set figure title
@@ -4102,7 +4084,7 @@ class NGS:
             except ValueError:
                 print(f'{orange}ERROR: Unable to plot the{cyan} {dataType}{orange} '
                       f'label{cyan} {label}\n')
-                sys.exit()
+                sys.exit(1)
         cbar.set_ticks(cbarLabels) # Set the positions of the ticks
         cbar.set_ticklabels(cbarLabels)
         cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
@@ -4122,20 +4104,7 @@ class NGS:
 
         # Save the figure
         if self.saveFigures:
-            # Define: Save location
-            figLabel = (f'EM - {self.enzymeName} - {dataType} - {datasetTag} - '
-                        f'MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                print(f'{yellow}The figure was not saved\n\n'
-                      f'File was already found at path:\n'
-                      f'     {saveLocation}{resetColor}\n\n')
-            else:
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
+            self.saveFigure(fig=fig, figType=dataType)
 
 
 
@@ -4240,7 +4209,7 @@ class NGS:
               f'{resetColor}\n'
               f'   End Index:{greenLightB} {frameIndicies[-1]}{resetColor}\n\n')
         frameLength = len(substrateFrame)
-        sys.exit()
+        sys.exit(1)
 
 
         # Bin substrates
