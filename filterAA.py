@@ -132,8 +132,8 @@ fixedSubSeq = ngs.getDatasetTag()
 countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
 
 # Calculate: RF
-initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
-                            fileType='Initial Sort')
+probInitial = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
+                                         fileType='Initial Sort')
 
 loadFilteredSubs = False
 filePathFixedCountsFinal, filePathFixedSubsFinal = None, None
@@ -198,24 +198,18 @@ if inFixResidues:
 ngs.saveData(substrates=substratesFinal, counts=countsFinal)
 
 
-
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalTotal)
 
-# Calculate: Average initial RF
-initialRFAvg = np.sum(initialRF, axis=1) / len(initialRF.columns)
-initialRFAvg = pd.DataFrame(initialRFAvg, index=initialRFAvg.index,
-                            columns=['Average RF'])
-
 # Calculate: RF
-finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal, fileType='Final Sort')
-
+probFinal = ngs.calculateProbabilities(counts=countsFinal, N=countsFinalTotal,
+                                       fileType='Final Sort')
 
 # Calculate: Positional entropy
-entropy = ngs.calculateEntropy(probability=finalRF)
+entropy = ngs.calculateEntropy(probability=probFinal)
 
 # Calculate: Enrichment scores
-enrichmentScores = ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalRF)
+enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinal)
 
 if inPlotWordCloud or inPlotPCA:
     # Extract motif
@@ -384,8 +378,8 @@ if inEvaluateSubstrateEnrichment:
 
 
 if inPlotAADistribution:
-    # Plot: AA probabilities in initial & final sorts
-    ngs.plotLibraryProbDist(probInitial=initialRF, probFinal=finalRF,
+    # Plot: AA probabilities in initial and final sorts
+    ngs.plotLibraryProbDist(probInitial=probInitial, probFinal=probFinal,
                             codonType=inCodonSequence, datasetTag=fixedSubSeq)
 
     # Evaluate: Degenerate codon probabilities
@@ -399,9 +393,9 @@ if inPlotCountsAA:
     ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal)
 
 if inPlotPositionalProbDist:
-    ngs.plotPositionalProbDist(probability=finalRF, entropyScores=entropy,
+    ngs.plotPositionalProbDist(probability=probFinal, entropyScores=entropy,
                                sortType='Final Sort', datasetTag=fixedSubSeq)
 
 if inPlotPosProb:
-    ngs.compairRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)
-    ngs.boxPlotRF(probInitial=initialRF, probFinal=finalRF, selectAA=inCompairAA)
+    ngs.compairRF(probInitial=probInitial, probFinal=probFinal, selectAA=inCompairAA)
+    ngs.boxPlotRF(probInitial=probInitial, probFinal=probFinal, selectAA=inCompairAA)

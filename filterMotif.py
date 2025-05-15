@@ -395,11 +395,11 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
 
     # Calculate RF
-    finalFixedRF = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
+    probFinalFixed = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
                                    fileType=sortType)
 
     # Calculate: Entropy
-    entropy = ngs.calculateEntropy(probability=finalFixedRF)
+    entropy = ngs.calculateEntropy(probability=probFinalFixed)
 
     # Determine substrate frame
     if inManualEntropy:
@@ -411,7 +411,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                                      fixFullFrame=inFixFullMotifSeq)
 
     # Calculate enrichment scores
-    ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalFixedRF)
+    ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
     # Save the data
     ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
@@ -488,11 +488,11 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
 
         # Calculate: RF
-        finalFixedRF = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
+        probFinalFixed = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
                                        fileType=f'Fixed Final Sort')
 
         # Calculate enrichment scores
-        ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalFixedRF)
+        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
         # Save the data
         ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
@@ -558,11 +558,11 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
 
         # Calculate: RF
-        finalFixedRF = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
+        probFinalFixed = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
                                        fileType='Fixed Final Sort')
 
         # Calculate enrichment scores
-        ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalFixedRF)
+        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
         # Save the data
         ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
@@ -605,11 +605,11 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
 
         # Calculate: RF
-        finalFixedRF = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
+        probFinalFixed = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
                                        fileType='Fixed Final Sort')
 
         # Calculate enrichment scores
-        ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalFixedRF)
+        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
         # Save the data
         ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
@@ -641,7 +641,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
 
     # Calculate enrichment scores
-    ngs.calculateEnrichment(probInitial=initialRF, probFinal=releasedRF,
+    ngs.calculateEnrichment(probInitial=probInitial, probFinal=releasedRF,
                             releasedCounts=True)
     
     # Extract motif
@@ -671,7 +671,7 @@ inDatasetTag = f'Motif {fixedSubSeq}'
 inFigureTitle = f'{inEnzymeName}: {inDatasetTag}'
 
 # Calculate RF
-initialRF = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+probInitial = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
                             fileType='Initial Sort')
 
 # Define: File paths
@@ -714,27 +714,22 @@ if (os.path.exists(filePathFixedMotifSubs) and
             break
     print('\n')
 
-    if dontPlot:
-        ngs.saveFigures = False
-
     # Display current sample size
     ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
 
     # Calculate: RF
-    finalFixedRF = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
-                                   fileType='Fixed Final Sort')
-
-    entropy = ngs.calculateEntropy(probability=finalFixedRF)
+    probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
+                                                N=countsFinalFixedTotal,
+                                                fileType='Fixed Final Sort')
+    # Calculate: Positional entropy
+    entropy = ngs.calculateEntropy(probability=probFinalFixed)
 
     # Calculate enrichment scores
-    ngs.calculateEnrichment(probInitial=initialRF, probFinal=finalFixedRF)
+    ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
     # Extract motif
     ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS, fixFullFrame=True)
     finalSubsMotif = ngs.getMotif(substrates=substratesFinalFixed)
-
-    if dontPlot:
-        ngs.saveFigures = True
 
     # Plot: Work cloud
     if inPlotWordCloud:

@@ -223,11 +223,6 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=inSubstrateLength,
 
 
 
-# ====================================== Load Data =======================================
-
-
-
-
 # =================================== Define Functions ===================================
 def pressKey(event):
     if event.key == 'escape':
@@ -277,7 +272,7 @@ def loadFixedMotifSubs():
             # Cluster substrates
             subPopulations = ngs.plotPCA(
                 substrates=loadedSubs, data=tokensESM, indices=subsESM,
-                numberOfPCs=inNumberOfPCs, fixedTag=ngs.labelCombinedMotifs, N=subCountsESM,
+                numberOfPCs=inNumberOfPCs, N=subCountsESM,
                 fixedSubs=True, saveTag=ngs.labelCombinedMotifs)
 
             # Plot: Substrate clusters
@@ -639,176 +634,6 @@ def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotdataPCA
     fig.canvas.mpl_connect('key_press_event', pressKey)
     fig.tight_layout()
     plt.show()
-
-
-
-def plotMotif(data, initialN, finalN, xLabels, figBorders, bigLettersOnTop, 
-              plotReleasedCounts, addLines, dataType):
-    # Set local parameters
-    try:
-        if bigLettersOnTop:
-            stackOrder = 'big_on_top'
-        else:
-            stackOrder = 'small_on_top'
-        colors = {
-            'A': inLetterColors[0],
-            'R': inLetterColors[2],
-            'N': inLetterColors[4],
-            'D': inLetterColors[1],
-            'C': inLetterColors[6],
-            'E': inLetterColors[1],
-            'Q': inLetterColors[4],
-            'G': inLetterColors[0],
-            'H': inLetterColors[2],
-            'I': inLetterColors[0],
-            'L': inLetterColors[0],
-            'K': inLetterColors[2],
-            'M': inLetterColors[6],
-            'F': inLetterColors[5],
-            'P': inLetterColors[0],
-            'S': inLetterColors[3],
-            'T': inLetterColors[3],
-            'W': inLetterColors[5],
-            'Y': inLetterColors[5],
-            'V': inLetterColors[0]
-        }
-
-        # Redefine column header
-        data.columns = range(len(data.columns))
-
-        # Define Bounds: y-axis
-        yMax = []
-        yMin = []
-        for column in data.columns:
-            sumPositive = 0
-            sumNegative = 0
-            for index in data.index:
-                value = data.loc[index, column]
-                if value > 0:
-                    sumPositive += value
-                if value < 0:
-                    sumNegative += value
-            yMax.append(sumPositive)
-            yMin.append(sumNegative)
-        # print(f'yMax: {yMax}\n'
-        #       f'yMin: {yMin}\n')
-        yMax = max(yMax)
-        yMin = min(yMin)
-        index = 0
-        # yMin = [-10, -10]
-        # yMin = yMin[1]
-        # index = 1
-
-        # Plot the sequence motif
-        fig, ax = plt.subplots(figsize=inFigureSize)
-        motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=colors,
-                               width=0.95, stack_order=stackOrder)
-        if 'Scaled' in dataType:
-            lefts = [0.131, 0.119]
-            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], 
-                                left=lefts[index], right=figBorders[3])
-        elif 'Enrichment' in dataType:
-            lefts = [0.117, 0.117]
-            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], 
-                                left=lefts[index], right=figBorders[3])
-        else:
-            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1], 
-                                left=figBorders[2], right=figBorders[3])
-
-        # Set figure title
-        if inShowSampleSize:
-            if plotReleasedCounts:
-                maxSubCount = max(finalN)
-                minSubCount = min(finalN)
-
-                if 'Enrichment' in dataType:
-                    motif.ax.set_title(f'{inEnzymeName}\n'
-                                       f'N Initial = {initialN:,}\n'
-                                       f'N Final = {maxSubCount:,}-{minSubCount:,}',
-                                       fontsize=inFigureTitleSize, fontweight='bold')
-                else:
-                    motif.ax.set_title(f'{inEnzymeName}\n'
-                                       f'N = {maxSubCount:,}-{minSubCount:,}',
-                                       fontsize=inFigureTitleSize, fontweight='bold')
-            else:
-                if 'Enrichment' in dataType:
-                    motif.ax.set_title(f'{inTitleEnrichmentMap}\n'
-                                       f'N Initial = {initialN:,}\n'
-                                       f'N Final = {finalN:,}',
-                                       fontsize=inFigureTitleSize, fontweight='bold')
-                else:
-                    motif.ax.set_title(f'{inTitleEnrichmentMap}\n'
-                                       f'N = {finalN:,}',
-                                       fontsize=inFigureTitleSize, fontweight='bold')
-        else:
-            motif.ax.set_title(inTitleEnrichmentMap, fontsize=inFigureTitleSize,
-                               fontweight='bold')
-
-        # Set borders
-        motif.style_spines(visible=False)
-        motif.style_spines(spines=['left', 'bottom'], visible=True)
-        for spine in motif.ax.spines.values():
-            spine.set_linewidth(inLineThickness)
-
-        # Set xticks
-        motif.ax.set_xticks([pos for pos in range(len(xLabels))])
-        motif.ax.set_xticklabels(xLabels, fontsize=inFigureTickSize,
-                                 rotation=0, ha='center')
-        for tick in motif.ax.xaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(inLineThickness)  # Set tick width
-
-        # Set yticks
-        if 'Enrichment' in dataType:
-            yTicks = [yMin, 0, yMax]
-            yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}' 
-                           for tick in yTicks]
-            yLimitUpper = yMax
-            yLimitLower = yMin
-        else:
-            yTicks = range(0, 5)
-            yTickLabels = [f'{tick:.0f}' if tick != 0 else f'{int(tick)}' 
-                           for tick in yTicks]
-            yLimitUpper = 4.32
-            yLimitLower = 0
-        motif.ax.set_yticks(yTicks)
-        motif.ax.set_yticklabels(yTickLabels, fontsize=inFigureTickSize)
-        motif.ax.set_ylim(0, yLimitUpper)
-        for tick in motif.ax.yaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(inLineThickness) # Set tick width
-
-        # Label the axes
-        motif.ax.set_xlabel('Position', fontsize=inFigureLabelSize)
-        if dataType == 'Weblogo':
-            motif.ax.set_ylabel('Bits', fontsize=inFigureLabelSize)
-        else:
-            motif.ax.set_ylabel(dataType, fontsize=inFigureLabelSize)
-
-        # Set horizontal line
-        motif.ax.axhline(y=0, color='black', linestyle='-', linewidth=inLineThickness)
-        if 'Enrichment' not in dataType and addLines:
-            for tick in yTicks:
-                motif.ax.axhline(y=tick, color='black', linestyle='--',
-                                 linewidth=inLineThickness)
-
-        # Evaluate dataset for fixed residues
-        spacer = np.diff(motif.ax.get_xticks())  # Find the space between each tick
-        spacer = spacer[0] / 2
-
-        # Use the spacer to set a grey background to fixed residues
-        fixedPosition = []  # Ensure this is defined properly
-        for index, position in enumerate(xLabels):
-            if position in fixedPosition:
-                # Plot grey boxes on each side of the xtick
-                motif.ax.axvspan(index - spacer, index + spacer,
-                                 facecolor='darkgrey', alpha=0.2)
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        plt.show()
-
-    except Exception as error:
-        print(f'{orange}ERROR{resetColor}:{orange}plotMotif()\n'
-              f'     {error}{resetColor}\n\n')
-        sys.exit()
 
 
 
@@ -1354,9 +1179,9 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
 
 
     # Calculate: Enrichment scores
-    fixedMotifPopES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
+    fixedMotifPopES = ngs.calculateEnrichment(initialSortRF=probInitialAvg,
                                               finalSortRF=finalRF)
-    fixedMotifPopESAdjusted = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
+    fixedMotifPopESAdjusted = ngs.calculateEnrichment(initialSortRF=probInitialAvg,
                                                       finalSortRF=finalRFAdjusted)
 
     # Calculate: Enrichment scores scaled
@@ -1433,14 +1258,36 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
 
 
 
+# ====================================== Load Data =======================================
+# Load: Counts
+countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
+
+# Calculate: RF
+probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
+                                            fileType='Initial Sort', calcAvg=True)
+
+
+
+
 # ===================================== Run The Code =====================================
 # Get dataset tag
-ngs.getDatasetTag()
+ngs.getDatasetTag(combinedMotif=True)
 
-# Combine Motifs
-ngs.combineMotifs(motifFrame=inMotifPositions, motifIndex=inFramePositions)
+# Load: Motif counts
+countsRelCombined = ngs.combineMotifCounts(
+    motifFrame=inMotifPositions, motifIndex=inFramePositions)
 
+# Calculate: RF
+probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
 
+# Calculate: Positional entropy
+entropy = ngs.calculateEntropy(probability=probCombinedMotif)
+
+# Calculate enrichment scores
+ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
+                        releasedCounts=True)
+
+sys.exit()
 
 # Set flag
 subsPredict = None
@@ -1455,12 +1302,14 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
     fixedMotifCounts, fixedMotifCountsTotal = ngs.loadFixedMotifCounts(
         motifFrame=inMotifPositions, motifIndex=inFramePositions, sortType='Final Sort')
 
-    print(f'Data:\n{fixedMotifCountsTotal}')
+    fixedMotifProb = ngs.calculateProbMotif(countsTotal=fixedMotifCountsTotal)
+
+    print(f'Data:\n{fixedMotifCountsTotal}\n\n'
+          f'Prob:\n{fixedMotifProb}\n\n')
     sys.exit()
 
     # Calculate: Probability & Entropy
-    fixedMotifProb = ngs.calculateProbMotif(countsTotal=fixedMotifCountsTotal,
-                                            datasetTag=ngs.labelCombinedMotifs)
+    fixedMotifProb = ngs.calculateProbMotif(countsTotal=fixedMotifCountsTotal)
     entropy = ngs.calculateEntropy(probability=fixedMotifProb)
 
     # Calculate: Enrichment Scores
@@ -1468,7 +1317,7 @@ if (inPredictSubstrateActivity or inPlotEnrichmentMap
             or inPlotLogo or inPlotMotifBarGraphs
             or inPlotBinnedSubstratePrediction):
         fixedSubSeq = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
-        fixedMotifES = ngs.calculateEnrichment(initialSortRF=initialRFAvg,
+        fixedMotifES = ngs.calculateEnrichment(initialSortRF=probInitialAvg,
                                                finalSortRF=fixedMotifProb,
                                                printES=inPrintES)
         fixedMotifESScaled = pd.DataFrame(0.0, index=fixedMotifES.index,
@@ -1507,7 +1356,7 @@ if inPlotEnrichmentMap:
     # Calculate: Stats
     if len(inFixedPosition) != 1:
         ngs.fixedMotifStats(countsList=fixedMotifCounts,
-                            initialProb=initialRFAvg,
+                            initialProb=probInitialAvg,
                             substrateFrame=inMotifPositions,
                             datasetTag=ngs.labelCombinedMotifs)
 

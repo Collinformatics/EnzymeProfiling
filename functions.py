@@ -178,7 +178,6 @@ class NGS:
         self.plotFigWords = plotFigWords
         self.datasetTag = None
         self.datasetTagMotif = ''
-        self.labelCombinedMotifs = ''
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsMotif = None
         self.title = ''
@@ -1003,22 +1002,28 @@ class NGS:
 
 
 
-    def getFilePath(self, datasetTag, motifPath=False):
+    def getFilePath(self, datasetTag, motifPath=False, customTag=None):
         # Define: File path
         if motifPath:
-            pathSubs = os.path.join(
-                self.pathSaveData,
-                f'fixedMotifSubs - {self.enzymeName} - {self.motifTag} - '
-                f'FinalSort - MinCounts {self.minSubCount}')
-            pathCounts = os.path.join(
-                self.pathSaveData,
-                f'fixedMotifCounts - {self.enzymeName} - {self.motifTag} - '
-                f'FinalSort - MinCounts {self.minSubCount}')
-            pathCountsReleased = os.path.join(
-                self.pathSaveData,
-                f'fixedMotifCountsRel - {self.enzymeName} - {self.motifTag} - '
-                f'FinalSort - MinCounts {self.minSubCount}')
-            paths = [pathSubs, pathCounts, pathCountsReleased]
+            if customTag is None:
+                pathSubs = os.path.join(
+                    self.pathSaveData,
+                    f'fixedMotifSubs - {self.enzymeName} - {self.motifTag} - '
+                    f'FinalSort - MinCounts {self.minSubCount}')
+                pathCounts = os.path.join(
+                    self.pathSaveData,
+                    f'fixedMotifCounts - {self.enzymeName} - {self.motifTag} - '
+                    f'FinalSort - MinCounts {self.minSubCount}')
+                pathCountsReleased = os.path.join(
+                    self.pathSaveData,
+                    f'fixedMotifCountsRel - {self.enzymeName} - {self.motifTag} - '
+                    f'FinalSort - MinCounts {self.minSubCount}')
+                paths = [pathSubs, pathCounts, pathCountsReleased]
+            else:
+                paths = os.path.join(
+                    self.pathSaveData,
+                    f'fixedMotifCountsRel - {self.enzymeName} - {customTag} - '
+                    f'FinalSort - MinCounts {self.minSubCount}')
         else:
             pathSubs = os.path.join(
                 self.pathSaveData,
@@ -1273,34 +1278,15 @@ class NGS:
 
 
 
-    def combineMotifs(self, motifFrame, motifIndex):
+    def combineMotifCounts(self, motifFrame, motifIndex, returnList=False):
         print('================================ Combine Motifs '
               '=================================')
-        print('Combine released count matrices ')
-        self.getCombinedMotifLabel()
-        print(f'Datasets: {purple}{self.labelCombinedMotifs}{resetColor}\n'
-              f'Motif Labels: {blue}{" ".join(motifFrame)}{resetColor}\n'
-              f'Motif Index: {blue}{motifIndex}{resetColor}\n\n')
+        initialMotifFrame = self.xAxisLabels[motifIndex[0]:motifIndex[1]]
+        print('Combine Matrices: Released counts')
+        print(f'Datasets: {purple}{self.datasetTag}{resetColor}\n'
+              f'Motif Label: {blue}{", ".join(motifFrame)}{resetColor}\n'
+              f'Motif Frame: {blue}{", ".join(initialMotifFrame)}{resetColor}\n\n')
 
-        # Load: Counts
-        motifCounts, motifCountsTotal = self.loadFixedMotifCounts(
-            motifFrame=motifFrame, motifIndex=motifIndex,
-            sortType='Final Sort')
-
-        print(f'Combined Counts:\n{motifCountsTotal}\n'
-              f'{motifCounts}\n\n')
-
-
-
-        sys.exit()
-
-
-
-    def loadFixedMotifCounts(self, motifFrame, motifIndex, sortType):
-        print('=========================== Load: Fixed Motif Counts '
-              '============================')
-        print(f'Loading counts: {purple}{self.enzymeName} - '
-              f'{self.labelCombinedMotifs}{resetColor}\n')
         frameLength = len(motifFrame)
         countsFixedFrameAll = []
         totalCountsFixedFrame = None
@@ -1308,16 +1294,18 @@ class NGS:
         # Load the counts
         for index, position in enumerate(self.fixedPos):
             # Define: File paths
-            tagFixedAA = f'{self.fixedAA[0]}@R{position}'
+            motifTag = f'{self.fixedAA[0]}@R{position}'
 
             # Define: File paths
-            (filePathFixedMotifSubs, filePathFixedMotifCounts,
-             filePathFixedMotifReleasedCounts) = self.getFilePath(
-                datasetTag=self.datasetTagMotif, motifPath=True)
+            filePathFixedMotifReleasedCounts = self.getFilePath(
+                datasetTag=self.datasetTagMotif, motifPath=True, customTag=motifTag)
 
 
             # Look for the file
             if os.path.exists(filePathFixedMotifReleasedCounts):
+                print(f'Loading: {greenLightB}Released Counts\n{greenDark}'
+                      f'     {filePathFixedMotifReleasedCounts}{resetColor}\n')
+
                 # Load file
                 countsLoaded = pd.read_csv(filePathFixedMotifReleasedCounts, index_col=0)
 
@@ -1342,9 +1330,8 @@ class NGS:
                 formattedCounts = countsFixedFrame.to_string(
                     formatters={column: '{:,.0f}'.format for column in
                                 countsFixedFrame.select_dtypes(include='number').columns})
-                print(f'Selecting Positions: {purple}Fixed Motif {tagFixedAA}\n'
-                      f'     {blue}{fixedFramePos}{resetColor}\n'
-                      f'Counts:\n'
+                print(f'Selecting Positions: {purple}Fixed Motif {motifTag}{resetColor}\n'
+                      f'Counts: {blue}{fixedFramePos}{resetColor}\n'
                       f'{formattedCounts}\n\n')
 
                 # Track totals
@@ -1368,17 +1355,20 @@ class NGS:
                         totalCountsFixedFrame.select_dtypes(include='number').columns})
 
         # Print the data
-        print(f'{greenLight}Combined Counts{resetColor}: {purple}{self.enzymeName} - '
-              f'{self.labelCombinedMotifs}{resetColor}\n{formattedCounts}\n')
+        print(f'{pink}Combined Counts{resetColor}: {purple}{self.enzymeName} - '
+              f'{self.datasetTag}{resetColor}\n{formattedCounts}\n')
         print('Total Counts:')
         for index, position in enumerate(motifFrame):
             print(f'     {position}: {red}{fixedFrameColumnSums[index]:,}{resetColor}')
         print('\n')
 
-        # Convert a list into 3D array
-        countsFixedFrameAll = np.stack(countsFixedFrameAll, axis=0)
+        if returnList:
+            # Convert a list into 3D array
+            countsFixedFrameAll = np.stack(countsFixedFrameAll, axis=0)
 
-        return countsFixedFrameAll, totalCountsFixedFrame
+            return countsFixedFrameAll, totalCountsFixedFrame
+        else:
+            return totalCountsFixedFrame
 
 
 
@@ -1500,88 +1490,107 @@ class NGS:
             self.titleWords = f'{self.enzymeName}\nUnfiltered'
 
 
-    def calculateProbMotif(self, countsTotal, datasetTag):
+
+    def calculateProbabilitiesCM(self, countsCombinedMotifs):
         print('====================== Calculate: Fixed Motif Probability '
               '=======================')
         # Sum each column
-        columnSums = np.sum(countsTotal, axis=0)
-        columnSums = pd.DataFrame(columnSums, index=countsTotal.columns, columns=['Sum'])
+        columnSums = np.sum(countsCombinedMotifs, axis=0)
+        columnSums = pd.DataFrame(columnSums, index=countsCombinedMotifs.columns,
+                                  columns=['Sum'])
 
-        prob = pd.DataFrame(0.0, index=countsTotal.index,
-                            columns=countsTotal.columns)
+        prob = pd.DataFrame(0.0, index=countsCombinedMotifs.index,
+                            columns=countsCombinedMotifs.columns)
 
         # Calculate: Residue Probability
-        for position in countsTotal.columns:
-            prob.loc[:, position] = (countsTotal.loc[:, position] /
+        for position in countsCombinedMotifs.columns:
+            prob.loc[:, position] = (countsCombinedMotifs.loc[:, position] /
                                    columnSums.loc[position, 'Sum'])
         pd.set_option('display.float_format', '{:,.5f}'.format)
-        print(f'Relative Frequency: {purple}{datasetTag}\n'
+        print(f'Dataset: {purple}{self.datasetTag}\n'
               f'{green}{prob}{resetColor}\n\n')
         pd.set_option('display.float_format', '{:,.3f}'.format)
-
-        print(f'\n{red}EXIT HEERE\n\n')
-        sys.exit(1)
 
         return prob
 
 
 
-    def getDatasetTag(self):
-        if self.filterSubs:
-            fixResidueList = []
-            if self.excludeAAs:
-                # Exclude residues
-                for index, removedAA in enumerate(self.excludeAA):
-                    if index == 0:
-                        fixResidueList.append(
-                            f'Excl-{removedAA}@R{self.excludePosition[index]}'.replace(
-                                ' ', ''))
+    def getDatasetTag(self, combinedMotif=False):
+        if combinedMotif:
+            if len(self.fixedPos) == 1:
+                self.datasetTag = f'Motif {self.fixedAA[0]}@R{self.fixedPos[0]}'
+            else:
+                fixedPos = sorted(self.fixedPos)
+                continuous = True
+                for index in range(len(fixedPos) - 1):
+                    pos1, pos2 = fixedPos[index], fixedPos[index + 1]
+                    if pos1 == pos2 - 1 or pos1 == pos2 + 1:
+                        continue
                     else:
-                        fixResidueList.append(
-                            f'{removedAA}@R{self.excludePosition[index]}'.replace(
-                                ' ', ''))
-
-                # Fix residues
-                for index in range(len(self.fixedAA)):
-                    if index == 0:
-                        fixResidueList.append(
-                            f'Fixed-{self.fixedAA[index]}@R'
-                            f'{self.fixedPos[index]}'.replace(' ', ''))
-                    else:
+                        continuous = False
+                        break
+                if continuous:
+                    self.datasetTag = (f'Motif {self.fixedAA[0]}@R{fixedPos[0]}-'
+                                  f'R{fixedPos[-1]}')
+                else:
+                    self.datasetTag = (f'Motif {self.fixedAA[0]}@R{fixedPos[0]}-'
+                                  f'R{fixedPos[1]}, R{fixedPos[-1]}')
+        else:
+            if self.filterSubs:
+                fixResidueList = []
+                if self.excludeAAs:
+                    # Exclude residues
+                    for index, removedAA in enumerate(self.excludeAA):
+                        if index == 0:
+                            fixResidueList.append(
+                                f'Excl-{removedAA}@R{self.excludePosition[index]}'.replace(
+                                    ' ', ''))
+                        else:
+                            fixResidueList.append(
+                                f'{removedAA}@R{self.excludePosition[index]}'.replace(
+                                    ' ', ''))
+    
+                    # Fix residues
+                    for index in range(len(self.fixedAA)):
+                        if index == 0:
+                            fixResidueList.append(
+                                f'Fixed-{self.fixedAA[index]}@R'
+                                f'{self.fixedPos[index]}'.replace(' ', ''))
+                        else:
+                            fixResidueList.append(
+                                f'{self.fixedAA[index]}@R'
+                                f'{self.fixedPos[index]}'.replace(' ', ''))
+    
+                    self.datasetTag = '_'.join(fixResidueList)
+                    self.datasetTag = self.datasetTag.replace("_Fixed",
+                                                                ' Fixed')
+                else:
+                    # Fix residues
+                    for index in range(len(self.fixedAA)):
                         fixResidueList.append(
                             f'{self.fixedAA[index]}@R'
                             f'{self.fixedPos[index]}'.replace(' ', ''))
-
-                self.datasetTag = '_'.join(fixResidueList)
-                self.datasetTag = self.datasetTag.replace("_Fixed",
-                                                            ' Fixed')
+    
+                    self.datasetTag = '_'.join(fixResidueList)
+    
+                # Condense the string
+                if "'" in self.datasetTag:
+                    self.datasetTag = self.datasetTag.replace("'", '')
+    
+                # Clean up fixed sequence tag
+                if self.substrateLength == 9:
+                    removeTag = 'Excl-Y@R1_Y@R2_Y@R3_Y@R4_Y@R6_Y@R7_Y@R8_Y@R9'
+                    if removeTag in self.datasetTag:
+                        # This should be reserved for simplifying dataset tags
+                        self.datasetTag = self.datasetTag.replace(removeTag, '')
+                        self.datasetTag = f'Excl-Y{self.datasetTag}'
             else:
-                # Fix residues
-                for index in range(len(self.fixedAA)):
-                    fixResidueList.append(
-                        f'{self.fixedAA[index]}@R'
-                        f'{self.fixedPos[index]}'.replace(' ', ''))
-
-                self.datasetTag = '_'.join(fixResidueList)
-
-            # Condense the string
-            if "'" in self.datasetTag:
-                self.datasetTag = self.datasetTag.replace("'", '')
-
-            # Clean up fixed sequence tag
-            if self.substrateLength == 9:
-                removeTag = 'Excl-Y@R1_Y@R2_Y@R3_Y@R4_Y@R6_Y@R7_Y@R8_Y@R9'
-                if removeTag in self.datasetTag:
-                    # This should be reserved for simplifying dataset tags
-                    self.datasetTag = self.datasetTag.replace(removeTag, '')
-                    self.datasetTag = f'Excl-Y{self.datasetTag}'
-        else:
-            self.datasetTag = 'Unfiltered'
-
-        # Define: Motif tag
-        if self.motifInit:
-            self.motifTag = self.datasetTag
-
+                self.datasetTag = 'Unfiltered'
+    
+            # Define: Motif tag
+            if self.motifInit:
+                self.motifTag = self.datasetTag
+                
         return self.datasetTag
 
 
@@ -1848,28 +1857,6 @@ class NGS:
 
         return motifs
 
-    def getCombinedMotifLabel(self):
-        # Dataset label
-        if len(self.fixedPos) == 1:
-            datasetTag = f'Motif {self.fixedAA[0]}@R{self.fixedPos[0]}'
-        else:
-            fixedPos = sorted(self.fixedPos)
-            continuous = True
-            for index in range(len(fixedPos) - 1):
-                pos1, pos2 = fixedPos[index], fixedPos[index + 1]
-                if pos1 == pos2 - 1 or pos1 == pos2 + 1:
-                    continue
-                else:
-                    continuous = False
-                    break
-            if continuous:
-                datasetTag = (f'Motif {self.fixedAA[0]}@R{fixedPos[0]}-'
-                              f'R{fixedPos[-1]}')
-            else:
-                datasetTag = (f'Motif {self.fixedAA[0]}@R{fixedPos[0]}-'
-                              f'R{fixedPos[1]}, R{fixedPos[-1]}')
-        self.labelCombinedMotifs = datasetTag
-
 
 
     def calculateProbCodon(self, codonSeq):
@@ -1941,7 +1928,7 @@ class NGS:
 
 
 
-    def calculateRF(self, counts, N, fileType):
+    def calculateProbabilities(self, counts, N, fileType, calcAvg=False):
         print('======================== Calculate: Residue Probability '
               '=========================')
         if self.filterSubs and 'initial' not in fileType.lower():
@@ -1953,6 +1940,11 @@ class NGS:
         # Calculate: Probability
         prob = counts / N
         print(f'{np.round(prob, 4)}\n\n')
+
+        if calcAvg:
+            probAvg = np.sum(prob, axis=1) / len(prob.columns)
+            prob = pd.DataFrame(probAvg, index=probAvg.index, columns=['Average RF'])
+            print(f'{np.round(prob, 4)}\n\n')
 
         return prob
 
@@ -3452,9 +3444,9 @@ class NGS:
                   f'{red}{countsFinalAdjusted}{resetColor}\n\n')
 
         # Calculate: RF
-        finalRF = self.calculateRF(counts=countsFinal, N=countsTotalFinal,
+        probFinal = self.calculateAAProb(counts=countsFinal, N=countsTotalFinal,
                                   fileType='Final Sort')
-        finalRFAdjusted = self.calculateRF(counts=countsFinalAdjusted, N=countsTotalFinal,
+        probFinalAdjusted = self.calculateAAProb(counts=countsFinalAdjusted, N=countsTotalFinal,
                                           fileType='Final Sort')
 
         if inPlotEntropyPCAPopulations:
@@ -3462,10 +3454,10 @@ class NGS:
             self.plotEntropy(entropy=self.entropy)
 
         # Calculate: Enrichment scores
-        fixedFramePopES = self.enrichmentMatrix(initialSortRF=initialRFAvg,
-                                                  finalSortRF=finalRF)
-        fixedFramePopESAdjusted = self.enrichmentMatrix(initialSortRF=initialRFAvg,
-                                                          finalSortRF=finalRFAdjusted)
+        fixedFramePopES = self.enrichmentMatrix(initialSortRF=probInitialAvg,
+                                                  finalSortRF=probFinal)
+        fixedFramePopESAdjusted = self.enrichmentMatrix(initialSortRF=probInitialAvg,
+                                                          finalSortRF=probFinalAdjusted)
 
         # Calculate: Enrichment scores scaled
         fixedFramePCAESScaled = pd.DataFrame(0.0, index=fixedFramePopES.index,
