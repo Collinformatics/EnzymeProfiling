@@ -40,12 +40,12 @@ inShowSampleSize = True
 # Input 3: Making Figures
 inPlotEntropy = True
 inPlotEnrichmentMap = True
-inPlotEnrichmentMapScaled = True
-inPlotLogo = True
-inPlotWeblogo = True
-inPlotWordCloud = True
-inPlotUnscaledScatter = True
-inPlotScaledScatter = True
+inPlotEnrichmentMapScaled = False
+inPlotLogo = False
+inPlotWeblogo = False
+inPlotWordCloud = False
+inPlotUnscaledScatter = False
+inPlotScaledScatter = False
 
 # Input 4: Processing The Data
 inPrintNumber = 10
@@ -471,7 +471,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
         # Update NGS attributes
         ngs.fixedAA = preferredResidues
-        ngs.fixedPosition = preferredPositions
+        ngs.fixedPos = preferredPositions
 
         # Update: Dataset tag
         ngs.getDatasetTag()
@@ -536,7 +536,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
         # Update NGS attributes
         ngs.fixedAA = keepResidues
-        ngs.fixedPosition = keepPositions
+        ngs.fixedPos = keepPositions
 
 
         # # Fix Substrates with released position

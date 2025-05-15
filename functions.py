@@ -1246,6 +1246,8 @@ class NGS:
 
             return substratesInitial, totalSubsInitial, substratesFinal, totalSubsFinal
 
+
+
     def loadSubstratesFiltered(self):
         print('=========================== Load: Filtered Substrate '
               '============================')
@@ -1274,21 +1276,23 @@ class NGS:
     def combineMotifs(self, motifFrame, motifIndex):
         print('================================ Combine Motifs '
               '=================================')
+        print('Combine released count matrices ')
         self.getCombinedMotifLabel()
         print(f'Datasets: {purple}{self.labelCombinedMotifs}{resetColor}\n'
               f'Motif Labels: {blue}{" ".join(motifFrame)}{resetColor}\n'
               f'Motif Index: {blue}{motifIndex}{resetColor}\n\n')
 
-        # # Load: Counts
-        # motifCounts, motifCountsTotal = self.loadFixedMotifCounts(
-        #     motifFrame=motifFrame, motifIndex=motifIndex,
-        #     sortType='Final Sort')
-        #
-        # print(f'Loaded Counts: {motifCountsTotal}\n'
-        #       f'{motifCounts}\n\n')
-        # sys.exit()
+        # Load: Counts
+        motifCounts, motifCountsTotal = self.loadFixedMotifCounts(
+            motifFrame=motifFrame, motifIndex=motifIndex,
+            sortType='Final Sort')
 
-        # sys.exit() datasetTag=self.labelCombinedMotifs,
+        print(f'Combined Counts:\n{motifCountsTotal}\n'
+              f'{motifCounts}\n\n')
+
+
+
+        sys.exit()
 
 
 
@@ -1297,10 +1301,6 @@ class NGS:
               '============================')
         print(f'Loading counts: {purple}{self.enzymeName} - '
               f'{self.labelCombinedMotifs}{resetColor}\n')
-        print(motifFrame)
-
-        # sys.exit()
-
         frameLength = len(motifFrame)
         countsFixedFrameAll = []
         totalCountsFixedFrame = None
@@ -1321,7 +1321,7 @@ class NGS:
                 # Load file
                 countsLoaded = pd.read_csv(filePathFixedMotifReleasedCounts, index_col=0)
 
-                # Define fixed frame positions & extract the data
+                # Define fixed frame positions and extract the data
                 startPosition = motifIndex[0]
                 startSubPrevious = startPosition
                 if index != 0:
@@ -1343,9 +1343,9 @@ class NGS:
                     formatters={column: '{:,.0f}'.format for column in
                                 countsFixedFrame.select_dtypes(include='number').columns})
                 print(f'Selecting Positions: {purple}Fixed Motif {tagFixedAA}\n'
-                      f'     {greenLightB}{fixedFramePos}{resetColor}\n'
+                      f'     {blue}{fixedFramePos}{resetColor}\n'
                       f'Counts:\n'
-                      f'{greenLight}{formattedCounts}{resetColor}\n\n')
+                      f'{formattedCounts}\n\n')
 
                 # Track totals
                 if index == 0:
@@ -1368,7 +1368,7 @@ class NGS:
                         totalCountsFixedFrame.select_dtypes(include='number').columns})
 
         # Print the data
-        print(f'{greyDark}Combined Counts{resetColor}: {purple}{self.enzymeName} - '
+        print(f'{greenLight}Combined Counts{resetColor}: {purple}{self.enzymeName} - '
               f'{self.labelCombinedMotifs}{resetColor}\n{formattedCounts}\n')
         print('Total Counts:')
         for index, position in enumerate(motifFrame):
@@ -3179,7 +3179,7 @@ class NGS:
                   f'{resetColor}\n')
             sys.exit(1)
 
-        print(f'Batch Tokens:{greenLightB} {batchTokens.shape}{resetColor}\n'
+        print(f'Batch Tokens:{greenLight} {batchTokens.shape}{resetColor}\n'
               f'{greenLight}{batchTokens}{resetColor}\n\n')
         slicedTokens = pd.DataFrame(batchTokens[:, 1:-1],
                                     index=batchSubs,
@@ -3459,7 +3459,7 @@ class NGS:
 
         if inPlotEntropyPCAPopulations:
             # Plot: Positional entropy
-            self.plotPositionalEntropy(entropy=entropy, fixedTag=self.datasetTag)
+            self.plotEntropy(entropy=self.entropy)
 
         # Calculate: Enrichment scores
         fixedFramePopES = self.enrichmentMatrix(initialSortRF=initialRFAvg,
