@@ -150,7 +150,7 @@ class NGS:
         self.enzymeName = enzymeName
         self.filterSubs = filterSubs
         self.fixedAA = fixedAA
-        self.fixedPosition = fixedPosition
+        self.fixedPos = fixedPosition
         self.excludeAAs = excludeAAs
         self.excludeAA = excludeAA
         self.excludePosition = excludePosition
@@ -178,6 +178,7 @@ class NGS:
         self.plotFigWords = plotFigWords
         self.datasetTag = None
         self.datasetTagMotif = ''
+        self.labelCombinedMotifs = ''
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsMotif = None
         self.title = ''
@@ -426,14 +427,14 @@ class NGS:
                                 # Inspect substrate seq: Keep good fixed datapoints
                                 if 'X' not in substrate and '*' not in substrate:
                                     if len(self.fixedAA[0]) == 1:
-                                        if substrate[self.fixedPosition[0] - 1] \
+                                        if substrate[self.fixedPos[0] - 1] \
                                             in self.fixedAA:
                                             if substrate in subSequence:
                                                 subSequence[substrate] += 1
                                             else:
                                                 subSequence[substrate] = 1
                                     else:
-                                        if substrate[self.fixedPosition[0] - 1] \
+                                        if substrate[self.fixedPos[0] - 1] \
                                             in self.fixedAA[0]:
                                             if substrate in subSequence:
                                                 subSequence[substrate] += 1
@@ -538,7 +539,7 @@ class NGS:
                                 # Inspect substrate seq: Keep good fixed datapoints
                                 if 'X' not in substrate and '*' not in substrate:
                                     if len(self.fixedAA[0]) == 1:
-                                        if substrate[self.fixedPosition[0] - 1] \
+                                        if substrate[self.fixedPos[0] - 1] \
                                             in self.fixedAA:
                                             if substrate in subSequence:
                                                 subSequence[substrate] += 1
@@ -546,7 +547,7 @@ class NGS:
                                                 subSequence[substrate] = 1
                                     else:
                                         if substrate[
-                                            self.fixedPosition[0] - 1] \
+                                            self.fixedPos[0] - 1] \
                                             in self.fixedAA[0]:
                                             if substrate in subSequence:
                                                 subSequence[substrate] += 1
@@ -714,14 +715,14 @@ class NGS:
                                 # Inspect substrate seq: Keep good fixed datapoints
                                 if 'X' not in substrate and '*' not in substrate:
                                     if len(self.fixedAA[0]) == 1:
-                                        if substrate[self.fixedPosition[0] - 1] \
+                                        if substrate[self.fixedPos[0] - 1] \
                                             in self.fixedAA:
                                             if substrate in subSequence:
                                                 subSequence[substrate] += 1
                                             else:
                                                 subSequence[substrate] = 1
                                     else:
-                                        if substrate[self.fixedPosition[0] - 1] \
+                                        if substrate[self.fixedPos[0] - 1] \
                                             in self.fixedAA[0]:
                                             if substrate in subSequence:
                                                 subSequence[substrate] += 1
@@ -827,14 +828,14 @@ class NGS:
                                 # Inspect substrate seq: Keep good fixed datapoints
                                 if 'X' not in substrate and '*' not in substrate:
                                     if len(self.fixedAA[0]) == 1:
-                                        if substrate[self.fixedPosition[0] - 1] \
+                                        if substrate[self.fixedPos[0] - 1] \
                                             in self.fixedAA:
                                             if substrate in subSequence:
                                                 subSequence[substrate] += 1
                                             else:
                                                 subSequence[substrate] = 1
                                     else:
-                                        if substrate[self.fixedPosition[0] - 1] \
+                                        if substrate[self.fixedPos[0] - 1] \
                                             in self.fixedAA[0]:
                                             if substrate in subSequence:
                                                 subSequence[substrate] += 1
@@ -1268,49 +1269,74 @@ class NGS:
 
         return substrates, totalSubsFinal
 
-    def loadFixedMotifCounts(self, filePath, substrateFrame, substrateFrameAAPos,
-                             frameIndices, datasetTag, sortType):
+
+
+    def combineMotifs(self, motifFrame, motifIndex):
+        print('================================ Combine Motifs '
+              '=================================')
+        self.getCombinedMotifLabel()
+        print(f'Datasets: {purple}{self.labelCombinedMotifs}{resetColor}\n'
+              f'Motif Labels: {blue}{" ".join(motifFrame)}{resetColor}\n'
+              f'Motif Index: {blue}{motifIndex}{resetColor}\n\n')
+
+        # # Load: Counts
+        # motifCounts, motifCountsTotal = self.loadFixedMotifCounts(
+        #     motifFrame=motifFrame, motifIndex=motifIndex,
+        #     sortType='Final Sort')
+        #
+        # print(f'Loaded Counts: {motifCountsTotal}\n'
+        #       f'{motifCounts}\n\n')
+        # sys.exit()
+
+        # sys.exit() datasetTag=self.labelCombinedMotifs,
+
+
+
+    def loadFixedMotifCounts(self, motifFrame, motifIndex, sortType):
         print('=========================== Load: Fixed Motif Counts '
               '============================')
-        print(f'Loading counts: {purple}{self.enzymeName} - {datasetTag}{resetColor}\n')
+        print(f'Loading counts: {purple}{self.enzymeName} - '
+              f'{self.labelCombinedMotifs}{resetColor}\n')
+        print(motifFrame)
 
-        frameLength = len(substrateFrame)
+        # sys.exit()
+
+        frameLength = len(motifFrame)
         countsFixedFrameAll = []
         totalCountsFixedFrame = None
 
         # Load the counts
-        for index, position in enumerate(self.fixedPosition):
+        for index, position in enumerate(self.fixedPos):
             # Define: File paths
             tagFixedAA = f'{self.fixedAA[0]}@R{position}'
-            if 'final' in sortType.lower():
-                tagLabel = (f'fixedMotifCountsRel - {self.enzymeName} - {tagFixedAA} - '
-                            f'FinalSort - MinCounts {self.minSubCount}')
-            else:
-                tagLabel = (f'fixedMotifCountsRel - {self.enzymeName} - {tagFixedAA} - '
-                            f'InitialSort - MinCounts {self.minSubCount}')
-            filePathFixedMotifCounts = os.path.join(filePath, tagLabel)
+
+            # Define: File paths
+            (filePathFixedMotifSubs, filePathFixedMotifCounts,
+             filePathFixedMotifReleasedCounts) = self.getFilePath(
+                datasetTag=self.datasetTagMotif, motifPath=True)
+
 
             # Look for the file
-            if os.path.exists(filePathFixedMotifCounts):
+            if os.path.exists(filePathFixedMotifReleasedCounts):
                 # Load file
-                countsLoaded = pd.read_csv(filePathFixedMotifCounts, index_col=0)
+                countsLoaded = pd.read_csv(filePathFixedMotifReleasedCounts, index_col=0)
 
                 # Define fixed frame positions & extract the data
-                startPosition = frameIndices[0]
+                startPosition = motifIndex[0]
                 startSubPrevious = startPosition
                 if index != 0:
                     # Evaluate previous fixed frame index
-                    fixedPosDifference = (self.fixedPosition[index] -
-                                          self.fixedPosition[index - 1])
+                    fixedPosDifference = (self.fixedPos[index] -
+                                          self.fixedPos[index - 1])
                     startSubPrevious += fixedPosDifference
                     startSub = index + startSubPrevious - 1
                     endSub = startSub + frameLength
                 else:
                     startSub = startPosition
-                    endSub = frameIndices[-1] + 1
+                    endSub = motifIndex[-1] + 1
                 fixedFramePos = countsLoaded.columns[startSub:endSub]
                 countsFixedFrame = countsLoaded.loc[:, fixedFramePos]
-                countsFixedFrame.columns = substrateFrame
+                countsFixedFrame.columns = motifFrame
                 countsFixedFrameAll.append(countsFixedFrame.values)
 
                 formattedCounts = countsFixedFrame.to_string(
@@ -1328,12 +1354,12 @@ class NGS:
                     totalCountsFixedFrame += countsFixedFrame
             else:
                 print(f'{orange}ERROR: The file was not found\n'
-                      f'     {filePathFixedMotifCounts}\n')
+                      f'     {filePathFixedMotifReleasedCounts}\n')
                 sys.exit(1)
 
         # Sum the columns
         fixedFrameColumnSums = []
-        for column in substrateFrame:
+        for column in motifFrame:
             fixedFrameColumnSums.append(sum(totalCountsFixedFrame.loc[:, column]))
 
         # Format the DataFrame with commas
@@ -1343,9 +1369,9 @@ class NGS:
 
         # Print the data
         print(f'{greyDark}Combined Counts{resetColor}: {purple}{self.enzymeName} - '
-              f'{datasetTag}{resetColor}\n{formattedCounts}\n')
+              f'{self.labelCombinedMotifs}{resetColor}\n{formattedCounts}\n')
         print('Total Counts:')
-        for index, position in enumerate(substrateFrame):
+        for index, position in enumerate(motifFrame):
             print(f'     {position}: {red}{fixedFrameColumnSums[index]:,}{resetColor}')
         print('\n')
 
@@ -1520,11 +1546,11 @@ class NGS:
                     if index == 0:
                         fixResidueList.append(
                             f'Fixed-{self.fixedAA[index]}@R'
-                            f'{self.fixedPosition[index]}'.replace(' ', ''))
+                            f'{self.fixedPos[index]}'.replace(' ', ''))
                     else:
                         fixResidueList.append(
                             f'{self.fixedAA[index]}@R'
-                            f'{self.fixedPosition[index]}'.replace(' ', ''))
+                            f'{self.fixedPos[index]}'.replace(' ', ''))
 
                 self.datasetTag = '_'.join(fixResidueList)
                 self.datasetTag = self.datasetTag.replace("_Fixed",
@@ -1534,7 +1560,7 @@ class NGS:
                 for index in range(len(self.fixedAA)):
                     fixResidueList.append(
                         f'{self.fixedAA[index]}@R'
-                        f'{self.fixedPosition[index]}'.replace(' ', ''))
+                        f'{self.fixedPos[index]}'.replace(' ', ''))
 
                 self.datasetTag = '_'.join(fixResidueList)
 
@@ -1639,11 +1665,11 @@ class NGS:
                 if keepSub:
                     if len(self.fixedAA) == 1 and len(self.fixedAA[0]) == 1:
                         # Fix only one AA
-                        if substrate[self.fixedPosition[0] - 1] != self.fixedAA[0]:
+                        if substrate[self.fixedPos[0] - 1] != self.fixedAA[0]:
                             keepSub = False
                     else:
                         for indexFixed, fixedAA in enumerate(self.fixedAA):
-                            indexFixAA = self.fixedPosition[indexFixed] - 1
+                            indexFixAA = self.fixedPos[indexFixed] - 1
 
                             if len(fixedAA) == 1:
                                 # Fix one AA at a given position
@@ -1667,7 +1693,7 @@ class NGS:
                     if count < self.minSubCount:
                         break
 
-                    subAA = substrate[self.fixedPosition[0] - 1]
+                    subAA = substrate[self.fixedPos[0] - 1]
                     if subAA in self.fixedAA[0]:
                         fixedSubs[substrate] = count
                         fixedSubsTotal += count
@@ -1680,7 +1706,7 @@ class NGS:
 
                     keepSub = []
                     for index in range(len(self.fixedAA)):
-                        fixIndex = self.fixedPosition[index] - 1
+                        fixIndex = self.fixedPos[index] - 1
                         subAA = substrate[fixIndex]
                         selectAA = self.fixedAA[index]
 
@@ -1821,6 +1847,28 @@ class NGS:
         print(f'Unique Motifs:{red} {len(motifs):,}{resetColor}\n\n')
 
         return motifs
+
+    def getCombinedMotifLabel(self):
+        # Dataset label
+        if len(self.fixedPos) == 1:
+            datasetTag = f'Motif {self.fixedAA[0]}@R{self.fixedPos[0]}'
+        else:
+            fixedPos = sorted(self.fixedPos)
+            continuous = True
+            for index in range(len(fixedPos) - 1):
+                pos1, pos2 = fixedPos[index], fixedPos[index + 1]
+                if pos1 == pos2 - 1 or pos1 == pos2 + 1:
+                    continue
+                else:
+                    continuous = False
+                    break
+            if continuous:
+                datasetTag = (f'Motif {self.fixedAA[0]}@R{fixedPos[0]}-'
+                              f'R{fixedPos[-1]}')
+            else:
+                datasetTag = (f'Motif {self.fixedAA[0]}@R{fixedPos[0]}-'
+                              f'R{fixedPos[1]}, R{fixedPos[-1]}')
+        self.labelCombinedMotifs = datasetTag
 
 
 
@@ -1990,8 +2038,8 @@ class NGS:
         final = probFinal[probFinal.index.str.contains(selectAA)].T
         print(f'{purple}Initial Sort{resetColor}:\n{initial}\n')
         print(f'{purple}Final Sort{resetColor}:\n{final}\n\n')
-        print(f'Pos: {self.fixedPosition}')
-        final = final.drop(final.index[[int(pos) - 1 for pos in self.fixedPosition]])
+        print(f'Pos: {self.fixedPos}')
+        final = final.drop(final.index[[int(pos) - 1 for pos in self.fixedPos]])
         print(f'Remove fixed residues: {purple}Final Sort{resetColor}\n{final}\n\n')
 
         # Set local parameters
@@ -2394,7 +2442,7 @@ class NGS:
 
         # Use the spacer to set a gray background to fixed residues
         for index, position in enumerate(self.xAxisLabels):
-            if position in self.fixedPosition:
+            if position in self.fixedPos:
                 # Plot gray boxes on each side of the xtick
                 motif.ax.axvspan(index - spacer, index + spacer,
                                  facecolor='darkgrey', alpha=0.2)
@@ -2525,7 +2573,7 @@ class NGS:
 
         # Use the spacer to set a gray background to fixed residues
         for index, position in enumerate(self.xAxisLabels):
-            if position in self.fixedPosition:
+            if position in self.fixedPos:
                 # Plot gray boxes on each side of the xtick
                 motif.ax.axvspan(index - spacer, index + spacer,
                                  facecolor='darkgrey', alpha=0.2)
@@ -2548,27 +2596,27 @@ class NGS:
 
 
 
-    def fixedMotifStats(self, countsList, initialProb, substrateFrame, datasetTag):
+    def fixedMotifStats(self, countsList, initialProb, motifFrame, datasetTag):
         print('================== Statistical Evaluation: Fixed Motif Counts '
               '===================')
         print(f'Evaluate: {purple}{datasetTag}{resetColor}\n')
-        countsFrameTotal = pd.DataFrame(0, index=range(0, len(self.fixedPosition)),
-                                        columns=substrateFrame)
+        countsFrameTotal = pd.DataFrame(0, index=range(0, len(self.fixedPos)),
+                                        columns=motifFrame)
         frameProb = pd.DataFrame(0.0, index=initialProb.index,
-                                 columns=substrateFrame)
+                                 columns=motifFrame)
         frameES = frameProb.copy()
         frameESList = []
 
         for index, countsFrame in enumerate(countsList):
             countsFrame = pd.DataFrame(countsFrame, index=initialProb.index,
-                                       columns=substrateFrame)
+                                       columns=motifFrame)
 
             # Format values to have commas
             formattedCounts = countsFrame.to_string(
                 formatters={column: '{:,.0f}'.format for column in
                             countsFrame.select_dtypes(include='number').columns})
             print(f'Counts: {purple}Fixed Motif '
-                  f'{self.fixedAA[0]}@R{self.fixedPosition[index]}{resetColor}\n'
+                  f'{self.fixedAA[0]}@R{self.fixedPos[index]}{resetColor}\n'
                   f'{formattedCounts}\n')
 
             for column in countsFrame.columns:
@@ -2583,7 +2631,7 @@ class NGS:
                     frameProb.loc[:, column] / initialProb['Average RF'])
 
             print(f'Enrichment Score:'
-                  f'{purple}Fixed Motif {self.fixedAA[0]}@R{self.fixedPosition[index]}\n'
+                  f'{purple}Fixed Motif {self.fixedAA[0]}@R{self.fixedPos[index]}\n'
                   f'{greenLight}{frameES}{resetColor}\n\n')
             frameESList.append(frameES.copy())
 
@@ -4206,17 +4254,17 @@ class NGS:
 
 
 
-    def extractMotif(self, substrates, substrateFrame, frameIndicies, datasetTag):
+    def extractMotif(self, substrates, motifFrame, frameIndicies, datasetTag):
         print('================================= Extract Motif '
               '=================================')
         print(f'Binning Substrates: {purple}{datasetTag}{resetColor}\n'
-              f'Start Position:{greenLightB} {substrateFrame[frameIndicies[0]]}'
+              f'Start Position:{greenLightB} {motifFrame[frameIndicies[0]]}'
               f'{resetColor}\n'
               f'   Start Index:{greenLightB} {frameIndicies[0]}{resetColor}\n'
-              f'End Position:{greenLightB} {substrateFrame[frameIndicies[-1]]}'
+              f'End Position:{greenLightB} {motifFrame[frameIndicies[-1]]}'
               f'{resetColor}\n'
               f'   End Index:{greenLightB} {frameIndicies[-1]}{resetColor}\n\n')
-        frameLength = len(substrateFrame)
+        frameLength = len(motifFrame)
         sys.exit(1)
 
 
@@ -4230,11 +4278,11 @@ class NGS:
             startSubPrevious = startPosition
             if index != 0:
                 # Evaluate previous fixed frame index
-                fixedPosDifference = (self.fixedPosition[index] -
-                                      self.fixedPosition[index - 1])
+                fixedPosDifference = (self.fixedPos[index] -
+                                      self.fixedPos[index - 1])
                 startSubPrevious += fixedPosDifference
-                # print(f'Pos Curr: {purple}{self.fixedPosition[index]}{resetColor}\n'
-                #       f'Pos Prev: {purple}{self.fixedPosition[index - 1]}{resetColor}')
+                # print(f'Pos Curr: {purple}{self.fixedPos[index]}{resetColor}\n'
+                #       f'Pos Prev: {purple}{self.fixedPos[index - 1]}{resetColor}')
                 # print(f'     Start Diff:{greenLightB} {fixedPosDifference}{resetColor}\n'
                 #       f'     Start Prev:{greenLightB} {startSubPrevious}{resetColor}')
                 startSub = index + startSubPrevious - 1
@@ -4246,7 +4294,7 @@ class NGS:
             #       f'Stop:{red} {endSub}{resetColor}\n\n')
 
             # Print substrates
-            print(f'Fixed Motif: {purple}{self.fixedAA[0]}@{self.fixedPosition[index]}'
+            print(f'Fixed Motif: {purple}{self.fixedAA[0]}@{self.fixedPos[index]}'
                   f'{resetColor}')
             iteration = 0
             for substrate, count in subsFixedFrame.items():

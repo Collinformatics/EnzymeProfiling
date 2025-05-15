@@ -105,7 +105,7 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 # Load: Dataset labels
-enzymeName, fileNamesInitial, fileNamesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
+enzymeName, filesInitial, filesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
 
 
 
@@ -117,7 +117,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
           printNumber=inPrintNumber, showNValues=inShowSampleSize,
           bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
-          filesInit=fileNamesInitial, filesFinal=fileNamesFinal, plotPosS=inPlotEntropy,
+          filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
           plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
           plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
           plotFigWords=inPlotWordCloud, saveFigures=inSaveFigures, setFigureTimer=None)

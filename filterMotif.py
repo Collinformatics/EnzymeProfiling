@@ -18,8 +18,8 @@ inSaveFigures = True
 inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.6 # 0.6, 0.6, 0.6
-inRefixMotif = False
+inMinDeltaS = 0.6
+inRefixMotif = True
 inFixedResidue = ['Q'] # Only use 1 AA
 inFixedPosition = [7]
 inExcludeResidues = False
@@ -43,7 +43,19 @@ inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = True
 inPlotLogo = True
 inPlotWeblogo = True
-inPlotWordCloud = False
+
+dontPlot = False
+if not inRefixMotif:
+    dontPlot = True
+    inSetFigureTimer = False
+
+    inPlotEntropy = False
+    inPlotEnrichmentMap = False
+    inPlotEnrichmentMapScaled = False
+    inPlotLogo = False
+    inPlotWeblogo = False
+
+inPlotWordCloud = True
 inPlotUnscaledScatter = True
 inPlotScaledScatter = True
 
@@ -127,20 +139,19 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 # Load: Dataset labels
-(enzymeName, inFileNamesInitial,
- inFileNamesFinal, inAAPositions) = filePaths(enzyme=inEnzymeName)
+enzymeName, filesInitial, filesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
 
 
 
 # =================================== Initialize Class ===================================
-ngs = NGS(enzymeName=enzymeName, substrateLength=len(inAAPositions),
+ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           filterSubs=True, fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=inAAPositions,
+          figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
           printNumber=inPrintNumber, showNValues=inShowSampleSize,
           bigAAonTop=inBigLettersOnTop, findMotif=True, folderPath=inPathFolder,
-          filesInit=inFileNamesInitial, filesFinal=inFileNamesFinal,
+          filesInit=filesInitial, filesFinal=filesFinal,
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
@@ -390,7 +401,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         exclude=inExcludeResidues, excludeAA=inExcludedResidue,
         excludePosition=inExcludedPosition, sortType=sortType)
 
-    initialFixedPos = inAAPositions[inFixedPosition[0] - 1]
+    initialFixedPos = labelAAPos[inFixedPosition[0] - 1]
 
     # Display current sample size
     ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
@@ -715,6 +726,9 @@ if (os.path.exists(filePathFixedMotifSubs) and
             break
     print('\n')
 
+    if dontPlot:
+        ngs.saveFigures = False
+
     # Display current sample size
     ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
 
@@ -730,6 +744,9 @@ if (os.path.exists(filePathFixedMotifSubs) and
     # Extract motif
     ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS, fixFullFrame=True)
     finalSubsMotif = ngs.getMotif(substrates=substratesFinalFixed)
+
+    if dontPlot:
+        ngs.saveFigures = True
 
     # Plot: Work cloud
     if inPlotWordCloud:
