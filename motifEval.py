@@ -198,17 +198,14 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 
 # Load: Dataset labels
 enzymeName, filesInitial, filesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
-
-inFixedMotifLength = len(inMotifPositions)
-inSubstrateLength = len(labelAAPos)
-inFramePositions = [inIndexNTerminus, inIndexNTerminus + inFixedMotifLength - 1]
-labelAAPosMotif = labelAAPos[inFramePositions[0]:
-                                    inIndexNTerminus+inFixedMotifLength]
+motifLen = len(inMotifPositions)
+motifFramePos = [inIndexNTerminus, inIndexNTerminus + motifLen]
+labelAAPosMotif = labelAAPos[motifFramePos[0]:inIndexNTerminus+motifLen]
 
 
 
 # =================================== Initialize Class ===================================
-ngs = NGS(enzymeName=enzymeName, substrateLength=inSubstrateLength,
+ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           filterSubs=True, fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
@@ -341,8 +338,8 @@ def fixInitialSubs(substrates):
 
     for substrate in substrates:
         for indexFrame in range(len(inFixedPosition)):
-            subMotif = substrate[inFramePositions[0] + indexFrame:
-                                 inFramePositions[-1] + indexFrame]
+            subMotif = substrate[motifFramePos[0] + indexFrame:
+                                 motifFramePos[-1] + indexFrame]
             if subMotif in subMotifInitial:
                 subMotifInitial[subMotif] += 1
             else:
@@ -373,7 +370,7 @@ def trimSubstrates():
     trimedSubs = {}
     for index, substrate in enumerate(inSubsPredict):
         trimedSub = substrate[inSubsPredictStartIndex:
-                              inFixedMotifLength+inSubsPredictStartIndex]
+                              motifLen+inSubsPredictStartIndex]
         print(f'Substrate:{pink} {substrate}{resetColor}\n'
               f'     Sub:{yellow} {trimedSub}{resetColor}')
         if trimedSub in trimedSubs:
@@ -1268,14 +1265,13 @@ probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitia
 
 
 
-
 # ===================================== Run The Code =====================================
 # Get dataset tag
 ngs.getDatasetTag(combinedMotif=True)
 
 # Load: Motif counts
-countsRelCombined = ngs.combineMotifCounts(
-    motifFrame=inMotifPositions, motifIndex=inFramePositions)
+countsRelCombined = ngs.combineMotifCounts(motifFrame=inMotifPositions, 
+                                           motifIndex=motifFramePos)
 
 # Calculate: RF
 probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
@@ -1287,129 +1283,14 @@ entropy = ngs.calculateEntropy(probability=probCombinedMotif)
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
                         releasedCounts=True)
 
+
 sys.exit()
+
 
 # Set flag
 subsPredict = None
 if inPredictSubstrateActivityPCA:
     inPlotMotifBarGraphs = True
-
-if (inPredictSubstrateActivity or inPlotEnrichmentMap
-        or inPlotLogo or inPlotWeblogo
-        or inPlotBinnedSubstratePrediction):
-
-    # Load: Counts
-    fixedMotifCounts, fixedMotifCountsTotal = ngs.loadFixedMotifCounts(
-        motifFrame=inMotifPositions, motifIndex=inFramePositions, sortType='Final Sort')
-
-    fixedMotifProb = ngs.calculateProbMotif(countsTotal=fixedMotifCountsTotal)
-
-    print(f'Data:\n{fixedMotifCountsTotal}\n\n'
-          f'Prob:\n{fixedMotifProb}\n\n')
-    sys.exit()
-
-    # Calculate: Probability & Entropy
-    fixedMotifProb = ngs.calculateProbMotif(countsTotal=fixedMotifCountsTotal)
-    entropy = ngs.calculateEntropy(probability=fixedMotifProb)
-
-    # Calculate: Enrichment Scores
-    if (inPredictSubstrateActivity or inPlotEnrichmentMap
-            or inPlotLogo or inPlotMotifBarGraphs
-            or inPlotBinnedSubstratePrediction):
-        fixedSubSeq = f'Fixed Frame {inFixedResidue[0]}@R{inFixedPosition[0]}'
-        fixedMotifES = ngs.calculateEnrichment(initialSortRF=probInitialAvg,
-                                               finalSortRF=fixedMotifProb,
-                                               printES=inPrintES)
-        fixedMotifESScaled = pd.DataFrame(0.0, index=fixedMotifES.index,
-                                          columns=fixedMotifES.columns)
-        for positon in fixedMotifES.columns:
-            fixedMotifESScaled.loc[:, positon] = (fixedMotifES.loc[:, positon] *
-                                                  entropy.loc[
-                                                      positon, 'ΔEntropy'])
-
-
-# # Plot Data
-if inPlotEnrichmentMap:
-    # plotES = pd.DataFrame(-math.inf, index=fixedMotifES.index,
-    #                       columns=fixedMotifES.columns)
-    # addData = [3, 2, 4, 0, 1]
-    # for column in addData:
-    #     plotES.iloc[:, column] = fixedMotifES.iloc[:, column]
-    #     Plot: Enrichment Map
-    #     ngs.plotEnrichmentScores(scores=plotES,
-    #                              dataType='Enrichment',
-    #                              title=f'{inTitleEnrichmentMap}\n{ngs.labelCombinedMotifs}\n'
-    #                                    f'Enrichment Scores',
-    #                              saveTag=ngs.labelCombinedMotifs,
-    #                              motifFilter=False,
-    #                              duplicateFigure=False)
-
-    # Plot: Enrichment Map
-    ngs.plotEnrichmentScores(scores=fixedMotifES.copy(),
-                             dataType='Enrichment',
-                             title=f'{inTitleEnrichmentMap}\n{ngs.labelCombinedMotifs}\n'
-                                   f'Enrichment Scores',
-                             saveTag=ngs.labelCombinedMotifs,
-                             motifFilter=False,
-                             duplicateFigure=False)
-
-    # Calculate: Stats
-    if len(inFixedPosition) != 1:
-        ngs.fixedMotifStats(countsList=fixedMotifCounts,
-                            initialProb=probInitialAvg,
-                            substrateFrame=inMotifPositions,
-                            datasetTag=ngs.labelCombinedMotifs)
-
-    # Plot: Enrichment Map - Scaled
-    ngs.plotEnrichmentScores(scores=fixedMotifESScaled.copy(),
-                             dataType='Scaled Enrichment',
-                             title=f'{inTitleEnrichmentMap}\n{ngs.labelCombinedMotifs}\n'
-                                   f'Scaled Enrichment Scores',
-                             saveTag=ngs.labelCombinedMotifs,
-                             motifFilter=False,
-                             duplicateFigure=False)
-
-
-if inPlotLogo:
-    yMax = max(fixedMotifESScaled[fixedMotifESScaled > 0].sum())
-    yMin = min(fixedMotifESScaled[fixedMotifESScaled < 0].sum())
-
-    # Plot: Sequence Motif
-    ngs.plotMotif(data=fixedMotifESScaled.copy(), dataType='Scaled Enrichment',
-                  bigLettersOnTop=inBigLettersOnTop,
-                  title=f'{inTitleMotif}\n{ngs.labelCombinedMotifs}',yMax=yMax, yMin=yMin,
-                  showYTicks=False, addHorizontalLines=inAddHorizontalLines,
-                  motifFilter=False,  duplicateFigure=False, saveTag=ngs.labelCombinedMotifs)
-
-    # Plot: Sequence Motif
-    ngs.plotMotif(data=fixedMotifESScaled.copy(), dataType='Scaled Enrichment',
-                  bigLettersOnTop=inBigLettersOnTop,
-                  title=f'{inTitleMotif}\n{ngs.labelCombinedMotifs}', yMax=yMax, yMin=0,
-                  showYTicks=False, addHorizontalLines=inAddHorizontalLines,
-                  motifFilter=False, duplicateFigure=False,
-                  saveTag=f'Y Min - {ngs.labelCombinedMotifs}')
-
-
-if inPlotWeblogo:
-    releasedRScaled, fixedAA, yMax, yMin = ngs.heightsRF(
-        counts=fixedMotifCountsTotal.copy(), N=fixedMotifCountsTotal,
-        printRF=inPrintMotifData)
-
-    if inShowWeblogoYTicks:
-        yMax, yMin = 5, 0
-        # Plot: Sequence Motif
-        ngs.plotMotif(data=releasedRScaled.copy(), dataType='Weblogo',
-                      bigLettersOnTop=inBigLettersOnTop,
-                      title=f'{inTitleMotif}\n{ngs.labelCombinedMotifs}', yMax=yMax, yMin=yMin,
-                      showYTicks=False, addHorizontalLines=inAddHorizontalLines,
-                      motifFilter=False, duplicateFigure=False, saveTag=ngs.labelCombinedMotifs)
-    else:
-        # Plot: Sequence Motif
-        ngs.plotMotif(data=releasedRScaled.copy(), dataType='Weblogo',
-                      bigLettersOnTop=inBigLettersOnTop,
-                      title=f'{inTitleMotif}\n{ngs.labelCombinedMotifs}', yMax=yMax, yMin=yMin,
-                      showYTicks=False, addHorizontalLines=inAddHorizontalLines,
-                      motifFilter=False, duplicateFigure=False, saveTag=ngs.labelCombinedMotifs)
 
 
 # Plot: Measured FACS activity
@@ -1516,7 +1397,7 @@ if (inPlotMotifBarGraphs or inPlotBinnedSubstrateES
     # Bin substrate frames
     motifs, frameTotalCountsFinal = ngs.extractMotif(
         substrates=substratesFixedMotif, substrateFrame=inMotifPositions,
-        frameIndicies=inFramePositions, datasetTag=ngs.labelCombinedMotifs)
+        frameIndicies=motifFramePos, datasetTag=ngs.labelCombinedMotifs)
 
     # Plot: Work cloud
     if inPlotWordCloud:

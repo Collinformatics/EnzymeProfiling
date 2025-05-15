@@ -1321,7 +1321,7 @@ class NGS:
                     endSub = startSub + frameLength
                 else:
                     startSub = startPosition
-                    endSub = motifIndex[-1] + 1
+                    endSub = motifIndex[-1]
                 fixedFramePos = countsLoaded.columns[startSub:endSub]
                 countsFixedFrame = countsLoaded.loc[:, fixedFramePos]
                 countsFixedFrame.columns = motifFrame
