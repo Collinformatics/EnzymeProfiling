@@ -21,7 +21,7 @@ inSetFigureTimer = True
 inMinDeltaS = 0.6
 inRefixMotif = True
 inFixedResidue = ['Q'] # Only use 1 AA
-inFixedPosition = [7]
+inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -43,18 +43,6 @@ inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = True
 inPlotLogo = True
 inPlotWeblogo = True
-
-dontPlot = False
-if not inRefixMotif:
-    dontPlot = True
-    inSetFigureTimer = False
-
-    inPlotEntropy = False
-    inPlotEnrichmentMap = False
-    inPlotEnrichmentMapScaled = False
-    inPlotLogo = False
-    inPlotWeblogo = False
-
 inPlotWordCloud = True
 inPlotUnscaledScatter = True
 inPlotScaledScatter = True
