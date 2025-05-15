@@ -168,7 +168,7 @@ class NGS:
 
         # Parameters: Figures
         self.entropy, self.entropyMax = None, None
-        self.eMap, self.eMapMotif = None, None
+        self.eMap, self.eMapScaled, self.eMapMotif = None, None, None
         self.heights, self.weblogo = None, None
         self.plotFigEntropy = plotPosS
         self.plotFigEM = plotFigEM
@@ -209,7 +209,7 @@ class NGS:
         self.bigAAonTop = bigAAonTop
         self.findMotif = findMotif
         self.motifFilter = False
-        self.motifInit = True
+        self.motifInit = True # Set to False after using NGS.calculateEntropy()
         self.motifTag = ''
         self.motifIndex = None
         self.saveFigures = saveFigures
@@ -222,8 +222,8 @@ class NGS:
         self.filesInit = filesInit
         self.filesFinal = filesFinal
         self.pathFolder = folderPath
-        self.pathSaveData = os.path.join(self.pathFolder, 'DataTest')
-        self.pathSaveFigs = os.path.join(self.pathFolder, 'FiguresTest')
+        self.pathSaveData = os.path.join(self.pathFolder, 'Data')
+        self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
         self.pathFilteredSubs = None
         self.pathFilteredCounts = None
 
@@ -1566,18 +1566,18 @@ class NGS:
             useGreen = True
             if useGreen:
                 # Green
-                colors = ['#FFFFFF', '#ABFF9B', '#39FF14',
-                          '#2E9418', '#2E9418', '#005000']
+                colors = ['#FFFFFF','#ABFF9B','#39FF14','#2E9418','#2E9418',
+                          '#005000','#000000']
             else:
                 # Orange
-                colors = ['white', 'white', '#FF76FA', '#FF50F9',
-                          '#FF00F2', '#CA00DF', '#BD16FF']
+                colors = ['white','white','#FF76FA','#FF50F9','#FF00F2',
+                          '#CA00DF','#BD16FF']
         elif colorType == 'stdev':
             colors = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
         elif colorType == 'word cloud':
-            # , '#F2A900', '#2E8B57', 'black'
-            colors = ['#CC5500', '#F79620', '#FAA338', '#00C01E', 'black']
-            # colors = ['#008631', '#39E75F','#CC5500', '#F79620', 'black']
+            # ,'#F2A900','#2E8B57','black'
+            colors = ['#CC5500','#F79620','#FAA338','#00C01E','black']
+            # colors = ['#008631','#39E75F','#CC5500','#F79620','black']
         elif colorType == 'em':
             colors = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
                       'lightcoral','red','firebrick','darkred']
@@ -1768,8 +1768,8 @@ class NGS:
         self.motifIndex = [indexSubFrameList.index(idx) for idx in subFrameSorted.index]
         self.xAxisLabelsMotif = self.xAxisLabels[
                                 min(self.motifIndex):max(self.motifIndex)+1]
-
-        self.datasetTagMotif = f'Motif {self.datasetTag}'
+        if self.motifInit:
+            self.datasetTagMotif = f'Motif {self.datasetTag}'
         self.saveTagMotif = (f'{self.datasetTag} - Motif '
                              f'{self.xAxisLabelsMotif[0]}-{self.xAxisLabelsMotif[-1]}')
 
@@ -2087,7 +2087,7 @@ class NGS:
     def calculateEnrichment(self, probInitial, probFinal, releasedCounts=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
-        print(f'Ent:\n{self.entropy}\n\n')
+        print(f'Entropy:\n{self.entropy}\n\n')
         # Calculate: Enrichment scores
         if len(probInitial.columns) == 1:
             self.eMap  = pd.DataFrame(0.0, index=probFinal.index,
@@ -2115,6 +2115,7 @@ class NGS:
             for indexColumn in heights.columns:
                 heights.loc[:, indexColumn] = (self.eMap.loc[:, indexColumn] *
                                                self.entropy.loc[indexColumn, 'ΔS'])
+            self.eMapScaled = heights.copy()
             heights.replace([np.inf, -np.inf], 0, inplace=True)
             self.heights = heights
             print(f'Residue Heights: {purple}{self.datasetTag}{resetColor}\n'
@@ -2148,7 +2149,7 @@ class NGS:
             print('How do I process this?')
             sys.exit(1)
         elif 'scaled' in dataType.lower():
-            scores = self.heights
+            scores = self.eMapScaled
         elif 'motif' in dataType.lower():
             scores = self.eMapMotif
         else:
@@ -2447,11 +2448,9 @@ class NGS:
 
         # Define: Title
         if releasedCounts:
-            print(0)
             title = self.titleWeblogoReleased
         else:
             title = self.titleWeblogo
-            print(1)
 
         # Set: Figure borders
         figBorders = [0.852, 0.075, 0.112, 0.938]

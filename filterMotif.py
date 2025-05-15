@@ -13,15 +13,15 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
-inSaveData = False
+inSaveData = True
 inSaveFigures = True
-inSetFigureTimer = False
+inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.6
+inMinDeltaS = 0.6 # 0.6, 0.6, 0.6
 inRefixMotif = False
 inFixedResidue = ['Q'] # Only use 1 AA
-inFixedPosition = [4]
+inFixedPosition = [7]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -35,15 +35,15 @@ inPrintFixedSubs = True
 inCombineFixedMotifs = False
 inPredictSubstrateEnrichmentScores = False
 inDuplicateFigure = True
-
-# Input 3: Figure Parameters
 inShowSampleSize = True
-inPlotEntropy = False
-inPlotEnrichmentMap = False
-inPlotEnrichmentMapScaled = False
-inPlotLogo = False
-inPlotWeblogo = False
-inPlotWordCloud = True
+
+# Input 3: Making Figures
+inPlotEntropy = True
+inPlotEnrichmentMap = True
+inPlotEnrichmentMapScaled = True
+inPlotLogo = True
+inPlotWeblogo = True
+inPlotWordCloud = False
 inPlotUnscaledScatter = True
 inPlotScaledScatter = True
 
@@ -64,7 +64,7 @@ inBigLettersOnTop = False
 
 # Input 7: Word Cloud
 inLimitWords = True
-inNWords = 50
+inNWords = 100
 
 # Input 8: Substrate Enrichment
 inBinSubstrates = False
@@ -651,10 +651,9 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     # Plot: Work cloud
     if inPlotWordCloud:
-        titleWordCloud = f'\n{inEnzymeName}: Motif {ngs.motifTag}'
         ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
                           limitWords=inLimitWords, N=inNWords,
-                          title=titleWordCloud, saveTag=ngs.datasetTagMotif)
+                          saveTag=ngs.datasetTagMotif)
 
     # Save the data
     ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed,
@@ -715,8 +714,6 @@ if (os.path.exists(filePathFixedMotifSubs) and
         if iteration == inPrintNumber:
             break
     print('\n')
-
-    ngs.saveFigures = False
 
     # Display current sample size
     ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)

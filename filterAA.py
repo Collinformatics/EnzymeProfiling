@@ -227,7 +227,7 @@ if inPlotWordCloud or inPlotPCA:
         if inFixResidues:
             ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
                               limitWords=inLimitWords, N=inNWords,
-                              saveTag=ngs.datasetTagMotif)
+                              saveTag=ngs.datasetTag)
         else:
             ngs.plotWordCloud(substrates=substratesFinal, indexSet=None,
                               limitWords=inLimitWords, N=inNWords,
