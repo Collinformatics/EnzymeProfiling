@@ -1268,8 +1268,8 @@ probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitia
 ngs.getDatasetTag(combinedMotif=True)
 
 # Load: Motif counts
-countsRelCombined, countsRelCombinedTotal = ngs.combineMotifCounts(
-    motifFrame=inMotifPositions, motifIndex=motifFramePos)
+countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
+    motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsRelCombinedTotal)
@@ -1284,9 +1284,9 @@ entropy = ngs.calculateEntropy(probability=probCombinedMotif)
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
                         releasedCounts=True)
 
+# Load: Substrate motifs
+ngs.loadMotifSeqs(motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
-if inPlotWordCloud:
-    ngs.loadMotifSeqs()
 
 sys.exit()
 

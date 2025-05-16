@@ -1323,16 +1323,16 @@ class NGS:
 
 
 
-    def combineMotifCounts(self, motifFrame, motifIndex, returnList=False):
+    def loadMotifCounts(self, motifLabel, motifIndex, returnList=False):
         print('================================ Combine Motifs '
               '=================================')
         initialMotifFrame = self.xAxisLabels[motifIndex[0]:motifIndex[1]]
         print('Combine Matrices: Released counts')
         print(f'Datasets: {purple}{self.datasetTag}{resetColor}\n'
-              f'Motif Label: {blue}{", ".join(motifFrame)}{resetColor}\n'
+              f'Motif Label: {blue}{", ".join(motifLabel)}{resetColor}\n'
               f'Motif Frame: {blue}{", ".join(initialMotifFrame)}{resetColor}\n\n')
 
-        frameLength = len(motifFrame)
+        frameLength = len(motifLabel)
         countsMotifsAll = []
         totalCountsFixedFrame = None
 
@@ -1353,11 +1353,11 @@ class NGS:
                 # Load file
                 countsLoaded = pd.read_csv(pathFixedMotifRelCounts, index_col=0)
 
-                # Define fixed frame positions and extract the data
+                # Define motif positions and extract the data
                 startPosition = motifIndex[0]
                 startSubPrevious = startPosition
                 if index != 0:
-                    # Evaluate previous fixed frame index
+                    # Evaluate previous motif index
                     fixedPosDifference = (self.fixedPos[index] -
                                           self.fixedPos[index - 1])
                     startSubPrevious += fixedPosDifference
@@ -1368,7 +1368,7 @@ class NGS:
                     endSub = motifIndex[-1]
                 fixedFramePos = countsLoaded.columns[startSub:endSub]
                 countsFixedFrame = countsLoaded.loc[:, fixedFramePos]
-                countsFixedFrame.columns = motifFrame
+                countsFixedFrame.columns = motifLabel
                 countsMotifsAll.append(countsFixedFrame.values)
 
                 formattedCounts = countsFixedFrame.to_string(
@@ -1390,7 +1390,7 @@ class NGS:
 
         # Sum the columns
         posSumsCombinedMotif = []
-        for column in motifFrame:
+        for column in motifLabel:
             posSumsCombinedMotif.append(sum(totalCountsFixedFrame.loc[:, column]))
 
         # Format the DataFrame with commas
@@ -1402,7 +1402,7 @@ class NGS:
         print(f'{pink}Combined Counts{resetColor}: {purple}{self.enzymeName} - '
               f'{self.datasetTag}{resetColor}\n{formattedCounts}\n')
         print('Total Counts:')
-        for index, position in enumerate(motifFrame):
+        for index, position in enumerate(motifLabel):
             print(f'     {position}: {red}{posSumsCombinedMotif[index]:,}{resetColor}')
         print('\n')
 
@@ -1416,10 +1416,13 @@ class NGS:
 
 
 
-    def loadMotifSeqs(self):
+    def loadMotifSeqs(self, motifLabel, motifIndex):
         print('============================ Load: Substrate Motifs '
               '=============================')
-        print(f'Dataset: {self.datasetTag}')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Motif Label: {blue}{", ".join(motifLabel)}{resetColor}\n\n')
+        frameLength = len(motifLabel)
+        motifs = {}
         
         # Load the substrates
         for index, position in enumerate(self.fixedPos):
@@ -1432,47 +1435,66 @@ class NGS:
 
             # Look for the file
             if os.path.exists(pathFixedMotifSubs):
-                print(f'Loading: {greenLightB}Released Counts\n{greenDark}'
+                print(f'Loading: {greenLightB}Filtered Motif\n{greenDark}'
                       f'     {pathFixedMotifSubs}{resetColor}\n')
 
                 # Load file
                 with open(pathFixedMotifSubs, 'rb') as file:
                     loadedSubs = pk.load(file)
 
+                # Define motif positions and extract the sequence
+                startPosition = motifIndex[0]
+                startSubPrevious = startPosition
+                if index != 0:
+                    # Evaluate previous motif index
+                    fixedPosDifference = (self.fixedPos[index] -
+                                          self.fixedPos[index - 1])
+                    startSubPrevious += fixedPosDifference
+                    startSub = index + startSubPrevious - 1
+                    endSub = startSub + frameLength
+                else:
+                    startSub = startPosition
+                    endSub = motifIndex[-1]
+
                 iteration = 0
                 print(f'Loaded Substrates: {purple}{motifTag}{resetColor}')
+                print(f'     Motif Indices: {blue}{self.xAxisLabels[startSub]}-'
+                      f'{self.xAxisLabels[endSub - 1]}{resetColor}')
                 for substrate, count in loadedSubs.items():
-                    print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
+                    print(f'          {pink}{substrate}{resetColor}, '
+                          f'{blue}{substrate[startSub:endSub]}{resetColor}, '
+                          f'Counts: {red}{count:,}'
                           f'{resetColor}')
                     iteration += 1
                     if iteration >= self.printNumber:
                         print('\n')
                         break
-                # fixedMotifSubs.append(loadedSubs)
 
+                # Record motifs
+                for substrate, count in loadedSubs.items():
+                    motif = substrate[startSub:endSub]
+                    if motif in motifs.keys():
+                        motifs[motif] += count
+                    else:
+                        motifs[motif] = count
+            else:
+                print(f'{orange}ERROR: The file was not found\n'
+                      f'     {pathFixedMotifSubs}\n')
+                sys.exit(1)
 
+        # Sort the substrate dictionary by counts
+        motifs = dict(sorted(motifs.items(), key=lambda x: x[1], reverse=True))
 
-    def loadFixedMotifSubstrates(self, pathLoad, datasetTag):
-        print('============================== Load: Fixed Motifs '
-              '===============================')
-        print(f'Loading substrates at path:\n'
-              f'     {greenDark}{pathLoad}{resetColor}\n')
-
-        # Load Data: Fixed substrates
-        with open(pathLoad, 'rb') as file:
-            loadedSubs = pk.load(file)
-
-        print(f'Loaded Substrates: {purple}Fixed Motif {datasetTag}{resetColor}')
         iteration = 0
-        for substrate, count in loadedSubs.items():
-            print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
-                  f'{resetColor}')
+        print(f'Top Motifs: {purple}{self.datasetTag}')
+        for motif, count, in motifs.items():
+            print(f'     {blue}{motif}{resetColor}, {red}{count:,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
                 print('\n')
                 break
 
-        return loadedSubs
+        return motifs
 
 
 
