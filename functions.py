@@ -299,7 +299,7 @@ class NGS:
             if useGreen:
                 # Green
                 colors = ['#FFFFFF','#ABFF9B','#39FF14','#2E9418','#2E9418',
-                          '#005000','#000000']
+                          '#005000']
             else:
                 # Orange
                 colors = ['white','white','#FF76FA','#FF50F9','#FF00F2',
@@ -308,7 +308,7 @@ class NGS:
             colors = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
         elif colorType == 'word cloud':
             # ,'#F2A900','#2E8B57','black'
-            colors = ['#CC5500','#F79620','#FAA338','#00C01E','black']
+            colors = ['#CC5500','#F79620','#FAA338','#00C01E','#003000','black']
             # colors = ['#008631','#39E75F','#CC5500','#F79620','black']
         elif colorType == 'em':
             colors = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
@@ -1422,6 +1422,7 @@ class NGS:
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
               f'Motif Label: {blue}{", ".join(motifLabel)}{resetColor}\n\n')
         frameLength = len(motifLabel)
+        totalMotifs = 0
         motifs = {}
         
         # Load the substrates
@@ -1456,6 +1457,7 @@ class NGS:
                     startSub = startPosition
                     endSub = motifIndex[-1]
 
+                # Print loaded data
                 iteration = 0
                 print(f'Loaded Substrates: {purple}{motifTag}{resetColor}')
                 print(f'     Motif Indices: {blue}{self.xAxisLabels[startSub]}-'
@@ -1467,16 +1469,19 @@ class NGS:
                           f'{resetColor}')
                     iteration += 1
                     if iteration >= self.printNumber:
-                        print('\n')
                         break
 
                 # Record motifs
+                totalCounts = 0
                 for substrate, count in loadedSubs.items():
+                    totalMotifs += count
+                    totalCounts += count
                     motif = substrate[startSub:endSub]
                     if motif in motifs.keys():
                         motifs[motif] += count
                     else:
                         motifs[motif] = count
+                print(f'\n     Total Counts: {red}{totalCounts:,}{resetColor}\n\n')
             else:
                 print(f'{orange}ERROR: The file was not found\n'
                       f'     {pathFixedMotifSubs}\n')
@@ -1486,15 +1491,17 @@ class NGS:
         motifs = dict(sorted(motifs.items(), key=lambda x: x[1], reverse=True))
 
         iteration = 0
-        print(f'Top Motifs: {purple}{self.datasetTag}')
+        print(f'Top Motifs:')
         for motif, count, in motifs.items():
             print(f'     {blue}{motif}{resetColor}, {red}{count:,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
-                print('\n')
+                print(f'\nTotal Motifs: {red}{totalMotifs:,}{resetColor}\n'
+                      f'Unique Motifs: {red}{len(motifs.keys()):,}'
+                      f'{resetColor}\n\n')
                 break
 
-        return motifs
+        return motifs, totalMotifs
 
 
 

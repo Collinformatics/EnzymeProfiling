@@ -14,7 +14,7 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
-inSaveFigures = False
+inSaveFigures = True
 inFigureTimer = False
 
 # Input 2: Experimental Parameters
@@ -29,14 +29,8 @@ inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
-inPrintFixedSubs = True
-inFigureTitleSize = 18
-inFigureLabelSize = 16
-inFigureTickSize = 13
-inLineThickness = 1.5
-inTickLength = 4
 
-# Input 4: Processing The Data
+# Input 4: Figures
 inPlotPCA = False # PCA plot of an individual fixed frame
 # inPlotPCACombined = True
 inPlotEntropy = False
@@ -54,13 +48,32 @@ inPlotBinnedSubstratePrediction = False
 inPlotCounts = False
 inShowSampleSize = False # Include the sample size in your figures
 
-# Input 5: PCA
+# Input 5: Processing The Data
+inPrintNumber = 10
+
+# Input 6: Plot Heatmap
+inShowEnrichmentScores = True
+inShowEnrichmentAsSquares = False
+
+# Input 7: Plot Sequence Motif
+inNormLetters = False  # Normalize fixed letter heights
+inPlotWeblogoMotif = False
+inShowWeblogoYTicks = True
+inAddHorizontalLines = False
+inPlotNegativeWeblogoMotif = False
+inBigLettersOnTop = False
+
+# Input 8: Word Cloud
+inLimitWords = True
+inNWords = 100
+
+# Input 9: PCA
 inNumberOfPCs = 2
 inTotalSubsPCA = int(5*10**4)
 inIncludeSubCountsESM = True
 inPlotEntropyPCAPopulations = False
 
-# Input 6: Printing The Data
+# Input 10: Printing The Data
 inPrintLoadedSubs = True
 inPrintSampleSize = True
 inPrintCounts = True
@@ -72,31 +85,7 @@ inPrintNumber = 10
 inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
 inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabilities
 
-# Input 7: Plot Heatmap
-inShowEnrichmentScores = True
-inShowEnrichmentAsSquares = False
-inTitleEnrichmentMap = inEnzymeName
-inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
-inPrintSelectedSubstrates = 1 # Set = 1, to print substrates with fixed residue
-inFigureSize = (9.5, 8) # (width, height)
-inFigureBorders = [0.873, 0.075, 0.117, 0.967] # Top, bottom, left, right
-inFigureAsSquares = (4.5, 8)
-inFigureBordersAsSquares = [0.873, 0.075, 0.075, 0.943]
-
-# Input 8: Plot Sequence Motif
-inNormLetters = False # Normalize fixed letter heights
-inShowWeblogoYTicks = True
-inAddHorizontalLines = False
-inPlotNegativeWeblogoMotif = False
-inTitleMotif = inTitleEnrichmentMap
-inBigLettersOnTop = False
-inFigureSizeMotif = inFigureSize
-inFigureBordersMotifYTicks = [0.94, 0.075, 0.07, 0.98] # [top, bottom, left, right]
-inFigureBordersMotifMaxYTick = [0.94, 0.075, 0.102, 0.98]
-inFigureBordersNegativeWeblogoMotif = [0.94, 0.075, 0.078, 0.98]
-inFigureBordersEnrichmentMotif = [0.94, 0.075, 0.138, 0.98]
-
-# Input 9: Evaluate Known Substrates
+# Input 11: Evaluate Known Substrates
 inNormalizePredictions = True
 inYMaxPred = 1.05
 inYMinPred, inYMinPredScaled, inYMinPredAI = 0, 0, -0.25
@@ -143,14 +132,14 @@ inDatapointColor = []
 for _ in inSubsPredict:
     inDatapointColor.append(inBarColor)
 
-# Input 10: Evaluate Binned Substrates
+# Input 12: Evaluate Binned Substrates
 inPlotEnrichedSubstrateFrame = False
 inPrintLoadedFrames = True
 inPlotBinnedSubNumber = 30
 inPlotBinnedSubProb = True
 inPlotBinnedSubYMax = 0.07
 
-# Input 11: Predict Binned Substrate Enrichment
+# Input 13: Predict Binned Substrate Enrichment
 inEvaluatePredictions = False
 inPrintPredictions = False
 inBottomParam = 0.16
@@ -1285,8 +1274,16 @@ ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
                         releasedCounts=True)
 
 # Load: Substrate motifs
-ngs.loadMotifSeqs(motifLabel=inMotifPositions, motifIndex=motifFramePos)
+motifs, motifsTotal = ngs.loadMotifSeqs(motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
+# Display current sample size
+ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsTotal)
+
+# Plot: Work cloud
+if inPlotWordCloud:
+    ngs.plotWordCloud(substrates=motifs, indexSet=None,
+                      limitWords=inLimitWords, N=inNWords,
+                      saveTag=ngs.datasetTag)
 
 sys.exit()
 
@@ -1398,20 +1395,11 @@ if (inPlotMotifBarGraphs or inPlotBinnedSubstrateES
         or inPlotEnrichmentMap or inPlotLogo
         or inPredictSubstrateActivityPCA or inPlotWordCloud):
 
-    # Bin substrate frames
-    motifs, frameTotalCountsFinal = ngs.extractMotif(
-        substrates=substratesFixedMotif, substrateFrame=inMotifPositions,
-        frameIndicies=motifFramePos, datasetTag=ngs.labelCombinedMotifs)
-
-    # Plot: Work cloud
-    if inPlotWordCloud:
-        ngs.plotWordCloud(substrates=motifs, title=f'{inTitleEnrichmentMap}\n{ngs.labelCombinedMotifs}',
-                          saveTag=f'Binned Substrates - {ngs.labelCombinedMotifs}')
     
     # Plot: Motifs
     if inPlotMotifBarGraphs:
         ngs.plotBinnedSubstrates(
-            substrates=motifs, countsTotal=frameTotalCountsFinal,
+            substrates=motifs, countsTotal=motifsTotal,
             datasetTag=ngs.labelCombinedMotifs, dataType='Counts',
             title=f'{inEnzymeName}\n{ngs.labelCombinedMotifs}\n'
                   f'Top {inPlotBinnedSubNumber} Substrates',
