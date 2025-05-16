@@ -144,8 +144,9 @@ class NGS:
                  excludeAAs, excludeAA, excludePosition, minCounts, figEMSquares,
                  xAxisLabels, printNumber, showNValues, bigAAonTop, findMotif, folderPath,
                  filesInit, filesFinal, plotPosS, plotFigEM, plotFigEMScaled, plotFigLogo,
-                 plotFigWebLogo, plotFigWords, wordLimit, wordsTotal, saveFigures,
-                 setFigureTimer, expressDNA=False):
+                 plotFigWebLogo, plotFigWords, wordLimit, wordsTotal, plotFigBars,
+                 NSubBars, runPCA, numPCs, NSubsPCA, saveFigures, setFigureTimer, 
+                 expressDNA=False):
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.filterSubs = filterSubs
@@ -178,6 +179,11 @@ class NGS:
         self.plotFigWords = plotFigWords
         self.wordsLimit = wordLimit
         self.wordsTotal = wordsTotal
+        self.plotFigBars = plotFigBars
+        self.NSubBars = NSubBars
+        self.runPCA = runPCA
+        self.NPCs=numPCs
+        self.NSubsPCA = NSubsPCA
         self.datasetTag = None
         self.datasetTagMotif = ''
         self.xAxisLabels = xAxisLabels
@@ -1495,7 +1501,7 @@ class NGS:
         iteration = 0
         print(f'Top Motifs:')
         for motif, count, in motifs.items():
-            print(f'     {blue}{motif}{resetColor}, {red}{count:,}{resetColor}')
+            print(f'     {blue}{motif}{resetColor}, Counts: {red}{count:,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
                 print(f'\nTotal Motifs: {red}{totalMotifs:,}{resetColor}\n'
@@ -2741,12 +2747,432 @@ class NGS:
 
 
 
-    def processSubstrates(self, substrates):
+    def processSubstrates(self, substrates, subLabel):
         # Plot: Work cloud
         if self.plotFigWords:
-            self.plotWordCloud(substrates=motifs, indexSet=None,
-                               limitWords=inLimitWords, N=inNWords,
-                               saveTag=ngs.datasetTag)
+            self.plotWordCloud(substrates=substrates)
+
+        # Plot: Bar graphs
+        if self.plotFigBars:
+            self.plotBarGraph(substrates=substrates, dataType='Counts')
+            self.plotBarGraph(substrates=substrates, dataType='Probability')
+             
+        # PCA
+        if self.runPCA:
+            # Convert substrate data to numerical
+            tokensESM, subsESM, subCountsESM = self.ESM(
+                substrates=substrates, subLabel=subLabel)
+
+            # Cluster substrates
+            subPopulations = self.plotPCA(substrates=substrates, data=tokensESM,
+                                          indices=subsESM, N=subCountsESM)
+            
+
+
+    def plotBarGraph(self, substrates, dataType, barColor='#CC5500', barWidth=0.75):
+        print('================================ Plot: Bar Graph '
+              '================================')
+        print(f'Collecting the top {red}{self.NSubBars}{resetColor} substrates\n')
+        xValues = []
+        yValues = []
+
+        print(f'Substrates:')
+        iteration = 0
+        for substrate, count in substrates.items():
+            print(f'     {blue}{substrate}{resetColor}, Counts: {red}{count}{resetColor}')
+            iteration += 1
+            if iteration >= self.printNumber:
+                print()
+                break
+
+
+        # Collect substrates
+        iteration = 0
+        countsTotal = 0
+        for count in substrates.values():
+            countsTotal += count
+        print(f'Total Substrates: {red}{countsTotal:,}{resetColor}')
+
+        if 'counts' in dataType.lower():
+            # Evaluate: Substrates
+            for substrate, count in substrates.items():
+                xValues.append(str(substrate))
+                yValues.append(count)
+                iteration += 1
+                if iteration == self.NSubBars:
+                    break
+
+            # Evaluate: Y axis
+            maxValue = math.ceil(max(yValues))
+            magnitude = math.floor(math.log10(maxValue))
+            unit = 10**(magnitude-1)
+            yMax = math.ceil(maxValue / unit) * unit
+            if yMax < max(yValues):
+                increaseValue = unit / 2
+                while yMax < max(yValues):
+                    print(f'Increase yMax by:{yellow} {increaseValue}{resetColor}')
+                    yMax += increaseValue
+                print('\n')
+            yMin = 0 # math.floor(min(yValues) / unit) * unit - spacer
+        elif 'probability' in dataType.lower():
+            # Evaluate: Substrates
+            for substrate, count in substrates.items():
+                xValues.append(str(substrate))
+                yValues.append(count / countsTotal)
+                iteration += 1
+                if iteration == self.NSubBars:
+                    break
+
+            # Evaluate: Y axis
+            maxValue = max(yValues)
+            magnitude = math.floor(math.log10(maxValue))
+            adjustedMax = maxValue * 10**abs(magnitude)
+            yMax = math.ceil(adjustedMax) * 10**magnitude
+            adjVal = 5 * 10**(magnitude-1)
+            yMaxAdjusted = yMax - adjVal
+            if yMaxAdjusted > maxValue:
+                yMax = yMaxAdjusted
+            yMin = 0
+        else:
+            # Evaluate: Substrates
+            for substrate, count in substrates.items():
+                xValues.append(str(substrate))
+                yValues.append(count)
+                iteration += 1
+                if iteration == self.NSubBars:
+                    break
+
+            # Evaluate: Y axis
+            spacer = 0.2
+            yMax = math.ceil(max(yValues)) + spacer
+            yMin = math.floor(min(yValues))
+        NSubs = len(xValues)
+        print(f'Number of plotted sequences: {red}{NSubs}{resetColor}\n\n')
+
+        # Plot the data
+        fig, ax = plt.subplots(figsize=self.figSize)
+        bars = plt.bar(xValues, yValues, color=barColor, width=barWidth)
+        plt.ylabel(dataType, fontsize=self.labelSizeAxis)
+        plt.title(f'\n{self.enzymeName}\n{self.datasetTag}\n'
+                 f'Top {NSubs} Substrates',
+                  fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.axhline(y=0, color='black', linewidth=self.lineThickness)
+        plt.ylim(yMin, yMax)
+        # plt.subplots_adjust(top=0.873, bottom=0.12, left=0.101, right=0.979)
+
+
+        # Set the edge color
+        for bar in bars:
+            bar.set_edgecolor('black')
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks, width=self.lineThickness)
+        plt.xticks(rotation=90, ha='center')
+
+        # Set the thickness of the figure border
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+            spine.set_linewidth(self.lineThickness)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        fig.tight_layout()
+        plt.show()
+
+        # Save the figure
+        if self.saveFigures:
+            # Define: Save location
+            figLabel = (f'{self.enzymeName} - Bar Graph - {dataType} - N {NSubs}'
+                        f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                print(f'{yellow}The figure was not saved\n\n'
+                      f'File was already found at path:\n'
+                      f'     {saveLocation}{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+
+    def ESM(self, substrates, subLabel, useSubCounts=True):
+        print('=========================== Convert To Numerical: ESM '
+              '===========================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
+              f'Collecting up to {red}{self.NSubsPCA:,}{resetColor} substrates\n'
+              f'Total unique substrates: {red}{len(substrates):,}{resetColor}\n')
+
+        import esm
+
+        # Extract: Datapoints
+        iteration = 0
+        collectedCountsTotal = 0
+        evaluateSubs = {}
+        for substrate, count in substrates.items():
+            evaluateSubs[str(substrate)] = count
+            iteration += 1
+            collectedCountsTotal += count
+            if iteration >= self.NSubsPCA:
+                break
+        sampleSize = len(evaluateSubs)
+        print(f'Collected substrates:{red} {sampleSize:,}{resetColor}\n'
+              f'Total Counts:{red} {collectedCountsTotal:,}{resetColor}\n\n')
+
+        # Step 1: Convert substrates to ESM model format and generate embeddings
+        subs = []
+        counts = []
+        if useSubCounts:
+            for index, (seq, count) in enumerate(evaluateSubs.items()):
+                subs.append((f'Sub{index}', seq))
+                counts.append(count)
+        else:
+            for index, seq in enumerate(evaluateSubs.keys()):
+                subs.append((f'Sub{index}', seq))
+
+
+        # Step 2: Load the ESM model and batch converter
+        model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
+        # model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
+
+        batch_converter = alphabet.get_batch_converter()
+
+
+        # Step 3: Convert substrates to ESM model format and generate embeddings
+        try:
+            batchLabels, batchSubs, batchTokens = batch_converter(subs)
+        except Exception as exc:
+            print(f'{orange}ERROR: The ESM has failed to evaluate your substrates\n\n'
+                  f'Exception:\n{exc}\n\n'
+                  f'Suggestion:'
+                  f'     Try replacing: {cyan}esm.pretrained.esm2_t36_3B_UR50D()'
+                  f'{orange}\n'
+                  f'     With: {cyan}esm.pretrained.esm2_t33_650M_UR50D()'
+                  f'{resetColor}\n')
+            sys.exit(1)
+
+        print(f'Batch Tokens:{greenLight} {batchTokens.shape}{resetColor}\n'
+              f'{greenLight}{batchTokens}{resetColor}\n\n')
+        slicedTokens = pd.DataFrame(batchTokens[:, 1:-1],
+                                    index=batchSubs,
+                                    columns=subLabel)
+        if useSubCounts:
+            slicedTokens['Counts'] = counts
+        print(f'Sliced Tokens:\n'
+              f'{greenLight}{slicedTokens}{resetColor}\n\n')
+
+        return slicedTokens, batchSubs, sampleSize
+
+
+
+    def plotPCA(self, substrates, data, indices, N):
+        print('====================================== PCA '
+              '======================================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
+
+        import matplotlib.patheffects as path_effects
+        from matplotlib.widgets import RectangleSelector
+        from sklearn.decomposition import PCA
+        from sklearn.preprocessing import StandardScaler
+
+        # Initialize lists for the clustered substrates
+        self.selectedSubstrates = []
+        self.selectedDatapoints = []
+        rectangles = []
+
+        # Define component labels
+        pcaHeaders = []
+        for componentNumber in range(1, self.NPCs + 1):
+            pcaHeaders.append(f'PC{componentNumber}')
+        headerCombinations = list(combinations(pcaHeaders, 2))
+
+        print('Here A')
+        # # Cluster the datapoints
+        # Step 1: Apply PCA on the standardized data
+        pca = PCA(n_components=self.NPCs) # Adjust the number of components as needed
+        scaler = StandardScaler()
+        data = scaler.fit_transform(data)
+        dataPCA = pca.fit_transform(data)
+        # loadings = pca.components_.T
+        print('Here B')
+        # Step 2: Create a DataFrame for PCA results
+        dataPCA = pd.DataFrame(dataPCA, columns=pcaHeaders, index=indices)
+        print(f'PCA Data:{red} # of components = {self.NPCs}\n'
+              f'{greenLight}{dataPCA}{resetColor}\n\n')
+
+        # Step 3: Print explained variance ratio
+        varRatio = pca.explained_variance_ratio_ * 100
+        print(f'Explained Variance Ratio: '
+              f'{red}{" ".join([f"{x:.3f}" for x in varRatio])}{resetColor} %\n\n')
+
+
+        # Define: Figure parameters
+        if self.filterSubs:
+            # Modify dataset tag
+            if 'Excl' in self.datasetTag:
+                datasetTag = self.datasetTag.replace('Excl', 'Exclude')
+
+            title = (f'\n{self.enzymeName}\n'
+                     f'{self.datasetTag}\n'
+                     f'{N:,} Unique Substrates')
+        else:
+            title = (f'\n{self.enzymeName}\n'
+                     f'Unfiltered'
+                     f'{N:,} Unique Substrates'),
+
+
+        # Plot the data
+        for components in headerCombinations:
+            fig, ax = plt.subplots(figsize=self.figSize)
+
+            def selectDatapoints(eClick, eRelease):
+                # # Function to update selection with a rectangle
+
+                nonlocal ax, rectangles
+
+                # Define x, y coordinates
+                x1, y1 = eClick.xdata, eClick.ydata  # Start of the rectangle
+                x2, y2 = eRelease.xdata, eRelease.ydata  # End of the rectangle
+
+                # Collect selected datapoints
+                selection = []
+                selectedSubs = []
+                for index, (x, y) in enumerate(zip(dataPCA.loc[:, 'PC1'],
+                                                   dataPCA.loc[:, 'PC2'])):
+                    if (min(x1, x2) <= x <= max(x1, x2) and
+                            min(y1, y2) <= y <= max(y1, y2)):
+                        selection.append((x, y))
+                        selectedSubs.append(dataPCA.index[index])
+                if selection:
+                    self.selectedDatapoints.append(selection)
+                    self.selectedSubstrates.append(selectedSubs)
+
+                # Draw the boxes
+                if self.selectedDatapoints:
+                    for index, box in enumerate(self.selectedDatapoints):
+                        # Calculate the bounding box for the selected points
+                        padding = 0.05
+                        xMinBox = min(x for x, y in box) - padding
+                        xMaxBox = max(x for x, y in box) + padding
+                        yMinBox = min(y for x, y in box) - padding
+                        yMaxBox = max(y for x, y in box) + padding
+
+                        # Draw a single rectangle around the bounding box
+                        boundingRect = plt.Rectangle((xMinBox, yMinBox),
+                                                     width=xMaxBox - xMinBox,
+                                                     height=yMaxBox - yMinBox,
+                                                     linewidth=2,
+                                                     edgecolor='black',
+                                                     facecolor='none')
+                        ax.add_patch(boundingRect)
+                        self.rectangles.append(boundingRect)
+
+                        # Add text only if there are multiple boxes
+                        if len(self.selectedDatapoints) > 1:
+                            # Calculate the center of the rectangle for text positioning
+                            centerX = (xMinBox + xMaxBox) / 2
+                            centerY = (yMinBox + yMaxBox) / 2
+
+                            # Number the boxes
+                            text = ax.text(centerX, centerY, f'{index + 1}',
+                                           horizontalalignment='center',
+                                           verticalalignment='center',
+                                           fontsize=25,
+                                           color='#F79620',
+                                           fontweight='bold')
+                            text.set_path_effects(
+                                [path_effects.Stroke(linewidth=2, foreground='black'),
+                                 path_effects.Normal()])
+                plt.draw()
+            plt.scatter(dataPCA[components[0]], dataPCA[components[1]],
+                        c='#CC5500', edgecolor='black')
+            plt.xlabel(f'Principal Component {components[0][-1]} '
+                       f'({np.round(varRatio[0], 3)} %)',
+                       fontsize=self.labelSizeAxis)
+            plt.ylabel(f'Principal Component {components[1][-1]} '
+                       f'({np.round(varRatio[1], 3)} %)',
+                       fontsize=self.labelSizeAxis)
+            plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+
+
+            # Set tick parameters
+            ax.tick_params(axis='both', which='major', length=self.tickLength,
+                           labelsize=self.labelSizeTicks, width=self.lineThickness)
+
+            # Set the thickness of the figure border
+            for _, spine in ax.spines.items():
+                spine.set_visible(True)
+                spine.set_linewidth(self.lineThickness)
+
+
+            # Create a RectangleSelector
+            selector = RectangleSelector(ax,
+                                         selectDatapoints,
+                                         useblit=True,
+                                         minspanx=5,
+                                         minspany=5,
+                                         spancoords='pixels',
+                                         interactive=True)
+
+            # Change rubber band color
+            selector.set_props(facecolor='none', edgecolor='green', linewidth=3)
+
+            fig.canvas.mpl_connect('key_press_event', pressKey)
+            fig.tight_layout()
+            plt.show()
+
+
+        # Save the Figure
+        if self.saveFigures:
+            # Define: Save location
+            figLabel = (f'{self.enzymeName} - PCA - {self.datasetTag} - '
+                        f'{N} - MinCounts {self.minSubCount}.png')
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                print(f'{yellow}The figure was not saved\n\n'
+                      f'File was already found at path:\n'
+                      f'     {saveLocation}{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+        # Create a list of collected substrate dictionaries
+        if self.selectedSubstrates:
+            print(f'Update: Make this able to shift the frame '
+                  f'if you plot binned substrates')
+            collectedSubs = []
+            for index, substrateSet in enumerate(self.selectedSubstrates):
+                print(f'Substrate Set:{greenLightB} {index + 1}{resetColor}')
+                iteration = 0
+                collectionSet = {}
+                for substrate in substrateSet:
+                    collectionSet[substrate] = substrates[substrate]
+
+                # Sort collected substrates and add to the list
+                collectionSet = dict(sorted(collectionSet.items(),
+                                            key=lambda x: x[1], reverse=True))
+                collectedSubs.append(collectionSet)
+
+                # Print collected substrates
+                for substrate, count in collectionSet.items():
+                    print(f'     {pink}{substrate}{resetColor}, '
+                          f'Counts: {red}{count:,}{resetColor}')
+                    iteration += 1
+                    if iteration >= self.printNumber:
+                        print('\n')
+                        break
+
+            return collectedSubs
+        else:
+            return None
+
+
 
     def KLDivergence(self, P, Q, printProb, scaler):
         print('================================= KL Divergence '
@@ -3202,282 +3628,6 @@ class NGS:
         return enrichedSubs
 
 
-
-    def ESM(self, substrates, collectionNumber, useSubCounts, subPositions, datasetTag):
-        print('=========================== Convert To Numerical: ESM '
-              '===========================')
-        print(f'Dataset: {purple}{datasetTag}{resetColor}\n\n'
-              f'Collecting{red} {collectionNumber:,}{resetColor} substrates\n'
-              f'Total unique substrates:{red} {len(substrates):,}{resetColor}\n')
-
-        import esm
-
-        # Extract: Datapoints
-        iteration = 0
-        collectedCountsTotal = 0
-        evaluateSubs = {}
-        for substrate, count in substrates.items():
-            evaluateSubs[str(substrate)] = count
-            iteration += 1
-            collectedCountsTotal += count
-            if iteration >= collectionNumber:
-                break
-        sampleSize = len(evaluateSubs)
-        print(f'Collected substrates:{red} {sampleSize:,}{resetColor}\n'
-              f'Total Counts:{red} {collectedCountsTotal:,}{resetColor}\n\n')
-
-        # Step 1: Convert substrates to ESM model format and generate embeddings
-        subs = []
-        if useSubCounts:
-            counts = []
-            for index, (seq, count) in enumerate(evaluateSubs.items()):
-                subs.append((f'Sub{index}', seq))
-                counts.append(count)
-        else:
-            for index, seq in enumerate(evaluateSubs.keys()):
-                subs.append((f'Sub{index}', seq))
-
-
-        # Step 2: Load the ESM model and batch converter
-        model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
-        # model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
-
-        batch_converter = alphabet.get_batch_converter()
-
-
-        # Step 3: Convert substrates to ESM model format and generate embeddings
-        try:
-            batchLabels, batchSubs, batchTokens = batch_converter(subs)
-        except Exception as exc:
-            print(f'{orange}ERROR: The ESM has failed to evaluate your substrates\n\n'
-                  f'Exception:\n{exc}\n\n'
-                  f'Suggestion:'
-                  f'     Try replacing: {cyan}esm.pretrained.esm2_t36_3B_UR50D()'
-                  f'{orange}\n'
-                  f'     With: {cyan}esm.pretrained.esm2_t33_650M_UR50D()'
-                  f'{resetColor}\n')
-            sys.exit(1)
-
-        print(f'Batch Tokens:{greenLight} {batchTokens.shape}{resetColor}\n'
-              f'{greenLight}{batchTokens}{resetColor}\n\n')
-        slicedTokens = pd.DataFrame(batchTokens[:, 1:-1],
-                                    index=batchSubs,
-                                    columns=subPositions)
-        if useSubCounts:
-            slicedTokens['Counts'] = counts
-        print(f'Sliced Tokens:\n'
-              f'{greenLight}{slicedTokens}{resetColor}\n\n')
-
-        return slicedTokens, batchSubs, sampleSize
-
-
-
-    def plotPCA(self, substrates, data, indices, numberOfPCs, N, fixedSubs,
-                datasetTag, saveTag):
-        print('====================================== PCA '
-              '======================================')
-        print(f'Dataset: {purple}{saveTag}{resetColor}\n')
-
-        import matplotlib.patheffects as path_effects
-        from matplotlib.widgets import RectangleSelector
-        from sklearn.decomposition import PCA
-        from sklearn.preprocessing import StandardScaler
-
-        # Initialize lists for the clustered substrates
-        self.selectedSubstrates = []
-        self.selectedDatapoints = []
-        rectangles = []
-
-        # Define component labels
-        pcaHeaders = []
-        for componentNumber in range(1, numberOfPCs + 1):
-            pcaHeaders.append(f'PC{componentNumber}')
-        headerCombinations = list(combinations(pcaHeaders, 2))
-
-
-        # # Cluster the datapoints
-        # Step 1: Apply PCA on the standardized data
-        pca = PCA(n_components=numberOfPCs) # Adjust the number of components as needed
-        scaler = StandardScaler()
-        data = scaler.fit_transform(data)
-        dataPCA = pca.fit_transform(data)
-        # loadings = pca.components_.T
-
-        # Step 2: Create a DataFrame for PCA results
-        dataPCA = pd.DataFrame(dataPCA, columns=pcaHeaders, index=indices)
-        print(f'PCA Data:{red} # of components = {numberOfPCs}\n'
-              f'{greenLight}{dataPCA}{resetColor}\n\n')
-
-        # Step 3: Print explained variance ratio
-        varRatio = pca.explained_variance_ratio_ * 100
-        print(f'Explained Variance Ratio: '
-              f'{red}{" ".join([f"{x:.3f}" for x in varRatio])}{resetColor} %\n\n')
-
-
-        # Define: Figure parameters
-        if fixedSubs:
-            # Modify dataset tag
-            if 'Excl' in datasetTag:
-                datasetTag = datasetTag.replace('Excl', 'Exclude')
-
-            title = (f'{self.enzymeName}\n'
-                     f'{datasetTag}\n'
-                     f'{N:,} Unique Substrates')
-        else:
-            title = (f'\n{self.enzymeName}\n'
-                     f'{N:,} Unique Substrates'),
-
-
-        # Plot the data
-        for components in headerCombinations:
-            fig, ax = plt.subplots(figsize=self.figSize)
-
-            def selectDatapoints(eClick, eRelease):
-                # # Function to update selection with a rectangle
-
-                nonlocal ax, rectangles
-
-                # Define x, y coordinates
-                x1, y1 = eClick.xdata, eClick.ydata  # Start of the rectangle
-                x2, y2 = eRelease.xdata, eRelease.ydata  # End of the rectangle
-
-                # Collect selected datapoints
-                selection = []
-                selectedSubs = []
-                for index, (x, y) in enumerate(zip(dataPCA.loc[:, 'PC1'],
-                                                   dataPCA.loc[:, 'PC2'])):
-                    if (min(x1, x2) <= x <= max(x1, x2) and
-                            min(y1, y2) <= y <= max(y1, y2)):
-                        selection.append((x, y))
-                        selectedSubs.append(dataPCA.index[index])
-                if selection:
-                    self.selectedDatapoints.append(selection)
-                    self.selectedSubstrates.append(selectedSubs)
-
-                # Draw the boxes
-                if self.selectedDatapoints:
-                    for index, box in enumerate(self.selectedDatapoints):
-                        # Calculate the bounding box for the selected points
-                        padding = 0.05
-                        xMinBox = min(x for x, y in box) - padding
-                        xMaxBox = max(x for x, y in box) + padding
-                        yMinBox = min(y for x, y in box) - padding
-                        yMaxBox = max(y for x, y in box) + padding
-
-                        # Draw a single rectangle around the bounding box
-                        boundingRect = plt.Rectangle((xMinBox, yMinBox),
-                                                     width=xMaxBox - xMinBox,
-                                                     height=yMaxBox - yMinBox,
-                                                     linewidth=2,
-                                                     edgecolor='black',
-                                                     facecolor='none')
-                        ax.add_patch(boundingRect)
-                        self.rectangles.append(boundingRect)
-
-                        # Add text only if there are multiple boxes
-                        if len(self.selectedDatapoints) > 1:
-                            # Calculate the center of the rectangle for text positioning
-                            centerX = (xMinBox + xMaxBox) / 2
-                            centerY = (yMinBox + yMaxBox) / 2
-
-                            # Number the boxes
-                            text = ax.text(centerX, centerY, f'{index + 1}',
-                                           horizontalalignment='center',
-                                           verticalalignment='center',
-                                           fontsize=25,
-                                           color='#F79620',
-                                           fontweight='bold')
-                            text.set_path_effects(
-                                [path_effects.Stroke(linewidth=2, foreground='black'),
-                                 path_effects.Normal()])
-                plt.draw()
-            plt.scatter(dataPCA[components[0]], dataPCA[components[1]],
-                        c='#CC5500', edgecolor='black')
-            plt.xlabel(f'Principal Component {components[0][-1]} '
-                       f'({np.round(varRatio[0], 3)} %)',
-                       fontsize=self.labelSizeAxis)
-            plt.ylabel(f'Principal Component {components[1][-1]} '
-                       f'({np.round(varRatio[1], 3)} %)',
-                       fontsize=self.labelSizeAxis)
-            plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-
-
-            # Set tick parameters
-            ax.tick_params(axis='both', which='major', length=self.tickLength,
-                           labelsize=self.labelSizeTicks, width=self.lineThickness)
-
-            # Set the thickness of the figure border
-            for _, spine in ax.spines.items():
-                spine.set_visible(True)
-                spine.set_linewidth(self.lineThickness)
-
-
-            # Create a RectangleSelector
-            selector = RectangleSelector(ax,
-                                         selectDatapoints,
-                                         useblit=True,
-                                         minspanx=5,
-                                         minspany=5,
-                                         spancoords='pixels',
-                                         interactive=True)
-
-            # Change rubber band color
-            selector.set_props(facecolor='none', edgecolor='green', linewidth=3)
-
-            fig.canvas.mpl_connect('key_press_event', pressKey)
-            fig.tight_layout()
-            plt.show()
-
-
-        # Save the Figure
-        if self.saveFigures:
-            # Define: Save location
-            figLabel = (f'{self.enzymeName} - PCA - {saveTag} - '
-                        f'{N} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                print(f'{yellow}The figure was not saved\n\n'
-                      f'File was already found at path:\n'
-                      f'     {saveLocation}{resetColor}\n\n')
-            else:
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
-
-
-        # Create a list of collected substrate dictionaries
-        if self.selectedSubstrates:
-            print(f'Update: Make this able to shift the frame '
-                  f'if you plot binned substrates')
-            collectedSubs = []
-            for index, substrateSet in enumerate(self.selectedSubstrates):
-                print(f'Substrate Set:{greenLightB} {index + 1}{resetColor}')
-                iteration = 0
-                collectionSet = {}
-                for substrate in substrateSet:
-                    collectionSet[substrate] = substrates[substrate]
-
-                # Sort collected substrates and add to the list
-                collectionSet = dict(sorted(collectionSet.items(),
-                                            key=lambda x: x[1], reverse=True))
-                collectedSubs.append(collectionSet)
-
-                # Print collected substrates
-                for substrate, count in collectionSet.items():
-                    print(f'     {pink}{substrate}{resetColor}, '
-                          f'Counts: {red}{count:,}{resetColor}')
-                    iteration += 1
-                    if iteration >= self.printNumber:
-                        print('\n')
-                        break
-
-            return collectedSubs
-        else:
-            return None
-
-
     # ====================================================================================
 
 
@@ -3581,7 +3731,7 @@ class NGS:
                        motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
 
         # Plot: Work cloud
-        self.plotWordCloud(substrates=substrates, saveTag=datasetTag)
+        self.plotWordCloud(substrates=substrates)
 
 
     # ====================================================================================
@@ -4243,13 +4393,13 @@ class NGS:
 
 
 
-    def plotWordCloud(self, substrates, limitWords, N, indexSet, saveTag):
+    def plotWordCloud(self, substrates, indexSet=None):
         print('=============================== Plot: Word Cloud '
               '================================')
         if indexSet is not None:
             print(f'Selecting PCA Population:{red} {indexSet + 1}{resetColor}')
         else:
-            print(f'Substrates: {purple}{saveTag}{resetColor}')
+            print(f'Substrates: {purple}{self.datasetTag}{resetColor}')
         iteration = 0
         for substrate, count in substrates.items():
             print(f'     {blue}{substrate}{resetColor}, '
@@ -4265,15 +4415,14 @@ class NGS:
             self.titleWords = '\n' + self.titleWords
 
         # Limit the number of words
-        if limitWords:
-            print(f'Selecting: {red}{N}{resetColor} words')
+        if self.wordsLimit:
+            print(f'Selecting: {red}{self.wordsTotal}{resetColor} words')
             subs = {}
             iteration = 0
             for substrate, count in substrates.items():
                 subs[substrate] = count
                 iteration += 1
-                if iteration >= N:
-
+                if iteration >= self.wordsTotal:
                     break
             substrates = subs
         totalWords = len(substrates)
@@ -4312,12 +4461,12 @@ class NGS:
         # Save the Figure
         if self.saveFigures:
             # Define: Save location
-            if limitWords:
-                figLabel = (f'{self.enzymeName} - Words - {saveTag} - '
-                            f'Select {N} Plot {totalWords} - '
+            if self.wordsLimit:
+                figLabel = (f'{self.enzymeName} - Words - {self.datasetTag} - '
+                            f'Select {self.wordsTotal} Plot {totalWords} - '
                             f'MinCounts {self.minSubCount}.png')
             else:
-                figLabel = (f'{self.enzymeName} - Words - {saveTag} - '
+                figLabel = (f'{self.enzymeName} - Words - {self.datasetTag} - '
                             f'Plot {totalWords} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
@@ -4412,106 +4561,6 @@ class NGS:
               f'Unique Substrates:{red} {countUniqueSubstrates:,}{resetColor}\n\n')
 
         return motifs, countTotalSubstrates
-
-
-
-    def plotBinnedSubstrates(self, substrates, countsTotal, datasetTag, dataType,
-                             title, numDatapoints, barColor, barWidth):
-        print('============================ Plot: Binned Substrates '
-              '============================')
-        xValues = []
-        yValues = []
-        iteration = 0
-        if dataType == 'Probability':
-            for substrate, count in substrates.items():
-                xValues.append(str(substrate))
-                yValues.append(count / countsTotal)
-                iteration += 1
-                if iteration == numDatapoints:
-                    break
-        else:
-            for substrate, count in substrates.items():
-                xValues.append(str(substrate))
-                yValues.append(count)
-                iteration += 1
-                if iteration == numDatapoints:
-                    break
-
-        if dataType == 'Counts':
-            maxValue = math.ceil(max(yValues))
-            magnitude = math.floor(math.log10(maxValue))
-            unit = 10**(magnitude-1)
-            yMax = math.ceil(maxValue / unit) * unit
-            if yMax < max(yValues):
-                increaseValue = unit / 2
-                while yMax < max(yValues):
-                    print(f'Increase yMax by:{yellow} {increaseValue}{resetColor}')
-                    yMax += increaseValue
-                print('\n')
-            yMin = 0 # math.floor(min(yValues) / unit) * unit - spacer
-        elif dataType == 'Probability':
-            maxValue = max(yValues)
-            magnitude = math.floor(math.log10(maxValue))
-            adjustedMax = maxValue * 10**abs(magnitude)
-            yMax = math.ceil(adjustedMax) * 10**magnitude
-            adjVal = 5 * 10**(magnitude-1)
-            yMaxAdjusted = yMax - adjVal
-            if yMaxAdjusted > maxValue:
-                yMax = yMaxAdjusted
-            yMin = 0
-        else:
-            spacer = 0.2
-            yMax = math.ceil(max(yValues)) + spacer
-            yMin = math.floor(min(yValues))
-
-        # Plot the data
-        fig, ax = plt.subplots(figsize=self.figSize)
-        bars = plt.bar(xValues, yValues, color=barColor, width=barWidth)
-        plt.ylabel(dataType, fontsize=self.labelSizeAxis)
-        plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-        plt.axhline(y=0, color='black', linewidth=self.lineThickness)
-        plt.ylim(yMin, yMax)
-        # if dataType == 'Probability':
-        #     plt.subplots_adjust(top=0.873, bottom=0.12, left=0.101, right=0.979)
-        # elif dataType == 'Counts':
-        #     plt.subplots_adjust(top=0.873, bottom=0.12, left=0.13, right=0.979)
-        # else:
-        #     plt.subplots_adjust(top=0.873, bottom=0.12, left=0.1, right=0.979)
-
-        # Set the edge color
-        for bar in bars:
-            bar.set_edgecolor('black')
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks, width=self.lineThickness)
-        plt.xticks(rotation=90, ha='center')
-
-        # Set the thickness of the figure border
-        for _, spine in ax.spines.items():
-            spine.set_visible(True)
-            spine.set_linewidth(self.lineThickness)
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        fig.tight_layout()
-        plt.show()
-
-        # Save the figure
-        if self.saveFigures:
-            # Define: Save location
-            figLabel = (f'{self.enzymeName} - Binned Substrates - {dataType} - '
-                        f'{datasetTag} - MinCounts {self.minSubCount}.png')
-            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                print(f'{yellow}The figure was not saved\n\n'
-                      f'File was already found at path:\n'
-                      f'     {saveLocation}{resetColor}\n\n')
-            else:
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
 
 
 

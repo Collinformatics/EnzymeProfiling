@@ -12,7 +12,7 @@ import sys
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inPathFolder = f'/path/{inEnzymeName}'
+inPathFolder = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = True
