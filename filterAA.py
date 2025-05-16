@@ -4,10 +4,8 @@
 
 
 from functions import filePaths, NGS
-import numpy as np
 import os
 import sys
-import pandas as pd
 
 
 
@@ -70,7 +68,7 @@ inBigLettersOnTop = False
 
 # Input 9: Word Cloud
 inLimitWords = True
-inNWords = 100
+inTotalWords = 100
 
 # Input 10: Optimal Substrates
 inEvaluateOS = False
@@ -120,7 +118,8 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
           plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
           plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
-          plotFigWords=inPlotWordCloud, saveFigures=inSaveFigures, setFigureTimer=None)
+          plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
+          saveFigures=inSaveFigures, setFigureTimer=None)
 
 
 
@@ -220,11 +219,11 @@ if inPlotWordCloud or inPlotPCA:
     if inPlotWordCloud:
         if inFixResidues:
             ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
-                              limitWords=inLimitWords, N=inNWords,
+                              limitWords=inLimitWords, N=inTotalWords,
                               saveTag=ngs.datasetTag)
         else:
             ngs.plotWordCloud(substrates=substratesFinal, indexSet=None,
-                              limitWords=inLimitWords, N=inNWords,
+                              limitWords=inLimitWords, N=inTotalWords,
                               saveTag='Unfiltered')
 
     # Plot: PCA

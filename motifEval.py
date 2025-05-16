@@ -65,7 +65,7 @@ inBigLettersOnTop = False
 
 # Input 8: Word Cloud
 inLimitWords = True
-inNWords = 100
+inTotalWords = 100
 
 # Input 9: PCA
 inNumberOfPCs = 2
@@ -203,6 +203,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
+          wordLimit=inLimitWords, wordsTotal=inTotalWords,
           saveFigures=inSaveFigures, setFigureTimer=inFigureTimer)
 
 
@@ -1279,11 +1280,8 @@ motifs, motifsTotal = ngs.loadMotifSeqs(motifLabel=inMotifPositions, motifIndex=
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsTotal)
 
-# Plot: Work cloud
-if inPlotWordCloud:
-    ngs.plotWordCloud(substrates=motifs, indexSet=None,
-                      limitWords=inLimitWords, N=inNWords,
-                      saveTag=ngs.datasetTag)
+ngs.processSubstrates(substrates=motifs)
+
 
 sys.exit()
 

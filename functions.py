@@ -144,8 +144,8 @@ class NGS:
                  excludeAAs, excludeAA, excludePosition, minCounts, figEMSquares,
                  xAxisLabels, printNumber, showNValues, bigAAonTop, findMotif, folderPath,
                  filesInit, filesFinal, plotPosS, plotFigEM, plotFigEMScaled, plotFigLogo,
-                 plotFigWebLogo, plotFigWords, saveFigures, setFigureTimer,
-                 expressDNA=False):
+                 plotFigWebLogo, plotFigWords, wordLimit, wordsTotal, saveFigures,
+                 setFigureTimer, expressDNA=False):
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.filterSubs = filterSubs
@@ -176,6 +176,8 @@ class NGS:
         self.plotFigLogo = plotFigLogo
         self.plotFigWebLogo = plotFigWebLogo
         self.plotFigWords = plotFigWords
+        self.wordsLimit = wordLimit
+        self.wordsTotal = wordsTotal
         self.datasetTag = None
         self.datasetTagMotif = ''
         self.xAxisLabels = xAxisLabels
@@ -1561,6 +1563,35 @@ class NGS:
 
 
 
+    def saveFigure(self, fig, figType, releasedCounts=False):
+        # Define: Save location
+        if self.motifFilter:
+            if releasedCounts:
+                figLabel = (f'{self.enzymeName} -  {figType} Rel Counts - '
+                            f'{self.motifTag} - MinCounts {self.minSubCount}.png')
+            else:
+                figLabel = (f'{self.enzymeName} - {figType} '
+                            f'{self.saveFigureIteration} - {self.motifTag} - '
+                            f'MinCounts {self.minSubCount}.png')
+        else:
+            figLabel = (f'{self.enzymeName} - {figType} - '
+                        f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+        saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+
+        # Save figure
+        if os.path.exists(saveLocation):
+            print(f'{yellow}WARNING{resetColor}: '
+                  f'{yellow}The figure already exists at the path\n'
+                  f'     {saveLocation}\n\n'
+                  f'We will not overwrite the figure{resetColor}\n\n')
+        else:
+            print(f'Saving figure at path:\n'
+                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
+            fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+
     def recordSampleSize(self, NInitial, NFinal):
         print('============================== Current Sample Size '
               '==============================')
@@ -1624,6 +1655,274 @@ class NGS:
         pd.set_option('display.float_format', '{:,.3f}'.format)
 
         return prob
+
+
+
+
+
+
+    def calculateProbCodon(self, codonSeq):
+        print('======================= Calculate: Residue Probabilities '
+              '========================')
+        print(f'Possible codons for {codonSeq}:')
+        nucleotides = ['A', 'C', 'G', 'T']
+        S = ['C', 'G']
+        K = ['G', 'T']
+
+        # Define what codons are associated with each residue
+        codonsAA = {
+            'A': ['GCT', 'GCC', 'GCA', 'GCG'],
+            'R': ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
+            'N': ['AAT', 'AAC'],
+            'D': ['GAT', 'GAC'],
+            'C': ['TGT', 'TGC'],
+            'E': ['GAA', 'GAG'],
+            'Q': ['CAA', 'CAG'],
+            'G': ['GGT', 'GGC', 'GGA', 'GGG'],
+            'H': ['CAT', 'CAC'],
+            'I': ['ATT', 'ATC', 'ATA'],
+            'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
+            'K': ['AAA', 'AAG'],
+            'M': ['ATG'],
+            'F': ['TTT', 'TTC'],
+            'P': ['CCT', 'CCC', 'CCA', 'CCG'],
+            'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
+            'T': ['ACT', 'ACC', 'ACA', 'ACG'],
+            'W': ['TGG'],
+            'Y': ['TAT', 'TAC'],
+            'V': ['GTT', 'GTC', 'GTA', 'GTG']
+        }
+
+        # Initialize a list to store all possible combinations
+        codons = []
+
+        # Generate all possible combinations
+        for combination in product(nucleotides, repeat=len(codonSeq)):
+            # Check if the combination satisfies the conditions
+            if all((c == 'N') or (c == 'S' and s in S) or (c == 'K' and s in K)
+                   for c, s in zip(codonSeq, combination)):
+                codons.append(''.join(combination))
+
+            # Print all possible codon combinations
+            for index, codon in enumerate(codons, 1):
+                print(f'Codon {index}: {codon}')
+            print('')
+
+        # Count the possible codon combinations for each AA
+        codonCounts = pd.DataFrame(index=self.letters, columns=['Counts'], data=0)
+        for sequence in codons:
+            for residue, codonsResidue in codonsAA.items():
+                if sequence in codonsResidue:
+                    if residue in codonCounts.index:
+                        codonCounts.loc[residue, 'Counts'] += 1
+                    break
+        codonProbability = pd.DataFrame(index=self.letters, columns=['Probability'], data=0)
+        codonProbability['Probability'] = codonCounts['Counts'] / len(codons)
+
+        print('Amino Acid Probabilities:')
+        for index, row in codonProbability.iterrows():
+            print(f'     {index}    {round(row["Probability"] * 100, 2)} %')
+        codonProb = round(sum(codonProbability["Probability"]) * 100, 2)
+        print(f'Total probability of AA with {codonSeq}: {codonProb} %')
+        print(f'Stop codon probability: {round(100 - codonProb, 2)} %\n\n')
+
+        return codonProbability
+
+
+
+    def calculateProbabilities(self, counts, N, fileType, calcAvg=False):
+        print('======================== Calculate: Residue Probability '
+              '=========================')
+        if self.filterSubs and 'initial' not in fileType.lower():
+            print(f'Dataset: {purple}{self.enzymeName} {fileType} - Filter '
+                  f'{self.datasetTag}{resetColor}\n')
+        else:
+            print(f'Dataset: {purple}{self.enzymeName} - {fileType}{resetColor}\n')
+
+        # Calculate: Probability
+        prob = counts / N
+        print(f'{np.round(prob, 4)}\n\n')
+
+        if calcAvg:
+            probAvg = np.sum(prob, axis=1) / len(prob.columns)
+            prob = pd.DataFrame(probAvg, index=probAvg.index, columns=['Average RF'])
+            print(f'{np.round(prob, 4)}\n\n')
+
+        return prob
+
+
+
+    def compairRF(self, probInitial, probFinal, selectAA):
+        print('======================= Evaluate Specificity: Compair RF '
+              '========================')
+        if selectAA in self.letters:
+            residue = self.residues[self.letters.index(selectAA)][0]
+        else:
+            print(f'{greyDark}Residue not recognized:{red} {selectAA}{greyDark}\n'
+                  f'Please check input:{red} self.fixedAA')
+            sys.exit(1)
+        print(f'Fixed Residues:{red} {self.datasetTag}{resetColor}\n'
+              f'Selected Residue:{red} {residue}{resetColor}\n')
+
+        initial = probInitial[probInitial.index.str.contains(selectAA)]
+        final = probFinal[probFinal.index.str.contains(selectAA)]
+
+        print(f'{purple}Initial Sort{resetColor}:\n{initial}\n'
+              f'{purple}Final Sort{resetColor}:\n{final}\n\n')
+
+        # Figure parameters
+        barWidth = 0.4
+
+        # Determine yMax
+        yMin = 0
+        yMax = 1
+
+        # Set the positions of the bars on the x-axis
+        x = np.arange(len(final.columns))
+
+        # Create a figure and axes
+        fig, ax = plt.subplots(figsize=self.figSizeMini)
+
+        # Plotting the bars
+        ax.bar(x - barWidth / 2, initial.iloc[0], width=barWidth, label='Initial Sort',
+               color='#000000')
+        ax.bar(x + barWidth / 2, final.iloc[0], width=barWidth, label='Final Sort',
+               color='#BF5700')
+
+        # Adding labels and title
+        ax.set_ylabel('Relative Frequency', fontsize=self.labelSizeAxis)
+        ax.set_title(f'{residue} RF: {self.enzymeName} Fixed {self.datasetTag}',
+                     fontsize=self.labelSizeTitle, fontweight='bold')
+        ax.legend()
+        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.112, right=0.917)
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks)
+
+        # Set x ticks
+        ax.set_xticks(x)
+        ax.set_xticklabels(self.xAxisLabels)
+
+        ax.set_ylim(yMin, yMax)
+
+        # Set the edge thickness
+        for spine in ax.spines.values():
+            spine.set_linewidth(self.lineThickness)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        plt.show()
+
+
+
+    def boxPlotRF(self, probInitial, probFinal, selectAA):
+        print('=============================== Plot: RF Box Plot '
+              '===============================')
+        if selectAA in self.letters:
+            residue = self.residues[self.letters.index(selectAA)][0]
+        else:
+            print(f'{greyDark}Residue not recognized:{red} {selectAA}{greyDark}\n'
+                  f'Please check input:{red} self.fixedAA')
+            sys.exit(1)
+        print(f'Fixed Residues:{red} {self.datasetTag}{resetColor}\n'
+              f'Selected Residue:{red} {residue}{resetColor}\n')
+
+        # Extract data
+        initial = probInitial[probInitial.index.str.contains(selectAA)].T
+        final = probFinal[probFinal.index.str.contains(selectAA)].T
+        print(f'{purple}Initial Sort{resetColor}:\n{initial}\n')
+        print(f'{purple}Final Sort{resetColor}:\n{final}\n\n')
+        print(f'Pos: {self.fixedPos}')
+        final = final.drop(final.index[[int(pos) - 1 for pos in self.fixedPos]])
+        print(f'Remove fixed residues: {purple}Final Sort{resetColor}\n{final}\n\n')
+
+        # Set local parameters
+        self.tickLength, self.lineThickness = 4, 1
+        xLabels = ['Initial Sort', 'Final Sort']
+
+        # Determine yMax
+        yMin = 0
+        yMax = 1
+
+
+        # Find outliers in the initial dataset
+        outliersInitial = []
+        Q1 = initial.quantile(0.25)
+        Q3 = initial.quantile(0.75)
+        IQR = Q3 - Q1
+        outliers = initial[(initial < Q1 - 1.5 * IQR) | (initial > Q3 + 1.5 * IQR)]
+        # Iterate over the indices of outliers
+        for index, row in outliers.iterrows():
+            if not row.isnull().all():
+                outliersInitial.append(index)
+
+        # Find outliers in the final dataset
+        outliersFinal = []
+        Q1 = final.quantile(0.25)
+        Q3 = final.quantile(0.75)
+        IQR = Q3 - Q1
+        outliers = final[(final < Q1 - 1.5 * IQR) | (final > Q3 + 1.5 * IQR)]
+        # Iterate over the indices of outliers
+        for index, row in outliers.iterrows():
+            if not row.isnull().all():
+                outliersFinal.append(index)
+
+        # Print the outliers
+        if len(outliersInitial) != 0:
+            print(f'Outliers: {purple}Initial Sort{resetColor}')
+            for outlierPosition in outliersInitial:
+                print(f'     {outlierPosition}')
+            print()
+        else:
+            print(f'There were no{red} {residue}{resetColor} RF outliers in: '
+                  f'{purple}Initial Sort{resetColor}\n')
+        if len(outliersFinal) != 0:
+            print(f'Outliers: {purple}Final Sort{resetColor}')
+            for outlierPosition in outliersFinal:
+                print(f'     {outlierPosition}')
+            print('\n')
+        else:
+            print(f'There were no{red} {residue}{resetColor} RF outliers in: '
+                  f'{purple}Final Sort{resetColor} '
+                  f'fixed{red} {self.datasetTag}{resetColor} \n\n')
+
+        # Create a figure and axes
+        fig, ax = plt.subplots(figsize=self.figSizeMini)
+
+        # Plot the data
+        initial.boxplot(
+            ax=ax, positions=[0], widths=0.4, patch_artist=True,
+            boxprops=dict(facecolor='black'), whiskerprops=dict(color='black'),
+            medianprops=dict(color='#F7971F', linewidth=0.5),
+            flierprops=dict(marker='o', markerfacecolor='#F7971F', markersize=10))
+        final.boxplot(
+            ax=ax, positions=[1], widths=0.4, patch_artist=True,
+            boxprops=dict(facecolor='#BF5700'), whiskerprops=dict(color='black'),
+            medianprops=dict(color='#F7971F', linewidth=0.5),
+            flierprops=dict(marker='o', markerfacecolor='#F7971F', markersize=10))
+        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.112, right=0.917)
+
+        # Add labels and title
+        ax.set_title(f'{self.enzymeName} - {residue} RF: Fixed {self.datasetTag}',
+                     fontsize=self.labelSizeTitle, fontweight='bold')
+        ax.set_ylabel('Relative Frequency', fontsize=self.labelSizeAxis)
+
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks)
+
+        # Set x & y-axis tick labels
+        ax.set_xticks(range(len(xLabels)))
+        ax.set_xticklabels(xLabels, fontsize=self.labelSizeAxis)
+        ax.set_ylim(yMin, yMax)
+
+        # Set the edge thickness
+        for spine in ax.spines.values():
+            spine.set_linewidth(self.lineThickness)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        plt.show()
 
 
 
@@ -1936,271 +2235,6 @@ class NGS:
 
 
 
-    def calculateProbCodon(self, codonSeq):
-        print('======================= Calculate: Residue Probabilities '
-              '========================')
-        print(f'Possible codons for {codonSeq}:')
-        nucleotides = ['A', 'C', 'G', 'T']
-        S = ['C', 'G']
-        K = ['G', 'T']
-
-        # Define what codons are associated with each residue
-        codonsAA = {
-            'A': ['GCT', 'GCC', 'GCA', 'GCG'],
-            'R': ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
-            'N': ['AAT', 'AAC'],
-            'D': ['GAT', 'GAC'],
-            'C': ['TGT', 'TGC'],
-            'E': ['GAA', 'GAG'],
-            'Q': ['CAA', 'CAG'],
-            'G': ['GGT', 'GGC', 'GGA', 'GGG'],
-            'H': ['CAT', 'CAC'],
-            'I': ['ATT', 'ATC', 'ATA'],
-            'L': ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
-            'K': ['AAA', 'AAG'],
-            'M': ['ATG'],
-            'F': ['TTT', 'TTC'],
-            'P': ['CCT', 'CCC', 'CCA', 'CCG'],
-            'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
-            'T': ['ACT', 'ACC', 'ACA', 'ACG'],
-            'W': ['TGG'],
-            'Y': ['TAT', 'TAC'],
-            'V': ['GTT', 'GTC', 'GTA', 'GTG']
-        }
-
-        # Initialize a list to store all possible combinations
-        codons = []
-
-        # Generate all possible combinations
-        for combination in product(nucleotides, repeat=len(codonSeq)):
-            # Check if the combination satisfies the conditions
-            if all((c == 'N') or (c == 'S' and s in S) or (c == 'K' and s in K)
-                   for c, s in zip(codonSeq, combination)):
-                codons.append(''.join(combination))
-
-            # Print all possible codon combinations
-            for index, codon in enumerate(codons, 1):
-                print(f'Codon {index}: {codon}')
-            print('')
-
-        # Count the possible codon combinations for each AA
-        codonCounts = pd.DataFrame(index=self.letters, columns=['Counts'], data=0)
-        for sequence in codons:
-            for residue, codonsResidue in codonsAA.items():
-                if sequence in codonsResidue:
-                    if residue in codonCounts.index:
-                        codonCounts.loc[residue, 'Counts'] += 1
-                    break
-        codonProbability = pd.DataFrame(index=self.letters, columns=['Probability'], data=0)
-        codonProbability['Probability'] = codonCounts['Counts'] / len(codons)
-
-        print('Amino Acid Probabilities:')
-        for index, row in codonProbability.iterrows():
-            print(f'     {index}    {round(row["Probability"] * 100, 2)} %')
-        codonProb = round(sum(codonProbability["Probability"]) * 100, 2)
-        print(f'Total probability of AA with {codonSeq}: {codonProb} %')
-        print(f'Stop codon probability: {round(100 - codonProb, 2)} %\n\n')
-
-        return codonProbability
-
-
-
-    def calculateProbabilities(self, counts, N, fileType, calcAvg=False):
-        print('======================== Calculate: Residue Probability '
-              '=========================')
-        if self.filterSubs and 'initial' not in fileType.lower():
-            print(f'Dataset: {purple}{self.enzymeName} {fileType} - Filter '
-                  f'{self.datasetTag}{resetColor}\n')
-        else:
-            print(f'Dataset: {purple}{self.enzymeName} - {fileType}{resetColor}\n')
-
-        # Calculate: Probability
-        prob = counts / N
-        print(f'{np.round(prob, 4)}\n\n')
-
-        if calcAvg:
-            probAvg = np.sum(prob, axis=1) / len(prob.columns)
-            prob = pd.DataFrame(probAvg, index=probAvg.index, columns=['Average RF'])
-            print(f'{np.round(prob, 4)}\n\n')
-
-        return prob
-
-
-
-    def compairRF(self, probInitial, probFinal, selectAA):
-        print('======================= Evaluate Specificity: Compair RF '
-              '========================')
-        if selectAA in self.letters:
-            residue = self.residues[self.letters.index(selectAA)][0]
-        else:
-            print(f'{greyDark}Residue not recognized:{red} {selectAA}{greyDark}\n'
-                  f'Please check input:{red} self.fixedAA')
-            sys.exit(1)
-        print(f'Fixed Residues:{red} {self.datasetTag}{resetColor}\n'
-              f'Selected Residue:{red} {residue}{resetColor}\n')
-
-        initial = probInitial[probInitial.index.str.contains(selectAA)]
-        final = probFinal[probFinal.index.str.contains(selectAA)]
-
-        print(f'{purple}Initial Sort{resetColor}:\n{initial}\n'
-              f'{purple}Final Sort{resetColor}:\n{final}\n\n')
-
-        # Figure parameters
-        barWidth = 0.4
-
-        # Determine yMax
-        yMin = 0
-        yMax = 1
-
-        # Set the positions of the bars on the x-axis
-        x = np.arange(len(final.columns))
-
-        # Create a figure and axes
-        fig, ax = plt.subplots(figsize=self.figSizeMini)
-
-        # Plotting the bars
-        ax.bar(x - barWidth / 2, initial.iloc[0], width=barWidth, label='Initial Sort',
-               color='#000000')
-        ax.bar(x + barWidth / 2, final.iloc[0], width=barWidth, label='Final Sort',
-               color='#BF5700')
-
-        # Adding labels and title
-        ax.set_ylabel('Relative Frequency', fontsize=self.labelSizeAxis)
-        ax.set_title(f'{residue} RF: {self.enzymeName} Fixed {self.datasetTag}',
-                     fontsize=self.labelSizeTitle, fontweight='bold')
-        ax.legend()
-        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.112, right=0.917)
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks)
-
-        # Set x ticks
-        ax.set_xticks(x)
-        ax.set_xticklabels(self.xAxisLabels)
-
-        ax.set_ylim(yMin, yMax)
-
-        # Set the edge thickness
-        for spine in ax.spines.values():
-            spine.set_linewidth(self.lineThickness)
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        plt.show()
-
-
-
-    def boxPlotRF(self, probInitial, probFinal, selectAA):
-        print('=============================== Plot: RF Box Plot '
-              '===============================')
-        if selectAA in self.letters:
-            residue = self.residues[self.letters.index(selectAA)][0]
-        else:
-            print(f'{greyDark}Residue not recognized:{red} {selectAA}{greyDark}\n'
-                  f'Please check input:{red} self.fixedAA')
-            sys.exit(1)
-        print(f'Fixed Residues:{red} {self.datasetTag}{resetColor}\n'
-              f'Selected Residue:{red} {residue}{resetColor}\n')
-
-        # Extract data
-        initial = probInitial[probInitial.index.str.contains(selectAA)].T
-        final = probFinal[probFinal.index.str.contains(selectAA)].T
-        print(f'{purple}Initial Sort{resetColor}:\n{initial}\n')
-        print(f'{purple}Final Sort{resetColor}:\n{final}\n\n')
-        print(f'Pos: {self.fixedPos}')
-        final = final.drop(final.index[[int(pos) - 1 for pos in self.fixedPos]])
-        print(f'Remove fixed residues: {purple}Final Sort{resetColor}\n{final}\n\n')
-
-        # Set local parameters
-        self.tickLength, self.lineThickness = 4, 1
-        xLabels = ['Initial Sort', 'Final Sort']
-
-        # Determine yMax
-        yMin = 0
-        yMax = 1
-
-
-        # Find outliers in the initial dataset
-        outliersInitial = []
-        Q1 = initial.quantile(0.25)
-        Q3 = initial.quantile(0.75)
-        IQR = Q3 - Q1
-        outliers = initial[(initial < Q1 - 1.5 * IQR) | (initial > Q3 + 1.5 * IQR)]
-        # Iterate over the indices of outliers
-        for index, row in outliers.iterrows():
-            if not row.isnull().all():
-                outliersInitial.append(index)
-
-        # Find outliers in the final dataset
-        outliersFinal = []
-        Q1 = final.quantile(0.25)
-        Q3 = final.quantile(0.75)
-        IQR = Q3 - Q1
-        outliers = final[(final < Q1 - 1.5 * IQR) | (final > Q3 + 1.5 * IQR)]
-        # Iterate over the indices of outliers
-        for index, row in outliers.iterrows():
-            if not row.isnull().all():
-                outliersFinal.append(index)
-
-        # Print the outliers
-        if len(outliersInitial) != 0:
-            print(f'Outliers: {purple}Initial Sort{resetColor}')
-            for outlierPosition in outliersInitial:
-                print(f'     {outlierPosition}')
-            print()
-        else:
-            print(f'There were no{red} {residue}{resetColor} RF outliers in: '
-                  f'{purple}Initial Sort{resetColor}\n')
-        if len(outliersFinal) != 0:
-            print(f'Outliers: {purple}Final Sort{resetColor}')
-            for outlierPosition in outliersFinal:
-                print(f'     {outlierPosition}')
-            print('\n')
-        else:
-            print(f'There were no{red} {residue}{resetColor} RF outliers in: '
-                  f'{purple}Final Sort{resetColor} '
-                  f'fixed{red} {self.datasetTag}{resetColor} \n\n')
-
-        # Create a figure and axes
-        fig, ax = plt.subplots(figsize=self.figSizeMini)
-
-        # Plot the data
-        initial.boxplot(
-            ax=ax, positions=[0], widths=0.4, patch_artist=True,
-            boxprops=dict(facecolor='black'), whiskerprops=dict(color='black'),
-            medianprops=dict(color='#F7971F', linewidth=0.5),
-            flierprops=dict(marker='o', markerfacecolor='#F7971F', markersize=10))
-        final.boxplot(
-            ax=ax, positions=[1], widths=0.4, patch_artist=True,
-            boxprops=dict(facecolor='#BF5700'), whiskerprops=dict(color='black'),
-            medianprops=dict(color='#F7971F', linewidth=0.5),
-            flierprops=dict(marker='o', markerfacecolor='#F7971F', markersize=10))
-        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.112, right=0.917)
-
-        # Add labels and title
-        ax.set_title(f'{self.enzymeName} - {residue} RF: Fixed {self.datasetTag}',
-                     fontsize=self.labelSizeTitle, fontweight='bold')
-        ax.set_ylabel('Relative Frequency', fontsize=self.labelSizeAxis)
-
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks)
-
-        # Set x & y-axis tick labels
-        ax.set_xticks(range(len(xLabels)))
-        ax.set_xticklabels(xLabels, fontsize=self.labelSizeAxis)
-        ax.set_ylim(yMin, yMax)
-
-        # Set the edge thickness
-        for spine in ax.spines.values():
-            spine.set_linewidth(self.lineThickness)
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        plt.show()
-
-
-
     def calculateEnrichment(self, probInitial, probFinal, releasedCounts=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
@@ -2376,35 +2410,6 @@ class NGS:
                       f'{cyan} {dataType}{resetColor}\n')
                 sys.exit(1)
             self.saveFigure(fig=fig, figType=datasetType, releasedCounts=releasedCounts)
-
-
-
-    def saveFigure(self, fig, figType, releasedCounts=False):
-        # Define: Save location
-        if self.motifFilter:
-            if releasedCounts:
-                figLabel = (f'{self.enzymeName} -  {figType} Rel Counts - '
-                            f'{self.motifTag} - MinCounts {self.minSubCount}.png')
-            else:
-                figLabel = (f'{self.enzymeName} - {figType} '
-                            f'{self.saveFigureIteration} - {self.motifTag} - '
-                            f'MinCounts {self.minSubCount}.png')
-        else:
-            figLabel = (f'{self.enzymeName} - {figType} - '
-                        f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
-        saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-
-        # Save figure
-        if os.path.exists(saveLocation):
-            print(f'{yellow}WARNING{resetColor}: '
-                  f'{yellow}The figure already exists at the path\n'
-                  f'     {saveLocation}\n\n'
-                  f'We will not overwrite the figure{resetColor}\n\n')
-        else:
-            print(f'Saving figure at path:\n'
-                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
-            fig.savefig(saveLocation, dpi=self.figureResolution)
 
 
 
@@ -2735,6 +2740,13 @@ class NGS:
         self.plotStats(countedData=frameESStDev, totalCounts=None, dataType='StDev')
 
 
+
+    def processSubstrates(self, substrates):
+        # Plot: Work cloud
+        if self.plotFigWords:
+            self.plotWordCloud(substrates=motifs, indexSet=None,
+                               limitWords=inLimitWords, N=inNWords,
+                               saveTag=ngs.datasetTag)
 
     def KLDivergence(self, P, Q, printProb, scaler):
         print('================================= KL Divergence '

@@ -64,7 +64,7 @@ inBigLettersOnTop = False
 
 # Input 7: Word Cloud
 inLimitWords = True
-inNWords = 100
+inTotalWords = 100
 
 # Input 8: Substrate Enrichment
 inBinSubstrates = False
@@ -143,6 +143,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
+          wordLimit=inLimitWords, wordsTotal=inTotalWords,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
@@ -655,7 +656,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     # Plot: Work cloud
     if inPlotWordCloud:
         ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
-                          limitWords=inLimitWords, N=inNWords,
+                          limitWords=inLimitWords, N=inTotalWords,
                           saveTag=ngs.datasetTagMotif)
 
     # Save the data
@@ -738,7 +739,7 @@ if (os.path.exists(filePathFixedMotifSubs) and
     # Plot: Work cloud
     if inPlotWordCloud:
         ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
-                          limitWords=inLimitWords, N=inNWords,
+                          limitWords=inLimitWords, N=inTotalWords,
                           saveTag=ngs.datasetTagMotif)
 else:
     # Load: Unfiltered substates
