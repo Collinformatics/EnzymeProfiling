@@ -16,11 +16,6 @@
 
 # Keyboard Shortcuts
 
-Note:
-
-- For the shortcuts to work, the displayed figure must be selected.
-- If nothing happens after pressing a key, click on the figure and try again.
-
 Esc: Close the current figure.
 
 - This will save the figure if "inSaveFigures" is turned on
@@ -28,6 +23,12 @@ Esc: Close the current figure.
 F12: Rerun the script
 
 Backspace: Terminate the script that is currently running.
+
+Note:
+
+- For the shortcuts to work, the displayed figure must be selected.
+
+- If nothing happens after pressing a key, click on the figure and try again.
 
 # General Information
 
