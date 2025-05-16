@@ -14,6 +14,21 @@
         pip install torch
         pip install wordcloud
 
+# Keyboard Shortcuts
+
+Note:
+
+- For the shortcuts to work, the displayed figure must be selected.
+- If nothing happens after pressing a key, click on the figure and try again.
+
+Esc: Close the current figure.
+
+- This will save the figure if "inSaveFigures" is turned on
+
+F12: Rerun the script
+
+Backspace: Terminate the script that is currently running.
+
 # General Information
 
 These scripts are designed to extact a protein substrate sequence from a longer DNA sequence. 
@@ -127,4 +142,11 @@ Input 3:
 - inExcludedResidue: define excluded AAs
 - inExcludedPosition: define positions to exclude the AAs
 - inMinimumSubstrateCount: exclude substrates with less than this value
+
+# Figures: Word Cloud
+
+The word distributions and colors will be randomized with each figure. 
+
+To remake the figure with a new arrangemnt, press the "F12" key (when the figure is selected) to rerun the script
+
 
