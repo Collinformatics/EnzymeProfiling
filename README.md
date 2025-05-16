@@ -141,7 +141,7 @@ Input 3:
 - inExcludedPosition: define positions to exclude the AAs
 - inMinimumSubstrateCount: exclude substrates with less than this value
 
-# Motif Eval
+# Motif Eval (Incomplete Section)
 
 Input 2:
 
