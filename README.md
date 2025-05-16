@@ -163,7 +163,7 @@ Input 2:
 
 Figures: Word Cloud
 
-- The word distributions and colors will be randomized with each figure. 
+- The orientations of the words, and their colors will be randomized with each figure. 
 
 - To remake the figure with a new arrangemnt, press the "F12" key (when the figure is selected) to rerun the script.
 
