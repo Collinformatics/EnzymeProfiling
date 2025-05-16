@@ -16,13 +16,13 @@
 
 # Keyboard Shortcuts
 
-Esc: Close the current figure.
+Esc: Close the current figure
 
 - This will save the figure if "inSaveFigures" is turned on
 
 F12: Rerun the script
 
-Backspace: Terminate the script that is currently running.
+Backspace: Terminate the script that is currently running
 
 Note:
 
