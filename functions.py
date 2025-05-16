@@ -1580,7 +1580,7 @@ class NGS:
 
         # Set figure title
         self.titleReleased = (f'\n{self.enzymeName}\n'
-                              f'{self.datasetTag}\n'
+                              f'{self.datasetTagMotif}\n'
                               f'Released Counts')
         if self.showSampleSize:
             self.title = (f'\n{self.enzymeName}\n'

@@ -186,7 +186,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
 
     # Determine if the fixed substrate file exists
     if os.path.exists(filePathFixedSubs) and os.path.exists(filePathFixedCounts):
-        print(f'Loading Substrates at Path:\n'
+        print(f'Loading Substrates at path:\n'
               f'     {greyDark}{filePathFixedSubs}\n'
               f'     {filePathFixedCounts}{resetColor}\n\n')
 
