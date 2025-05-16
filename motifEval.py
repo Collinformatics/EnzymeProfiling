@@ -14,7 +14,7 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
-inSaveFigures = True
+inSaveFigures = False
 inFigureTimer = False
 
 # Input 2: Experimental Parameters
@@ -39,14 +39,15 @@ inTickLength = 4
 # Input 4: Processing The Data
 inPlotPCA = False # PCA plot of an individual fixed frame
 # inPlotPCACombined = True
-inPlotEnrichmentMap = True
-inPlotEnrichmentMapScaled = True
-inPlotLogo = True
-inPlotWeblogo = True
+inPlotEntropy = False
+inPlotEnrichmentMap = False
+inPlotEnrichmentMapScaled = False
+inPlotLogo = False
+inPlotWeblogo = False
+inPlotWordCloud = True
 inPlotActivityFACS = False
 inPredictSubstrateActivity = False
 inPredictSubstrateActivityPCA = False
-inPlotWordCloud = True # Plot word cloud for the selected populations
 inPlotMotifBarGraphs = False
 inPlotBinnedSubstrateES = False
 inPlotBinnedSubstratePrediction = False
@@ -210,7 +211,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           printNumber=inPrintNumber, showNValues=inShowSampleSize,
           bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
           filesInit=filesInitial, filesFinal=filesFinal,
-          plotPosS=False, plotFigEM=inPlotEnrichmentMap,
+          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
           saveFigures=inSaveFigures, setFigureTimer=inFigureTimer)
@@ -1283,6 +1284,9 @@ entropy = ngs.calculateEntropy(probability=probCombinedMotif)
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
                         releasedCounts=True)
 
+
+if inPlotWordCloud:
+    ngs.loadMotifSeqs()
 
 sys.exit()
 

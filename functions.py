@@ -1056,10 +1056,19 @@ class NGS:
                     f'FinalSort - MinCounts {self.minSubCount}')
                 paths = [pathSubs, pathCounts, pathCountsReleased]
             else:
-                paths = os.path.join(
+                pathSubs = os.path.join(
+                    self.pathSaveData,
+                    f'fixedMotifSubs - {self.enzymeName} - {customTag} - '
+                    f'FinalSort - MinCounts {self.minSubCount}')
+                pathCounts = os.path.join(
+                    self.pathSaveData,
+                    f'fixedMotifCounts - {self.enzymeName} - {customTag} - '
+                    f'FinalSort - MinCounts {self.minSubCount}')
+                pathCountsReleased = os.path.join(
                     self.pathSaveData,
                     f'fixedMotifCountsRel - {self.enzymeName} - {customTag} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
+                paths = [pathSubs, pathCounts, pathCountsReleased]
         else:
             pathSubs = os.path.join(
                 self.pathSaveData,
@@ -1333,17 +1342,16 @@ class NGS:
             motifTag = f'{self.fixedAA[0]}@R{position}'
 
             # Define: File paths
-            filePathFixedMotifReleasedCounts = self.getFilePath(
+            _, _, pathFixedMotifRelCounts = self.getFilePath(
                 datasetTag=self.datasetTagMotif, motifPath=True, customTag=motifTag)
 
-
             # Look for the file
-            if os.path.exists(filePathFixedMotifReleasedCounts):
+            if os.path.exists(pathFixedMotifRelCounts):
                 print(f'Loading: {greenLightB}Released Counts\n{greenDark}'
-                      f'     {filePathFixedMotifReleasedCounts}{resetColor}\n')
+                      f'     {pathFixedMotifRelCounts}{resetColor}\n')
 
                 # Load file
-                countsLoaded = pd.read_csv(filePathFixedMotifReleasedCounts, index_col=0)
+                countsLoaded = pd.read_csv(pathFixedMotifRelCounts, index_col=0)
 
                 # Define fixed frame positions and extract the data
                 startPosition = motifIndex[0]
@@ -1377,7 +1385,7 @@ class NGS:
                     totalCountsFixedFrame += countsFixedFrame
             else:
                 print(f'{orange}ERROR: The file was not found\n'
-                      f'     {filePathFixedMotifReleasedCounts}\n')
+                      f'     {pathFixedMotifRelCounts}\n')
                 sys.exit(1)
 
         # Sum the columns
@@ -1405,6 +1413,42 @@ class NGS:
             return countsMotifsAll, totalCountsFixedFrame, posSumsCombinedMotif
         else:
             return totalCountsFixedFrame, posSumsCombinedMotif
+
+
+
+    def loadMotifSeqs(self):
+        print('============================ Load: Substrate Motifs '
+              '=============================')
+        print(f'Dataset: {self.datasetTag}')
+        
+        # Load the substrates
+        for index, position in enumerate(self.fixedPos):
+            # Define: File paths
+            motifTag = f'{self.fixedAA[0]}@R{position}'
+
+            # Define: File paths
+            pathFixedMotifSubs, _, _ = self.getFilePath(
+                datasetTag=self.datasetTagMotif, motifPath=True, customTag=motifTag)
+
+            # Look for the file
+            if os.path.exists(pathFixedMotifSubs):
+                print(f'Loading: {greenLightB}Released Counts\n{greenDark}'
+                      f'     {pathFixedMotifSubs}{resetColor}\n')
+
+                # Load file
+                with open(pathFixedMotifSubs, 'rb') as file:
+                    loadedSubs = pk.load(file)
+
+                iteration = 0
+                print(f'Loaded Substrates: {purple}{motifTag}{resetColor}')
+                for substrate, count in loadedSubs.items():
+                    print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
+                          f'{resetColor}')
+                    iteration += 1
+                    if iteration >= self.printNumber:
+                        print('\n')
+                        break
+                # fixedMotifSubs.append(loadedSubs)
 
 
 
@@ -3708,9 +3752,9 @@ class NGS:
         print('================================= Plot: Entropy '
               '=================================')
         if self.filterSubs:
-            title = f'\n{self.enzymeName}: {self.datasetTag}'
+            title = f'{self.enzymeName}\n{self.datasetTag}'
         else:
-            title = f'\n{self.enzymeName}'
+            title = f'\n\n{self.enzymeName}'
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
               f'{entropy}\n\n')
 
