@@ -41,7 +41,6 @@ The specificity of the enzyme is evaluated by calculating the Enrichment Score o
 
 # Express DNA
 
-
 Run extractSubstrates.py to express DNA sequneces, and extract the protein substrates.
 
 Input parameters you will need to know include:
@@ -141,6 +140,24 @@ Input 3:
 - inExcludedResidue: define excluded AAs
 - inExcludedPosition: define positions to exclude the AAs
 - inMinimumSubstrateCount: exclude substrates with less than this value
+
+# Motif Eval
+
+Input 2:
+
+- inMotifPositions: Label the residues in the motif sequence
+
+        inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'']
+
+- inIndexNTerminus: Define the index of the first position in "inMotifPositions"
+
+  - If the positions in the full substrate sequnece are:
+ 
+        pos = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+
+    - If: inIndexNTerminus = 0, the motif will start at 'R1', and extend to 'R6'
+    
+    - If: inIndexNTerminus = 1, the motif will start at 'R2', and extend to 'R7'
 
 # Figures: Word Cloud
 
