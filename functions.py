@@ -1579,34 +1579,20 @@ class NGS:
 
 
         # Set figure title
+        self.titleReleased = (f'\n{self.enzymeName}\n'
+                              f'{self.datasetTag}\n'
+                              f'Released Counts')
         if self.showSampleSize:
             self.title = (f'\n{self.enzymeName}\n'
                      f'N Unsorted = {self.nSubsInitial:,}\n'
                      f'N Sorted = {self.nSubsFinal:,}')
-            if self.motifFilter:
-                self.titleReleased = (f'{self.enzymeName}\n'
-                                      f'Released Counts\n'
-                                      f'N Unsorted = {self.nSubsInitial:,}\n'
-                                      f'N Sorted = {self.nSubsFinal:,}')
-            else:
-                self.titleReleased = (f'\n{self.enzymeName}\n'
-                                      f'{self.datasetTag}\n'
-                                      f'Released Counts\n')
             self.titleWeblogo = f'\n\n{self.enzymeName}\nN = {self.nSubsFinal:,}'
             self.titleWeblogoReleased = (f'\n{self.enzymeName}\nReleased Counts\n'
                                          f'N = {self.nSubsFinal:,}')
         else:
             self.title = f'\n\n\n{self.enzymeName}'
-            if self.motifFilter:
-                self.titleReleased = (f'\n\n{self.enzymeName}\n'
-                                      f'Released Counts')
-            else:
-                self.titleReleased = (f'\n{self.enzymeName}\n'
-                                      f'{self.datasetTag}\n'
-                                      f'Released Counts')
             self.titleWeblogo = f'\n\n\n{self.enzymeName}'
             self.titleWeblogoReleased = f'\n\n{self.enzymeName}\nReleased Counts'
-
         if self.filterSubs:
             if self.motifFilter:
                 self.titleWords = f'\n{self.enzymeName}\nMotif {self.motifTag}'
