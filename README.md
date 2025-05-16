@@ -159,12 +159,14 @@ Input 2:
     
     - If: inIndexNTerminus = 1, the motif will start at 'R2', and extend to 'R7'
 
-# Figures: Word Cloud
+# Miscellaneous
 
-The word distributions and colors will be randomized with each figure. 
+Figures: Word Cloud
 
-To remake the figure with a new arrangemnt, press the "F12" key (when the figure is selected) to rerun the script.
+- The word distributions and colors will be randomized with each figure. 
 
-- Recommendation: Turn off the switches that plot the Enrichment Maps, and Logos to avoid spending time plotting unnecessary figures before plotting the Word Cloud
+- To remake the figure with a new arrangemnt, press the "F12" key (when the figure is selected) to rerun the script.
+
+  - Recommendation: Turn off the switches that plot the Enrichment Maps, and Logos to avoid spending time plotting unnecessary figures before plotting the Word Cloud
 
 
