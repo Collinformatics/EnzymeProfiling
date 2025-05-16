@@ -209,7 +209,7 @@ class NGS:
         self.bigAAonTop = bigAAonTop
         self.findMotif = findMotif
         self.motifFilter = False
-        self.motifInit = True # Set to False after using NGS.calculateEntropy()
+        self.motifInit = True # filterMotif.py: Set to False after NGS.calculateEntropy()
         self.motifTag = ''
         self.motifIndex = None
         self.saveFigures = saveFigures
@@ -288,6 +288,42 @@ class NGS:
             'Y': color[5],
             'V': color[0]
         }
+
+
+
+    @staticmethod
+    def createCustomColorMap(colorType):
+        colorType = colorType.lower()
+        if colorType == 'counts':
+            useGreen = True
+            if useGreen:
+                # Green
+                colors = ['#FFFFFF','#ABFF9B','#39FF14','#2E9418','#2E9418',
+                          '#005000','#000000']
+            else:
+                # Orange
+                colors = ['white','white','#FF76FA','#FF50F9','#FF00F2',
+                          '#CA00DF','#BD16FF']
+        elif colorType == 'stdev':
+            colors = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
+        elif colorType == 'word cloud':
+            # ,'#F2A900','#2E8B57','black'
+            colors = ['#CC5500','#F79620','#FAA338','#00C01E','black']
+            # colors = ['#008631','#39E75F','#CC5500','#F79620','black']
+        elif colorType == 'em':
+            colors = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
+                      'lightcoral','red','firebrick','darkred']
+        else:
+            print(f'{orange}ERROR: Cannot create colormap. '
+                  f'Unrecognized colorType parameter: {colorType}{resetColor}\n')
+            sys.exit(1)
+
+        # Create colormap
+        if len(colors) == 1:
+            colorList = [(0, colors[0]), (1, colors[0])]
+        else:
+            colorList = [(i / (len(colors) - 1), color) for i, color in enumerate(colors)]
+        return LinearSegmentedColormap.from_list('custom_colormap', colorList)
 
 
 
@@ -1288,7 +1324,7 @@ class NGS:
               f'Motif Frame: {blue}{", ".join(initialMotifFrame)}{resetColor}\n\n')
 
         frameLength = len(motifFrame)
-        countsFixedFrameAll = []
+        countsMotifsAll = []
         totalCountsFixedFrame = None
 
         # Load the counts
@@ -1325,7 +1361,7 @@ class NGS:
                 fixedFramePos = countsLoaded.columns[startSub:endSub]
                 countsFixedFrame = countsLoaded.loc[:, fixedFramePos]
                 countsFixedFrame.columns = motifFrame
-                countsFixedFrameAll.append(countsFixedFrame.values)
+                countsMotifsAll.append(countsFixedFrame.values)
 
                 formattedCounts = countsFixedFrame.to_string(
                     formatters={column: '{:,.0f}'.format for column in
@@ -1345,9 +1381,9 @@ class NGS:
                 sys.exit(1)
 
         # Sum the columns
-        fixedFrameColumnSums = []
+        posSumsCombinedMotif = []
         for column in motifFrame:
-            fixedFrameColumnSums.append(sum(totalCountsFixedFrame.loc[:, column]))
+            posSumsCombinedMotif.append(sum(totalCountsFixedFrame.loc[:, column]))
 
         # Format the DataFrame with commas
         formattedCounts = totalCountsFixedFrame.to_string(
@@ -1359,16 +1395,16 @@ class NGS:
               f'{self.datasetTag}{resetColor}\n{formattedCounts}\n')
         print('Total Counts:')
         for index, position in enumerate(motifFrame):
-            print(f'     {position}: {red}{fixedFrameColumnSums[index]:,}{resetColor}')
+            print(f'     {position}: {red}{posSumsCombinedMotif[index]:,}{resetColor}')
         print('\n')
 
         if returnList:
             # Convert a list into 3D array
-            countsFixedFrameAll = np.stack(countsFixedFrameAll, axis=0)
+            countsMotifsAll = np.stack(countsMotifsAll, axis=0)
 
-            return countsFixedFrameAll, totalCountsFixedFrame
+            return countsMotifsAll, totalCountsFixedFrame, posSumsCombinedMotif
         else:
-            return totalCountsFixedFrame
+            return totalCountsFixedFrame, posSumsCombinedMotif
 
 
 
@@ -1455,29 +1491,46 @@ class NGS:
     def recordSampleSize(self, NInitial, NFinal):
         print('============================== Current Sample Size '
               '==============================')
-        # Update: Sample size
-        self.nSubsInitial = NInitial
-        self.nSubsFinal = NFinal
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f'Initial Sort: {red}{self.nSubsInitial:,}{resetColor}\n'
-              f'Final Sort: {red}{self.nSubsFinal:,}{resetColor}\n\n')
+        if isinstance(NInitial, int) and isinstance(NFinal, int):
+            # Update: Sample size
+            self.nSubsInitial = NInitial
+            self.nSubsFinal = NFinal
+            print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+                  f'Initial Sort: {red}{self.nSubsInitial:,}{resetColor}\n'
+                  f'Final Sort: {red}{self.nSubsFinal:,}{resetColor}\n\n')
+        else:
+            print(f'Sample size was not recorded.\n'
+                  f'N values must be integers:\n'
+                  f'     N Initial: {pink}{type(NInitial)}{resetColor}\n'
+                  f'     N Final: {pink}{type(NFinal)}{resetColor}\n\n')
+
 
         # Set figure title
         if self.showSampleSize:
             self.title = (f'\n{self.enzymeName}\n'
                      f'N Unsorted = {self.nSubsInitial:,}\n'
                      f'N Sorted = {self.nSubsFinal:,}')
-            self.titleReleased = (f'{self.enzymeName}\n'
-                                  f'Released Counts\n'
-                                  f'N Unsorted = {self.nSubsInitial:,}\n'
-                                  f'N Sorted = {self.nSubsFinal:,}')
+            if self.motifFilter:
+                self.titleReleased = (f'{self.enzymeName}\n'
+                                      f'Released Counts\n'
+                                      f'N Unsorted = {self.nSubsInitial:,}\n'
+                                      f'N Sorted = {self.nSubsFinal:,}')
+            else:
+                self.titleReleased = (f'\n{self.enzymeName}\n'
+                                      f'{self.datasetTag}\n'
+                                      f'Released Counts\n')
             self.titleWeblogo = f'\n\n{self.enzymeName}\nN = {self.nSubsFinal:,}'
             self.titleWeblogoReleased = (f'\n{self.enzymeName}\nReleased Counts\n'
                                          f'N = {self.nSubsFinal:,}')
         else:
             self.title = f'\n\n\n{self.enzymeName}'
-            self.titleReleased = (f'{self.enzymeName}\n'
-                                  f'Released Counts\n')
+            if self.motifFilter:
+                self.titleReleased = (f'\n\n{self.enzymeName}\n'
+                                      f'Released Counts')
+            else:
+                self.titleReleased = (f'\n{self.enzymeName}\n'
+                                      f'{self.datasetTag}\n'
+                                      f'Released Counts')
             self.titleWeblogo = f'\n\n\n{self.enzymeName}'
             self.titleWeblogoReleased = f'\n\n{self.enzymeName}\nReleased Counts'
 
@@ -1592,41 +1645,6 @@ class NGS:
                 self.motifTag = self.datasetTag
                 
         return self.datasetTag
-
-
-
-    def createCustomColorMap(self, colorType):
-        colorType = colorType.lower()
-        if colorType == 'counts':
-            useGreen = True
-            if useGreen:
-                # Green
-                colors = ['#FFFFFF','#ABFF9B','#39FF14','#2E9418','#2E9418',
-                          '#005000','#000000']
-            else:
-                # Orange
-                colors = ['white','white','#FF76FA','#FF50F9','#FF00F2',
-                          '#CA00DF','#BD16FF']
-        elif colorType == 'stdev':
-            colors = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
-        elif colorType == 'word cloud':
-            # ,'#F2A900','#2E8B57','black'
-            colors = ['#CC5500','#F79620','#FAA338','#00C01E','black']
-            # colors = ['#008631','#39E75F','#CC5500','#F79620','black']
-        elif colorType == 'em':
-            colors = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
-                      'lightcoral','red','firebrick','darkred']
-        else:
-            print(f'{orange}ERROR: Cannot create colormap. '
-                  f'Unrecognized colorType parameter: {colorType}{resetColor}\n')
-            sys.exit(1)
-
-        # Create colormap
-        if len(colors) == 1:
-            colorList = [(0, colors[0]), (1, colors[0])]
-        else:
-            colorList = [(i / (len(colors) - 1), color) for i, color in enumerate(colors)]
-        return LinearSegmentedColormap.from_list('custom_colormap', colorList)
 
 
 
@@ -2399,14 +2417,9 @@ class NGS:
             spine.set_linewidth(self.lineThickness)
 
         # Set x-ticks
-        if len(self.heights.columns) == len(self.xAxisLabels):
-            motif.ax.set_xticks([pos for pos in range(len(self.xAxisLabels))])
-            motif.ax.set_xticklabels(self.xAxisLabels, fontsize=self.labelSizeTicks,
-                                     rotation=0, ha='center')
-        else:
-            motif.ax.set_xticks([pos for pos in range(len(self.xAxisLabelsMotif))])
-            motif.ax.set_xticklabels(self.heights.columns, fontsize=self.labelSizeTicks,
-                                     rotation=0, ha='center')
+        motif.ax.set_xticks([pos for pos in range(len(self.heights.columns))])
+        motif.ax.set_xticklabels(self.heights.columns, fontsize=self.labelSizeTicks,
+                                 rotation=0, ha='center')
 
         # Set y-ticks
         yTicks = [yMin, 0, yMax]
@@ -2488,7 +2501,10 @@ class NGS:
 
         # Define: Title
         if releasedCounts:
-            title = self.titleWeblogoReleased
+            if self.motifFilter:
+                title = self.titleWeblogoReleased
+            else:
+                title = self.titleReleased
         else:
             title = self.titleWeblogo
 

@@ -1,5 +1,4 @@
 from functions import filePaths, NGS
-
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -8,8 +7,6 @@ import pickle as pk
 import random
 from sklearn.metrics import r2_score
 import sys
-import time
-import threading
 
 
 
@@ -17,7 +14,7 @@ import threading
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
-inSaveFigures = False
+inSaveFigures = True
 inFigureTimer = False
 
 # Input 2: Experimental Parameters
@@ -45,7 +42,7 @@ inPlotPCA = False # PCA plot of an individual fixed frame
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = True
 inPlotLogo = True
-inPlotWeblogo = False
+inPlotWeblogo = True
 inPlotActivityFACS = False
 inPredictSubstrateActivity = False
 inPredictSubstrateActivityPCA = False
@@ -1270,8 +1267,11 @@ probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitia
 ngs.getDatasetTag(combinedMotif=True)
 
 # Load: Motif counts
-countsRelCombined = ngs.combineMotifCounts(motifFrame=inMotifPositions, 
-                                           motifIndex=motifFramePos)
+countsRelCombined, countsRelCombinedTotal = ngs.combineMotifCounts(
+    motifFrame=inMotifPositions, motifIndex=motifFramePos)
+
+# Display current sample size
+ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsRelCombinedTotal)
 
 # Calculate: RF
 probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
