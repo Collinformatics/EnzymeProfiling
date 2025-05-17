@@ -2766,6 +2766,8 @@ class NGS:
             # Cluster substrates
             subPopulations = self.plotPCA(substrates=substrates, data=tokensESM,
                                           indices=subsESM, N=subCountsESM)
+
+            # Why is the PCA getting stuck?
             
 
 
@@ -2882,7 +2884,7 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             # Define: Save location
-            figLabel = (f'{self.enzymeName} - Bar Graph - {dataType} - N {NSubs}'
+            figLabel = (f'{self.enzymeName} - Bars - {dataType} - N {NSubs} - '
                         f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
