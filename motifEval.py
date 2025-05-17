@@ -14,7 +14,7 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
-inSaveFigures = True
+inSaveFigures = False
 inFigureTimer = False
 
 # Input 2: Experimental Parameters
@@ -38,11 +38,12 @@ inPlotEnrichmentMap = False
 inPlotEnrichmentMapScaled = False
 inPlotLogo = False
 inPlotWeblogo = False
-inPlotWordCloud = True
+inPlotWordCloud = False
+inPlotBarGraphs = False
+inPlotPCA = True # PCA plot of the combined set of motifs
 inPlotActivityFACS = False
 inPredictSubstrateActivity = False
 inPredictSubstrateActivityPCA = False
-inPlotMotifBarGraphs = False
 inPlotBinnedSubstrateES = False
 inPlotBinnedSubstratePrediction = False
 inPlotCounts = False
@@ -66,6 +67,9 @@ inBigLettersOnTop = False
 # Input 8: Word Cloud
 inLimitWords = True
 inTotalWords = 100
+
+# Input 9: Bar Graphs
+inNSequences = 30
 
 # Input 9: PCA
 inNumberOfPCs = 2
@@ -199,12 +203,13 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
           printNumber=inPrintNumber, showNValues=inShowSampleSize,
           bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
-          filesInit=filesInitial, filesFinal=filesFinal,
-          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
-          plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
-          plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
-          wordLimit=inLimitWords, wordsTotal=inTotalWords,
-          saveFigures=inSaveFigures, setFigureTimer=inFigureTimer)
+          filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
+          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
+          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
+          plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
+          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, runPCA=inPlotPCA,
+          numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, saveFigures=inSaveFigures,
+          setFigureTimer=inFigureTimer)
 
 
 
@@ -1280,7 +1285,7 @@ motifs, motifsTotal = ngs.loadMotifSeqs(motifLabel=inMotifPositions, motifIndex=
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsTotal)
 
-ngs.processSubstrates(substrates=motifs)
+ngs.processSubstrates(substrates=motifs, subLabel=inMotifPositions)
 
 
 sys.exit()
@@ -1289,7 +1294,7 @@ sys.exit()
 # Set flag
 subsPredict = None
 if inPredictSubstrateActivityPCA:
-    inPlotMotifBarGraphs = True
+    inPlotBarGraphs = True
 
 
 # Plot: Measured FACS activity
@@ -1388,14 +1393,14 @@ if inPredictSubstrateActivity:
 substratesFixedMotif = importFixedMotifSubs()
 
 # Evaluate substrates
-if (inPlotMotifBarGraphs or inPlotBinnedSubstrateES
-        or inPlotBinnedSubstratePrediction or inPlotMotifBarGraphs
+if (inPlotBarGraphs or inPlotBinnedSubstrateES
+        or inPlotBinnedSubstratePrediction or inPlotBarGraphs
         or inPlotEnrichmentMap or inPlotLogo
         or inPredictSubstrateActivityPCA or inPlotWordCloud):
 
     
     # Plot: Motifs
-    if inPlotMotifBarGraphs:
+    if inPlotBarGraphs:
         ngs.plotBinnedSubstrates(
             substrates=motifs, countsTotal=motifsTotal,
             datasetTag=ngs.labelCombinedMotifs, dataType='Counts',
@@ -1412,7 +1417,7 @@ if (inPlotMotifBarGraphs or inPlotBinnedSubstrateES
             numDatapoints=inPlotBinnedSubNumber,
             barColor=inBarColor, barWidth=inBarWidth)
 
-    if (inPlotMotifBarGraphs or inPlotEnrichmentMap or inPlotLogo
+    if (inPlotBarGraphs or inPlotEnrichmentMap or inPlotLogo
             or inPredictSubstrateActivityPCA or inPlotWordCloud):
         subPopulations = []
 
