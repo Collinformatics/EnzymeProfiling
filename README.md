@@ -68,6 +68,8 @@ Input 3:
 
   - Recommended: R1 to RN, where N = substrate length
 
+    If: N = 8
+
         inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
 
 
