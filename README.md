@@ -41,31 +41,42 @@ The specificity of the enzyme is evaluated by calculating the Enrichment Score o
 
 # Express DNA
 
-Run extractSubstrates.py to express DNA sequneces, and extract the protein substrates.
+Run extractSubs.py to express DNA sequneces, and extract the protein substrates.
 
 Input parameters you will need to know include:
 
 Input 1:
 - inFileName: select files you want to process.
-Important: do not mix files from the intial and final sorts, these must be processed separatly. Files witin the same set can be processed in one batch, or individually, it is up to you how to do this, but I recommend at minimum combining the forward (R1) and reverse reads (R2).
-
-- inBasePath: define the path to the folder for the enzyme you intend on working with.
-
-        Recommend: make a folder for each unique enzyme that contains the folders "Fastq", "Extracted Data", and "Figures"
-- inFilePath: define path to the folder with your fastq data
-- inSavePath: define path to the folder used to store the extracted data
+  - Important: do not mix files from the intial and final sorts, these must be processed separatly. Files witin the same set can be processed in one batch, or individually, it is up to you how to do this, but I recommend at minimum combining the forward (R1) and reverse reads (R2).
+- inPathFolder: define path to the folder for your 
+- inPathDNASeqs: add the name of the folder with your fastq data
 - inSaveFileName: define the name of your saved files (This should be related to the input files)
-- inAlertPath: an optional input to play a sound then the script has finished processing the files
 
 Input 2:
-- inAAPositions: define the residues of your substrate
-    - For a 8 residue substrate, it is recommened to name positions R1 to R8:
+- inSaveFileName: define the name of your saved files (This should be related to the input files)
 
-          inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+  - If:
   
-- inCodonSequence: define the type of degenerate codon you are working with
+          inFileName = ['Fyn-I_S6_L001_R1_001', 'Fyn-I_S6_L001_R2_001']
+
+  - Recommend:
+  
+          inSaveFileName = 'Fyn-I_S6_L001'
 
 Input 3:
+- inAAPositions: name the positions in the substrate
+
+  - Recommended: R1 to RN, where N = substrate length
+
+        inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
+
+
+Input 4:
+- inPrintNumber: how many expressed & extracted do you want to print to inspect how the script is performing with your input parameters
+- inStartSeqR1, inStartSeqR2: what DNA sequences do you expect to see to the left of your substrate
+- inEndSeqR1, inEndSeqR2: what DNA sequences do you expect to see to the right of your substrate
+
+Input 5:
 - inFixedLibrary: are any of the residues in your substrate not randomized
 - inFixedResidue: make a list of what residue(s) should always be in the substrate
 - inFixedPosition: where are these AAs expected to be
@@ -80,18 +91,9 @@ Input 3:
   
         inFixedResidue = [['L', 'M', 'F', 'Y']]
         inFixedPosition = [4]
-- inPrintNumber: how many expressed & extracted do you want to print to inspect how the script is performing with your input parameters
-- inStartSeqR1, inStartSeqR2: what DNA sequences do you expect to see to the left of your substrate
-- inEndSeqR1, inEndSeqR2: what DNA sequences do you expect to see to the right of your substrate
 
-Input 4:
-- inPrintCounts: do you want to print the AA counts
-- inPlotCounts: do you want to plot the AA counts
-- inCountMapYLabel: select how the residue names are displayed in the figure
-
-        inCountMapYLabel = 0 # for Alanine
-        inCountMapYLabel = 1 # for Ala
-        inCountMapYLabel = 2 # for A
+Input 6:
+- inAlertPath: an optional input to play a sound then the script has finished processing the files
 
 
 # Evaluate Substrates (Incomplete Section)
