@@ -145,8 +145,8 @@ class NGS:
                  xAxisLabels, printNumber, showNValues, bigAAonTop, findMotif, folderPath,
                  filesInit, filesFinal, plotPosS, plotFigEM, plotFigEMScaled, plotFigLogo,
                  plotFigWebLogo, plotFigWords, wordLimit, wordsTotal, plotFigBars,
-                 NSubBars, runPCA, numPCs, NSubsPCA, saveFigures, setFigureTimer, 
-                 expressDNA=False):
+                 NSubBars, plotPCA, numPCs, NSubsPCA, plotSuffixTree, saveFigures,
+                 setFigureTimer, expressDNA=False):
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.filterSubs = filterSubs
@@ -181,9 +181,10 @@ class NGS:
         self.wordsTotal = wordsTotal
         self.plotFigBars = plotFigBars
         self.NSubBars = NSubBars
-        self.runPCA = runPCA
+        self.plotPCA = plotPCA
         self.NPCs=numPCs
         self.NSubsPCA = NSubsPCA
+        self.plotSuffixTree = plotSuffixTree
         self.datasetTag = None
         self.datasetTagMotif = ''
         self.xAxisLabels = xAxisLabels
@@ -2758,7 +2759,7 @@ class NGS:
             self.plotBarGraph(substrates=substrates, dataType='Probability')
              
         # PCA
-        if self.runPCA:
+        if self.plotPCA:
             # Convert substrate data to numerical
             tokensESM, subsESM, subCountsESM = self.ESM(
                 substrates=substrates, subLabel=subLabel)
@@ -2768,7 +2769,12 @@ class NGS:
                                           indices=subsESM, N=subCountsESM)
 
             # Why is the PCA getting stuck?
-            
+
+
+        # Suffix tree
+        if self.plotSuffixTree:
+            print(f'ADD: Suffix tree')
+
 
 
     def plotBarGraph(self, substrates, dataType, barColor='#CC5500', barWidth=0.75):

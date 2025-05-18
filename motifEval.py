@@ -41,6 +41,7 @@ inPlotWeblogo = False
 inPlotWordCloud = False
 inPlotBarGraphs = False
 inPlotPCA = True # PCA plot of the combined set of motifs
+inPlotSuffixTree = True
 inPlotActivityFACS = False
 inPredictSubstrateActivity = False
 inPredictSubstrateActivityPCA = False
@@ -207,9 +208,9 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
           plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
-          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, runPCA=inPlotPCA,
-          numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, saveFigures=inSaveFigures,
-          setFigureTimer=inFigureTimer)
+          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotPCA=inPlotPCA,
+          numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
+          saveFigures=inSaveFigures, setFigureTimer=inFigureTimer)
 
 
 
