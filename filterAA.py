@@ -14,6 +14,7 @@ import sys
 inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
+inFigureTimer = False
 
 # Input 2: Computational Parameters
 inFixResidues = True
@@ -34,10 +35,12 @@ inPlotEnrichmentMapScaled = True
 inPlotLogo = True
 inPlotWeblogo = True
 inPlotWordCloud = True
+inPlotBarGraphs = False
 inPlotPCA = False
+inPlotSuffixTree = True
+inPlotCounts = False
 inPlotAADistribution = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
-inPlotCountsAA = False
 inPlotPositionalProbDist = False # For understanding shannon entropy
 
 # Input 4: Inspecting The Data
@@ -46,7 +49,25 @@ inPrintNumber = 10
 # Input 5: Motif Extraction
 inMinDeltaS = 0.55
 
-# Input 6: PCA
+# Input 6: Plot Heatmap
+inShowEnrichmentScores = True
+inShowEnrichmentAsSquares = False
+inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
+
+# Input 7: Plot Sequence Motif
+inNormLetters = True # Equal letter heights fixed for fixed AAs
+inShowWeblogoYTicks = True
+inAddHorizontalLines = False
+inBigLettersOnTop = False
+
+# Input 8: Word Cloud
+inLimitWords = True
+inTotalWords = 100
+
+# Input 9: Bar Graphs
+inNSequences = 30
+
+# Input 10: PCA
 inPCAMotif = True
 inNumberOfPCs = 2
 inTotalSubsPCA = 10000
@@ -55,32 +76,17 @@ inExtractPopulations = False
 inPlotEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
 
-# Input 7: Plot Heatmap
-inShowEnrichmentScores = True
-inShowEnrichmentAsSquares = False
-inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
-
-# Input 8: Plot Sequence Motif
-inNormLetters = True # Equal letter heights fixed for fixed AAs
-inShowWeblogoYTicks = True
-inAddHorizontalLines = False
-inBigLettersOnTop = False
-
-# Input 9: Word Cloud
-inLimitWords = True
-inTotalWords = 100
-
-# Input 10: Optimal Substrates
+# Input 11: Optimal Substrates
 inEvaluateOS = False
 inPrintOSNumber = 10
 inMaxResidueCount = 4
 
-# Input 11: Evaluate Substrate Enrichment
+# Input 12: Evaluate Substrate Enrichment
 inEvaluateSubstrateEnrichment = False # ============= Fix: Load Initial Subs =============
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
-# Input 12: Evaluate Positional Preferences
+# Input 13: Evaluate Positional Preferences
 inPlotPosProb = False # Plot RF distributions of a given AA
 inCompairAA = 'L' # Select AA of interest (different A than inFixedResidue)
 
@@ -117,9 +123,11 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
           filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
           plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
-          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
-          plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
-          saveFigures=inSaveFigures, setFigureTimer=None)
+          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo, 
+          plotFigWords=inPlotWordCloud,  wordLimit=inLimitWords, wordsTotal=inTotalWords, 
+          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotPCA=inPlotPCA, 
+          numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
+          saveFigures=inSaveFigures, setFigureTimer=inFigureTimer)
 
 
 
@@ -387,7 +395,7 @@ if inPlotAADistribution:
     ngs.plotLibraryProbDist(probInitial=None, probFinal=codonProbs,
                             codonType=inCodonSequence, datasetTag=inCodonSequence)
 
-if inPlotCountsAA:
+if inPlotCounts:
     # Plot the data
     ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal)
 
