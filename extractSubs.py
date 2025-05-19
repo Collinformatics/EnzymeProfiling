@@ -20,7 +20,7 @@ from functions import NGS
 inFileName = ['Fyn-I_S6_L001_R1_001', 'Fyn-I_S6_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
 inPathFolder = f'/path/{inEnzymeName}'
-inFilePath = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder name
+inPathDNASeqs = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder name
 inFileType = 'fastq' # Define the file type
 
 # Input 2: Saving The Data
@@ -56,12 +56,17 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           bigAAonTop=False, findMotif=False, folderPath=inPathFolder, filesInit=None,
           filesFinal=None, plotPosS=False, plotFigEM=False, plotFigEMScaled=False,
           plotFigLogo=False, plotFigWebLogo=False, plotFigWords=False,
-          wordLimit=False, wordsTotal=False, saveFigures=False,
-          setFigureTimer=None, expressDNA=True)
+          wordLimit=False, wordsTotal=False, plotFigBars=False,
+          NSubBars=False, plotPCA=False, numPCs=False, NSubsPCA=False,
+          plotSuffixTree=False, saveFigures=False, setFigureTimer=None, expressDNA=True)
 
 
 
 # ===================================== Run The Code =====================================
+# Make directory
+if not os.path.exists(inPathDNASeqs):
+    os.makedirs(inPathDNASeqs, exist_ok=True)
+
 # Extract the substrates
 loadR1 = False
 loadR2 = False
@@ -70,13 +75,13 @@ substratesR1 = {}
 substratesR2 = {}
 for fileName in inFileName:
     if '_R1_' in fileName:
-        substratesR1 = ngs.loadAndTranslate(filePath=inFilePath, fileName=fileName,
+        substratesR1 = ngs.loadAndTranslate(filePath=inPathDNASeqs, fileName=fileName,
                                             fileType=inFileType, fixedSubs=inFixedLibrary,
                                             startSeq=inStartSeqR1, endSeq=inEndSeqR1,
                                             printQS=inPrintQualityScores)
         loadR1 = True
     elif '_R2_' in fileName:
-        substratesR2 = ngs.loadAndTranslate(filePath=inFilePath, fileName=fileName,
+        substratesR2 = ngs.loadAndTranslate(filePath=inPathDNASeqs, fileName=fileName,
                                             fileType=inFileType, fixedSubs=inFixedLibrary,
                                             startSeq=inStartSeqR2, endSeq=inEndSeqR2,
                                             printQS=inPrintQualityScores)

@@ -14,8 +14,8 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
-inSaveFigures = False
-inFigureTimer = False
+inSaveFigures = True
+inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
@@ -31,16 +31,16 @@ inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 
 # Input 4: Figures
-inPlotPCA = False # PCA plot of an individual fixed frame
+# inPlotPCA = False # PCA plot of an individual fixed frame
 # inPlotPCACombined = True
 inPlotEntropy = False
 inPlotEnrichmentMap = False
 inPlotEnrichmentMapScaled = False
 inPlotLogo = False
 inPlotWeblogo = False
-inPlotWordCloud = False
+inPlotWordCloud = True
 inPlotBarGraphs = False
-inPlotPCA = True # PCA plot of the combined set of motifs
+inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
 inPlotActivityFACS = False
 inPredictSubstrateActivity = False
@@ -48,7 +48,7 @@ inPredictSubstrateActivityPCA = False
 inPlotBinnedSubstrateES = False
 inPlotBinnedSubstratePrediction = False
 inPlotCounts = False
-inShowSampleSize = False # Include the sample size in your figures
+inShowSampleSize = True # Include the sample size in your figures
 
 # Input 5: Processing The Data
 inPrintNumber = 10
@@ -72,13 +72,13 @@ inTotalWords = 100
 # Input 9: Bar Graphs
 inNSequences = 30
 
-# Input 9: PCA
+# Input 10: PCA
 inNumberOfPCs = 2
 inTotalSubsPCA = int(5*10**4)
 inIncludeSubCountsESM = True
 inPlotEntropyPCAPopulations = False
 
-# Input 10: Printing The Data
+# Input 11: Printing The Data
 inPrintLoadedSubs = True
 inPrintSampleSize = True
 inPrintCounts = True
@@ -90,7 +90,7 @@ inPrintNumber = 10
 inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
 inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabilities
 
-# Input 11: Evaluate Known Substrates
+# Input 12: Evaluate Known Substrates
 inNormalizePredictions = True
 inYMaxPred = 1.05
 inYMinPred, inYMinPredScaled, inYMinPredAI = 0, 0, -0.25
@@ -137,14 +137,14 @@ inDatapointColor = []
 for _ in inSubsPredict:
     inDatapointColor.append(inBarColor)
 
-# Input 12: Evaluate Binned Substrates
+# Input 13: Evaluate Binned Substrates
 inPlotEnrichedSubstrateFrame = False
 inPrintLoadedFrames = True
 inPlotBinnedSubNumber = 30
 inPlotBinnedSubProb = True
 inPlotBinnedSubYMax = 0.07
 
-# Input 13: Predict Binned Substrate Enrichment
+# Input 14: Predict Binned Substrate Enrichment
 inEvaluatePredictions = False
 inPrintPredictions = False
 inBottomParam = 0.16
@@ -192,7 +192,6 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 enzymeName, filesInitial, filesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
 motifLen = len(inMotifPositions)
 motifFramePos = [inIndexNTerminus, inIndexNTerminus + motifLen]
-labelAAPosMotif = labelAAPos[motifFramePos[0]:inIndexNTerminus+motifLen]
 
 
 
@@ -202,126 +201,20 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
-          printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
-          filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
-          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
-          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
-          plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
-          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotPCA=inPlotPCA,
-          numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
-          saveFigures=inSaveFigures, setFigureTimer=inFigureTimer)
+          xAxisLabelsMotif=inMotifPositions, printNumber=inPrintNumber,
+          showNValues=inShowSampleSize, bigAAonTop=inBigLettersOnTop, findMotif=False,
+          folderPath=inPathFolder, filesInit=filesInitial, filesFinal=filesFinal,
+          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
+          plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
+          plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
+          wordLimit=inLimitWords, wordsTotal=inTotalWords, plotFigBars=inPlotBarGraphs,
+          NSubBars=inNSequences, plotPCA=inPlotPCA, numPCs=inTotalSubsPCA,
+          NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
+          saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
 
 # =================================== Define Functions ===================================
-def pressKey(event):
-    if event.key == 'escape':
-        plt.close()
-
-
-
-def loadFixedMotifSubs():
-    fixedMotifSubs = []
-    for index in range(len(inFixedPosition)):
-        print('=============================== Load: Fixed Motif '
-              '===============================')
-
-        # Define: File path
-        frame = f'{inFixedResidue[0]}@R{inFixedPosition[index]}'
-        labelTag = (f'{inEnzymeName}_FixedMotif_{frame}_'
-                    f'MinCounts {inMinimumSubstrateCount}')
-        filePathFixedMotifSubs = os.path.join(inPathFolder,
-                                              f'fixedSubs_{labelTag}')
-        print(f'Loading substrates at path:\n'
-              f'     {greenDark}{filePathFixedMotifSubs}{resetColor}\n')
-
-
-        # Load Data: Fixed substrates
-        with open(filePathFixedMotifSubs, 'rb') as file:
-            loadedSubs = pk.load(file)
-        fixedMotifSubs.append(loadedSubs)
-        print(f'Fixed Frame:{purple} {frame}{resetColor}')
-        iteration = 0
-        for substrate, count in loadedSubs.items():
-            print(f'Substrate:{greenLight} {substrate}{resetColor}\n'
-                  f'     Count:{red} {count:,}{resetColor}')
-            iteration += 1
-            if iteration >= inPrintNumber:
-                print('\n')
-                break
-        fixedMotifSubs.append(loadedSubs)
-
-        # PCA: On a single fixed frame
-        if inPlotPCA:
-            # Convert substrate data to numerical
-            tokensESM, subsESM, subCountsESM = ngs.ESM(
-                substrates=loadedSubs, collectionNumber=inTotalSubsPCA,
-                useSubCounts=inIncludeSubCountsESM, subPositions=labelAAPos,
-                datasetTag=frame)
-
-            # Cluster substrates
-            subPopulations = ngs.plotPCA(
-                substrates=loadedSubs, data=tokensESM, indices=subsESM,
-                numberOfPCs=inNumberOfPCs, N=subCountsESM,
-                fixedSubs=True, saveTag=ngs.labelCombinedMotifs)
-
-            # Plot: Substrate clusters
-            if (inPlotEnrichmentMap or inPlotLogo
-                    or inPredictSubstrateActivityPCA or inPlotWordCloud):
-                clusterCount = len(subPopulations)
-                for index, subCluster in enumerate(subPopulations):
-                    # Plot data
-                    plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
-                                             numClusters=clusterCount)
-
-    return fixedMotifSubs
-
-
-def importFixedMotifSubs():
-    fixedMotifSubs = []
-
-    for position in inFixedPosition:
-        tagFixedAA = f'{inFixedResidue[0]}@R{position}'
-
-        # Define: File paths
-        (filePathFixedMotifSubs,
-         filePathFixedMotifCounts,
-         filePathFixedMotifReleasedCounts) = ngs.filePathMotif(datasetTag=tagFixedAA)
-
-        # Load: substrates
-        loadedSubs = ngs.loadFixedMotifSubstrates(pathLoad=filePathFixedMotifSubs,
-                                                  datasetTag=tagFixedAA)
-        fixedMotifSubs.append(loadedSubs)
-
-
-        # PCA: On a single fixed frame
-        if inPlotPCA:
-            # Convert substrate data to numerical
-            tokensESM, subsESM, subCountsESM = ngs.ESM(
-                substrates=loadedSubs, collectionNumber=inTotalSubsPCA,
-                useSubCounts=inIncludeSubCountsESM, subPositions=labelAAPos,
-                datasetTag=tagFixedAA)
-
-            # Cluster substrates
-            subPopulations = ngs.plotPCA(
-                substrates=loadedSubs, data=tokensESM, indices=subsESM,
-                numberOfPCs=inNumberOfPCs, fixedTag=tagFixedAA,
-                N=subCountsESM, fixedSubs=True, saveTag=ngs.labelCombinedMotifs)
-
-            # Plot: Substrate clusters
-            if (inPlotEnrichmentMap or inPlotLogo
-                    or inPredictSubstrateActivityPCA or inPlotWordCloud):
-                clusterCount = len(subPopulations)
-                for index, subCluster in enumerate(subPopulations):
-                    # Plot data
-                    plotSubstratePopulations(clusterSubs=subCluster, clusterIndex=index,
-                                             numClusters=clusterCount)
-
-    return fixedMotifSubs
-
-
-
 def fixInitialSubs(substrates):
     print('============================ Fix: Initial Substrates '
           '============================')
@@ -358,24 +251,6 @@ def fixInitialSubs(substrates):
 
 
 
-def trimSubstrates():
-    print('=============================== Process Known Substrates '
-          '================================')
-    trimedSubs = {}
-    for index, substrate in enumerate(inSubsPredict):
-        trimedSub = substrate[inSubsPredictStartIndex:
-                              motifLen+inSubsPredictStartIndex]
-        print(f'Substrate:{pink} {substrate}{resetColor}\n'
-              f'     Sub:{yellow} {trimedSub}{resetColor}')
-        if trimedSub in trimedSubs:
-            print(f'     {white}Duplicate Sub{resetColor}')
-        trimedSubs[trimedSub] = 0
-    print('\n')
-
-    return trimedSubs
-
-
-
 def substrateProbability(substrates, N, sortType):
     print('=========================== Calcualte: Substrate Probability '
           '============================')
@@ -406,7 +281,7 @@ def subMotifEnrichment(substratesInitial, initialN, substratesFinal):
     enrichedSubs = {}
     minInitialProb = 1 / initialN
     print(f'Min Initial Prob:{pink} {minInitialProb}{resetColor}\n')
-    for substrate, probabiliy in substratesFinal.items():
+    for substrate, probability in substratesFinal.items():
         if substrate in substratesInitial:
             enrichedSubs[substrate] = np.log2(substratesFinal[substrate] /
                                               substratesInitial[substrate])
@@ -531,7 +406,7 @@ def generateKinetics(predictions):
 
 
 
-def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotdataPCA, popPCA):
+def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotDataPCA, popPCA):
     # Prep data for the figure
     xValues = []
     yValues = []
@@ -547,7 +422,7 @@ def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotdataPCA
     if scaledMatrix:
         yMin = inYMinPredScaled
         yTickMin = inYTickMinScaled
-        if plotdataPCA:
+        if plotDataPCA:
             title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
                      f'{ngs.labelCombinedMotifs}\nScaled Enrichment Scores')
         else:
@@ -555,7 +430,7 @@ def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotdataPCA
     else:
         yMin = inYMinPred
         yTickMin = inYTickMinPred
-        if plotdataPCA:
+        if plotDataPCA:
             title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
                      f'{ngs.labelCombinedMotifs}\nEnrichment Scores')
         else:
@@ -1238,14 +1113,14 @@ def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
             substrates=subsPredict, predictionMatrix=fixedMotifPopESAdjusted,
             normalizeValues=inNormalizePredictions, matrixType='Enrichment Scores')
         plotSubstratePrediction(substrates=subsPredict, predictValues=True,
-                                scaledMatrix=False, plotdataPCA=True, popPCA=clusterIndex)
+                                scaledMatrix=False, plotDataPCA=True, popPCA=clusterIndex)
 
         # Predict: Scaled Enrichment
         subsPredictScaled, yMax, yMin = predictActivity(
             substrates=subsPredict, predictionMatrix=fixedMotifPCAESScaledAdjusted,
             normalizeValues=inNormalizePredictions, matrixType='Scaled Enrichment Scores')
         plotSubstratePrediction(substrates=subsPredictScaled, predictValues=True,
-                                scaledMatrix=True, plotdataPCA=True, popPCA=clusterIndex)
+                                scaledMatrix=True, plotDataPCA=True, popPCA=clusterIndex)
 
 
 
@@ -1263,31 +1138,47 @@ probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitia
 # Get dataset tag
 ngs.getDatasetTag(combinedMotif=True)
 
-# Load: Motif counts
-countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
-    motifLabel=inMotifPositions, motifIndex=motifFramePos)
+evalRelCounts = False
+if evalRelCounts:
+    # Load: Motif counts
+    countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
+        motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
-# Display current sample size
-ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsRelCombinedTotal)
+    # Display current sample size
+    ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsRelCombinedTotal)
 
-# Calculate: RF
-probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
+    # Calculate: RF
+    probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
 
-# Calculate: Positional entropy
-entropy = ngs.calculateEntropy(probability=probCombinedMotif)
+    # Calculate: Positional entropy
+    entropy = ngs.calculateEntropy(probability=probCombinedMotif)
 
-# Calculate enrichment scores
-ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
-                        releasedCounts=True)
+    # Calculate enrichment scores
+    ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
+                            releasedCounts=True)
 
 # Load: Substrate motifs
-motifs, motifsTotal = ngs.loadMotifSeqs(motifLabel=inMotifPositions, motifIndex=motifFramePos)
+motifs, motifsCountsTotal = ngs.loadMotifSeqs(motifLabel=inMotifPositions,
+                                              motifIndex=motifFramePos)
 
 # Display current sample size
-ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsTotal)
+ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
 
-ngs.processSubstrates(substrates=motifs, subLabel=inMotifPositions)
+# Count fixed substrates
+motifCountsFinal, motifsCountsTotal = ngs.countResidues(substrates=motifs,
+                                                        datasetType='Final Sort')
 
+# Calculate: RF
+probMotif = ngs.calculateProbabilities(counts=motifCountsFinal, N=motifsCountsTotal,
+                                       fileType='Final Sort')
+
+# Calculate: Positional entropy
+entropy = ngs.calculateEntropy(probability=probMotif, combinedMotif=True)
+
+ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
+                        combinedMotif=True)
+
+ngs.processSubstrates(substrates=motifs, subLabel=inMotifPositions, combinedMotif=True)
 
 sys.exit()
 
@@ -1315,14 +1206,14 @@ if inPredictSubstrateActivity:
                                               normalizeValues=inNormalizePredictions,
                                               matrixType='Enrichment Scores')
     plotSubstratePrediction(substrates=subsPredict, predictValues=True, 
-                            scaledMatrix=False, plotdataPCA=False, popPCA=None)
+                            scaledMatrix=False, plotDataPCA=False, popPCA=None)
 
     # Predict: Scaled Enrichment
     subsPredictScaled, yMax, yMin = predictActivity(
         substrates=subsPredict.copy(), predictionMatrix=fixedMotifESScaled,
         normalizeValues=inNormalizePredictions, matrixType='Scaled Enrichment Scores')
     plotSubstratePrediction(substrates=subsPredictScaled, predictValues=True, 
-                            scaledMatrix=True, plotdataPCA=False, popPCA=None)
+                            scaledMatrix=True, plotDataPCA=False, popPCA=None)
 
     # Predict: AI
     subsPredictAI = {
@@ -1370,7 +1261,7 @@ if inPredictSubstrateActivity:
                 break
         subsPredictAI = subSubSet
     # plotSubstratePrediction(substrates=subsPredictAI, predictValues=False, 
-    #                         scaledMatrix=True, plotdataPCA=False, popPCA=None)
+    #                         scaledMatrix=True, plotDataPCA=False, popPCA=None)
 
 
     # Evaluate predictions
@@ -1389,9 +1280,6 @@ if inPredictSubstrateActivity:
         plotPredictionStats(data=simKineticsAI, predictionType='SArKS - ESM')
 
 
-# Load: Fixed frames
-# substratesFixedMotif = loadFixedMotifSubs()
-substratesFixedMotif = importFixedMotifSubs()
 
 # Evaluate substrates
 if (inPlotBarGraphs or inPlotBinnedSubstrateES

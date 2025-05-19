@@ -15,7 +15,7 @@ inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
-inSetFigureTimer = True
+inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inMinDeltaS = 0.6
@@ -144,6 +144,8 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
           wordLimit=inLimitWords, wordsTotal=inTotalWords,
+          plotFigBars=False, NSubBars=None, plotPCA=False,
+          numPCs=None, NSubsPCA=None, plotSuffixTree=False,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
@@ -522,6 +524,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
 
         # Determine which residues will be released
+        indexDrop = None
         for indexDrop, indexPos in enumerate(preferredPositions):
             if str(indexPos) in position:
                 # Drop the element at indexDrop
@@ -655,9 +658,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     # Plot: Work cloud
     if inPlotWordCloud:
-        ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
-                          limitWords=inLimitWords, N=inTotalWords,
-                          saveTag=ngs.datasetTagMotif)
+        ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None)
 
     # Save the data
     ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed,
@@ -738,9 +739,7 @@ if (os.path.exists(filePathFixedMotifSubs) and
 
     # Plot: Work cloud
     if inPlotWordCloud:
-        ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
-                          limitWords=inLimitWords, N=inTotalWords,
-                          saveTag=ngs.datasetTagMotif)
+        ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None)
 else:
     # Load: Unfiltered substates
     substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)

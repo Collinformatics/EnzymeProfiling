@@ -14,7 +14,7 @@ import sys
 inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
-inFigureTimer = False
+inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inFixResidues = True
@@ -127,7 +127,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotFigWords=inPlotWordCloud,  wordLimit=inLimitWords, wordsTotal=inTotalWords, 
           plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotPCA=inPlotPCA, 
           numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
-          saveFigures=inSaveFigures, setFigureTimer=inFigureTimer)
+          saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
 
