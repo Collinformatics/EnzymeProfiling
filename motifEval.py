@@ -34,12 +34,19 @@ inMinimumSubstrateCount = 10
 # inPlotPCA = False # PCA plot of an individual fixed frame
 # inPlotPCACombined = True
 inPlotEntropy = False
-inPlotEnrichmentMap = False
+inPlotEnrichmentMap = True
+inPlotEnrichmentMapScaled = True
+inPlotLogo = False
+inPlotWeblogo = False
+
+inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = False
 inPlotLogo = False
 inPlotWeblogo = False
+
+
 inPlotWordCloud = True
-inPlotBarGraphs = False
+inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
 inPlotActivityFACS = False
@@ -67,10 +74,10 @@ inBigLettersOnTop = False
 
 # Input 8: Word Cloud
 inLimitWords = True
-inTotalWords = 100
+inTotalWords = 75
 
 # Input 9: Bar Graphs
-inNSequences = 30
+inPlotNBars = 50
 
 # Input 10: PCA
 inNumberOfPCs = 2
@@ -208,7 +215,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
           wordLimit=inLimitWords, wordsTotal=inTotalWords, plotFigBars=inPlotBarGraphs,
-          NSubBars=inNSequences, plotPCA=inPlotPCA, numPCs=inTotalSubsPCA,
+          NSubBars=inPlotNBars, plotPCA=inPlotPCA, numPCs=inTotalSubsPCA,
           NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
@@ -1138,6 +1145,7 @@ probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitia
 # Get dataset tag
 ngs.getDatasetTag(combinedMotif=True)
 
+
 evalRelCounts = False
 if evalRelCounts:
     # Load: Motif counts
@@ -1158,8 +1166,11 @@ if evalRelCounts:
                             releasedCounts=True)
 
 # Load: Substrate motifs
-motifs, motifsCountsTotal = ngs.loadMotifSeqs(motifLabel=inMotifPositions,
-                                              motifIndex=motifFramePos)
+motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
+    motifLabel=inMotifPositions, motifIndex=motifFramePos)
+
+# Load: Substrates
+substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
@@ -1167,6 +1178,16 @@ ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
 # Count fixed substrates
 motifCountsFinal, motifsCountsTotal = ngs.countResidues(substrates=motifs,
                                                         datasetType='Final Sort')
+
+
+ngs.plotNormBarGraph(substratesInitial=substratesInitial,
+                     substratesFinal=substratesFiltered,
+                     motifs=motifs, combinedMotif=True, limitNBars=False)
+
+ngs.plotNormBarGraph(substratesInitial=substratesInitial,
+                     substratesFinal=substratesFiltered,
+                     motifs=motifs, combinedMotif=True)
+
 
 # Calculate: RF
 probMotif = ngs.calculateProbabilities(counts=motifCountsFinal, N=motifsCountsTotal,
@@ -1180,7 +1201,10 @@ ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
 
 ngs.processSubstrates(substrates=motifs, subLabel=inMotifPositions, combinedMotif=True)
 
+
 sys.exit()
+
+# plotBarGraph
 
 
 # Set flag

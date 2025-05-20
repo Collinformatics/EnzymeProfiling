@@ -1438,6 +1438,7 @@ class NGS:
         frameLength = len(motifLabel)
         totalMotifs = 0
         motifs = {}
+        substrates = {}
         
         # Load the substrates
         for index, position in enumerate(self.fixedPos):
@@ -1456,6 +1457,14 @@ class NGS:
                 # Load file
                 with open(pathFixedMotifSubs, 'rb') as file:
                     loadedSubs = pk.load(file)
+                    if substrates == {}:
+                        substrates = loadedSubs
+                    else:
+                        for substrate, count in loadedSubs.items():
+                            if substrate in substrates.keys():
+                                substrates[substrate] += count
+                            else:
+                                substrates[substrate] = count
 
                 # Define motif positions and extract the sequence
                 startPosition = motifIndex[0]
@@ -1496,6 +1505,15 @@ class NGS:
                     else:
                         motifs[motif] = count
                 print(f'\n     Total Counts: {red}{totalCounts:,}{resetColor}\n\n')
+
+                # seq = 'ATLQG'
+                # print(f'Search ({purple}{motifTag}{resetColor}): '
+                #       f'{orange}{seq}{resetColor}')
+                # for substrate, count in loadedSubs.items():
+                #     if seq in substrate:
+                #         print(f'     {pink}{substrate}{resetColor}, '
+                #               f'Count: {red}{count:,}{resetColor}')
+                # print('\n\n')
             else:
                 print(f'{orange}ERROR: The file was not found\n'
                       f'     {pathFixedMotifSubs}\n')
@@ -1503,6 +1521,7 @@ class NGS:
 
         # Sort the substrate dictionary by counts
         motifs = dict(sorted(motifs.items(), key=lambda x: x[1], reverse=True))
+        substrates = dict(sorted(substrates.items(), key=lambda x: x[1], reverse=True))
 
         iteration = 0
         print(f'Top Motifs:')
@@ -1515,7 +1534,7 @@ class NGS:
                       f'{resetColor}\n\n')
                 break
 
-        return motifs, totalMotifs
+        return motifs, totalMotifs, substrates
 
 
 
@@ -1577,8 +1596,6 @@ class NGS:
 
     def saveFigure(self, fig, figType, combinedMotif=False, releasedCounts=False):
         # Define: Save location
-        print(f'Tag: {self.motifTag}\n'
-              f'Filter: {self.motifFilter}\n')
         if self.motifFilter:
             if releasedCounts:
                 figLabel = (f'{self.enzymeName} -  {figType} Rel Counts - '
@@ -1591,7 +1608,7 @@ class NGS:
             if combinedMotif:
                 figLabel = (f'{self.enzymeName} - {figType} - '
                             f'Combined {self.datasetTag} - '
-                            f'MinCounts {self.minSubCount}.png')
+                            f'MinCounts {self.minSubCount} - N {self.nSubsFinal}.png')
             else:
                 figLabel = (f'{self.enzymeName} - {figType} - '
                             f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
@@ -1629,8 +1646,8 @@ class NGS:
                   f'     N Final: {pink}{type(NFinal)}{resetColor}\n\n')
 
         # Set figure titles
-        self.titleReleased = (f'\n{self.enzymeName}\n'
-                              f'{self.datasetTag}\n'
+        self.titleReleased = (f'{self.enzymeName}\n'
+                              f'Motif {self.datasetTagInit}\n'
                               f'Released Counts')
         if self.showSampleSize:
             self.title = (f'{self.enzymeName}\n'
@@ -1644,16 +1661,11 @@ class NGS:
             self.titleWeblogoCombined = (f'{self.enzymeName}\n'
                                          f'Combined {self.datasetTagInit}\n'
                                          f'N = {self.nSubsFinal:,}')
-
-            self.titleWeblogoReleased = (f'{self.enzymeName}\n'
-                                         f'Released Counts\n'
-                                         f'N = {self.nSubsFinal:,}')
         else:
             self.title = f'{self.enzymeName}'
             self.titleWeblogo = f'{self.enzymeName}'
             self.titleWeblogoCombined = (f'{self.enzymeName}\n'
                                          f'Combined {self.datasetTagInit}')
-            self.titleWeblogoReleased = f'{self.enzymeName}\nReleased Counts'
         if self.filterSubs:
             if self.motifFilter:
                 self.titleWords = f'{self.enzymeName}\nMotif {self.motifTag}'
@@ -2620,8 +2632,6 @@ class NGS:
             title = self.titleWeblogoCombined
         elif releasedCounts:
             if self.motifFilter:
-                title = self.titleWeblogoReleased
-            else:
                 title = self.titleReleased
         else:
             title = self.titleWeblogo
@@ -2803,8 +2813,8 @@ class NGS:
 
         # Plot: Bar graphs
         if self.plotFigBars:
-            self.plotBarGraph(substrates=substrates, dataType='Counts',
-                              combinedMotif=combinedMotif)
+            # self.plotBarGraph(substrates=substrates, subsInit=subsInit, dataType='Counts',
+            #                   combinedMotif=combinedMotif)
             self.plotBarGraph(substrates=substrates, dataType='Probability',
                               combinedMotif=combinedMotif)
              
@@ -2828,8 +2838,168 @@ class NGS:
 
 
 
+    def plotNormBarGraph(self, substratesInitial, substratesFinal, motifs,
+                         barColor='#CC5500', barWidth=0.75, combinedMotif=False,
+                         limitNBars=True):
+        print('================================ Normalize Bars '
+              '=================================')
+        ratios = {}
+        motifsCorrected = {}
+        totalCountsInit = 0
+        totalCountsInitAdj = 0
+        totalCountsFinal = 0
+        totalUniqueSubsFinal = len(substratesFinal)
+
+
+        # Sort input sequences
+        substratesFinal = dict(sorted(substratesFinal.items(),
+                                      key=lambda x: x[1], reverse=True))
+
+        iteration = 0
+        print('Substrates:')
+        for substrate, count in substratesFinal.items():
+            print(f'     {pink}{substrate}{resetColor}, '
+                  f'Count:{red} {count:,}{resetColor}')
+            iteration += 1
+            if iteration >= self.printNumber:
+                print('\n')
+                break
+
+        for substrate, count in substratesFinal.items():
+            totalCountsFinal += count
+            if substrate in substratesInitial.keys():
+                countInit = substratesInitial[substrate]
+            else:
+                countInit = 1
+                count += countInit
+                totalCountsFinal += 1
+            totalCountsInit += countInit
+            if countInit == 1:
+                totalCountsInitAdj += countInit
+            ratios[substrate] = count / countInit
+
+        # Sort collected substrates and add to the list
+        ratios = dict(sorted(ratios.items(), key=lambda x: x[1], reverse=True))
+
+        iteration = 0
+        print('Normalized Substrates:')
+        for substrate, ratio in ratios.items():
+            # if int(ratio) != substratesFinal[substrate]:
+            iteration += 1
+            print(f'     {pink}{substrate}{resetColor}, '
+                  f'Ratio: {red}{round(ratio, 3):,}{resetColor}')
+            if iteration >= self.printNumber:
+                print('\n')
+                break
+
+        print(f'Substrates: {red}{totalUniqueSubsFinal:,}{resetColor}\n'
+              f'Counts +1: {red}{totalCountsInitAdj:,}{resetColor}\n'
+              f'Percent +1: {yellow}{round(100*(totalCountsInitAdj / 
+                                                totalUniqueSubsFinal), 3)} %'
+              f'{resetColor}\n'
+              f'Counts Initial: {red}{totalCountsInit:,}{resetColor}\n')
+
+
+        # Evaluate: Motifs
+        for motif in motifs.keys():
+            for substrate, ratio in ratios.items():
+                if motif in substrate:
+                    if motif in motifsCorrected.keys():
+                        motifsCorrected[motif] += ratio
+                    else:
+                        motifsCorrected[motif] = ratio
+
+        # Sort collected substrates and add to the list
+        motifsCorrected = dict(sorted(motifsCorrected.items(),
+                                      key=lambda x: x[1], reverse=True))
+
+        iteration = 0
+        print(f'Enrichment Ratio:')
+        for motif, ratio in motifsCorrected.items():
+            print(f'     {blue}{motif}{resetColor}, '
+                  f'Ratio: {red}{round(ratio, 3):,}{resetColor}')
+            iteration += 1
+            if iteration >= self.printNumber:
+                print()
+                break
+
+
+        # Collect datapoints
+        iteration = 0
+        xValues, yValues = [], []
+        if limitNBars:
+            for substrate, count in motifsCorrected.items():
+                xValues.append(str(substrate))
+                yValues.append(count)
+                iteration += 1
+                if iteration == self.NSubBars:
+                    print(f'Size: {len(xValues), self.NSubBars}')
+                    break
+        else:
+            for substrate, count in motifsCorrected.items():
+                xValues.append(str(substrate))
+                yValues.append(count)
+
+        # Evaluate: Y axis
+        maxValue = math.ceil(max(yValues))
+        magnitude = math.floor(math.log10(maxValue))
+        unit = 10**(magnitude-1)
+        yMax = math.ceil(maxValue / unit) * unit
+        if yMax < max(yValues):
+            increaseValue = unit / 2
+            while yMax < max(yValues):
+                print(f'Increase yMax by:{yellow} {increaseValue}{resetColor}')
+                yMax += increaseValue
+            print('\n')
+        yMin = 0
+
+        NSubs = len(xValues)
+        print(f'Number of plotted sequences: {red}{NSubs}{resetColor}\n\n')
+
+        # Define: Figure title
+        if combinedMotif:
+            title = (f'{self.enzymeName}\n Combined {self.datasetTag}\n'
+                     f'Top {NSubs} Substrates')
+        else:
+            title = (f'{self.enzymeName}\n{self.datasetTag}\n'
+                     f'Top {NSubs} Substrates')
+
+        # Plot the data
+        fig, ax = plt.subplots(figsize=self.figSize)
+        bars = plt.bar(xValues, yValues, color=barColor, width=barWidth)
+        plt.ylabel('Enrichment Factor', fontsize=self.labelSizeAxis)
+        plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.axhline(y=0, color='black', linewidth=self.lineThickness)
+        plt.ylim(yMin, yMax)
+        # plt.subplots_adjust(top=0.873, bottom=0.12, left=0.101, right=0.979)
+
+        if not limitNBars:
+            ax.set_xticks([])
+            ax.set_xticklabels([])
+
+        # Set the edge color
+        for bar in bars:
+            bar.set_edgecolor('#CC5500')
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks, width=self.lineThickness)
+        plt.xticks(rotation=90, ha='center')
+
+        # Set the thickness of the figure border
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+            spine.set_linewidth(self.lineThickness)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        fig.tight_layout()
+        plt.show()
+
+
+
+
     def plotBarGraph(self, substrates, dataType, barColor='#CC5500', barWidth=0.75,
-                     combinedMotif=False):
+                     combinedMotif=False, subsInit=False):
         print('================================ Plot: Bar Graph '
               '================================')
         print(f'Collecting the top {red}{self.NSubBars}{resetColor} substrates\n')
@@ -2874,6 +3044,9 @@ class NGS:
                 print('\n')
             yMin = 0 # math.floor(min(yValues) / unit) * unit - spacer
         elif 'probability' in dataType.lower():
+
+
+
             # Evaluate: Substrates
             for substrate, count in substrates.items():
                 xValues.append(str(substrate))
@@ -2925,10 +3098,14 @@ class NGS:
         plt.ylim(yMin, yMax)
         # plt.subplots_adjust(top=0.873, bottom=0.12, left=0.101, right=0.979)
 
+        noXTicks = True
+        if noXTicks:
+            ax.set_xticks([])
+            ax.set_xticklabels([])
 
         # Set the edge color
         for bar in bars:
-            bar.set_edgecolor('black')
+            bar.set_edgecolor('#CC5500')
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -3980,7 +4157,6 @@ class NGS:
         self.entropy = pd.DataFrame(0.0, index=probability.columns, columns=['ΔS'])
         self.entropyMax = np.log2(len(probability.index))
         for indexColumn in probability.columns:
-            print(indexColumn)
             S = 0
             for indexRow, probRatio in probability.iterrows():
                 prob = probRatio[indexColumn]
