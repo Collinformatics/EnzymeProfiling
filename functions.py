@@ -4116,7 +4116,8 @@ class NGS:
 
 
 
-    def plotLibraryProbDist(self, probInitial, probFinal, codonType, datasetTag):
+    def plotLibraryProbDist(self, probInitial, probFinal, codonType, datasetTag,
+                            skipInitial=False):
         # Inspect data
         if probInitial is None and probFinal is None:
             print(f'{orange}ERROR: both of the inputs for probInitial and '
@@ -4157,8 +4158,6 @@ class NGS:
             if yMax < maxY:
                 while yMax < maxY:
                     yMax += tickStepSize
-        if codonType == datasetTag:
-            yMax = np.ceil(probFinal.values.max() * 10) / 10
 
 
         def plotFig(probability, sortType):
@@ -4173,7 +4172,7 @@ class NGS:
             print(f'{probability}\n')
 
             fig, ax = plt.subplots(figsize=self.figSize)
-            plt.ylabel('Probability Distribution', fontsize=self.labelSizeAxis)
+            plt.ylabel('Probability', fontsize=self.labelSizeAxis)
             if sortType == 'Initial Sort':
                 plt.title(f'Unsorted {self.enzymeName} Library',
                           fontsize=self.labelSizeTitle, fontweight='bold')
@@ -4190,7 +4189,6 @@ class NGS:
                                   f'{datasetTag}', fontsize=self.labelSizeTitle,
                                   fontweight='bold')
             plt.subplots_adjust(top=0.926, bottom=0.068, left=0.102, right=0.979)
-
 
             # Set tick parameters
             ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -4265,7 +4263,7 @@ class NGS:
                     fig.savefig(saveLocation, dpi=self.figureResolution)
 
         # Plot the data
-        if plotInitial:
+        if plotInitial and not skipInitial:
             plotFig(probability=probInitial, sortType='Initial Sort')
         if plotFinal:
             if codonType == datasetTag:

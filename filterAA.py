@@ -17,7 +17,7 @@ inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
-inFixResidues = True
+inFixResidues = False
 inFixedResidue = ['Q']
 inFixedPosition = [4]
 inExcludeResidues = False
@@ -35,11 +35,11 @@ inPlotEnrichmentMapScaled = True
 inPlotLogo = True
 inPlotWeblogo = True
 inPlotWordCloud = True
-inPlotBarGraphs = False
+inPlotBarGraphs = True
 inPlotPCA = False
 inPlotSuffixTree = True
 inPlotCounts = False
-inPlotAADistribution = False
+inPlotAADistribution = True
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotPositionalProbDist = False # For understanding shannon entropy
 
@@ -392,8 +392,9 @@ if inPlotAADistribution:
     # Evaluate: Degenerate codon probabilities
     codonProbs = ngs.calculateProbCodon(codonSeq=inCodonSequence)
     # Plot: Codon probabilities
-    ngs.plotLibraryProbDist(probInitial=None, probFinal=codonProbs,
-                            codonType=inCodonSequence, datasetTag=inCodonSequence)
+    ngs.plotLibraryProbDist(probInitial=probFinal, probFinal=codonProbs,
+                            codonType=inCodonSequence, datasetTag=inCodonSequence,
+                            skipInitial=True)
 
 if inPlotCounts:
     # Plot the data
