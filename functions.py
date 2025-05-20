@@ -4171,23 +4171,19 @@ class NGS:
                       f' {purple}{self.enzymeName} {sortType}{resetColor}')
             print(f'{probability}\n')
 
+            if sortType == 'Initial Sort':
+                title = f'Unsorted {self.enzymeName} Library'
+            else:
+                if datasetTag is None or datasetTag == 'Unfiltered':
+                    title = f'Sorted {self.enzymeName} Library'
+                elif codonType == datasetTag:
+                    title = f'{codonType} Codon'
+                else:
+                    title = f'Sorted {self.enzymeName} Library - {datasetTag}'
+
             fig, ax = plt.subplots(figsize=self.figSize)
             plt.ylabel('Probability', fontsize=self.labelSizeAxis)
-            if sortType == 'Initial Sort':
-                plt.title(f'Unsorted {self.enzymeName} Library',
-                          fontsize=self.labelSizeTitle, fontweight='bold')
-            else:
-                if datasetTag is None:
-                    plt.title(f'Sorted {self.enzymeName} Library',
-                              fontsize=self.labelSizeTitle, fontweight='bold')
-                else:
-                    if codonType == datasetTag:
-                        plt.title(f'{codonType} Codon',
-                        fontsize=self.labelSizeTitle, fontweight='bold')
-                    else:
-                        plt.title(f'Sorted {self.enzymeName} Library - '
-                                  f'{datasetTag}', fontsize=self.labelSizeTitle,
-                                  fontweight='bold')
+            plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
             plt.subplots_adjust(top=0.926, bottom=0.068, left=0.102, right=0.979)
 
             # Set tick parameters
@@ -4240,7 +4236,7 @@ class NGS:
             if self.saveFigures:
                 # Define: Save location
                 if datasetTag is None:
-                    figLabel = (f'AA Distribution - {self.enzymeName} - Unfiltered - '
+                    figLabel = (f'AA Distribution - {self.enzymeName} - '
                                 f'{sortType} - Y Max {yMax} - {codonType} - '
                                 f'MinCounts {self.minSubCount}.png')
                 else:
