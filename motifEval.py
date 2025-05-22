@@ -39,12 +39,14 @@ inPlotEnrichmentMapScaled = True
 inPlotLogo = False
 inPlotWeblogo = False
 
-inPlotEnrichmentMap = True
+# OVERWRITE PARAMS
+inPlotEnrichmentMap = False
 inPlotEnrichmentMapScaled = False
 inPlotLogo = False
 inPlotWeblogo = False
 
-
+inPlotMotifEnrichment = False
+inPlotMotifEnrichmentLimited = False
 inPlotWordCloud = True
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
@@ -72,12 +74,12 @@ inAddHorizontalLines = False
 inPlotNegativeWeblogoMotif = False
 inBigLettersOnTop = False
 
-# Input 8: Word Cloud
-inLimitWords = True
-inTotalWords = 75
-
-# Input 9: Bar Graphs
+# Input 8: Motif Enrichment
 inPlotNBars = 50
+
+# Input 9: Word Cloud
+inLimitWords = True
+inTotalWords = 50
 
 # Input 10: PCA
 inNumberOfPCs = 2
@@ -213,10 +215,11 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           folderPath=inPathFolder, filesInit=filesInitial, filesFinal=filesFinal,
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
-          plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
-          wordLimit=inLimitWords, wordsTotal=inTotalWords, plotFigBars=inPlotBarGraphs,
-          NSubBars=inPlotNBars, plotPCA=inPlotPCA, numPCs=inTotalSubsPCA,
-          NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
+          plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
+          plotFigMotifEnrichSelect=inPlotMotifEnrichmentLimited,
+          plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
+          plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotPCA=inPlotPCA,
+          numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
@@ -1142,35 +1145,35 @@ probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitia
 
 
 # ===================================== Run The Code =====================================
+# Load: Substrates
+substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
+
 # Get dataset tag
 ngs.getDatasetTag(combinedMotif=True)
 
+# # Evaluate: Count Matrices
+# # Load: Motif counts
+# countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
+#     motifLabel=inMotifPositions, motifIndex=motifFramePos)
+#
+# # Display current sample size
+# ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsRelCombinedTotal)
+#
+# # Calculate: RF
+# probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
+#
+# # Calculate: Positional entropy
+# entropy = ngs.calculateEntropy(probability=probCombinedMotif)
+#
+# # Calculate enrichment scores
+# ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
+#                         releasedCounts=True)
 
-evalRelCounts = False
-if evalRelCounts:
-    # Load: Motif counts
-    countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
-        motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
-    # Display current sample size
-    ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsRelCombinedTotal)
-
-    # Calculate: RF
-    probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
-
-    # Calculate: Positional entropy
-    entropy = ngs.calculateEntropy(probability=probCombinedMotif)
-
-    # Calculate enrichment scores
-    ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
-                            releasedCounts=True)
-
+# # Evaluate: Motif Sequences
 # Load: Substrate motifs
 motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
     motifLabel=inMotifPositions, motifIndex=motifFramePos)
-
-# Load: Substrates
-substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
@@ -1179,16 +1182,6 @@ ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
 motifCountsFinal, motifsCountsTotal = ngs.countResidues(substrates=motifs,
                                                         datasetType='Final Sort')
 
-
-ngs.plotNormBarGraph(substratesInitial=substratesInitial,
-                     substratesFinal=substratesFiltered,
-                     motifs=motifs, combinedMotif=True, limitNBars=False)
-
-ngs.plotNormBarGraph(substratesInitial=substratesInitial,
-                     substratesFinal=substratesFiltered,
-                     motifs=motifs, combinedMotif=True)
-
-
 # Calculate: RF
 probMotif = ngs.calculateProbabilities(counts=motifCountsFinal, N=motifsCountsTotal,
                                        fileType='Final Sort')
@@ -1196,10 +1189,16 @@ probMotif = ngs.calculateProbabilities(counts=motifCountsFinal, N=motifsCountsTo
 # Calculate: Positional entropy
 entropy = ngs.calculateEntropy(probability=probMotif, combinedMotif=True)
 
+# Calculate: AA Enrichment
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
                         combinedMotif=True)
 
-ngs.processSubstrates(substrates=motifs, subLabel=inMotifPositions, combinedMotif=True)
+# Calculate: Motif enrichment
+motifES = ngs.motifEnrichment(substratesInitial=substratesInitial,
+                              substratesFinal=substratesFiltered,
+                              motifs=motifs)
+
+ngs.processSubstrates(substrates=motifES, subLabel=inMotifPositions, combinedMotif=True)
 
 
 sys.exit()

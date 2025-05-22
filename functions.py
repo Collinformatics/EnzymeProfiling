@@ -11,7 +11,6 @@ from itertools import combinations, product
 import logomaker
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
-from matplotlib.pyplot import title
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
@@ -130,7 +129,7 @@ def pressKey(event):
         plt.close()
     elif event.key == 'backspace':
         sys.exit()
-    elif event.key == 'f12':
+    elif event.key == 'r':
         python = sys.executable
         os.execl(python, python, *sys.argv)
 
@@ -148,7 +147,8 @@ class NGS:
                  filesInit, filesFinal, plotPosS, plotFigEM, plotFigEMScaled, plotFigLogo,
                  plotFigWebLogo, plotFigWords, wordLimit, wordsTotal, plotFigBars,
                  NSubBars, plotPCA, numPCs, NSubsPCA, plotSuffixTree, saveFigures,
-                 setFigureTimer, expressDNA=False, xAxisLabelsMotif=None):
+                 setFigureTimer, expressDNA=False, xAxisLabelsMotif=None,
+                 plotFigMotifEnrich=False, plotFigMotifEnrichSelect=False):
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.filterSubs = filterSubs
@@ -160,6 +160,7 @@ class NGS:
         self.minSubCount = minCounts
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsMotif = xAxisLabelsMotif
+        self.motifLen = None
         self.printNumber = printNumber
         self.selectedSubstrates = []
         self.selectedDatapoints = []
@@ -181,6 +182,8 @@ class NGS:
         self.plotFigEMScaled = plotFigEMScaled
         self.plotFigLogo = plotFigLogo
         self.plotFigWebLogo = plotFigWebLogo
+        self.plotFigMotifEnrich = plotFigMotifEnrich
+        self.plotFigMotifEnrichSelect = plotFigMotifEnrichSelect
         self.plotFigWords = plotFigWords
         self.wordsLimit = wordLimit
         self.wordsTotal = wordsTotal
@@ -226,6 +229,7 @@ class NGS:
         self.initialize = True # filterMotif.py: Set to False after NGS.calculateEntropy()
         self.motifTag = ''
         self.motifIndex = None
+        self.motifIndexExtracted = []
         self.saveFigures = saveFigures
         self.setFigureTimer = setFigureTimer
         self.figureTimerDuration = 0.5
@@ -242,6 +246,7 @@ class NGS:
         self.pathFilteredCounts = None
 
         # Parameters: Misc
+        self.roundVal = 3
         np.set_printoptions(suppress=True) # Prevent data from printing in sci notation
         np.seterr(divide='ignore')
 
@@ -421,7 +426,8 @@ class NGS:
                               f'{self.printNumber} substrates{resetColor} were found in '
                               f'{purple}R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
                               f'     {greyDark}Percent throwaway{resetColor}:'
-                              f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
+                              f'{red} {round(throwawayPercent, self.roundVal)} %'
+                              f'{resetColor}\n\n')
                         break
 
                     # Select full DNA seq
@@ -530,7 +536,8 @@ class NGS:
                               f'{self.printNumber} substrates{resetColor} were found in '
                               f'{purple}R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
                               f'     {greyDark}Percent throwaway{resetColor}:'
-                              f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
+                              f'{red} {round(throwawayPercent, self.roundVal)} %'
+                              f'{resetColor}\n\n')
                         break
 
                     # Select full DNA seq
@@ -646,7 +653,7 @@ class NGS:
                   f'     Number of extracted Substrates: '
                   f'{red}{extractionCount:,}{resetColor}\n'
                   f'     {greyDark}Percent throwaway{resetColor}:'
-                  f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
+                  f'{red} {round(throwawayPercent, self.roundVal)} %{resetColor}\n\n')
         # sys.exit(1)
 
         # Rank the substrates
@@ -705,7 +712,8 @@ class NGS:
                               f'{self.printNumber} substrates{resetColor} were found in '
                               f'{purple}R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
                               f'     {greyDark}Percent throwaway{resetColor}:'
-                              f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
+                              f'{red} {round(throwawayPercent, self.roundVal)} %'
+                              f'{resetColor}\n\n')
                         break
 
                     # Select full DNA seq
@@ -818,7 +826,8 @@ class NGS:
                               f'{self.printNumber} substrates{resetColor} were found in '
                               f'{purple}R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
                               f'     {greyDark}Percent throwaway{resetColor}:'
-                              f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
+                              f'{red} {round(throwawayPercent, self.roundVal)} %'
+                              f'{resetColor}\n\n')
                         break
 
                     # Select full DNA seq
@@ -936,7 +945,8 @@ class NGS:
                   f'     Number of extracted Substrates: '
                   f'{red}{extractionCount:,}{resetColor}\n'
                   f'     {greyDark}Percent throwaway{resetColor}:'
-                  f'{red} {round(throwawayPercent, 3)} %{resetColor}\n\n')
+                  f'{red} {round(throwawayPercent, self.roundVal)} %'
+                  f'{resetColor}\n\n')
 
 
         # Rank the substrates
@@ -956,7 +966,8 @@ class NGS:
                   f'     Number of extracted Substrates: '
                   f'{red}{self.countExtractedSubs[index]:,}{resetColor}\n'
                   f'     {greenLight}Percent throwaway{resetColor}: '
-                  f'{red}{round(self.percentUnusableDNASeqs[index], 3)} %{resetColor}\n')
+                  f'{red}{round(self.percentUnusableDNASeqs[index], self.roundVal)} %'
+                  f'{resetColor}\n')
         print('')
 
 
@@ -1439,6 +1450,11 @@ class NGS:
         totalMotifs = 0
         motifs = {}
         substrates = {}
+
+        # Assign: Motif parameters
+        self.motifIndex = motifIndex
+        print(f'Motif Index: {self.motifIndex}\n')
+
         
         # Load the substrates
         for index, position in enumerate(self.fixedPos):
@@ -1518,6 +1534,10 @@ class NGS:
                 print(f'{orange}ERROR: The file was not found\n'
                       f'     {pathFixedMotifSubs}\n')
                 sys.exit(1)
+
+            self.motifIndexExtracted.append((startSub, endSub))
+        # Evaluate: Loaded data
+        self.motifLen = len(next(iter(motifs)))
 
         # Sort the substrate dictionary by counts
         motifs = dict(sorted(motifs.items(), key=lambda x: x[1], reverse=True))
@@ -2259,6 +2279,7 @@ class NGS:
                 motifs[motif] += count
             else:
                 motifs[motif] = count
+        self.motifLen = len(next(iter(motifs)))
         motifs = dict(sorted(motifs.items(), key=lambda x: x[1], reverse=True))
 
         # Print data
@@ -2295,7 +2316,7 @@ class NGS:
             self.eMap.columns = probFinal.columns
 
         print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n\n'
-              f'{self.eMap.round(3)}\n\n')
+              f'{self.eMap.round(self.roundVal)}\n\n')
 
 
         if self.plotFigEMScaled or self.plotFigLogo:
@@ -2838,36 +2859,57 @@ class NGS:
 
 
 
-    def plotNormBarGraph(self, substratesInitial, substratesFinal, motifs,
-                         barColor='#CC5500', barWidth=0.75, combinedMotif=False,
-                         limitNBars=True):
-        print('================================ Normalize Bars '
-              '=================================')
+    def motifEnrichment(self, motifs, substratesInitial, substratesFinal,
+                        barColor='#CC5500', barWidth=0.65):
+        print('=============================== Motif Enrichment '
+              '================================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
+              f'Normalizing substrate counts in the {purple}Final Sort{resetColor}:\n'
+              f'     Enrichment Ratio (ER) = {magenta}Counts Final{resetColor} / '
+              f'{magenta}Counts Initial{resetColor}\n')
+        k = None
+        motifEnrichment = {}
         ratios = {}
-        motifsCorrected = {}
         totalCountsInit = 0
         totalCountsInitAdj = 0
         totalCountsFinal = 0
         totalUniqueSubsFinal = len(substratesFinal)
+        if len(self.motifIndexExtracted) > 1:
+            combinedMotifs = True
+        else:
+            combinedMotifs = False
 
+        # ================================================================================
+
+        # Calc: ER
+            # Use: CountFinal / CountInit
+
+            # Or Use: (CountFinal / NFinalSubs) / (CountInit / NInitSubs)
+
+            # Use?: log2(ratio)
+
+        # ================================================================================
 
         # Sort input sequences
         substratesFinal = dict(sorted(substratesFinal.items(),
                                       key=lambda x: x[1], reverse=True))
 
         iteration = 0
-        print('Substrates:')
+        print(f'Substrates: {magenta}Final Sort{resetColor}')
         for substrate, count in substratesFinal.items():
             print(f'     {pink}{substrate}{resetColor}, '
                   f'Count:{red} {count:,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
-                print('\n')
+                print('')
                 break
 
+
+        # Evaluate: Motif enrichment
         for substrate, count in substratesFinal.items():
             totalCountsFinal += count
             if substrate in substratesInitial.keys():
+                # Limit subInit length to match frame extraction zones
                 countInit = substratesInitial[substrate]
             else:
                 countInit = 1
@@ -2882,119 +2924,198 @@ class NGS:
         ratios = dict(sorted(ratios.items(), key=lambda x: x[1], reverse=True))
 
         iteration = 0
-        print('Normalized Substrates:')
+        print('Enrichment Ratios:')
         for substrate, ratio in ratios.items():
             # if int(ratio) != substratesFinal[substrate]:
             iteration += 1
             print(f'     {pink}{substrate}{resetColor}, '
-                  f'Ratio: {red}{round(ratio, 3):,}{resetColor}')
+                  f'ER: {red}{round(ratio, self.roundVal):,}{resetColor}')
             if iteration >= self.printNumber:
-                print('\n')
+                print('')
                 break
 
-        print(f'Substrates: {red}{totalUniqueSubsFinal:,}{resetColor}\n'
+        print(f'Unique Substrates: {red}{totalUniqueSubsFinal:,}{resetColor}\n'
               f'Counts +1: {red}{totalCountsInitAdj:,}{resetColor}\n'
               f'Percent +1: {yellow}{round(100*(totalCountsInitAdj / 
-                                                totalUniqueSubsFinal), 3)} %'
-              f'{resetColor}\n'
-              f'Counts Initial: {red}{totalCountsInit:,}{resetColor}\n')
+                                                totalUniqueSubsFinal), self.roundVal)} %'
+              f'{resetColor}')
 
 
         # Evaluate: Motifs
         for motif in motifs.keys():
             for substrate, ratio in ratios.items():
                 if motif in substrate:
-                    if motif in motifsCorrected.keys():
-                        motifsCorrected[motif] += ratio
+                    if motif in motifEnrichment.keys():
+                        motifEnrichment[motif] += ratio
                     else:
-                        motifsCorrected[motif] = ratio
+                        motifEnrichment[motif] = ratio
+        totalMotifs = len(motifs.keys())
+        print(f'Unique Motifs: {red}{totalMotifs:,}{resetColor}\n')
 
         # Sort collected substrates and add to the list
-        motifsCorrected = dict(sorted(motifsCorrected.items(),
+        motifEnrichment = dict(sorted(motifEnrichment.items(),
                                       key=lambda x: x[1], reverse=True))
 
         iteration = 0
-        print(f'Enrichment Ratio:')
-        for motif, ratio in motifsCorrected.items():
+        print(f'Enrichment Motifs:')
+        for motif, ratio in motifEnrichment.items():
             print(f'     {blue}{motif}{resetColor}, '
-                  f'Ratio: {red}{round(ratio, 3):,}{resetColor}')
+                  f'ER: {red}{round(ratio, self.roundVal):,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
                 print()
                 break
+        NSubs = len(motifEnrichment.keys())
 
 
-        # Collect datapoints
-        iteration = 0
+        def plotBarGraph(x, y, limitNBars=False):
+            # Evaluate: Y axis
+            maxValue = math.ceil(max(y))
+            magnitude = math.floor(math.log10(maxValue))
+            unit = 10 ** (magnitude - 1)
+            yMax = math.ceil(maxValue / unit) * unit
+            if yMax < max(y):
+                increaseValue = unit / 2
+                while yMax < max(y):
+                    # print(f'Increase yMax by:{yellow} {increaseValue}{resetColor}')
+                    yMax += increaseValue
+                print('\n')
+            yMin = 0
+
+
+            # Plot the data
+            fig, ax = plt.subplots(figsize=self.figSize)
+            if limitNBars:
+                bars = plt.bar(x, y, color=barColor, width=barWidth)
+
+                # Determine x values
+                xTicks = np.arange(0, len(x))
+                ax.set_xticks(xTicks)
+                ax.set_xticklabels(x, rotation=90, ha='center')
+                ax.set_xlim(left=xTicks[0] - barWidth, right=xTicks[-1] + barWidth)
+
+                # Set the edge color
+                for bar in bars:
+                    bar.set_edgecolor('black')
+            else:
+                bars = plt.bar(x, y, color=barColor, width=barWidth)
+
+                # Determine x values
+                magnitude = np.floor(np.log10(NSubs))
+                div = 10 ** (magnitude - 1)
+                xMax = int(np.ceil(NSubs))
+                step = int(div * 10)  # int(xMax / 10)
+                xTicks = np.arange(0, xMax + step, step)
+
+                ax.set_xticks(xTicks)
+                ax.set_xticklabels(xTicks)
+                ax.set_xlim(left=-div * 2, right=max(xTicks))
+
+                # Set the edge color
+                for bar in bars:
+                    bar.set_edgecolor(barColor)
+
+            # Define: Figure title
+            title = (f'{self.enzymeName}\n{self.datasetTag}\n'
+                     f'{NSubs:,} Unique Motif')
+            if combinedMotifs:
+                title = title.replace(self.datasetTag,
+                                      f'Combined {self.datasetTag}')
+            title = title.replace('Motif', 'Motifs')
+            if limitNBars:
+                title = title.replace(f'{NSubs:,}', f'Top {NSubs:,}')
+            plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+            plt.ylabel('Enrichment Factor', fontsize=self.labelSizeAxis)
+            plt.axhline(y=0, color='black', linewidth=self.lineThickness)
+            plt.ylim(yMin, yMax)
+
+            # Set: y ticks
+            step = yMax / 10
+            yTicks = np.arange(0, yMax + step, step)
+            plt.xticks(rotation=90, ha='center')
+            plt.yticks(yTicks)
+
+            # Set tick parameters
+            ax.tick_params(axis='both', which='major', length=self.tickLength,
+                           labelsize=self.labelSizeTicks, width=self.lineThickness)
+
+            # Set the thickness of the figure border
+            for _, spine in ax.spines.items():
+                spine.set_visible(True)
+                spine.set_linewidth(self.lineThickness)
+
+            fig.canvas.mpl_connect('key_press_event', pressKey)
+            fig.tight_layout()
+            plt.show()
+
+            # Save the figure
+            if self.saveFigures:
+                # Define: Save location
+                figLabel = (f'{self.enzymeName} - Motif Enrichment - '
+                            f'N {NSubs} - {self.datasetTag} - '
+                            f'MinCounts {self.minSubCount}.png')
+                if combinedMotifs:
+                    figLabel = figLabel.replace(self.datasetTag,
+                                                f'Combined {self.datasetTag}')
+
+                saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+                # Save figure
+                if os.path.exists(saveLocation):
+                    print(f'{yellow}The figure was not saved\n\n'
+                          f'File was already found at path:\n'
+                          f'     {saveLocation}{resetColor}\n\n')
+                else:
+                    print(f'Saving figure at path:\n'
+                          f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                    fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+        # Collect all datapoints
         xValues, yValues = [], []
-        if limitNBars:
-            for substrate, count in motifsCorrected.items():
+        for substrate, count in motifEnrichment.items():
+            xValues.append(str(substrate))
+            yValues.append(count)
+
+        # Plot: Motif enrichment
+        if self.plotFigMotifEnrich:
+            plotBarGraph(x=xValues, y=yValues)
+        if self.plotFigMotifEnrichSelect:
+            # Collect top datapoints
+            iteration = 0
+            xValues, yValues = [], []
+            for substrate, count in motifEnrichment.items():
                 xValues.append(str(substrate))
                 yValues.append(count)
                 iteration += 1
                 if iteration == self.NSubBars:
-                    print(f'Size: {len(xValues), self.NSubBars}')
                     break
-        else:
-            for substrate, count in motifsCorrected.items():
-                xValues.append(str(substrate))
-                yValues.append(count)
+            plotBarGraph(x=xValues, y=yValues, limitNBars=True)
 
-        # Evaluate: Y axis
-        maxValue = math.ceil(max(yValues))
-        magnitude = math.floor(math.log10(maxValue))
-        unit = 10**(magnitude-1)
-        yMax = math.ceil(maxValue / unit) * unit
-        if yMax < max(yValues):
-            increaseValue = unit / 2
-            while yMax < max(yValues):
-                print(f'Increase yMax by:{yellow} {increaseValue}{resetColor}')
-                yMax += increaseValue
-            print('\n')
-        yMin = 0
+        # # Calculate: Decay constant
+        # k = ngs.decayRate(y=yValues)
 
-        NSubs = len(xValues)
-        print(f'Number of plotted sequences: {red}{NSubs}{resetColor}\n\n')
+        return motifEnrichment
 
-        # Define: Figure title
-        if combinedMotif:
-            title = (f'{self.enzymeName}\n Combined {self.datasetTag}\n'
-                     f'Top {NSubs} Substrates')
-        else:
-            title = (f'{self.enzymeName}\n{self.datasetTag}\n'
-                     f'Top {NSubs} Substrates')
 
-        # Plot the data
-        fig, ax = plt.subplots(figsize=self.figSize)
-        bars = plt.bar(xValues, yValues, color=barColor, width=barWidth)
-        plt.ylabel('Enrichment Factor', fontsize=self.labelSizeAxis)
-        plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-        plt.axhline(y=0, color='black', linewidth=self.lineThickness)
-        plt.ylim(yMin, yMax)
-        # plt.subplots_adjust(top=0.873, bottom=0.12, left=0.101, right=0.979)
 
-        if not limitNBars:
-            ax.set_xticks([])
-            ax.set_xticklabels([])
+    def decayRate(self, y):
+        print('========================= Calculate: Exponential Decay '
+              '==========================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
+        x = np.arange(0, len(y))
+        smoothx = np.linspace(x[0], x[-1], 20)
 
-        # Set the edge color
-        for bar in bars:
-            bar.set_edgecolor('#CC5500')
+        guess_a, guess_b, guess_c = 4000, -0.005, 100
+        guess = [guess_a, guess_b, guess_c]
 
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks, width=self.lineThickness)
-        plt.xticks(rotation=90, ha='center')
+        exp_decay = lambda x, A, t, y0: A * np.exp(x * t) + y0
 
-        # Set the thickness of the figure border
-        for _, spine in ax.spines.items():
-            spine.set_visible(True)
-            spine.set_linewidth(self.lineThickness)
+        params, cov = curve_fit(exp_decay, x, y, p0=guess)
 
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        fig.tight_layout()
-        plt.show()
+        A, t, y0 = params
 
+        print("A = %s\nt = %s\ny0 = %s\n" % (A, t, y0))
 
 
 
@@ -3044,9 +3165,6 @@ class NGS:
                 print('\n')
             yMin = 0 # math.floor(min(yValues) / unit) * unit - spacer
         elif 'probability' in dataType.lower():
-
-
-
             # Evaluate: Substrates
             for substrate, count in substrates.items():
                 xValues.append(str(substrate))
@@ -3097,11 +3215,6 @@ class NGS:
         plt.axhline(y=0, color='black', linewidth=self.lineThickness)
         plt.ylim(yMin, yMax)
         # plt.subplots_adjust(top=0.873, bottom=0.12, left=0.101, right=0.979)
-
-        noXTicks = True
-        if noXTicks:
-            ax.set_xticks([])
-            ax.set_xticklabels([])
 
         # Set the edge color
         for bar in bars:
@@ -3338,10 +3451,10 @@ class NGS:
             plt.scatter(dataPCA[components[0]], dataPCA[components[1]],
                         c='#CC5500', edgecolor='black')
             plt.xlabel(f'Principal Component {components[0][-1]} '
-                       f'({np.round(varRatio[0], 3)} %)',
+                       f'({np.round(varRatio[0], self.roundVal)} %)',
                        fontsize=self.labelSizeAxis)
             plt.ylabel(f'Principal Component {components[1][-1]} '
-                       f'({np.round(varRatio[1], 3)} %)',
+                       f'({np.round(varRatio[1], self.roundVal)} %)',
                        fontsize=self.labelSizeAxis)
             plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
 
@@ -4657,7 +4770,7 @@ class NGS:
         iteration = 0
         for substrate, count in substrates.items():
             print(f'     {blue}{substrate}{resetColor}, '
-                  f'Count:{red} {count:,}{resetColor}')
+                  f'Count:{red} {round(count, self.roundVal):,}{resetColor}')
             iteration += 1
             if iteration == self.printNumber:
                 break
@@ -4715,7 +4828,10 @@ class NGS:
 
         # Save the Figure
         if self.saveFigures:
-            seqLength = len(next(iter(substrates)))
+            if self.motifLen == None:
+                seqLength = len(self.xAxisLabels)
+            else:
+                seqLength = self.motifLen
 
             # Define: Save location
             if self.wordsLimit:
@@ -4893,6 +5009,7 @@ class NGS:
 
         # Evaluate: Partial sequence counts
         subtreeCount = {}
+        self.motifLen = len(next(iter(substrates)))
         motifLength = len(next(iter(motifTrie)))
         for index in range(motifLength):
             for motif, count in motifTrie.items():
