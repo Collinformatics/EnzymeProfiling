@@ -327,7 +327,8 @@ class NGS:
             colors = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
         elif colorType == 'word cloud':
             # ,'#F2A900','#2E8B57','black'
-            colors = ['#CC5500','#F79620','#FAA338','#00C01E','#003000','black']
+            colors = ['#CC5500','#CC5500','#F79620','#FAA338',
+                      '#00C01E','#1D680D','#003000','black']
             # colors = ['#008631','#39E75F','#CC5500','#F79620','black']
         elif colorType == 'em':
             colors = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
@@ -2005,10 +2006,10 @@ class NGS:
                         continuous = False
                         break
                 if continuous:
-                    self.datasetTag = (f'Motif {self.fixedAA[0]}@R{fixedPos[0]}-'
+                    self.datasetTag = (f'Motifs {self.fixedAA[0]}@R{fixedPos[0]}-'
                                   f'R{fixedPos[-1]}')
                 else:
-                    self.datasetTag = (f'Motif {self.fixedAA[0]}@R{fixedPos[0]}-'
+                    self.datasetTag = (f'Motifs {self.fixedAA[0]}@R{fixedPos[0]}-'
                                   f'R{fixedPos[1]}, R{fixedPos[-1]}')
         else:
             if self.filterSubs:
@@ -2827,26 +2828,39 @@ class NGS:
 
 
 
-    def processSubstrates(self, substrates, subLabel, combinedMotif=False):
+    def processSubstrates(self, subsInit, subsFinal, motifs, subLabel):
+        # Evaluate dataset
+        combinedMotif = False
+        if len(self.motifIndexExtracted) > 1:
+            combinedMotif = True
+
+
+        # Calculate: Motif enrichment
+        motifES = self.motifEnrichment(subsInit=subsInit, subsFinal=subsFinal,
+                                       motifs=motifs)
+
         # Plot: Work cloud
         if self.plotFigWords:
-            self.plotWordCloud(substrates=substrates, combinedMotif=combinedMotif)
+            self.plotWordCloud(substrates=motifES, combinedMotif=combinedMotif)
+
+        # Predict: Motif enrichment
+        self.predMotifEnrichment(motifES=motifES)
 
         # Plot: Bar graphs
         if self.plotFigBars:
-            # self.plotBarGraph(substrates=substrates, subsInit=subsInit, dataType='Counts',
-            #                   combinedMotif=combinedMotif)
-            self.plotBarGraph(substrates=substrates, dataType='Probability',
+            self.plotBarGraph(substrates=motifs, subsInit=subsInit, dataType='Counts',
+                              combinedMotif=combinedMotif)
+            self.plotBarGraph(substrates=motifs, dataType='Probability',
                               combinedMotif=combinedMotif)
              
         # PCA
         if self.plotPCA:
             # Convert substrate data to numerical
             tokensESM, subsESM, subCountsESM = self.ESM(
-                substrates=substrates, subLabel=subLabel)
+                substrates=motifES, subLabel=subLabel)
 
             # Cluster substrates
-            subPopulations = self.plotPCA(substrates=substrates, data=tokensESM,
+            subPopulations = self.plotPCA(substrates=motifES, data=tokensESM,
                                           indices=subsESM, N=subCountsESM)
 
             # Why is the PCA getting stuck?
@@ -2859,8 +2873,156 @@ class NGS:
 
 
 
-    def motifEnrichment(self, motifs, substratesInitial, substratesFinal,
-                        barColor='#CC5500', barWidth=0.65):
+    def predMotifEnrichment(self, motifES):
+        def predictActivity(substrates, predictionMatrix, normalizeValues, matrixType):
+            print('=============================== Predict Activity '
+                  '================================')
+            print(f'Matrix Type:{white} {matrixType}\n'
+                  f'{predictionMatrix}{resetColor}\n')
+            maxScore = 0
+            minScore = 0
+            for substrate in substrates:
+                score = 0
+                for index, AA in enumerate(substrate):
+                    position = inMotifPositions[index]
+                    score += predictionMatrix.loc[AA, position]
+                substrates[substrate] = score
+                if score > maxScore:
+                    maxScore = score
+                if score < minScore:
+                    minScore = score
+
+            if normalizeValues:
+                if minScore < 0:
+                    # Set minimum predicted score = 0
+                    for substrate, score in substrates.items():
+                        newScore = score - minScore
+                        substrates[substrate] = newScore
+
+                        # Update max score
+                        if newScore > maxScore:
+                            maxScore = newScore
+
+                # Normalize Values
+                for substrate, score in substrates.items():
+                    substrates[substrate] = score / maxScore
+                maxScore, minScore = 1, 0
+
+            print(f'Prediction Matrix:{white} {matrixType}{resetColor}')
+            for substrate, score in substrates.items():
+                print(f'     {yellow} {substrate}{resetColor}, '
+                      f'Score:{pink} {np.round(score, 2)}{resetColor}')
+            print('\n')
+
+            return substrates, maxScore, minScore
+
+        def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotDataPCA,
+                                    popPCA):
+            # Prep data for the figure
+            xValues = []
+            yValues = []
+            for substrate, score in substrates.items():
+                xValues.append(substrate)
+                yValues.append(score)
+
+            substrateColors = {}
+            for index, substrate in enumerate(substrates.keys()):
+                substrateColors[substrate] = inDatapointColor[index]
+
+            # Define: Figure parameters
+            if scaledMatrix:
+                yMin = inYMinPredScaled
+                yTickMin = inYTickMinScaled
+                if plotDataPCA:
+                    title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
+                             f'{ngs.labelCombinedMotifs}\nScaled Enrichment Scores')
+                else:
+                    title = f'{inEnzymeName}\n{ngs.labelCombinedMotifs}\nScaled Enrichment Scores'
+            else:
+                yMin = inYMinPred
+                yTickMin = inYTickMinPred
+                if plotDataPCA:
+                    title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
+                             f'{ngs.labelCombinedMotifs}\nEnrichment Scores')
+                else:
+                    title = f'{inEnzymeName}\n{ngs.labelCombinedMotifs}\nEnrichment Scores'
+
+            # Plot the data
+            fig, ax = plt.subplots(figsize=(10, 8))
+            bars = plt.bar(xValues, yValues, color=inDatapointColor, width=inBarWidth)
+            plt.ylabel('Normalized Predicted Activity', fontsize=inFigureLabelSize)
+            plt.title(title, fontsize=inFigureTitleSize, fontweight='bold')
+            if not predictValues:
+                plt.title(f'{inEnzymeName}\n'
+                          f'Fixed Frames '
+                          f'{inFixedResidue[0]}@R{inFixedPosition[0]}-R{inFixedPosition[-1]}\n'
+                          f'Prediction: SArKS - ESM',
+                          fontsize=inFigureTitleSize, fontweight='bold')
+                yMin = inYMinPredAI
+                yTickMin = inYTickMinAI
+            plt.xticks(rotation=90, ha='center')
+            plt.axhline(y=0, color='black', linewidth=inLineThickness)
+            plt.ylim(yMin, inYMaxPred)
+
+            # Set edge color
+            try:
+                inSubsManual
+            except NameError:
+                for index, bar in enumerate(bars):
+                    bar.set_edgecolor(inEdgeColor)
+            else:
+                lenSubs = len(substrates)
+                lenSubsManual = len(inSubsManual)
+                lenSubsCovid = len(inSubsCovid)
+                if lenSubs == lenSubsTotal:
+                    for index, bar in enumerate(bars):
+                        if index < lenSubsManual:
+                            bar.set_edgecolor('black')
+                        elif index < lenSubsManual + lenSubsCovid:
+                            bar.set_edgecolor('#CC5500')
+                        else:
+                            bar.set_edgecolor('black')
+                else:
+                    if lenSubs == lenSubsCovid:
+                        for bar in bars:
+                            bar.set_edgecolor(inEdgeColorOrange)
+                    else:
+                        for bar in bars:
+                            bar.set_edgecolor('black')
+
+            # Set tick parameters
+            ax.tick_params(axis='both', which='major', length=inTickLength,
+                           labelsize=inFigureTickSize, width=inLineThickness)
+
+            # Set yticks
+            tickStepSize = 0.2
+            yTicks = np.arange(yTickMin, 1 + tickStepSize, tickStepSize)
+            yTickLabels = [f'{tick:.0f}' if tick == 0 or int(tick) == 1 else f'{tick:.1f}'
+                           for tick in yTicks]
+            ax.set_yticks(yTicks)
+            ax.set_yticklabels(yTickLabels)
+
+            # Set the thickness of the figure border
+            for _, spine in ax.spines.items():
+                spine.set_visible(True)
+                spine.set_linewidth(inLineThickness)
+
+            fig.canvas.mpl_connect('key_press_event', pressKey)
+            fig.tight_layout()
+            plt.show()
+
+        # Predict: Enrichment
+        subsPredict, yMax, yMin = predictActivity(substrates=motifES.copy(),
+                                                  predictionMatrix=self.eMapMotif,
+                                                  normalizeValues=inNormalizePredictions,
+                                                  matrixType='Enrichment Scores')
+        plotSubstratePrediction(substrates=subsPredict, predictValues=True,
+                                scaledMatrix=False, plotDataPCA=False, popPCA=None)
+
+
+
+    def motifEnrichment(self, subsInit, subsFinal, motifs, barColor='#CC5500',
+                        barWidth=0.65):
         print('=============================== Motif Enrichment '
               '================================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
@@ -2873,7 +3035,7 @@ class NGS:
         totalCountsInit = 0
         totalCountsInitAdj = 0
         totalCountsFinal = 0
-        totalUniqueSubsFinal = len(substratesFinal)
+        totalUniqueSubsFinal = len(subsFinal)
         if len(self.motifIndexExtracted) > 1:
             combinedMotifs = True
         else:
@@ -2891,12 +3053,12 @@ class NGS:
         # ================================================================================
 
         # Sort input sequences
-        substratesFinal = dict(sorted(substratesFinal.items(),
+        subsFinal = dict(sorted(subsFinal.items(),
                                       key=lambda x: x[1], reverse=True))
 
         iteration = 0
         print(f'Substrates: {magenta}Final Sort{resetColor}')
-        for substrate, count in substratesFinal.items():
+        for substrate, count in subsFinal.items():
             print(f'     {pink}{substrate}{resetColor}, '
                   f'Count:{red} {count:,}{resetColor}')
             iteration += 1
@@ -2906,11 +3068,11 @@ class NGS:
 
 
         # Evaluate: Motif enrichment
-        for substrate, count in substratesFinal.items():
+        for substrate, count in subsFinal.items():
             totalCountsFinal += count
-            if substrate in substratesInitial.keys():
+            if substrate in subsInit.keys():
                 # Limit subInit length to match frame extraction zones
-                countInit = substratesInitial[substrate]
+                countInit = subsInit[substrate]
             else:
                 countInit = 1
                 count += countInit
@@ -2926,7 +3088,7 @@ class NGS:
         iteration = 0
         print('Enrichment Ratios:')
         for substrate, ratio in ratios.items():
-            # if int(ratio) != substratesFinal[substrate]:
+            # if int(ratio) != subsFinal[substrate]:
             iteration += 1
             print(f'     {pink}{substrate}{resetColor}, '
                   f'ER: {red}{round(ratio, self.roundVal):,}{resetColor}')
@@ -2969,6 +3131,8 @@ class NGS:
 
 
         def plotBarGraph(x, y, limitNBars=False):
+            plotNSubs = len(x)
+
             # Evaluate: Y axis
             maxValue = math.ceil(max(y))
             magnitude = math.floor(math.log10(maxValue))
@@ -3017,13 +3181,13 @@ class NGS:
 
             # Define: Figure title
             title = (f'{self.enzymeName}\n{self.datasetTag}\n'
-                     f'{NSubs:,} Unique Motif')
+                     f'{NSubs:,} Unique Motifs')
             if combinedMotifs:
                 title = title.replace(self.datasetTag,
                                       f'Combined {self.datasetTag}')
-            title = title.replace('Motif', 'Motifs')
+            # title = title.replace('Motif', 'Motifs')
             if limitNBars:
-                title = title.replace(f'{NSubs:,}', f'Top {NSubs:,}')
+                title = title.replace(f'{NSubs:,}', f'Top {plotNSubs:,}')
             plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
             plt.ylabel('Enrichment Factor', fontsize=self.labelSizeAxis)
             plt.axhline(y=0, color='black', linewidth=self.lineThickness)
@@ -3051,9 +3215,14 @@ class NGS:
             # Save the figure
             if self.saveFigures:
                 # Define: Save location
-                figLabel = (f'{self.enzymeName} - Motif Enrichment - '
-                            f'N {NSubs} - {self.datasetTag} - '
-                            f'MinCounts {self.minSubCount}.png')
+                if limitNBars:
+                    figLabel = (f'{self.enzymeName} - Motif Enrichment - '
+                                f'Select N {self.NSubBars} Plot N {plotNSubs} - '
+                                f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+                else:
+                    figLabel = (f'{self.enzymeName} - Motif Enrichment - '
+                                f'N {plotNSubs} - {self.datasetTag} - '
+                                f'MinCounts {self.minSubCount}.png')
                 if combinedMotifs:
                     figLabel = figLabel.replace(self.datasetTag,
                                                 f'Combined {self.datasetTag}')
@@ -4778,7 +4947,10 @@ class NGS:
 
         # Define: Figure title
         if combinedMotif:
-            title = self.titleWordsCombined
+            if len(self.motifIndexExtracted) == 1:
+                title = self.titleWords
+            else:
+                title = self.titleWordsCombined
         else:
             title = self.titleWords
 
@@ -4842,8 +5014,11 @@ class NGS:
                 figLabel = (f'{self.enzymeName} - Words - {seqLength} AA - '
                             f'{self.datasetTag} - Plot {totalWords} - '
                             f'MinCounts {self.minSubCount}.png')
-            if combinedMotif:
+            if len(self.motifIndexExtracted) > 1:
+                print(1)
                 figLabel = figLabel.replace('Motif', 'Combined Motif')
+            else:
+                print(2)
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure

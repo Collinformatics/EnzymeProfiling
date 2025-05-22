@@ -9,6 +9,11 @@ from sklearn.metrics import r2_score
 import sys
 
 
+# ========================================================================================
+# ======================== Try predicting motif enrichment Scores ========================
+# ========================================================================================
+
+
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
@@ -47,6 +52,7 @@ inPlotWeblogo = False
 
 inPlotMotifEnrichment = False
 inPlotMotifEnrichmentLimited = False
+
 inPlotWordCloud = True
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
@@ -262,7 +268,7 @@ def fixInitialSubs(substrates):
 
 
 def substrateProbability(substrates, N, sortType):
-    print('=========================== Calcualte: Substrate Probability '
+    print('=========================== Calculate: Substrate Probability '
           '============================')
     print(f'Substrate Frames:{purple} {sortType}')
 
@@ -285,7 +291,7 @@ def substrateProbability(substrates, N, sortType):
 
 
 def subMotifEnrichment(substratesInitial, initialN, substratesFinal):
-    print('============================ Calcualte: Substrate Enrichment '
+    print('============================ Calculate: Substrate Enrichment '
           '============================')
     decimals = 3
     enrichedSubs = {}
@@ -324,52 +330,6 @@ def subMotifEnrichment(substratesInitial, initialN, substratesFinal):
                   f'{resetColor}\n')
 
     return enrichedSubs
-
-
-
-def predictActivity(substrates, predictionMatrix, normalizeValues, matrixType):
-    print('=============================== Predict Activity '
-          '================================')
-    print(f'Matrix Type:{white} {matrixType}\n'
-          f'{predictionMatrix}{resetColor}\n')
-    maxScore = 0
-    minScore = 0
-    for substrate in substrates:
-        score = 0
-        for index, AA in enumerate(substrate):
-            position = inMotifPositions[index]
-            score += predictionMatrix.loc[AA, position]
-        substrates[substrate] = score
-        if score > maxScore:
-            maxScore = score
-        if score < minScore:
-            minScore = score
-
-
-    if normalizeValues:
-        if minScore < 0:
-            # Set minimum predicted score = 0
-            for substrate, score in substrates.items():
-                newScore = score - minScore
-                substrates[substrate] = newScore
-
-                # Update max score
-                if newScore > maxScore:
-                    maxScore = newScore
-
-        # Normalize Values
-        for substrate, score in substrates.items():
-            substrates[substrate] = score / maxScore
-        maxScore, minScore = 1, 0
-
-
-    print(f'Prediction Matrix:{white} {matrixType}{resetColor}')
-    for substrate, score in substrates.items():
-        print(f'     {yellow} {substrate}{resetColor}, '
-              f'Score:{pink} {np.round(score, 2)}{resetColor}')
-    print('\n')
-
-    return substrates, maxScore, minScore
 
 
 
@@ -413,103 +373,6 @@ def generateKinetics(predictions):
     r2 = r2_score(yValues, xValues)
 
     return [predictions.keys(), xValues, yValues, avg, stDev, r2]
-
-
-
-def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotDataPCA, popPCA):
-    # Prep data for the figure
-    xValues = []
-    yValues = []
-    for substrate, score in substrates.items():
-        xValues.append(substrate)
-        yValues.append(score)
-
-    substrateColors = {}
-    for index, substrate in enumerate(substrates.keys()):
-        substrateColors[substrate] = inDatapointColor[index]
-
-    # Define: Figure parameters
-    if scaledMatrix:
-        yMin = inYMinPredScaled
-        yTickMin = inYTickMinScaled
-        if plotDataPCA:
-            title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
-                     f'{ngs.labelCombinedMotifs}\nScaled Enrichment Scores')
-        else:
-            title = f'{inEnzymeName}\n{ngs.labelCombinedMotifs}\nScaled Enrichment Scores'
-    else:
-        yMin = inYMinPred
-        yTickMin = inYTickMinPred
-        if plotDataPCA:
-            title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
-                     f'{ngs.labelCombinedMotifs}\nEnrichment Scores')
-        else:
-            title = f'{inEnzymeName}\n{ngs.labelCombinedMotifs}\nEnrichment Scores'
-
-
-    # Plot the data
-    fig, ax = plt.subplots(figsize=(10, 8))
-    bars = plt.bar(xValues, yValues, color=inDatapointColor, width=inBarWidth)
-    plt.ylabel('Normalized Predicted Activity', fontsize=inFigureLabelSize)
-    plt.title(title, fontsize=inFigureTitleSize, fontweight='bold')
-    if not predictValues:
-        plt.title(f'{inEnzymeName}\n'
-                  f'Fixed Frames '
-                  f'{inFixedResidue[0]}@R{inFixedPosition[0]}-R{inFixedPosition[-1]}\n'
-                  f'Prediction: SArKS - ESM',
-                  fontsize=inFigureTitleSize, fontweight='bold')
-        yMin = inYMinPredAI
-        yTickMin = inYTickMinAI
-    plt.xticks(rotation=90, ha='center')
-    plt.axhline(y=0, color='black', linewidth=inLineThickness)
-    plt.ylim(yMin, inYMaxPred)
-
-    # Set edge color
-    try:
-        inSubsManual
-    except NameError:
-        for index, bar in enumerate(bars):
-            bar.set_edgecolor(inEdgeColor)
-    else:
-        lenSubs = len(substrates)
-        lenSubsManual = len(inSubsManual)
-        lenSubsCovid = len(inSubsCovid)
-        if lenSubs == lenSubsTotal:
-            for index, bar in enumerate(bars):
-                if index < lenSubsManual:
-                    bar.set_edgecolor('black')
-                elif index < lenSubsManual + lenSubsCovid:
-                    bar.set_edgecolor('#CC5500')
-                else:
-                    bar.set_edgecolor('black')
-        else:
-            if lenSubs == lenSubsCovid:
-                for bar in bars:
-                    bar.set_edgecolor(inEdgeColorOrange)
-            else:
-                for bar in bars:
-                    bar.set_edgecolor('black')
-
-    # Set tick parameters
-    ax.tick_params(axis='both', which='major', length=inTickLength,
-                   labelsize=inFigureTickSize, width=inLineThickness)
-
-    # Set yticks
-    tickStepSize = 0.2
-    yTicks = np.arange(yTickMin, 1 + tickStepSize, tickStepSize)
-    yTickLabels = [f'{tick:.0f}' if tick == 0 or int(tick) == 1 else f'{tick:.1f}'
-                   for tick in yTicks]
-    ax.set_yticks(yTicks)
-    ax.set_yticklabels(yTickLabels)
-
-    # Set the thickness of the figure border
-    for _, spine in ax.spines.items():
-        spine.set_visible(True)
-        spine.set_linewidth(inLineThickness)
-
-    fig.canvas.mpl_connect('key_press_event', pressKey)
-    fig.tight_layout()
-    plt.show()
 
 
 
@@ -990,150 +853,6 @@ def plotFACSData():
 
 
 
-def plotSubstratePopulations(clusterSubs, clusterIndex, numClusters):
-    print('=============================== Plot PC Clusters '
-          '================================')
-    print(f'Cluster Number:{white} {clusterIndex + 1}{resetColor}\n'
-          f'     Total Clusters:{white} {numClusters}{resetColor}\n\n')
-
-
-    # Define figure titles
-    if numClusters == 1:
-        figureTitleEM = (f'{inTitleEnrichmentMap}: PCA Population\n'
-                         f'{ngs.labelCombinedMotifs}')
-        figureTitleMotif = (f'{inTitleMotif}: PCA Population\n'
-                            f'{ngs.labelCombinedMotifs}')
-        figureTitleWordCloud = (f'{inTitleEnrichmentMap}: PCA Population\n'
-                                f'{ngs.labelCombinedMotifs}')
-        ngs.labelCombinedMotifs = f'PCA Pop - {ngs.labelCombinedMotifs}'
-    else:
-        figureTitleEM = (f'{inTitleEnrichmentMap}: PCA Population {clusterIndex + 1}\n'
-                         f'{ngs.labelCombinedMotifs}')
-        figureTitleMotif = (f'{inTitleMotif}: PCA Population {clusterIndex + 1}\n'
-                            f'{ngs.labelCombinedMotifs}')
-        figureTitleWordCloud = (f'{inTitleEnrichmentMap}: '
-                                f'PCA Population {clusterIndex + 1}\n'
-                                f'{ngs.labelCombinedMotifs}')
-        ngs.labelCombinedMotifs = (f'PCA Pop {clusterIndex + 1} - '
-                                   f'{ngs.labelCombinedMotifs}')
-
-    # Count fixed substrates
-    countFullSubstrate = False
-    if countFullSubstrate:
-        countsFinal, countsFinalTotal = ngs.countResiduesBinned(
-            substrates=clusterSubs, positions=labelAAPos, printCounts=inPrintCounts)
-    else:
-        countsFinal, countsFinalTotal = ngs.countResiduesBinned(
-            substrates=clusterSubs, positions=inMotifPositions,
-            printCounts=inPrintCounts)
-    ngs.updateSampleSize(NSubs=countsFinalTotal, sortType='Final Sort',
-                         printCounts=inPrintSampleSize, fixedTag=ngs.labelCombinedMotifs)
-
-    # Adjust the zero counts at nonfixed positions
-    countsFinalAdjusted = countsFinal.copy()
-    for indexColumn in countsFinalAdjusted.columns:
-        for AA in countsFinalAdjusted.index:
-            if countsFinalAdjusted.loc[AA, indexColumn] == 0:
-                countsFinalAdjusted.loc[AA, indexColumn] = 1
-    print(f'Adjusted Final Counts:{pink} {inEnzymeName}\n'
-          f'{red}{countsFinalAdjusted}{resetColor}\n\n')
-
-
-    # Calculate: RF
-    finalRF = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
-                              fileType='Final Sort')
-    finalRFAdjusted = ngs.calculateRF(counts=countsFinalAdjusted, N=countsFinalTotal,
-                                      fileType='Final Sort')
-
-    # Calculate: Positional entropy
-    entropy = ngs.calculateEntropy(probability=finalRF)
-    
-    if inPlotEntropyPCAPopulations:
-        # Plot: Positional entropy
-        ngs.plotEntropy(entropy=entropy, fixedDataset=True,
-                                  fixedTag=ngs.labelCombinedMotifs, avgDelta=False)
-
-
-    # Calculate: Enrichment scores
-    fixedMotifPopES = ngs.calculateEnrichment(initialSortRF=probInitialAvg,
-                                              finalSortRF=finalRF)
-    fixedMotifPopESAdjusted = ngs.calculateEnrichment(initialSortRF=probInitialAvg,
-                                                      finalSortRF=finalRFAdjusted)
-
-    # Calculate: Enrichment scores scaled
-    fixedMotifPCAESScaled = pd.DataFrame(0.0, index=fixedMotifPopES.index,
-                                        columns=fixedMotifPopES.columns)
-    fixedMotifPCAESScaledAdjusted = pd.DataFrame(0.0, index=fixedMotifPopES.index,
-                                                columns=fixedMotifPopES.columns)
-
-    # Scale enrichment scores with Shannon Entropy
-    print(f'Entropy:\n{entropy}\n\n')
-    for positon in fixedMotifPopES.columns:
-        fixedMotifPCAESScaled.loc[:, positon] = (fixedMotifPopES.loc[:, positon] *
-                                                entropy.loc[
-                                                positon, 'ΔEntropy'])
-        fixedMotifPCAESScaledAdjusted.loc[:, positon] = (
-                fixedMotifPopESAdjusted.loc[:, positon] *
-                entropy.loc[positon, 'ΔEntropy'])
-    print(f'Motif: Scaled\n{fixedMotifPCAESScaled}\n\n')
-    yMax = max(fixedMotifPCAESScaled[fixedMotifPopES > 0].sum())
-    yMin = min(fixedMotifPCAESScaled[fixedMotifPopES < 0].sum())
-
-
-    # # Plot data
-    if inPlotEnrichmentMap:
-        # Plot: Enrichment Map
-        ngs.plotEnrichmentScores(
-            scores=fixedMotifPopESAdjusted, dataType='Enrichment',
-            title=f'{figureTitleEM}\nEnrichment Scores',
-            saveTag=ngs.labelCombinedMotifs, motifFilter=False, duplicateFigure=False)
-
-        # Plot: Enrichment Map Scaled
-        ngs.plotEnrichmentScores(
-            scores=fixedMotifPCAESScaledAdjusted, dataType='Scaled Enrichment',
-            title=f'{figureTitleEM}\nScaled Enrichment Scores',
-            saveTag=ngs.labelCombinedMotifs, motifFilter=False, duplicateFigure=False)
-
-    if inPlotLogo:
-        # Plot: Sequence Motif
-        ngs.plotMotif(data=fixedMotifPCAESScaled.copy(),
-                      dataType='Scaled Enrichment',
-                      bigLettersOnTop=inBigLettersOnTop, title=f'{figureTitleMotif}',
-                      yMax=yMax, yMin=yMin, showYTicks=False,
-                      addHorizontalLines=inAddHorizontalLines, motifFilter=False,
-                      duplicateFigure=False, saveTag=ngs.labelCombinedMotifs)
-
-    # Plot: Work cloud
-    if inPlotWordCloud:
-        ngs.plotWordCloud(clusterSubs=clusterSubs,
-                          clusterIndex=clusterIndex,
-                          title=figureTitleWordCloud,
-                          saveTag=ngs.labelCombinedMotifs)
-
-
-    # Plot: Activity predictions
-    if inPredictSubstrateActivityPCA:
-        # Extract substrate frames
-        global subsPredict
-        if subsPredict is None:
-            subsPredict = trimSubstrates()
-
-        # Predict: Enrichment
-        subsPredict, yMax, yMin = predictActivity(
-            substrates=subsPredict, predictionMatrix=fixedMotifPopESAdjusted,
-            normalizeValues=inNormalizePredictions, matrixType='Enrichment Scores')
-        plotSubstratePrediction(substrates=subsPredict, predictValues=True,
-                                scaledMatrix=False, plotDataPCA=True, popPCA=clusterIndex)
-
-        # Predict: Scaled Enrichment
-        subsPredictScaled, yMax, yMin = predictActivity(
-            substrates=subsPredict, predictionMatrix=fixedMotifPCAESScaledAdjusted,
-            normalizeValues=inNormalizePredictions, matrixType='Scaled Enrichment Scores')
-        plotSubstratePrediction(substrates=subsPredictScaled, predictValues=True,
-                                scaledMatrix=True, plotDataPCA=True, popPCA=clusterIndex)
-
-
-
 # ====================================== Load Data =======================================
 # Load: Counts
 countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
@@ -1193,17 +912,11 @@ entropy = ngs.calculateEntropy(probability=probMotif, combinedMotif=True)
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
                         combinedMotif=True)
 
-# Calculate: Motif enrichment
-motifES = ngs.motifEnrichment(substratesInitial=substratesInitial,
-                              substratesFinal=substratesFiltered,
-                              motifs=motifs)
-
-ngs.processSubstrates(substrates=motifES, subLabel=inMotifPositions, combinedMotif=True)
+ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
+                      motifs=motifs, subLabel=inMotifPositions)
 
 
 sys.exit()
-
-# plotBarGraph
 
 
 # Set flag
