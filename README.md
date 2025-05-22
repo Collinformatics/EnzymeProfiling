@@ -171,7 +171,7 @@ Figures: Word Cloud
 
 - The orientations of the words, and their colors will be randomized with each figure. 
 
-- To remake the figure with a new arrangemnt, press the "F12" key (when the figure is selected) to rerun the script.
+- To remake the figure with a new arrangemnt, press the "R" key (when the figure is selected) to rerun the script.
 
   - Recommendation: Turn off the switches that plot the Enrichment Maps, and Logos to avoid spending time plotting unnecessary figures before plotting the Word Cloud
 
