@@ -41,8 +41,8 @@ inMinimumSubstrateCount = 10
 inPlotEntropy = False
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = True
-inPlotLogo = False
-inPlotWeblogo = False
+inPlotLogo = True
+inPlotWeblogo = True
 
 # OVERWRITE PARAMS
 inPlotEnrichmentMap = False
@@ -53,8 +53,8 @@ inPlotWeblogo = False
 inPlotMotifEnrichment = False
 inPlotMotifEnrichmentLimited = False
 
-inPlotWordCloud = True
-inPlotBarGraphs = True
+inPlotWordCloud = False
+inPlotBarGraphs = False
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
 inPlotActivityFACS = False
@@ -373,37 +373,6 @@ def generateKinetics(predictions):
     r2 = r2_score(yValues, xValues)
 
     return [predictions.keys(), xValues, yValues, avg, stDev, r2]
-
-
-
-def plotPredictionAccuracy(data, predictionType):
-    x, y, accuracy = data[1], data[2], data[5]
-
-    # Create scatter plot
-    fig, ax = plt.subplots(figsize=inFigureSize)
-    ax.scatter(x, y, color=inDatapointColor)
-    plt.xlabel('Predicted Scores', fontsize=inFigureLabelSize)
-    plt.ylabel('Kinetics', fontsize=inFigureLabelSize)
-    plt.title(f'{inEnzymeName}\n'
-              f'{predictionType}\n'
-              f'R² = {np.round(accuracy, 3)}',
-              fontsize=inFigureTitleSize, fontweight='bold')
-    if min(y) >= 0:
-        plt.subplots_adjust(top=0.873, bottom=inBottomParam, left=0.088, right=0.979)
-    else:
-        plt.subplots_adjust(top=0.873, bottom=inBottomParam, left=0.104, right=0.979)
-
-    # Set tick parameters
-    ax.tick_params(axis='both', which='major', length=inTickLength,
-                   labelsize=inFigureTickSize, width=inLineThickness)
-
-    # Set the thickness of the figure border
-    for _, spine in ax.spines.items():
-        spine.set_visible(True)
-        spine.set_linewidth(inLineThickness)
-
-    fig.canvas.mpl_connect('key_press_event', pressKey)
-    plt.show()
 
 
 
@@ -867,36 +836,40 @@ probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitia
 # Load: Substrates
 substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
-# Get dataset tag
-ngs.getDatasetTag(combinedMotif=True)
-
-# # Evaluate: Count Matrices
-# # Load: Motif counts
-# countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
-#     motifLabel=inMotifPositions, motifIndex=motifFramePos)
-#
-# # Display current sample size
-# ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsRelCombinedTotal)
-#
-# # Calculate: RF
-# probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
-#
-# # Calculate: Positional entropy
-# entropy = ngs.calculateEntropy(probability=probCombinedMotif)
-#
-# # Calculate enrichment scores
-# ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
-#                         releasedCounts=True)
-
-
-# # Evaluate: Motif Sequences
 # Load: Substrate motifs
 motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
     motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
+# Get dataset tag
+ngs.getDatasetTag(combinedMotif=True)
+
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
 
+# Evaluate dataset
+combinedMotif = False
+if len(ngs.motifIndexExtracted) > 1:
+    combinedMotif = True
+
+
+# # Evaluate: Count Matrices
+# Load: Motif counts
+countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
+    motifLabel=inMotifPositions, motifIndex=motifFramePos)
+
+
+# Calculate: RF
+probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
+
+# Calculate: Positional entropy
+entropy = ngs.calculateEntropy(probability=probCombinedMotif)
+
+# Calculate enrichment scores
+ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
+                        combinedMotif=combinedMotif, releasedCounts=True)
+
+
+# # Evaluate: Motif Sequences
 # Count fixed substrates
 motifCountsFinal, motifsCountsTotal = ngs.countResidues(substrates=motifs,
                                                         datasetType='Final Sort')
@@ -910,11 +883,11 @@ entropy = ngs.calculateEntropy(probability=probMotif, combinedMotif=True)
 
 # Calculate: AA Enrichment
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
-                        combinedMotif=True)
+                        combinedMotif=combinedMotif)
 
 ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
-                      motifs=motifs, subLabel=inMotifPositions)
-
+                      motifs=motifs, subLabel=inMotifPositions,
+                      combinedMotif=combinedMotif)
 
 sys.exit()
 

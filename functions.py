@@ -10,7 +10,9 @@ import math
 from itertools import combinations, product
 import logomaker
 import matplotlib.pyplot as plt
+from fontTools.varLib.models import normalizeValue
 from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.pyplot import title
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
@@ -20,6 +22,8 @@ import seaborn as sns
 import sys
 import threading
 import warnings
+
+from mpmath.libmp import normalize
 from wordcloud import WordCloud
 
 
@@ -148,7 +152,8 @@ class NGS:
                  plotFigWebLogo, plotFigWords, wordLimit, wordsTotal, plotFigBars,
                  NSubBars, plotPCA, numPCs, NSubsPCA, plotSuffixTree, saveFigures,
                  setFigureTimer, expressDNA=False, xAxisLabelsMotif=None,
-                 plotFigMotifEnrich=False, plotFigMotifEnrichSelect=False):
+                 motifFilter=False, plotFigMotifEnrich=False,
+                 plotFigMotifEnrichSelect=False):
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.filterSubs = filterSubs
@@ -175,7 +180,8 @@ class NGS:
 
         # Parameters: Figures
         self.entropy, self.entropyMax = None, None
-        self.eMap, self.eMapScaled, self.eMapMotif = None, None, None
+        self.eMap, self.eMapScaled = None, None
+        self.eMapReleased, self.eMapReleasedScaled = None, None
         self.heights, self.weblogo = None, None
         self.plotFigEntropy = plotPosS
         self.plotFigEM = plotFigEM
@@ -225,7 +231,7 @@ class NGS:
         self.nSubsFinal = 0
         self.bigAAonTop = bigAAonTop
         self.findMotif = findMotif
-        self.motifFilter = False
+        self.motifFilter = motifFilter
         self.initialize = True # filterMotif.py: Set to False after NGS.calculateEntropy()
         self.motifTag = ''
         self.motifIndex = None
@@ -1617,24 +1623,27 @@ class NGS:
 
     def saveFigure(self, fig, figType, combinedMotif=False, releasedCounts=False):
         # Define: Save location
-        if self.motifFilter:
-            if releasedCounts:
-                figLabel = (f'{self.enzymeName} -  {figType} Rel Counts - '
-                            f'{self.motifTag} - MinCounts {self.minSubCount}.png')
-            else:
+        if combinedMotif and releasedCounts:
+            figLabel = (f'{self.enzymeName} - {figType} - '
+                        f'Combined Released Counts {self.datasetTag} - '
+                        f'MinCounts {self.minSubCount}.png')
+        elif combinedMotif:
+                figLabel = (f'{self.enzymeName} - {figType} - '
+                            f'Combined {self.datasetTag} - '
+                            f'N {self.nSubsFinal} - MinCounts {self.minSubCount}.png')
+        elif releasedCounts:
+            if self.motifFilter:
                 figLabel = (f'{self.enzymeName} - {figType} '
                             f'{self.saveFigureIteration} - {self.motifTag} - '
                             f'MinCounts {self.minSubCount}.png')
-        else:
-            if combinedMotif:
-                figLabel = (f'{self.enzymeName} - {figType} - '
-                            f'Combined {self.datasetTag} - '
-                            f'MinCounts {self.minSubCount} - N {self.nSubsFinal}.png')
             else:
-                figLabel = (f'{self.enzymeName} - {figType} - '
-                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+                figLabel = (f'{self.enzymeName} -  {figType} Released Counts - '
+                            f'{self.motifTag} - MinCounts {self.minSubCount}.png')
+        else:
+            figLabel = (f'{self.enzymeName} - {figType} - '
+                        f'{self.datasetTag} - '
+                        f'N {self.nSubsFinal} - MinCounts {self.minSubCount}.png')
         saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-        print(f'Save:\n{saveLocation}\n\n')
 
 
         # Save figure
@@ -1667,9 +1676,14 @@ class NGS:
                   f'     N Final: {pink}{type(NFinal)}{resetColor}\n\n')
 
         # Set figure titles
-        self.titleReleased = (f'{self.enzymeName}\n'
-                              f'Motif {self.datasetTagInit}\n'
-                              f'Released Counts')
+        if len(self.motifIndexExtracted) > 1:
+            self.titleReleased = (f'{self.enzymeName}\n'
+                                  f'Combined {self.datasetTagInit}\n'
+                                  f'Released Counts')
+        else:
+            self.titleReleased = (f'{self.enzymeName}\n'
+                                  f'{self.datasetTagInit}\n'
+                                  f'Released Counts')
         if self.showSampleSize:
             self.title = (f'{self.enzymeName}\n'
                           f'N Unsorted = {self.nSubsInitial:,}\n'
@@ -1720,9 +1734,6 @@ class NGS:
         pd.set_option('display.float_format', '{:,.3f}'.format)
 
         return prob
-
-
-
 
 
 
@@ -2303,44 +2314,49 @@ class NGS:
                             releasedCounts=False, combinedMotif=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
-        print(f'Entropy:\n{self.entropy}\n\n')
+        print(f'Enrichment Scores:\n'
+              f'     {magenta}log₂(prob FinalAA / prob InitialAA){resetColor}\n\n'
+              f'Entropy:\n{self.entropy}\n\n')
         # Calculate: Enrichment scores
         if len(probInitial.columns) == 1:
-            self.eMap  = pd.DataFrame(0.0, index=probFinal.index,
-                                      columns=probFinal.columns)
+            matrix = pd.DataFrame(0.0, index=probFinal.index,
+                                  columns=probFinal.columns)
             for position in probFinal.columns:
-                self.eMap.loc[:, position] = np.log2(probFinal.loc[:, position] /
-                                                      probInitial.iloc[:, 0])
+                matrix.loc[:, position] = np.log2(probFinal.loc[:, position] /
+                                                  probInitial.iloc[:, 0])
         else:
             probInitial.columns = probFinal.columns
-            self.eMap  = np.log2(probFinal / probInitial)
-            self.eMap.columns = probFinal.columns
-
+            matrix  = np.log2(probFinal / probInitial)
+            matrix = probFinal.columns
         print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n\n'
-              f'{self.eMap.round(self.roundVal)}\n\n')
+              f'{matrix.round(self.roundVal)}\n\n')
 
 
-        if self.plotFigEMScaled or self.plotFigLogo:
-            print('=========================== Calculate: Letter Heights '
-                  '===========================')
-            print(f'Residue heights calculated by: '
-                  f'{pink}Enrichment Scores * ΔS{resetColor}\n')
-            print(f'Data:\n{self.eMap}\n\n'
-                  f'S:\n{self.entropy}\n\n')
+        print('====================== Calculate: Scaled Enrichment Score '
+              '=======================')
+        print(f'Scale Enrichment Scores:\n'
+              f'     {magenta}Enrichment Scores * ΔS{resetColor}\n')
+        print(f'ΔS:\n{self.entropy}\n\n')
 
+        # Calculate: Letter heights
+        heights = pd.DataFrame(0, index=matrix.index,
+                               columns=matrix.columns, dtype=float)
+        for indexColumn in heights.columns:
+            heights.loc[:, indexColumn] = (matrix.loc[:, indexColumn] *
+                                           self.entropy.loc[indexColumn, 'ΔS'])
 
-            # Calculate: Letter heights
-            heights = pd.DataFrame(0, index=self.eMap.index,
-                                   columns=self.eMap.columns, dtype=float)
-            for indexColumn in heights.columns:
-                heights.loc[:, indexColumn] = (self.eMap.loc[:, indexColumn] *
-                                               self.entropy.loc[indexColumn, 'ΔS'])
+        # Record values
+        if releasedCounts:
+            self.eMapReleased = matrix
+            self.eMapReleasedScaled = heights.copy()
+        else:
+            self.eMap = matrix
             self.eMapScaled = heights.copy()
-            heights.replace([np.inf, -np.inf], 0, inplace=True)
-            self.heights = heights
-            print(f'Residue Heights: {purple}{self.datasetTag}{resetColor}\n'
-                  f'{heights}\n\n')
 
+        heights.replace([np.inf, -np.inf], 0, inplace=True)
+        self.heights = heights
+        print(f'Residue Heights: {purple}{self.datasetTag}{resetColor}\n'
+              f'{heights}\n\n')
 
         # Plot: Enrichment Map
         if self.plotFigEM:
@@ -2369,26 +2385,29 @@ class NGS:
     def plotEnrichmentScores(self, dataType, combinedMotif=False, releasedCounts=False):
         print('============================ Plot: Enrichment Score '
               '=============================')
-        if 'motif' in dataType.lower() and 'scaled' in dataType.lower():
-            print(f'{orange}How do I process this?\n'
-                  f'     Data Type: {cyan}{dataType}\n')
-            sys.exit(1)
-
         # Select: Dataset
-        elif 'scaled' in dataType.lower():
-            scores = self.eMapScaled
-        elif 'motif' in dataType.lower():
-            scores = self.eMapMotif
+        if 'scaled' in dataType.lower():
+            if releasedCounts:
+                scores = self.eMapReleasedScaled
+            else:
+                scores = self.eMapScaled
         else:
-            scores = self.eMap
+            if releasedCounts:
+                scores = self.eMapReleased
+            else:
+                scores = self.eMap
 
         # Define: Figure title
-        if combinedMotif:
-            title = self.titleCombined
-        elif releasedCounts:
+        if releasedCounts:
+            print(1)
             title = self.titleReleased
+        elif combinedMotif:
+            print(2)
+            title = self.titleCombined
         else:
+            print(3)
             title = self.title
+
 
         if self.motifFilter:
             print(f'Figure Number: '
@@ -2429,9 +2448,9 @@ class NGS:
                                   linecolor='black', square=self.figEMSquares,
                                   center=None, vmax=cBarMax, vmin=cBarMin,
                                   annot_kws={'fontweight': 'bold'})
+        ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
-        ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         if self.figEMSquares:
             figBorders = [0.852, 0.075, 0, 0.895]
         else:
@@ -2499,10 +2518,10 @@ class NGS:
         print('============================= Plot: Enrichment Logo '
               '=============================')
         # Define: Figure title
-        if combinedMotif:
-            title = self.titleCombined
-        elif releasedCounts:
+        if releasedCounts:
             title = self.titleReleased
+        elif combinedMotif:
+            title = self.titleCombined
         else:
             title = self.title
 
@@ -2650,11 +2669,10 @@ class NGS:
               f'{self.weblogo}\n\n')
 
         # Define: Figure title
-        if combinedMotif:
+        if releasedCounts:
+            title = self.titleReleased
+        elif combinedMotif:
             title = self.titleWeblogoCombined
-        elif releasedCounts:
-            if self.motifFilter:
-                title = self.titleReleased
         else:
             title = self.titleWeblogo
 
@@ -2828,13 +2846,8 @@ class NGS:
 
 
 
-    def processSubstrates(self, subsInit, subsFinal, motifs, subLabel):
-        # Evaluate dataset
-        combinedMotif = False
-        if len(self.motifIndexExtracted) > 1:
-            combinedMotif = True
-
-
+    def processSubstrates(self, subsInit, subsFinal, motifs, subLabel,
+                          combinedMotif=False):
         # Calculate: Motif enrichment
         motifES = self.motifEnrichment(subsInit=subsInit, subsFinal=subsFinal,
                                        motifs=motifs)
@@ -2845,6 +2858,8 @@ class NGS:
 
         # Predict: Motif enrichment
         self.predMotifEnrichment(motifES=motifES)
+        # self.predMotifEnrichment(motifES=motifES, scaledMatrix=True)
+
 
         # Plot: Bar graphs
         if self.plotFigBars:
@@ -2873,151 +2888,128 @@ class NGS:
 
 
 
-    def predMotifEnrichment(self, motifES):
-        def predictActivity(substrates, predictionMatrix, normalizeValues, matrixType):
-            print('=============================== Predict Activity '
-                  '================================')
-            print(f'Matrix Type:{white} {matrixType}\n'
-                  f'{predictionMatrix}{resetColor}\n')
-            maxScore = 0
-            minScore = 0
-            for substrate in substrates:
-                score = 0
-                for index, AA in enumerate(substrate):
-                    position = inMotifPositions[index]
-                    score += predictionMatrix.loc[AA, position]
-                substrates[substrate] = score
-                if score > maxScore:
-                    maxScore = score
-                if score < minScore:
-                    minScore = score
+    def predMotifEnrichment(self, motifES, scaledMatrix=False):
+        print('=========================== Predict: Motif Enrichment '
+              '===========================')
+        if scaledMatrix:
+            matrixType = 'Scaled Enrichment Scores'
+            matrix = self.eMapScaled
+        else:
+            matrixType = 'Enrichment Scores'
+            matrix = self.eMap
+        print(f'Prediction Matrix: {magenta}{matrixType}{resetColor}\n'
+              f'{self.eMap}\n\n')
 
-            if normalizeValues:
-                if minScore < 0:
-                    # Set minimum predicted score = 0
-                    for substrate, score in substrates.items():
-                        newScore = score - minScore
-                        substrates[substrate] = newScore
+        predScores = {}
+        maxScore, minScore = 0, 0
+        normalizeValues = True
 
-                        # Update max score
-                        if newScore > maxScore:
-                            maxScore = newScore
+        for motif in motifES:
+            score = 0
+            for index, AA in enumerate(motif):
+                position = self.xAxisLabelsMotif[index]
+                score += matrix.loc[AA, position]
+            # score = np.log2(score)
+            predScores[motif] = score
+            if score > maxScore:
+                maxScore = score
+            if score < minScore:
+                minScore = score
 
-                # Normalize Values
-                for substrate, score in substrates.items():
-                    substrates[substrate] = score / maxScore
-                maxScore, minScore = 1, 0
+        if normalizeValues:
+            # Set minimum predicted score = 0
+            if minScore < 0:
+                for substrate, score in predScores.items():
+                    newScore = score - minScore
+                    predScores[substrate] = newScore
 
-            print(f'Prediction Matrix:{white} {matrixType}{resetColor}')
-            for substrate, score in substrates.items():
-                print(f'     {yellow} {substrate}{resetColor}, '
-                      f'Score:{pink} {np.round(score, 2)}{resetColor}')
-            print('\n')
-
-            return substrates, maxScore, minScore
-
-        def plotSubstratePrediction(substrates, predictValues, scaledMatrix, plotDataPCA,
-                                    popPCA):
-            # Prep data for the figure
-            xValues = []
-            yValues = []
-            for substrate, score in substrates.items():
-                xValues.append(substrate)
-                yValues.append(score)
-
-            substrateColors = {}
-            for index, substrate in enumerate(substrates.keys()):
-                substrateColors[substrate] = inDatapointColor[index]
-
-            # Define: Figure parameters
-            if scaledMatrix:
-                yMin = inYMinPredScaled
-                yTickMin = inYTickMinScaled
-                if plotDataPCA:
-                    title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
-                             f'{ngs.labelCombinedMotifs}\nScaled Enrichment Scores')
-                else:
-                    title = f'{inEnzymeName}\n{ngs.labelCombinedMotifs}\nScaled Enrichment Scores'
+                    # Update max score
+                    if newScore > maxScore:
+                        maxScore = newScore
+                minScore -= minScore
             else:
-                yMin = inYMinPred
-                yTickMin = inYTickMinPred
-                if plotDataPCA:
-                    title = (f'{inEnzymeName}: PCA Population {popPCA + 1}\n'
-                             f'{ngs.labelCombinedMotifs}\nEnrichment Scores')
-                else:
-                    title = f'{inEnzymeName}\n{ngs.labelCombinedMotifs}\nEnrichment Scores'
+                for substrate, score in predScores.items():
+                    newScore = score + minScore
+                    predScores[substrate] = newScore
+                maxScore += minScore
 
-            # Plot the data
-            fig, ax = plt.subplots(figsize=(10, 8))
-            bars = plt.bar(xValues, yValues, color=inDatapointColor, width=inBarWidth)
-            plt.ylabel('Normalized Predicted Activity', fontsize=inFigureLabelSize)
-            plt.title(title, fontsize=inFigureTitleSize, fontweight='bold')
-            if not predictValues:
-                plt.title(f'{inEnzymeName}\n'
-                          f'Fixed Frames '
-                          f'{inFixedResidue[0]}@R{inFixedPosition[0]}-R{inFixedPosition[-1]}\n'
-                          f'Prediction: SArKS - ESM',
-                          fontsize=inFigureTitleSize, fontweight='bold')
-                yMin = inYMinPredAI
-                yTickMin = inYTickMinAI
-            plt.xticks(rotation=90, ha='center')
-            plt.axhline(y=0, color='black', linewidth=inLineThickness)
-            plt.ylim(yMin, inYMaxPred)
+            # Normalize Values
+            for substrate, score in predScores.items():
+                predScores[substrate] = score / maxScore
 
-            # Set edge color
-            try:
-                inSubsManual
-            except NameError:
-                for index, bar in enumerate(bars):
-                    bar.set_edgecolor(inEdgeColor)
-            else:
-                lenSubs = len(substrates)
-                lenSubsManual = len(inSubsManual)
-                lenSubsCovid = len(inSubsCovid)
-                if lenSubs == lenSubsTotal:
-                    for index, bar in enumerate(bars):
-                        if index < lenSubsManual:
-                            bar.set_edgecolor('black')
-                        elif index < lenSubsManual + lenSubsCovid:
-                            bar.set_edgecolor('#CC5500')
-                        else:
-                            bar.set_edgecolor('black')
-                else:
-                    if lenSubs == lenSubsCovid:
-                        for bar in bars:
-                            bar.set_edgecolor(inEdgeColorOrange)
-                    else:
-                        for bar in bars:
-                            bar.set_edgecolor('black')
+        iteration = 0
+        print(f'Predicted Scores:')
+        for substrate, score in predScores.items():
+            print(f'     {pink}{substrate}{resetColor}, '
+                  f'Score: {red}{np.round(score, 2)}{resetColor}')
+            iteration += 1
+            if iteration >= self.printNumber:
+                print('\n')
+                break
 
-            # Set tick parameters
-            ax.tick_params(axis='both', which='major', length=inTickLength,
-                           labelsize=inFigureTickSize, width=inLineThickness)
+        self.plotScatter(valuesExp=motifES, valuesPred=predScores, matrixType=matrixType)
 
-            # Set yticks
-            tickStepSize = 0.2
-            yTicks = np.arange(yTickMin, 1 + tickStepSize, tickStepSize)
-            yTickLabels = [f'{tick:.0f}' if tick == 0 or int(tick) == 1 else f'{tick:.1f}'
-                           for tick in yTicks]
-            ax.set_yticks(yTicks)
-            ax.set_yticklabels(yTickLabels)
 
-            # Set the thickness of the figure border
-            for _, spine in ax.spines.items():
-                spine.set_visible(True)
-                spine.set_linewidth(inLineThickness)
 
-            fig.canvas.mpl_connect('key_press_event', pressKey)
-            fig.tight_layout()
-            plt.show()
+    def plotScatter(self, valuesExp, valuesPred, matrixType, color='#CC5500'):
+        x, y = valuesExp.values(), valuesPred.values()
 
-        # Predict: Enrichment
-        subsPredict, yMax, yMin = predictActivity(substrates=motifES.copy(),
-                                                  predictionMatrix=self.eMapMotif,
-                                                  normalizeValues=inNormalizePredictions,
-                                                  matrixType='Enrichment Scores')
-        plotSubstratePrediction(substrates=subsPredict, predictValues=True,
-                                scaledMatrix=False, plotDataPCA=False, popPCA=None)
+        # Normalize predicted values
+        xMax, xMin, xNorm = max(x), min(x), []
+        xAdj = xMax - xMin
+        for value in x:
+            xNorm.append((value - xMin) / xAdj)
+        print(f'Experimental Values:\n'
+              f'     Max: {red}{max(x)}{resetColor}'
+              f'     Min: {red}{min(x)}{resetColor}\n'
+              f'Normalized Experimental Values:\n'
+              f'     Max: {red}{max(xNorm)}{resetColor}'
+              f'     Min: {red}{min(xNorm)}{resetColor}\n\n'
+              f'Predicted Values:\n'
+              f'     Max: {red}{max(y)}{resetColor}'
+              f'     Min: {red}{min(y)}{resetColor}\n\n')
+
+
+        accuracy = 1.0
+        label = f'R² = {np.round(accuracy, 3)}'
+
+        title = (f'{self.enzymeName}\n'
+                 f'Combined {self.datasetTag}\n'
+                 f'{matrixType}')
+
+        # Create scatter plot
+        fig, ax = plt.subplots(figsize=self.figSize)
+        ax.scatter(xNorm, y, color=color)
+        plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.xlabel('Motif Enrichment', fontsize=self.labelSizeAxis)
+        plt.ylabel('Predicted Scores', fontsize=self.labelSizeAxis)
+        plt.subplots_adjust(top=0.852, bottom=0.076, left=0.145, right=0.938)
+
+        # Define: Axis ticks
+        ticks = np.linspace(0, 1, 5)
+        tickLabels = ['0', '0.25', '0.5', '0.75', '1']
+
+        # Set x-ticks
+        ax.set_xticks(ticks)
+        ax.set_xticklabels(tickLabels)
+        ax.set_xlim(-0.03, 1.03)
+
+        # Set y-ticks
+        ax.set_yticks(ticks)
+        ax.set_yticklabels(tickLabels)
+        ax.set_ylim(-0.03, 1.03)
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks, width=self.lineThickness)
+
+        # Set the thickness of the figure border
+        for _, spine in ax.spines.items():
+            spine.set_visible(True)
+            spine.set_linewidth(self.lineThickness)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        plt.show()
 
 
 
@@ -3026,7 +3018,8 @@ class NGS:
         print('=============================== Motif Enrichment '
               '================================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
-              f'Normalizing substrate counts in the {purple}Final Sort{resetColor}:\n'
+              f'Normalizing substrate counts in the '
+              f'{purple}Final Sort{resetColor} library:\n'
               f'     Enrichment Ratio (ER) = {magenta}Counts Final{resetColor} / '
               f'{magenta}Counts Initial{resetColor}\n')
         k = None
@@ -3125,13 +3118,14 @@ class NGS:
                   f'ER: {red}{round(ratio, self.roundVal):,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
-                print()
+                print('\n')
                 break
         NSubs = len(motifEnrichment.keys())
 
 
         def plotBarGraph(x, y, limitNBars=False):
             plotNSubs = len(x)
+            motifLen = len(x[0])
 
             # Evaluate: Y axis
             maxValue = math.ceil(max(y))
@@ -3217,12 +3211,13 @@ class NGS:
                 # Define: Save location
                 if limitNBars:
                     figLabel = (f'{self.enzymeName} - Motif Enrichment - '
+                                f'{self.datasetTag} - {motifLen} AA - '
                                 f'Select N {self.NSubBars} Plot N {plotNSubs} - '
-                                f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+                                f'MinCounts {self.minSubCount}.png')
                 else:
                     figLabel = (f'{self.enzymeName} - Motif Enrichment - '
-                                f'N {plotNSubs} - {self.datasetTag} - '
-                                f'MinCounts {self.minSubCount}.png')
+                                f'{self.datasetTag} - {motifLen} AA - '
+                                f'N {plotNSubs} - MinCounts {self.minSubCount}.png')
                 if combinedMotifs:
                     figLabel = figLabel.replace(self.datasetTag,
                                                 f'Combined {self.datasetTag}')
@@ -5007,18 +5002,15 @@ class NGS:
 
             # Define: Save location
             if self.wordsLimit:
-                figLabel = (f'{self.enzymeName} - Words - {seqLength} AA - '
-                            f'{self.datasetTag} - Select {self.wordsTotal} '
+                figLabel = (f'{self.enzymeName} - Words - {self.datasetTag} - '
+                            f'{seqLength} AA - Select {self.wordsTotal} '
                             f'Plot {totalWords} - MinCounts {self.minSubCount}.png')
             else:
-                figLabel = (f'{self.enzymeName} - Words - {seqLength} AA - '
-                            f'{self.datasetTag} - Plot {totalWords} - '
+                figLabel = (f'{self.enzymeName} - Words - {self.datasetTag} - '
+                            f'{seqLength} AA - Plot {totalWords} - '
                             f'MinCounts {self.minSubCount}.png')
             if len(self.motifIndexExtracted) > 1:
-                print(1)
                 figLabel = figLabel.replace('Motif', 'Combined Motif')
-            else:
-                print(2)
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
