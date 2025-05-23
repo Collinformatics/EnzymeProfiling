@@ -114,7 +114,6 @@ elif loadR2:
     substrates = substratesR2
 
 # Define: File type
-print(inFileName[0])
 if 'F' in inFileName[0] or 'R4' in inFileName[0]:
     fileType = 'Final Sort'
 else:
