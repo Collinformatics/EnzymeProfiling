@@ -16,15 +16,15 @@ from functions import NGS
 
 
 # ===================================== User Inputs ======================================
-# Input 1: File Location
-inFileName = ['Fyn-I_S6_L001_R1_001', 'Fyn-I_S6_L001_R2_001'] # Define file name(s)
+# Input 1: File Location 
+inFileName = ['Mpro2-I_S1_L001_R1_001', 'Mpro2-I_S1_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
 inPathFolder = f'/path/{inEnzymeName}'
 inPathDNASeqs = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder name
 inFileType = 'fastq' # Define the file type
 
 # Input 2: Saving The Data
-inSaveFileName = 'Fyn-I_S6_L001' # Add this name to filePaths(enzyme) in functions.py
+inSaveFileName = 'Mpro2-I_S1_L001' # Add this name to filePaths(enzyme) in functions.py
 
 # Input 3: Substrate Parameters
 inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
@@ -78,14 +78,22 @@ for fileName in inFileName:
         substratesR1 = ngs.loadAndTranslate(filePath=inPathDNASeqs, fileName=fileName,
                                             fileType=inFileType, fixedSubs=inFixedLibrary,
                                             startSeq=inStartSeqR1, endSeq=inEndSeqR1,
-                                            printQS=inPrintQualityScores)
+                                            printQS=inPrintQualityScores,
+                                            forwardRead=True)
         loadR1 = True
     elif '_R2_' in fileName:
         substratesR2 = ngs.loadAndTranslate(filePath=inPathDNASeqs, fileName=fileName,
                                             fileType=inFileType, fixedSubs=inFixedLibrary,
                                             startSeq=inStartSeqR2, endSeq=inEndSeqR2,
-                                            printQS=inPrintQualityScores)
+                                            printQS=inPrintQualityScores,
+                                            forwardRead=False)
         loadR2 = True
+    else:
+        # When R1 and R2 is missing from your file name
+        ngs.loadAndTranslate(filePath=inPathDNASeqs, fileName=fileName,
+                             fileType=inFileType, fixedSubs=inFixedLibrary,
+                             startSeq=inStartSeqR2, endSeq=inEndSeqR2,
+                             printQS=inPrintQualityScores, forwardRead=None)
 
 
 # Combine substrate dictionaries
@@ -106,7 +114,8 @@ elif loadR2:
     substrates = substratesR2
 
 # Define: File type
-if 'F' or 'R4' in inFileName[0]:
+print(inFileName[0])
+if 'F' in inFileName[0] or 'R4' in inFileName[0]:
     fileType = 'Final Sort'
 else:
     fileType = 'Initial Sort'

@@ -38,7 +38,7 @@ inShowSampleSize = True # Include the sample size in your figures
 inFixResidues = True # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
-inNumberOfDatapoints = 100
+inNumberOfDatapoints = 10**6
 inSaveAsText = True # False: save as a larger FASTA file
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
@@ -85,7 +85,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, p
             saveLocationsTxt.append(os.path.join(savePath, fileName, '.txt'))
 
 
-    # Evaluate file path
+    # Evaluate: File path
     gZipped = False
     for indexPath, path in enumerate(fileLocations):
         print('=============================== Load: Fastq Files '
@@ -117,16 +117,26 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, p
                     for index, datapoint in enumerate(dataLoaded):
                         # Select full DNA seq
                         DNA = str(datapoint.seq)
+                        QS = datapoint.letter_annotations['phred_quality']
 
                         # Extract substrate DNA
                         if startSeq in DNA and endSeq in DNA:
                             indexStart = DNA.find(startSeq) + len(startSeq)
                             indexEnd = DNA.find(endSeq)
                             substrate = DNA[indexStart:indexEnd].strip()
+                            QSSub = QS[indexStart:indexEnd]
                             if 'N' not in substrate:
                                 if len(substrate) == len(inAAPositions) * 3:
                                     substrate = Seq.translate(substrate)
                                     if '*' not in substrate:
+                                        print(f'DNA: {DNA}\n'
+                                              f'QS: {QS}\n'
+                                              f'Sub: {substrate}\n'
+                                              f'QS Sub: {QSSub}\n')
+                                        if any(score < 20 for score in QSSub):
+                                            print("Low quality base detected in "
+                                                  "substrate DNA.")
+                                            sys.exit()
                                         if inFixResidues:
                                             selectAA = substrate[inFixedPosition[0] - 1]
                                             if selectAA in inFixedResidue:

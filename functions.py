@@ -173,7 +173,8 @@ class NGS:
         self.initialize = True
         
         # Parameters: DNA Processing
-        self.expressDNA = expressDNA # Only define this input when processing DNA seqs
+        self.expressDNA = expressDNA # Only set as True when processing DNA seqs
+        self.minQS = 20 # Minium quality score
         self.fileSize = []
         self.countExtractedSubs = []
         self.percentUnusableDNASeqs = []
@@ -282,7 +283,7 @@ class NGS:
             threading.Thread(target=playsound, args=(soundPath,)).start()
         else:
             print(f'{orange}ERROR: The alerts sound was not found at\n'
-                  f'     {soundPath}{resetColor}\n')
+                  f'     {soundPath}{resetColor}\n\n')
 
 
 
@@ -354,38 +355,44 @@ class NGS:
 
 
     def loadAndTranslate(self, filePath, fileName, fileType, fixedSubs,
-                         startSeq, endSeq, printQS):
+                         startSeq, endSeq, printQS, forwardRead):
+        if forwardRead is None:
+            print(f'{orange}ERROR: The file {cyan}{fileName}{orange} does not contain '
+                  f'a forward read (R1) or reverse read (R2) label.\n\n'
+                  f'Please update the file name, or expand the conditional statements '
+                  f'in extractSubs.py that call the function NGS.loadAndTranslate() '
+                  f'so that the file can be processed.')
+            sys.exit(1)
+
+
         # Define file location
         fileLocation = os.path.join(filePath, f'{fileName}.{fileType}')
 
         # Determine the read direction
         subSequence = None
-        if '_R1_' in fileName:
-            # Extract the substrates
-            subSequence = self.translate(path=fileLocation, fileType=fileType,
-                                        fixData=fixedSubs, startSeq=startSeq,
-                                        endSeq=endSeq, printQS=printQS)
-        elif '_R2_' in fileName:
-            # Extract the substrates
-            subSequence = self.reverseTranslate(path=fileLocation, fileType=fileType,
-                                               fixData=fixedSubs, startSeq=startSeq,
-                                               endSeq=endSeq, printQS=printQS)
-        else:
-            print(f'{orange}ERROR: The file {cyan}{fileName}{orange} does not contain '
-                  f'a forward read (R1) or reverse read (R2) label.\n\n'
-                  f'Please update the file name, or expand the conditional statements'
-                  f'in NGS.loadAndTranslate() so that the file can be processed.')
-            sys.exit(1)
+        # Extract the substrates
+        subSequence = self.translate(path=fileLocation, fileType=fileType,
+                                     fixData=fixedSubs, startSeq=startSeq,
+                                     endSeq=endSeq, printQS=printQS,
+                                     forwardRead=forwardRead)
 
         return subSequence
 
 
 
-    def translate(self, path, fileType, fixData, startSeq, endSeq, printQS):
-        print('============================ Translate: Forward Read '
-              '============================')
+    def translate(self, path, fileType, fixData, startSeq, endSeq, printQS, forwardRead):
+        if forwardRead:
+            read = 'R1'
+            print('============================ Translate: Forward Read '
+                  '============================')
+        else:
+            read = 'R2'
+            print('============================ Translate: Reverse Read '
+                  '============================')
         subSequence = {}
         totalSeqsDNA = 0
+        printedSeqs = 0
+
 
         # Evaluate the file path
         gZipped = False
@@ -402,244 +409,292 @@ class NGS:
         print(f'File Location:\n'
               f'     {path}\n\n')
 
-
         # Define fixed substrate tag
         if fixData:
             self.getDatasetTag()
-            print(f'Evaluating fixed Library: {purple}{self.datasetTag}{resetColor}\n')
+            print(f'Evaluating fixed library: {purple}{self.datasetTag}{resetColor}')
+        else:
+            print(f'Evaluating library: {purple}{self.enzymeName}{resetColor}')
 
 
-        # Load the data & extract the substrates
+        def printDNA(printedSeqs):
+            # Select full DNA seq
+            DNA = str(datapoint.seq)
+            if not forwardRead:
+                DNA = Seq(DNA).reverse_complement()
+
+            # Get: Quality score
+            QS = datapoint.letter_annotations['phred_quality']
+            if printQS:
+                print(f'DNA sequence: {DNA}\n'
+                      f'     QS - Forward: {QS}')
+            else:
+                print(f'DNA sequence: {DNA}')
+
+            # Inspect full DNA seq
+            if startSeq in DNA and endSeq in DNA:
+                # Find: Substrate indices
+                start = DNA.find(startSeq) + len(startSeq)
+                end = DNA.find(endSeq)
+
+                # Extract substrate DNA seq
+                substrateDNA = DNA[start:end].strip()
+                print(f'     Inspected substrate: '
+                      f'{greenLightB}{substrateDNA}{resetColor}')
+                if len(substrateDNA) == self.substrateLength * 3:
+
+                    # Express substrate
+                    substrate = str(Seq.translate(substrateDNA))
+                    print(f'     Inspected Substrate:'
+                          f'{greenLightB} {substrate}{resetColor}')
+
+                    # Inspect substrate seq: PRINT ONLY
+                    if 'X' not in substrate and '*' not in substrate:
+                        print(f'     Extracted substrate: '
+                              f'{pink}{substrate}{resetColor}')
+                        if printQS:
+                            QS = QS[start:end]
+                            print(f'     QS Substrate: {QS}')
+                        printedSeqs += 1
+
+            return printedSeqs
+
+
+        def inspectDNAFixed():
+            # Inspect full DNA seq
+            if startSeq in DNA and endSeq in DNA:
+                # Find: Substrate indices
+                start = DNA.find(startSeq) + len(startSeq)
+                end = DNA.find(endSeq)
+
+                # Extract substrate DNA seq
+                substrate = DNA[start:end].strip()
+                if len(substrate) == self.substrateLength * 3:
+                    # Express substrate
+                    substrate = str(Seq.translate(substrate))
+
+                    # Inspect substrate seq: Keep good fixed datapoints
+                    if 'X' not in substrate and '*' not in substrate:
+                        # Inspect quality score
+                        QS = datapoint.letter_annotations['phred_quality']
+                        QS = QS[start:end]
+                        if any(score < self.minQS for score in QS):
+                            print(f'{substrate}\n{QS}\n')
+                            sys.exit()
+
+                        if len(self.fixedAA[0]) == 1:
+                            if substrate[self.fixedPos[0] - 1] in self.fixedAA:
+                                if substrate in subSequence:
+                                    subSequence[substrate] += 1
+                                else:
+                                    subSequence[substrate] = 1
+                        else:
+                            if substrate[self.fixedPos[0] - 1] in self.fixedAA[0]:
+                                if substrate in subSequence:
+                                    subSequence[substrate] += 1
+                                else:
+                                    subSequence[substrate] = 1
+
+        def inspectDNA():
+            # Inspect full DNA seq
+            if startSeq in DNA and endSeq in DNA:
+                # Find: Substrate indices
+                start = DNA.find(startSeq) + len(startSeq)
+                end = DNA.find(endSeq)
+
+                # Extract substrate DNA seq
+                substrate = DNA[start:end].strip()
+                if len(substrate) == self.substrateLength * 3:
+                    # Express substrate
+                    substrate = str(Seq.translate(substrate))
+
+                    # Inspect substrate seq: Keep good fixed datapoints
+                    if 'X' not in substrate and '*' not in substrate:
+                        # Inspect quality score
+                        QS = datapoint.letter_annotations['phred_quality']
+                        QS = QS[start:end]
+                        if any(score < self.minQS for score in QS):
+                            return
+
+                        # Record datapoint
+                        if substrate in subSequence:
+                            subSequence[substrate] += 1
+                        else:
+                            subSequence[substrate] = 1
+
+        def inspectDNAReverseFixed():
+            # Inspect full DNA seq
+            if startSeq in DNA and endSeq in DNA:
+                # Find: Substrate indices
+                start = DNA.find(startSeq) + len(startSeq)
+                end = DNA.find(endSeq)
+
+                # Extract substrate DNA seq
+                substrate = DNA[start:end].strip()
+                if len(substrate) == self.substrateLength * 3:
+                    # Express substrate
+                    substrate = str(Seq.translate(substrate))
+
+                    # Inspect substrate seq: Keep good fixed datapoints
+                    if 'X' not in substrate and '*' not in substrate:
+                        # Inspect quality score
+                        QS = datapoint.letter_annotations['phred_quality']
+                        QS = QS[start:end]
+                        if any(score < self.minQS for score in QS):
+                            print(f'{substrate}\n{QS}\n')
+                            sys.exit()
+
+                        if len(self.fixedAA[0]) == 1:
+                            if substrate[self.fixedPos[0] - 1] in self.fixedAA:
+                                if substrate in subSequence:
+                                    subSequence[substrate] += 1
+                                else:
+                                    subSequence[substrate] = 1
+                        else:
+                            if substrate[self.fixedPos[0] - 1] in self.fixedAA[0]:
+                                if substrate in subSequence:
+                                    subSequence[substrate] += 1
+                                else:
+                                    subSequence[substrate] = 1
+
+        def inspectDNAReverse():
+            # Inspect full DNA seq
+            if startSeq in DNA and endSeq in DNA:
+                # Find: Substrate indices
+                start = DNA.find(startSeq) + len(startSeq)
+                end = DNA.find(endSeq)
+
+                # Extract substrate DNA seq
+                substrate = DNA[start:end].strip()
+                if len(substrate) == self.substrateLength * 3:
+                    # Express substrate
+                    substrate = str(Seq.translate(substrate))
+
+                    # Inspect substrate seq: Keep good fixed datapoints
+                    if 'X' not in substrate and '*' not in substrate:
+                        # Inspect quality score
+                        QS = datapoint.letter_annotations['phred_quality']
+                        QS = QS[start:end]
+                        if any(score < self.minQS for score in QS):
+                            return
+
+                        # Record datapoint
+                        if substrate in subSequence:
+                            subSequence[substrate] += 1
+                        else:
+                            subSequence[substrate] = 1
+
+
+        if fixData:
+            print(f'\nNote: The displayed substrates were not selected '
+                  f'for fixed {purple}{self.datasetTag}{resetColor}\n'
+                  f'      However the extracted substrates will meet '
+                  f'this restriction\n')
+
+        # Load the data
         if gZipped:
             # Open the file
             with (gzip.open(path, 'rt', encoding='utf-8') as file):
                 data = SeqIO.parse(file, fileType)
                 warnings.simplefilter('ignore', BiopythonWarning)
 
-                # Print expressed DNA sequences
-                printedSeqs = 0
                 for datapoint in data:
+                    printedSeqs = printDNA(printedSeqs)
+                    totalSeqsDNA += 1
                     if printedSeqs == self.printNumber:
-                        if fixData:
-                            print(f'\nNote: The displayed substrates were not selected '
-                                  f'for fixed {purple}{self.datasetTag}{resetColor}\n'
-                                  f'      However the extracted substrates will meet '
-                                  f'this restriction\n')
-
                         throwaway = totalSeqsDNA - self.printNumber
                         throwawayPercent = (throwaway / totalSeqsDNA) * 100
-                        print(f'\nExtracting {self.printNumber} Substrates\n'
+                        print(f'\nExtraction Efficiency:\n'
                               f'     Number of discarded sequences until {red}'
                               f'{self.printNumber} substrates{resetColor} were found in '
-                              f'{purple}R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {greyDark}Percent throwaway{resetColor}:'
+                              f'{purple}{read}{resetColor}: {red}{throwaway:,}{resetColor}\n'
+                              f'     {yellow}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, self.roundVal)} %'
                               f'{resetColor}\n\n')
                         break
 
-                    # Select full DNA seq
-                    DNA = str(datapoint.seq)
-                    totalSeqsDNA += 1
-                    if printQS:
-                        quality = datapoint.letter_annotations["phred_quality"]
-                        print(f'DNA sequence: {DNA}\n     QS - Forward: {quality}')
-                    else:
-                        print(f'DNA sequence: {DNA}')
-
-                    # Inspect full DNA seq
-                    if startSeq in DNA and endSeq in DNA:
-                        start = DNA.find(startSeq) + len(startSeq)
-                        end = DNA.find(endSeq) # Find the substrate end index
-
-                        # Extract substrate DNA seq
-                        substrate = DNA[start:end].strip()
-                        print(f'     Inspected substrate: '
-                              f'{greenLightB}{substrate}{resetColor}')
-                        if len(substrate) == self.substrateLength * 3:
-                            # Express substrate
-                            substrate = str(Seq.translate(substrate))
-                            print(f'     Inspected Substrate:'
-                                  f'{greenLightB} {substrate}{resetColor}')
-
-                            # Inspect substrate seq: PRINT ONLY
-                            if 'X' not in substrate and '*' not in substrate:
-                                print(f'     Extracted substrate: '
-                                      f'{pink}{substrate}{resetColor}')
-                                printedSeqs += 1
-                # Collect expressed DNA sequences
+                # Extract the substrates
                 totalSeqsDNA = 0
-                if fixData:
-                    for datapoint in data:
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-                        totalSeqsDNA += 1
-
-                        # Inspect full DNA seq
-                        if startSeq in DNA and endSeq in DNA:
-                            # Find beginning & end indices for the substrate
-                            start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)
-
-                            # Extract substrate DNA seq
-                            substrate = DNA[start:end].strip()
-                            if len(substrate) == self.substrateLength * 3:
-                                # Express substrate
-                                substrate = str(Seq.translate(substrate))
-
-                                # Inspect substrate seq: Keep good fixed datapoints
-                                if 'X' not in substrate and '*' not in substrate:
-                                    if len(self.fixedAA[0]) == 1:
-                                        if substrate[self.fixedPos[0] - 1] \
-                                            in self.fixedAA:
-                                            if substrate in subSequence:
-                                                subSequence[substrate] += 1
-                                            else:
-                                                subSequence[substrate] = 1
-                                    else:
-                                        if substrate[self.fixedPos[0] - 1] \
-                                            in self.fixedAA[0]:
-                                            if substrate in subSequence:
-                                                subSequence[substrate] += 1
-                                            else:
-                                                subSequence[substrate] = 1
+                if forwardRead:
+                    if fixData:
+                        for datapoint in data:
+                            # Select full DNA seq
+                            DNA = str(datapoint.seq)
+                            totalSeqsDNA += 1
+                            inspectDNAFixed()
+                    else:
+                        for datapoint in data:
+                            # Select full DNA seq
+                            DNA = str(datapoint.seq)
+                            totalSeqsDNA += 1
+                            inspectDNA()
                 else:
-                    for datapoint in data:
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-                        totalSeqsDNA += 1
-
-                        # Inspect full DNA seq
-                        if startSeq in DNA and endSeq in DNA:
-                            # Find beginning & end indices for the substrate
-                            start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq) # Find the substate end index
-
-                            # Extract substrate DNA seq
-                            substrate = DNA[start:end].strip()
-                            if len(substrate) == self.substrateLength * 3:
-                                substrate = str(Seq.translate(substrate))
-
-                                # Inspect substrate seq: Keep good datapoints
-                                if 'X' not in substrate and '*' not in substrate:
-                                    # if len(substrate) == self.substrateLength:
-                                    if substrate in subSequence:
-                                        subSequence[substrate] += 1
-                                    else:
-                                        subSequence[substrate] = 1
+                    if fixData:
+                        for datapoint in data:
+                            # Select full DNA seq
+                            DNA = str(datapoint.seq)
+                            DNA = Seq(DNA).reverse_complement()
+                            totalSeqsDNA += 1
+                            inspectDNAReverseFixed()
+                    else:
+                        for datapoint in data:
+                            # Select full DNA seq
+                            DNA = str(datapoint.seq)
+                            DNA = Seq(DNA).reverse_complement()
+                            totalSeqsDNA += 1
+                            inspectDNAReverse()
         else:
             # Open the file
             with open(path, 'r') as file:
                 data = SeqIO.parse(file, fileType)
                 warnings.simplefilter('ignore', BiopythonWarning)
 
-                # Print expressed DNA sequences
-                printedSeqs = 0
                 for datapoint in data:
+                    printedSeqs = printDNA(printedSeqs)
                     if printedSeqs == self.printNumber:
                         throwaway = totalSeqsDNA - self.printNumber
                         throwawayPercent = (throwaway / totalSeqsDNA) * 100
-                        print(f'\nExtracting {self.printNumber} Substrates\n'
+                        print(f'\nExtraction Efficiency:\n'
                               f'     Number of discarded sequences until {red}'
                               f'{self.printNumber} substrates{resetColor} were found in '
-                              f'{purple}R1{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {greyDark}Percent throwaway{resetColor}:'
+                              f'{purple}{read}{resetColor}: {red}{throwaway:,}{resetColor}\n'
+                              f'     {yellow}Percent throwaway{resetColor}:'
                               f'{red} {round(throwawayPercent, self.roundVal)} %'
                               f'{resetColor}\n\n')
                         break
 
-                    # Select full DNA seq
-                    DNA = str(datapoint.seq)
-                    totalSeqsDNA += 1
-
-                    if printQS:
-                        quality = datapoint.letter_annotations["phred_quality"]
-                        print(f'DNA sequence: {DNA}\n     QS - Forward: {quality}')
-                    else:
-                        # print(f'Expressed DNA sequence: {AA}')
-                        print(f'DNA sequence: {DNA}')
-
-                    # Inspect full DNA seq
-                    if startSeq in DNA and endSeq in DNA:
-                        # Find beginning & end indices for the substrate
-                        start = DNA.find(startSeq) + len(startSeq)
-                        end = DNA.find(endSeq)
-
-                        # Extract substrate DNA seq
-                        substrate = DNA[start:end].strip()
-                        print(f'     Inspected substrate: '
-                              f'{greenLightB}{substrate}{resetColor}')
-                        if len(substrate) == self.substrateLength * 3:
-                            # Express substrate
-                            substrate = str(Seq.translate(substrate))
-                            print(f'     Inspected Substrate:'
-                                  f'{greenLightB} {substrate}{resetColor}')
-
-                            # Inspect substrate seq: PRINT ONLY
-                            if 'X' not in substrate and '*' not in substrate:
-                                print(f'     Extracted substrate: '
-                                      f'{pink}{substrate}{resetColor}')
-                                printedSeqs += 1
-                # Collect expressed DNA sequences
+                # Extract the substrates
                 totalSeqsDNA = 0
-                if fixData:
-                    for datapoint in data:
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-                        totalSeqsDNA += 1
-
-                        # Inspect full DNA seq
-                        if startSeq in DNA and endSeq in DNA:
-                            # Find beginning & end indices for the substrate
-                            start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)
-
-                            # Extract substrate DNA seq
-                            substrate = DNA[start:end].strip()
-                            if len(substrate) == self.substrateLength * 3:
-                                # Express substrate
-                                substrate = str(Seq.translate(substrate))
-
-                                # Inspect substrate seq: Keep good fixed datapoints
-                                if 'X' not in substrate and '*' not in substrate:
-                                    if len(self.fixedAA[0]) == 1:
-                                        if substrate[self.fixedPos[0] - 1] \
-                                            in self.fixedAA:
-                                            if substrate in subSequence:
-                                                subSequence[substrate] += 1
-                                            else:
-                                                subSequence[substrate] = 1
-                                    else:
-                                        if substrate[
-                                            self.fixedPos[0] - 1] \
-                                            in self.fixedAA[0]:
-                                            if substrate in subSequence:
-                                                subSequence[substrate] += 1
-                                            else:
-                                                subSequence[substrate] = 1
+                if forwardRead:
+                    if fixData:
+                        for datapoint in data:
+                            # Select full DNA seq
+                            DNA = str(datapoint.seq)
+                            totalSeqsDNA += 1
+                            inspectDNAFixed()
+                    else:
+                        for datapoint in data:
+                            # Select full DNA seq
+                            DNA = str(datapoint.seq)
+                            totalSeqsDNA += 1
+                            inspectDNA()
                 else:
-                    for datapoint in data:
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-                        totalSeqsDNA += 1
+                    if fixData:
+                        for datapoint in data:
+                            # Select full DNA seq
+                            DNA = str(datapoint.seq)
+                            DNA = Seq(DNA).reverse_complement()
+                            totalSeqsDNA += 1
+                            inspectDNAReverseFixed()
+                    else:
+                        for datapoint in data:
+                            # Select full DNA seq
+                            DNA = str(datapoint.seq)
+                            DNA = Seq(DNA).reverse_complement()
+                            totalSeqsDNA += 1
+                            inspectDNAReverse()
 
-                        # Inspect full DNA seq
-                        if startSeq in DNA and endSeq in DNA:
-                            # Find beginning & end indices for the substrate
-                            start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)
 
-                            # Extract substrate DNA seq
-                            substrate = DNA[start:end].strip()
-                            if len(substrate) == self.substrateLength * 3:
-                                # Express substrate
-                                substrate = str(Seq.translate(substrate))
-
-                                # Inspect substrate seq: Keep good datapoints
-                                if 'X' not in substrate and '*' not in substrate:
-                                    if substrate in subSequence:
-                                        subSequence[substrate] += 1
-                                    else:
-                                        subSequence[substrate] = 1
         # Verify if substrates have been extracted
         if len(subSequence) == 0:
             print(f'\nNo substrates were extracted from file at:\n{path}\n\n'
@@ -654,307 +709,13 @@ class NGS:
             self.fileSize.append(totalSeqsDNA)
             self.countExtractedSubs.append(extractionCount)
             self.percentUnusableDNASeqs.append(throwawayPercent)
-            print(f'Evaluate All DNA Sequences in {purple}R1{resetColor}:\n'
+            print(f'Evaluate All DNA Sequences in {purple}{read}{resetColor}:\n'
                   f'     Total DNA sequences in the file: '
                   f'{red}{totalSeqsDNA:,}{resetColor}\n'
                   f'     Number of extracted Substrates: '
                   f'{red}{extractionCount:,}{resetColor}\n'
-                  f'     {greyDark}Percent throwaway{resetColor}:'
+                  f'     {yellow}Percent throwaway{resetColor}:'
                   f'{red} {round(throwawayPercent, self.roundVal)} %{resetColor}\n\n')
-        # sys.exit(1)
-
-        # Rank the substrates
-        subSequence = dict(sorted(subSequence.items(), key=lambda x: x[1], reverse=True))
-
-        return subSequence
-
-
-
-    def reverseTranslate(self, path, fileType, fixData, startSeq, endSeq, printQS):
-        print('============================ Translate: Reverse Read '
-              '============================')
-        subSequence = {}
-        totalSeqsDNA = 0
-
-        # Evaluate the file path
-        gZipped = False
-        if not os.path.isfile(path):
-            pathZipped = path + '.gz'
-            if not os.path.isfile(pathZipped):
-                print(f'{orange}ERROR: File location does not lead to a file\n'
-                      f'     {path}\n'
-                      f'     {pathZipped}\n')
-                sys.exit(1)
-            else:
-                gZipped = True
-                path = pathZipped
-        print(f'File Location:\n     {path}\n\n')
-
-
-        # Define fixed substrate tag
-        if fixData:
-            self.getDatasetTag()
-            print(f'Evaluating fixed Library: {purple}{self.datasetTag}{resetColor}\n')
-
-
-        if gZipped:
-            with gzip.open(path, 'rt', encoding='utf-8') as file: # Open the file
-                data = SeqIO.parse(file, fileType)
-                warnings.simplefilter('ignore', BiopythonWarning)
-
-                # Print expressed DNA sequences
-                printedSeqs = 0
-                for datapoint in data:
-                    if printedSeqs == self.printNumber:
-                        if fixData:
-                            print(f'\nNote: The displayed substrates were not selected '
-                                  f'for fixed {purple}{self.datasetTag}{resetColor}\n'
-                                  f'      However the extracted substrates will meet '
-                                  f'this restriction\n')
-
-                        throwaway = totalSeqsDNA - self.printNumber
-                        throwawayPercent = (throwaway / totalSeqsDNA) * 100
-                        print(f'\nExtracting {self.printNumber} Substrates\n'
-                              f'     Number of discarded sequences until {red}'
-                              f'{self.printNumber} substrates{resetColor} were found in '
-                              f'{purple}R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {greyDark}Percent throwaway{resetColor}:'
-                              f'{red} {round(throwawayPercent, self.roundVal)} %'
-                              f'{resetColor}\n\n')
-                        break
-
-                    # Select full DNA seq
-                    DNA = str(datapoint.seq)
-                    DNA = Seq(DNA).reverse_complement()
-                    totalSeqsDNA += 1
-                    if printQS:
-                        quality = datapoint.letter_annotations["phred_quality"]
-                        print(f'DNA sequence: {DNA}\n     QS - Forward: {quality}')
-                    else:
-                        # print(f'Expressed DNA sequence: {AA}')
-                        print(f'DNA sequence: {DNA}')
-
-                    # Inspect full DNA seq
-                    if startSeq in DNA and endSeq in DNA:
-                        # Find beginning & end indices for the substrate
-                        start = DNA.find(startSeq) + len(startSeq)
-                        end = DNA.find(endSeq)
-
-                        # Extract substrate DNA seq
-                        substrate = DNA[start:end].strip()
-                        print(f'     Inspected substrate: '
-                              f'{greenLightB}{substrate}{resetColor}')
-                        if len(substrate) == self.substrateLength * 3:
-                            # Express substrate
-                            substrate = str(Seq.translate(substrate))
-                            print(f'     Inspected Substrate:'
-                                  f'{greenLightB} {substrate}{resetColor}')
-
-                            # Inspect substrate seq: PRINT ONLY
-                            if 'X' not in substrate and '*' not in substrate:
-                                print(f'     Extracted substrate: '
-                                      f'{pink}{substrate}{resetColor}')
-                                printedSeqs += 1
-                # Collect expressed DNA sequences
-                totalSeqsDNA = 0
-                if fixData:
-                    for datapoint in data:
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-                        DNA = Seq(DNA).reverse_complement()
-                        totalSeqsDNA += 1
-
-                        # Inspect full DNA seq
-                        if startSeq in DNA:  # and endSeq in DNA:
-                            # Find beginning & end indices for the substrate
-                            start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)
-
-                            # Extract substrate DNA seq
-                            substrate = DNA[start:end].strip()
-                            if len(substrate) == self.substrateLength * 3:
-                                # Express substrate
-                                substrate = str(Seq.translate(substrate))
-
-                                # Inspect substrate seq: Keep good fixed datapoints
-                                if 'X' not in substrate and '*' not in substrate:
-                                    if len(self.fixedAA[0]) == 1:
-                                        if substrate[self.fixedPos[0] - 1] \
-                                            in self.fixedAA:
-                                            if substrate in subSequence:
-                                                subSequence[substrate] += 1
-                                            else:
-                                                subSequence[substrate] = 1
-                                    else:
-                                        if substrate[self.fixedPos[0] - 1] \
-                                            in self.fixedAA[0]:
-                                            if substrate in subSequence:
-                                                subSequence[substrate] += 1
-                                            else:
-                                                subSequence[substrate] = 1
-                else:
-                    for datapoint in data:
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-                        DNA = Seq(DNA).reverse_complement()
-                        totalSeqsDNA += 1
-
-                        # Inspect full DNA seq
-                        if startSeq in DNA:  # and endSeq in DNA:
-                            # Find beginning & end indices for the substrate
-                            start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)
-
-                            # Extract substrate DNA seq
-                            substrate = DNA[start:end].strip()
-                            if len(substrate) == self.substrateLength * 3:
-                                # Express substrate
-                                substrate = str(Seq.translate(substrate))
-
-                                # Inspect substrate seq
-                                if 'X' not in substrate and '*' not in substrate:
-                                    if substrate in subSequence:
-                                        subSequence[substrate] += 1
-                                    else:
-                                        subSequence[substrate] = 1
-        else:
-            with open(path, 'r') as file: # Open the file
-                data = SeqIO.parse(file, fileType)
-                warnings.simplefilter('ignore', BiopythonWarning)
-
-                # Print expressed DNA sequences
-                printedSeqs = 0
-                for datapoint in data:
-                    if printedSeqs == self.printNumber:
-                        throwaway = totalSeqsDNA - self.printNumber
-                        throwawayPercent = (throwaway / totalSeqsDNA) * 100
-                        print(f'\nExtracting {self.printNumber} Substrates\n'
-                              f'     Number of discarded sequences until {red}'
-                              f'{self.printNumber} substrates{resetColor} were found in '
-                              f'{purple}R2{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {greyDark}Percent throwaway{resetColor}:'
-                              f'{red} {round(throwawayPercent, self.roundVal)} %'
-                              f'{resetColor}\n\n')
-                        break
-
-                    # Select full DNA seq
-                    DNA = str(datapoint.seq)
-                    DNA = Seq(DNA).reverse_complement()
-                    totalSeqsDNA += 1
-                    if printQS:
-                        quality = datapoint.letter_annotations["phred_quality"]
-                        print(f'DNA sequence: {DNA}\n     QS - Forward: {quality}')
-                    else:
-                        # print(f'Expressed DNA sequence: {AA}')
-                        print(f'DNA sequence: {DNA}')
-
-                    # Inspect full DNA seq
-                    if startSeq in DNA and endSeq in DNA:
-                        # Find beginning & end indices for the substrate
-                        start = DNA.find(startSeq) + len(startSeq)
-                        end = DNA.find(endSeq)
-
-                        # Extract substrate DNA seq
-                        substrate = DNA[start:end].strip()
-                        print(f'     Inspected substrate: '
-                              f'{greenLightB}{substrate}{resetColor}')
-                        if len(substrate) == self.substrateLength * 3:
-                            # Express substrate
-                            substrate = str(Seq.translate(substrate))
-                            print(f'     Inspected Substrate:'
-                                  f'{greenLightB} {substrate}{resetColor}')
-
-                            # Inspect substrate seq: PRINT ONLY
-                            if 'X' not in substrate and '*' not in substrate:
-                                print(f'     Extracted substrate: '
-                                      f'{pink}{substrate}{resetColor}')
-                                printedSeqs += 1
-                # Collect expressed DNA sequences
-                totalSeqsDNA = 0
-                if fixData:
-                    for datapoint in data:
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-                        DNA = Seq(DNA).reverse_complement()
-                        totalSeqsDNA += 1
-
-                        # Inspect full DNA seq
-                        if startSeq in DNA and endSeq in DNA:
-                            # Find beginning & end indices for the substrate
-                            start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)
-
-                            # Extract substrate DNA seq
-                            substrate = DNA[start:end].strip()
-                            if len(substrate) == self.substrateLength * 3:
-                                # Express substrate
-                                substrate = str(Seq.translate(substrate))
-
-                                # Inspect substrate seq: Keep good fixed datapoints
-                                if 'X' not in substrate and '*' not in substrate:
-                                    if len(self.fixedAA[0]) == 1:
-                                        if substrate[self.fixedPos[0] - 1] \
-                                            in self.fixedAA:
-                                            if substrate in subSequence:
-                                                subSequence[substrate] += 1
-                                            else:
-                                                subSequence[substrate] = 1
-                                    else:
-                                        if substrate[self.fixedPos[0] - 1] \
-                                            in self.fixedAA[0]:
-                                            if substrate in subSequence:
-                                                subSequence[substrate] += 1
-                                            else:
-                                                subSequence[substrate] = 1
-                else:
-                    for datapoint in data:
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-                        DNA = Seq(DNA).reverse_complement()
-                        totalSeqsDNA += 1
-
-                        # Inspect full DNA seq
-                        if startSeq in DNA and endSeq in DNA:
-                            start = DNA.find(startSeq) + len(startSeq)
-                            end = DNA.find(endSeq)
-
-                            # Extract substrate DNA seq
-                            substrate = DNA[start:end].strip()
-                            if len(substrate) == self.substrateLength * 3:
-                                # Express substrate
-                                substrate = str(Seq.translate(substrate))
-
-                                # Inspect substrate seq
-                                if 'X' not in substrate and '*' not in substrate:
-                                    if substrate in subSequence:
-                                        subSequence[substrate] += 1
-                                    else:
-                                        subSequence[substrate] = 1
-
-
-        # Verify if substrates have been extracted
-        if len(subSequence) == 0:
-            print(f'\nNo substrates were extracted from file at:\n{path}\n\n'
-                  f'Recommend: adjust variables\n'
-                  f'     startSeq: {red}{startSeq}{resetColor}\n'
-                  f'     endSeq: {red}{endSeq}{resetColor}')
-            sys.exit(1)
-        else:
-            extractionCount = sum(subSequence.values())
-            throwaway = (totalSeqsDNA - extractionCount)
-            throwawayPercent = (throwaway / totalSeqsDNA) * 100
-            self.fileSize.append(totalSeqsDNA)
-            self.countExtractedSubs.append(extractionCount)
-            self.percentUnusableDNASeqs.append(throwawayPercent)
-            print(f'Evaluate All DNA Sequences in {purple}R2{resetColor}:\n'
-                  f'     Total DNA sequences in the file: '
-                  f'{red}{totalSeqsDNA:,}{resetColor}\n'
-                  f'     Number of extracted Substrates: '
-                  f'{red}{extractionCount:,}{resetColor}\n'
-                  f'     {greyDark}Percent throwaway{resetColor}:'
-                  f'{red} {round(throwawayPercent, self.roundVal)} %'
-                  f'{resetColor}\n\n')
-
 
         # Rank the substrates
         subSequence = dict(sorted(subSequence.items(), key=lambda x: x[1], reverse=True))
@@ -972,7 +733,7 @@ class NGS:
                   f'{red}{self.fileSize[index]:,}{resetColor}\n'
                   f'     Number of extracted Substrates: '
                   f'{red}{self.countExtractedSubs[index]:,}{resetColor}\n'
-                  f'     {greenLight}Percent throwaway{resetColor}: '
+                  f'     {yellow}Percent throwaway{resetColor}: '
                   f'{red}{round(self.percentUnusableDNASeqs[index], self.roundVal)} %'
                   f'{resetColor}\n')
         print('')
@@ -2892,11 +2653,11 @@ class NGS:
         print('=========================== Predict: Motif Enrichment '
               '===========================')
         if scaledMatrix:
-            matrixType = 'Scaled Enrichment Scores'
-            matrix = self.eMapScaled
+            matrixType = 'Released Count Scaled Enrichment Scores'
+            matrix = self.eMapReleasedScaled
         else:
-            matrixType = 'Enrichment Scores'
-            matrix = self.eMap
+            matrixType = 'Released Count Enrichment Scores'
+            matrix = self.eMapReleased
         print(f'Prediction Matrix: {magenta}{matrixType}{resetColor}\n'
               f'{self.eMap}\n\n')
 
