@@ -17,14 +17,14 @@ from functions import NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location 
-inFileName = ['Mpro2-I_S1_L001_R1_001', 'Mpro2-I_S1_L001_R2_001'] # Define file name(s)
+inFileName = ['IDE-F_S5_L002_R1_001', 'IDE-F_S5_L002_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
 inPathFolder = f'/path/{inEnzymeName}'
 inPathDNASeqs = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder name
 inFileType = 'fastq' # Define the file type
 
 # Input 2: Saving The Data
-inSaveFileName = 'Mpro2-I_S1_L001' # Add this name to filePaths(enzyme) in functions.py
+inSaveFileName = 'IDE-F_S5_L002' # Add this name to filePaths(enzyme) in functions.py
 
 # Input 3: Substrate Parameters
 inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
@@ -37,9 +37,9 @@ inStartSeqR2 = inStartSeqR1
 inEndSeqR2 = inEndSeqR1
 
 # Input 5: Define Variables Used To Extract The Substrates
-inFixedLibrary = False
-inFixedResidue = ['']
-inFixedPosition = []
+inFixedLibrary = True
+inFixedResidue = [['L','M','F','Y']]
+inFixedPosition = [4]
 
 # Input 6: Miscellaneous
 inAlertPath = '/path/Bells.mp3' # Play a sound to let you know the script is done
@@ -57,7 +57,7 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           filesFinal=None, plotPosS=False, plotFigEM=False, plotFigEMScaled=False,
           plotFigLogo=False, plotFigWebLogo=False, plotFigWords=False,
           wordLimit=False, wordsTotal=False, plotFigBars=False,
-          NSubBars=False, plotPCA=False, numPCs=False, NSubsPCA=False,
+          NSubBars=False, plotFigPCA=False, numPCs=False, NSubsPCA=False,
           plotSuffixTree=False, saveFigures=False, setFigureTimer=None, expressDNA=True)
 
 
@@ -133,4 +133,4 @@ ngs.saveData(substrates=substrates, counts=counts, saveTag=inSaveFileName)
 ngs.extractionEfficiency(files=inFileName)
 
 # Plot the data
-ngs.plotCounts(countedData=counts, totalCounts=totalSubs)
+ngs.plotCounts(countedData=counts, totalCounts=totalSubs, fileName=inSaveFileName)

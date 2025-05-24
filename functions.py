@@ -170,7 +170,7 @@ class NGS:
         
         # Parameters: DNA Processing
         self.expressDNA = expressDNA # Only set as True when processing DNA seqs
-        self.minQS = 20 # Minium quality score
+        self.minQS = 20 # Minium Phred quality score for extracted substrates
         self.fileSize = []
         self.countExtractedSubs = []
         self.percentUnusableDNASeqs = []
@@ -367,16 +367,17 @@ class NGS:
         # Determine the read direction
         subSequence = None
         # Extract the substrates
-        subSequence = self.translate(path=fileLocation, fileType=fileType,
-                                     fixData=fixedSubs, startSeq=startSeq,
-                                     endSeq=endSeq, printQS=printQS,
-                                     forwardRead=forwardRead)
+        subSequence = self.translate(path=fileLocation, fileName=fileName,
+                                     fileType=fileType, fixData=fixedSubs,
+                                     startSeq=startSeq, endSeq=endSeq,
+                                     printQS=printQS, forwardRead=forwardRead)
 
         return subSequence
 
 
 
-    def translate(self, path, fileType, fixData, startSeq, endSeq, printQS, forwardRead):
+    def translate(self, path, fileName, fileType, fixData, startSeq, endSeq, printQS,
+                  forwardRead):
         if forwardRead:
             read = 'R1'
             print('============================ Translate: Forward Read '
@@ -456,41 +457,6 @@ class NGS:
             return printedSeqs
 
 
-        def inspectDNAFixed():
-            # Inspect full DNA seq
-            if startSeq in DNA and endSeq in DNA:
-                # Find: Substrate indices
-                start = DNA.find(startSeq) + len(startSeq)
-                end = DNA.find(endSeq)
-
-                # Extract substrate DNA seq
-                substrate = DNA[start:end].strip()
-                if len(substrate) == self.substrateLength * 3:
-                    # Express substrate
-                    substrate = str(Seq.translate(substrate))
-
-                    # Inspect substrate seq: Keep good fixed datapoints
-                    if 'X' not in substrate and '*' not in substrate:
-                        # Inspect quality score
-                        QS = datapoint.letter_annotations['phred_quality']
-                        QS = QS[start:end]
-                        if any(score < self.minQS for score in QS):
-                            print(f'{substrate}\n{QS}\n')
-                            sys.exit()
-
-                        if len(self.fixedAA[0]) == 1:
-                            if substrate[self.fixedPos[0] - 1] in self.fixedAA:
-                                if substrate in subSequence:
-                                    subSequence[substrate] += 1
-                                else:
-                                    subSequence[substrate] = 1
-                        else:
-                            if substrate[self.fixedPos[0] - 1] in self.fixedAA[0]:
-                                if substrate in subSequence:
-                                    subSequence[substrate] += 1
-                                else:
-                                    subSequence[substrate] = 1
-
         def inspectDNA():
             # Inspect full DNA seq
             if startSeq in DNA and endSeq in DNA:
@@ -518,42 +484,8 @@ class NGS:
                         else:
                             subSequence[substrate] = 1
 
-        def inspectDNAReverseFixed():
-            # Inspect full DNA seq
-            if startSeq in DNA and endSeq in DNA:
-                # Find: Substrate indices
-                start = DNA.find(startSeq) + len(startSeq)
-                end = DNA.find(endSeq)
 
-                # Extract substrate DNA seq
-                substrate = DNA[start:end].strip()
-                if len(substrate) == self.substrateLength * 3:
-                    # Express substrate
-                    substrate = str(Seq.translate(substrate))
-
-                    # Inspect substrate seq: Keep good fixed datapoints
-                    if 'X' not in substrate and '*' not in substrate:
-                        # Inspect quality score
-                        QS = datapoint.letter_annotations['phred_quality']
-                        QS = QS[start:end]
-                        if any(score < self.minQS for score in QS):
-                            print(f'{substrate}\n{QS}\n')
-                            sys.exit()
-
-                        if len(self.fixedAA[0]) == 1:
-                            if substrate[self.fixedPos[0] - 1] in self.fixedAA:
-                                if substrate in subSequence:
-                                    subSequence[substrate] += 1
-                                else:
-                                    subSequence[substrate] = 1
-                        else:
-                            if substrate[self.fixedPos[0] - 1] in self.fixedAA[0]:
-                                if substrate in subSequence:
-                                    subSequence[substrate] += 1
-                                else:
-                                    subSequence[substrate] = 1
-
-        def inspectDNAReverse():
+        def inspectDNAFixed():
             # Inspect full DNA seq
             if startSeq in DNA and endSeq in DNA:
                 # Find: Substrate indices
@@ -574,18 +506,31 @@ class NGS:
                         if any(score < self.minQS for score in QS):
                             return
 
-                        # Record datapoint
-                        if substrate in subSequence:
-                            subSequence[substrate] += 1
+                        if len(self.fixedAA[0]) == 1:
+                            if substrate[self.fixedPos[0] - 1] in self.fixedAA:
+                                if substrate in subSequence:
+                                    subSequence[substrate] += 1
+                                else:
+                                    subSequence[substrate] = 1
                         else:
-                            subSequence[substrate] = 1
+                            if substrate[self.fixedPos[0] - 1] in self.fixedAA[0]:
+                                if substrate in subSequence:
+                                    subSequence[substrate] += 1
+                                else:
+                                    subSequence[substrate] = 1
 
 
-        if fixData:
-            print(f'\nNote: The displayed substrates were not selected '
-                  f'for fixed {purple}{self.datasetTag}{resetColor}\n'
-                  f'      However the extracted substrates will meet '
-                  f'this restriction\n')
+        def evaluateDNAQuality(throwaway, read):
+            throwawayPercent = (throwaway / totalSeqsDNA) * 100
+            print(f'\nExtraction Efficiency: '
+                  f'{greenLight}{fileName}{resetColor}\n'
+                  f'     Number of discarded sequences until {red}'
+                  f'{self.printNumber} substrates{resetColor} were found in '
+                  f'{purple}{read}{resetColor}: {red}{throwaway:,}{resetColor}\n'
+                  f'     {yellow}Percent throwaway{resetColor}:'
+                  f'{red} {round(throwawayPercent, self.roundVal)} %'
+                  f'{resetColor}')
+
 
         # Load the data
         if gZipped:
@@ -599,15 +544,15 @@ class NGS:
                     totalSeqsDNA += 1
                     if printedSeqs == self.printNumber:
                         throwaway = totalSeqsDNA - self.printNumber
-                        throwawayPercent = (throwaway / totalSeqsDNA) * 100
-                        print(f'\nExtraction Efficiency:\n'
-                              f'     Number of discarded sequences until {red}'
-                              f'{self.printNumber} substrates{resetColor} were found in '
-                              f'{purple}{read}{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {yellow}Percent throwaway{resetColor}:'
-                              f'{red} {round(throwawayPercent, self.roundVal)} %'
-                              f'{resetColor}\n\n')
+                        evaluateDNAQuality(throwaway, read)
                         break
+                if fixData:
+                    print(f'\nNote: The displayed substrates were not selected '
+                          f'for fixed {purple}{self.datasetTag}{resetColor}\n'
+                          f'      However the extracted substrates will meet '
+                          f'this restriction')
+                print('\n')
+
 
                 # Extract the substrates
                 totalSeqsDNA = 0
@@ -631,14 +576,14 @@ class NGS:
                             DNA = str(datapoint.seq)
                             DNA = Seq(DNA).reverse_complement()
                             totalSeqsDNA += 1
-                            inspectDNAReverseFixed()
+                            inspectDNAFixed()
                     else:
                         for datapoint in data:
                             # Select full DNA seq
                             DNA = str(datapoint.seq)
                             DNA = Seq(DNA).reverse_complement()
                             totalSeqsDNA += 1
-                            inspectDNAReverse()
+                            inspectDNA()
         else:
             # Open the file
             with open(path, 'r') as file:
@@ -649,15 +594,14 @@ class NGS:
                     printedSeqs = printDNA(printedSeqs)
                     if printedSeqs == self.printNumber:
                         throwaway = totalSeqsDNA - self.printNumber
-                        throwawayPercent = (throwaway / totalSeqsDNA) * 100
-                        print(f'\nExtraction Efficiency:\n'
-                              f'     Number of discarded sequences until {red}'
-                              f'{self.printNumber} substrates{resetColor} were found in '
-                              f'{purple}{read}{resetColor}: {red}{throwaway:,}{resetColor}\n'
-                              f'     {yellow}Percent throwaway{resetColor}:'
-                              f'{red} {round(throwawayPercent, self.roundVal)} %'
-                              f'{resetColor}\n\n')
+                        evaluateDNAQuality(throwaway, read)
                         break
+                if fixData:
+                    print(f'Note: The displayed substrates were not selected '
+                          f'for fixed {purple}{self.datasetTag}{resetColor}\n'
+                          f'      However the extracted substrates will meet '
+                          f'this restriction')
+                print('\n')
 
                 # Extract the substrates
                 totalSeqsDNA = 0
@@ -681,14 +625,14 @@ class NGS:
                             DNA = str(datapoint.seq)
                             DNA = Seq(DNA).reverse_complement()
                             totalSeqsDNA += 1
-                            inspectDNAReverseFixed()
+                            inspectDNAFixed()
                     else:
                         for datapoint in data:
                             # Select full DNA seq
                             DNA = str(datapoint.seq)
                             DNA = Seq(DNA).reverse_complement()
                             totalSeqsDNA += 1
-                            inspectDNAReverse()
+                            inspectDNA()
 
 
         # Verify if substrates have been extracted
@@ -705,7 +649,8 @@ class NGS:
             self.fileSize.append(totalSeqsDNA)
             self.countExtractedSubs.append(extractionCount)
             self.percentUnusableDNASeqs.append(throwawayPercent)
-            print(f'Evaluate All DNA Sequences in {purple}{read}{resetColor}:\n'
+            print(f'Evaluate All DNA Sequences in {purple}{read}{resetColor}: '
+                  f'{greenLight}{fileName}{resetColor}\n'
                   f'     Total DNA sequences in the file: '
                   f'{red}{totalSeqsDNA:,}{resetColor}\n'
                   f'     Number of extracted Substrates: '
