@@ -404,7 +404,7 @@ class NGS:
                       f'     {pathZipped}\n')
                 sys.exit(1)
         print(f'File Location:\n'
-              f'     {path}\n\n')
+              f'     {greenDark}{path}{resetColor}\n\n')
 
         # Define fixed substrate tag
         if fixData:
