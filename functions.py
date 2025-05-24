@@ -10,9 +10,7 @@ import math
 from itertools import combinations, product
 import logomaker
 import matplotlib.pyplot as plt
-from fontTools.varLib.models import normalizeValue
 from matplotlib.colors import LinearSegmentedColormap, Normalize
-from matplotlib.pyplot import title
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
@@ -22,8 +20,6 @@ import seaborn as sns
 import sys
 import threading
 import warnings
-
-from mpmath.libmp import normalize
 from wordcloud import WordCloud
 
 
@@ -150,7 +146,7 @@ class NGS:
                  xAxisLabels, printNumber, showNValues, bigAAonTop, findMotif, folderPath,
                  filesInit, filesFinal, plotPosS, plotFigEM, plotFigEMScaled, plotFigLogo,
                  plotFigWebLogo, plotFigWords, wordLimit, wordsTotal, plotFigBars,
-                 NSubBars, plotPCA, numPCs, NSubsPCA, plotSuffixTree, saveFigures,
+                 NSubBars, plotFigPCA, numPCs, NSubsPCA, plotSuffixTree, saveFigures,
                  setFigureTimer, expressDNA=False, xAxisLabelsMotif=None,
                  motifFilter=False, plotFigMotifEnrich=False,
                  plotFigMotifEnrichSelect=False):
@@ -196,7 +192,7 @@ class NGS:
         self.wordsTotal = wordsTotal
         self.plotFigBars = plotFigBars
         self.NSubBars = NSubBars
-        self.plotPCA = plotPCA
+        self.plotFigPCA = plotFigPCA
         self.NPCs=numPCs
         self.NSubsPCA = NSubsPCA
         self.plotSuffixTree = plotSuffixTree
@@ -2088,7 +2084,6 @@ class NGS:
         else:
             probInitial.columns = probFinal.columns
             matrix  = np.log2(probFinal / probInitial)
-            matrix = probFinal.columns
         print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n\n'
               f'{matrix.round(self.roundVal)}\n\n')
 
@@ -2617,10 +2612,11 @@ class NGS:
         if self.plotFigWords:
             self.plotWordCloud(substrates=motifES, combinedMotif=combinedMotif)
 
-        # Predict: Motif enrichment
-        self.predMotifEnrichment(motifES=motifES)
-        # self.predMotifEnrichment(motifES=motifES, scaledMatrix=True)
 
+        predMotif = False
+        if predMotif:
+            # Predict: Motif enrichment
+            self.predMotifEnrichment(motifES=motifES)
 
         # Plot: Bar graphs
         if self.plotFigBars:
@@ -2630,7 +2626,7 @@ class NGS:
                               combinedMotif=combinedMotif)
              
         # PCA
-        if self.plotPCA:
+        if self.plotFigPCA:
             # Convert substrate data to numerical
             tokensESM, subsESM, subCountsESM = self.ESM(
                 substrates=motifES, subLabel=subLabel)
@@ -2638,6 +2634,13 @@ class NGS:
             # Cluster substrates
             subPopulations = self.plotPCA(substrates=motifES, data=tokensESM,
                                           indices=subsESM, N=subCountsESM)
+            import time
+            for index, cluster in enumerate(subPopulations):
+                print(f'Cluster: {red}{index}{resetColor}\n'
+                      f'{cluster}\n\n')
+
+                # Plot: Work cloud
+                self.plotWordCloud(substrates=cluster, combinedMotif=combinedMotif)
 
             # Why is the PCA getting stuck?
 
@@ -2829,7 +2832,6 @@ class NGS:
                 countInit = subsInit[substrate]
             else:
                 countInit = 1
-                count += countInit
                 totalCountsFinal += 1
             totalCountsInit += countInit
             if countInit == 1:
@@ -3273,7 +3275,6 @@ class NGS:
             pcaHeaders.append(f'PC{componentNumber}')
         headerCombinations = list(combinations(pcaHeaders, 2))
 
-        print('Here A')
         # # Cluster the datapoints
         # Step 1: Apply PCA on the standardized data
         pca = PCA(n_components=self.NPCs) # Adjust the number of components as needed
@@ -3281,7 +3282,7 @@ class NGS:
         data = scaler.fit_transform(data)
         dataPCA = pca.fit_transform(data)
         # loadings = pca.components_.T
-        print('Here B')
+
         # Step 2: Create a DataFrame for PCA results
         dataPCA = pd.DataFrame(dataPCA, columns=pcaHeaders, index=indices)
         print(f'PCA Data:{red} # of components = {self.NPCs}\n'
@@ -3431,8 +3432,6 @@ class NGS:
 
         # Create a list of collected substrate dictionaries
         if self.selectedSubstrates:
-            print(f'Update: Make this able to shift the frame '
-                  f'if you plot binned substrates')
             collectedSubs = []
             for index, substrateSet in enumerate(self.selectedSubstrates):
                 print(f'Substrate Set:{greenLightB} {index + 1}{resetColor}')
@@ -4119,7 +4118,7 @@ class NGS:
 
 
 
-    def plotCounts(self, countedData, totalCounts):
+    def plotCounts(self, countedData, totalCounts, fileName):
         # Remove commas from string values and convert to float
         countedData = countedData.applymap(lambda x:
                                            float(x.replace(',', ''))
@@ -4137,7 +4136,7 @@ class NGS:
             countedData.index = [residue[2] for residue in self.residues]
 
         # Set figure title
-        title = f'\n\n{self.enzymeName}\nN={totalCounts:,}'
+        title = f'\n\n{self.enzymeName}\n{fileName}\nN={totalCounts:,}'
 
 
         # Plot the heatmap with numbers centered inside the squares
