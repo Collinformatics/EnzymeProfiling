@@ -16,9 +16,8 @@ inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
-inWordsOnly = True
-
 # Input 2: Computational Parameters
+inPlotOnlyWords = False
 inFixResidues = True
 inFixedResidue = ['L']
 inFixedPosition = [6]
@@ -37,14 +36,12 @@ inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = False
 inPlotLogo = True
 inPlotWeblogo = True
-
-if inWordsOnly:
+if inPlotOnlyWords:
     inPlotEntropy = False
     inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
-
 inPlotWordCloud = True
 inPlotBarGraphs = False
 inPlotPCA = False

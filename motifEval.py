@@ -28,7 +28,7 @@ inMotifPositions = ['P3', 'P2', 'P1', 'P1\'', 'P2\''] #
 inIndexNTerminus = 1 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
-inWordsOnly = False
+inPlotOnlyWords = False
 inFixedResidue = ['L']
 inFixedPosition = [3, 4]
 inExcludeResidues = False
@@ -46,7 +46,7 @@ inPlotLogo = True
 inPlotWeblogo = True
 inPlotMotifEnrichment = True
 inPlotMotifEnrichmentNBars = True
-if inWordsOnly:
+if inPlotOnlyWords:
     inPlotEntropy = False
     inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
