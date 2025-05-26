@@ -4129,7 +4129,7 @@ class NGS:
 
 
 
-    def calculateEntropy(self, probability, fixFullFrame,
+    def calculateEntropy(self, probability, fixFullFrame=None,
                         combinedMotif=False):
         print('============================== Calculate: Entropy '
               '===============================')
@@ -4147,7 +4147,8 @@ class NGS:
         print(f'{self.entropy}\n\nMax Entropy: {self.entropyMax.round(6)}\n\n')
 
         # Identify motif frame
-        self.identifyMotif(fixFullFrame=fixFullFrame)
+        if fixFullFrame is not None:
+            self.identifyMotif(fixFullFrame=fixFullFrame)
 
         if self.plotFigEntropy:
             self.plotEntropy(entropy=self.entropy, combinedMotif=combinedMotif)

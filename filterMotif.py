@@ -11,17 +11,17 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'MMP7'
 inPathFolder = f'/path/{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
-inSetFigureTimer = False
+inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.6
+inMinDeltaS = 0.64
 inRefixMotif = True
-inFixedResidue = ['Q'] # Only use 1 AA
-inFixedPosition = [4]
+inFixedResidue = ['L'] # Only use 1 AA
+inFixedPosition = [3]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -42,8 +42,13 @@ inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = True
 inPlotLogo = True
-inPlotWeblogo = True
-inPlotWordCloud = False
+
+inPlotEntropy = True
+inPlotEnrichmentMap = True
+inPlotEnrichmentMapScaled = False
+inPlotLogo = False
+
+inPlotWeblogo = False
 inPlotUnscaledScatter = False
 inPlotScaledScatter = False
 
@@ -61,10 +66,6 @@ inShowWeblogoYTicks = True
 inAddHorizontalLines = False
 inPlotNegativeWeblogoMotif = False
 inBigLettersOnTop = False
-
-# Input 7: Word Cloud
-inLimitWords = True
-inTotalWords = 100
 
 # Input 8: Substrate Enrichment
 inBinSubstrates = False
@@ -136,16 +137,16 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           filterSubs=True, fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
-          printNumber=inPrintNumber, showNValues=inShowSampleSize,
+          minEntropy=inMinDeltaS, figEMSquares=inShowEnrichmentAsSquares,
+          xAxisLabels=labelAAPos, printNumber=inPrintNumber, showNValues=inShowSampleSize,
           bigAAonTop=inBigLettersOnTop, findMotif=True, folderPath=inPathFolder,
           filesInit=filesInitial, filesFinal=filesFinal,
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
-          plotFigWebLogo=inPlotWeblogo, plotFigWords=inPlotWordCloud,
-          wordLimit=inLimitWords, wordsTotal=inTotalWords,
-          plotFigBars=False, NSubBars=None, plotPCA=False,
-          numPCs=None, NSubsPCA=None, plotSuffixTree=False,
+          plotFigWebLogo=inPlotWeblogo, plotFigWords=False,
+          wordLimit=None, wordsTotal=None,
+          plotFigBars=False, NSubBars=None, plotFigPCA=False,
+          numPCs=None, NSubsPCA=None, plotSuffixTree=False, motifFilter=True,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
@@ -190,7 +191,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
     # Determine if the fixed substrate file exists
     if os.path.exists(filePathFixedSubs) and os.path.exists(filePathFixedCounts):
         print(f'Loading Substrates at path:\n'
-              f'     {greyDark}{filePathFixedSubs}\n'
+              f'     {greenDark}{filePathFixedSubs}\n'
               f'     {filePathFixedCounts}{resetColor}\n\n')
 
         # Load Data: Fixed substrates
@@ -403,16 +404,15 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                                                 fileType=sortType)
 
     # Calculate: Entropy
-    entropy = ngs.calculateEntropy(probability=probFinalFixed)
+    ngs.calculateEntropy(probability=probFinalFixed,
+                         fixFullFrame=inFixFullMotifSeq)
 
-    # Determine substrate frame
+    # Overwrite substrate frame
     if inManualEntropy:
-        motifPos = pd.DataFrame(1, index=inManualFrame, columns=['ΔS'])
+        ngs.subFrame = pd.DataFrame(1, index=inManualFrame, columns=['ΔS'])
         print(f'{pink}Ranked Substrate Frame{resetColor}:{yellow} User Defined\n'
-              f'{cyan}{motifPos}{resetColor}\n\n')
-    else:
-        motifPos = ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS,
-                                     fixFullFrame=inFixFullMotifSeq)
+              f'{cyan}{ngs.subFrame}{resetColor}\n\n')
+
 
     # Calculate enrichment scores
     ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
@@ -435,7 +435,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     # # Fix The Next Set Of Substrates
     # Cycle through the substrate and fix AA
-    for iteration, position in enumerate(motifPos.index):
+    for iteration, position in enumerate(ngs.subFrame.index):
         if position == initialFixedPos:
             # Skip the position that was already fixed
             continue
@@ -516,7 +516,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     # Initialize the list of residues that will be fixed
     keepResidues = preferredResidues.copy()
     keepPositions = preferredPositions.copy()
-    for iteration, position in enumerate(motifPos.index):
+    for iteration, position in enumerate(ngs.subFrame.index):
         print(f'=================================== Release Residues '
               f'===================================')
         # Update: Figure label
@@ -623,7 +623,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
 
         # Display loop status
-        if position == motifPos.index[-1]:
+        if position == ngs.subFrame.index[-1]:
             print(f'{red}This is the final figure{resetColor}\n\n')
             datasetTag = f'{datasetTag} - Final'
 
@@ -635,13 +635,13 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     # Fill in missing columns in the released counts matrix and calculate RF
     for position in countsReleased.columns:
-        if position not in motifPos.index:
+        if position not in ngs.subFrame.index:
             countsReleased.loc[:, position] = countsFinalFixed.loc[:, position]
 
         releasedRF.loc[:, position] = (countsReleased.loc[:, position] /
                                        countsFinalFixedTotal)
         releasedRFScaled.loc[:, position] = (releasedRF.loc[:, position] *
-                                             entropy.loc[position, 'ΔS'])
+                                             ngs.entropy.loc[position, 'ΔS'])
     print(f'Released counts:\n'
           f'{countsReleased}\n\n'
           f'Scaled RF:{purple} Fixed Frame{resetColor}\n'
@@ -653,12 +653,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                             releasedCounts=True)
     
     # Extract motif
-    ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS, fixFullFrame=True)
-    finalSubsMotif = ngs.getMotif(substrates=substratesFinalFixed)
+    ngs.getMotif(substrates=substratesFinalFixed)
 
-    # Plot: Work cloud
-    if inPlotWordCloud:
-        ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None)
 
     # Save the data
     ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed,
@@ -671,7 +667,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
 # ===================================== Run The Code =====================================
 # # Fix AA at the important positions in the substrate
-ngs.motifFilter = True # Turn on motif filter
 fixedSubSeq = ngs.getDatasetTag()
 inDatasetTag = f'Motif {fixedSubSeq}'
 inFigureTitle = f'{inEnzymeName}: {inDatasetTag}'
@@ -695,6 +690,12 @@ if (os.path.exists(filePathFixedMotifSubs) and
           f'     {greenDark}{filePathFixedMotifSubs}\n'
           f'     {greenDark}{filePathFixedMotifCounts}{resetColor}\n\n')
 
+    # Dont save figure
+    if ngs.saveFigures:
+        ngs.saveFigures= False
+        print(f'{yellow}Warning: The option that enables saving figures was '
+              f'turned off{resetColor}\n\n')
+
     # Load Data: Fixed substrates
     with open(filePathFixedMotifSubs, 'rb') as file:
         substratesFinalFixed = pk.load(file)
@@ -712,9 +713,10 @@ if (os.path.exists(filePathFixedMotifSubs) and
           f'{greenLightB} {countsFinalFixedTotal:,}{resetColor}\n'
           f'Number of Unique Substrates:'
           f'{greenLightB} {len(substratesFinalFixed):,}{resetColor}\n')
+
+    print(f'Substrates:')
     for substrate, count in substratesFinalFixed.items():
-        print(f'Substrate:{green} {substrate}{resetColor}\n'
-              f'     Count:{pink} {count:,}{resetColor}')
+        print(f'     {pink}{substrate}{resetColor}, Count:{red} {count:,}{resetColor}')
         iteration += 1
         if iteration == inPrintNumber:
             break
@@ -728,18 +730,14 @@ if (os.path.exists(filePathFixedMotifSubs) and
                                                 N=countsFinalFixedTotal,
                                                 fileType='Fixed Final Sort')
     # Calculate: Positional entropy
-    entropy = ngs.calculateEntropy(probability=probFinalFixed)
+    ngs.calculateEntropy(probability=probFinalFixed,
+                         fixFullFrame=inFixFullMotifSeq)
 
     # Calculate enrichment scores
     ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
     # Extract motif
-    ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS, fixFullFrame=True)
     finalSubsMotif = ngs.getMotif(substrates=substratesFinalFixed)
-
-    # Plot: Work cloud
-    if inPlotWordCloud:
-        ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None)
 else:
     # Load: Unfiltered substates
     substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)

@@ -17,19 +17,19 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'MMP7'
 inPathFolder = f'/path/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
-inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'']
-inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
+inMotifPositions = ['P3', 'P2', 'P1', 'P1\'']
+inIndexNTerminus = 1 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
-inFixedResidue = ['Q']
-inFixedPosition = [4, 5, 6]
+inFixedResidue = ['L']
+inFixedPosition = [3, 4, 6]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -38,22 +38,26 @@ inMinimumSubstrateCount = 10
 # Input 4: Figures
 # inPlotPCA = False # PCA plot of an individual fixed frame
 # inPlotPCACombined = True
-inPlotEntropy = False
+inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = True
 inPlotLogo = True
 inPlotWeblogo = True
+inPlotMotifEnrichment = True
+inPlotMotifEnrichmentNBars = True
 
 # OVERWRITE PARAMS
-inPlotEnrichmentMap = False
-inPlotEnrichmentMapScaled = False
-inPlotLogo = False
-inPlotWeblogo = False
+offFigs = True
+if offFigs:
+    inPlotEntropy = False
+    inPlotEnrichmentMap = False
+    inPlotEnrichmentMapScaled = False
+    inPlotLogo = False
+    inPlotWeblogo = False
+    inPlotMotifEnrichment = False
+    inPlotMotifEnrichmentNBars = False
 
-inPlotMotifEnrichment = False
-inPlotMotifEnrichmentLimited = False
-
-inPlotWordCloud = False
+inPlotWordCloud = True
 inPlotBarGraphs = False
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
@@ -215,17 +219,17 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           filterSubs=True, fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
+          minEntropy=None, figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
           xAxisLabelsMotif=inMotifPositions, printNumber=inPrintNumber,
           showNValues=inShowSampleSize, bigAAonTop=inBigLettersOnTop, findMotif=False,
           folderPath=inPathFolder, filesInit=filesInitial, filesFinal=filesFinal,
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
-          plotFigMotifEnrichSelect=inPlotMotifEnrichmentLimited,
+          plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
-          plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotPCA=inPlotPCA,
-          numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
+          plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotFigPCA=inPlotPCA,
+          numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
@@ -862,7 +866,7 @@ countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
 probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
 
 # Calculate: Positional entropy
-entropy = ngs.calculateEntropy(probability=probCombinedMotif)
+ngs.calculateEntropy(probability=probCombinedMotif)
 
 # Calculate enrichment scores
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
@@ -879,7 +883,7 @@ probMotif = ngs.calculateProbabilities(counts=motifCountsFinal, N=motifsCountsTo
                                        fileType='Final Sort')
 
 # Calculate: Positional entropy
-entropy = ngs.calculateEntropy(probability=probMotif, combinedMotif=True)
+ngs.calculateEntropy(probability=probMotif)
 
 # Calculate: AA Enrichment
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,

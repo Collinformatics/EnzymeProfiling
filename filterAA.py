@@ -13,7 +13,6 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'MMP7'
 inPathFolder = f'/path/{inEnzymeName}'
-inPathFolder = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
@@ -222,7 +221,7 @@ probFinal = ngs.calculateProbabilities(counts=countsFinal, N=countsFinalTotal,
                                        fileType='Final Sort')
 
 # Calculate: Positional entropy
-entropy = ngs.calculateEntropy(probability=probFinal, fixFullFrame=True)
+entropy = ngs.calculateEntropy(probability=probFinal)
 
 # Calculate: Enrichment scores
 enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinal)
