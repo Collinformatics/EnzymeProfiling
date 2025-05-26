@@ -24,12 +24,13 @@ inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
-inMotifPositions = ['P3', 'P2', 'P1', 'P1\'']
+inMotifPositions = ['P3', 'P2', 'P1', 'P1\'', 'P2\''] #
 inIndexNTerminus = 1 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
+inWordsOnly = False
 inFixedResidue = ['L']
-inFixedPosition = [3, 4, 6]
+inFixedPosition = [3, 4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -40,15 +41,12 @@ inMinimumSubstrateCount = 10
 # inPlotPCACombined = True
 inPlotEntropy = True
 inPlotEnrichmentMap = True
-inPlotEnrichmentMapScaled = True
+inPlotEnrichmentMapScaled = False
 inPlotLogo = True
 inPlotWeblogo = True
 inPlotMotifEnrichment = True
 inPlotMotifEnrichmentNBars = True
-
-# OVERWRITE PARAMS
-offFigs = True
-if offFigs:
+if inWordsOnly:
     inPlotEntropy = False
     inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
@@ -56,7 +54,6 @@ if offFigs:
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
-
 inPlotWordCloud = True
 inPlotBarGraphs = False
 inPlotPCA = False # PCA plot of the combined set of motifs
@@ -89,7 +86,7 @@ inPlotNBars = 50
 
 # Input 9: Word Cloud
 inLimitWords = True
-inTotalWords = 50
+inTotalWords = inPlotNBars
 
 # Input 10: PCA
 inNumberOfPCs = 2

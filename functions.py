@@ -2788,7 +2788,7 @@ class NGS:
             # if int(ratio) != subsFinal[substrate]:
             iteration += 1
             print(f'     {pink}{substrate}{resetColor}, '
-                  f'ER: {red}{round(ratio, self.roundVal):,}{resetColor}')
+                  f'ER: {red}{round(ratio, 1):,}{resetColor}')
             if iteration >= self.printNumber:
                 print('')
                 break
@@ -2819,7 +2819,7 @@ class NGS:
         print(f'Enrichment Motifs:')
         for motif, ratio in motifEnrichment.items():
             print(f'     {blue}{motif}{resetColor}, '
-                  f'ER: {red}{round(ratio, self.roundVal):,}{resetColor}')
+                  f'ER: {red}{round(ratio, 1):,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
                 print('\n')
@@ -2843,6 +2843,7 @@ class NGS:
                     yMax += increaseValue
                 print('\n')
             yMin = 0
+            yMax += 5000 # Increase: yMax
 
 
             # Plot the data
@@ -4638,7 +4639,7 @@ class NGS:
         iteration = 0
         for substrate, count in substrates.items():
             print(f'     {blue}{substrate}{resetColor}, '
-                  f'Count:{red} {round(count, self.roundVal):,}{resetColor}')
+                  f'Count:{red} {round(count, 1):,}{resetColor}')
             iteration += 1
             if iteration == self.printNumber:
                 break
