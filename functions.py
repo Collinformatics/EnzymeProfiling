@@ -63,6 +63,7 @@ resetColor = '\033[0m'
 
 # =================================== Define Functions ===================================
 def filePaths(enzyme):
+    print(enzyme)
     if enzyme.lower() == 'eln' or enzyme.lower() == 'hne':
         enzyme = 'ELN'
         inFileNamesInitialSort = ['ELN-I_S1_L001', 'ELN-I_S1_L002']
@@ -109,7 +110,7 @@ def filePaths(enzyme):
         inFileNamesInitialSort = ['Src-I_S4_L001', 'Src-I_S4_L002']
         inFileNamesFinalSort = ['Src-F_S2_L001', 'Src-F_S2_L002']
         inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
-    elif enzyme.lower() == 'veev':
+    elif enzyme.lower() == 'veev' or enzyme.lower() == 've':
         enzyme = 'VEEV'
         inFileNamesInitialSort = ['VE-I_S1_L001']
         inFileNamesFinalSort = ['VE-R4_S2_L001']
@@ -142,16 +143,17 @@ def includeCommas(x):
 
 class NGS:
     def __init__(self, enzymeName, substrateLength, filterSubs, fixedAA, fixedPosition,
-                 excludeAAs, excludeAA, excludePosition, minCounts, figEMSquares,
-                 xAxisLabels, printNumber, showNValues, bigAAonTop, findMotif, folderPath,
-                 filesInit, filesFinal, plotPosS, plotFigEM, plotFigEMScaled, plotFigLogo,
-                 plotFigWebLogo, plotFigWords, wordLimit, wordsTotal, plotFigBars,
-                 NSubBars, plotFigPCA, numPCs, NSubsPCA, plotSuffixTree, saveFigures,
-                 setFigureTimer, expressDNA=False, xAxisLabelsMotif=None,
-                 motifFilter=False, plotFigMotifEnrich=False,
+                 excludeAAs, excludeAA, excludePosition, minCounts, minEntropy,
+                 figEMSquares, xAxisLabels, printNumber, showNValues, bigAAonTop,
+                 findMotif, folderPath, filesInit, filesFinal, plotPosS, plotFigEM,
+                 plotFigEMScaled, plotFigLogo, plotFigWebLogo, plotFigWords, wordLimit,
+                 wordsTotal, plotFigBars, NSubBars, plotFigPCA, numPCs, NSubsPCA,
+                 plotSuffixTree, saveFigures, setFigureTimer, expressDNA=False,
+                 xAxisLabelsMotif=None, motifFilter=False, plotFigMotifEnrich=False,
                  plotFigMotifEnrichSelect=False):
         # Parameters: Dataset
         self.enzymeName = enzymeName
+
         self.filterSubs = filterSubs
         self.fixedAA = fixedAA
         self.fixedPos = fixedPosition
@@ -159,6 +161,7 @@ class NGS:
         self.excludeAA = excludeAA
         self.excludePosition = excludePosition
         self.minSubCount = minCounts
+        self.minEntropy = minEntropy
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsMotif = xAxisLabelsMotif
         self.motifLen = None
@@ -231,6 +234,7 @@ class NGS:
         self.motifFilter = motifFilter
         self.initialize = True # filterMotif.py: Set to False after NGS.calculateEntropy()
         self.motifTag = ''
+        self.subFrame = None
         self.motifIndex = None
         self.motifIndexExtracted = []
         self.saveFigures = saveFigures
@@ -547,11 +551,10 @@ class NGS:
                         evaluateDNAQuality(throwaway, read)
                         break
                 if fixData:
-                    print(f'\nNote: The displayed substrates were not selected '
-                          f'for fixed {purple}{self.datasetTag}{resetColor}\n'
-                          f'      However the extracted substrates will meet '
-                          f'this restriction')
-                print('\n')
+                    print(f'\nNote: The displayed substrates were not filtered for '
+                          f'{purple}{self.datasetTag}{resetColor}\n'
+                          f'      The filter will be applied to the extracted substrates')
+                print('')
 
 
                 # Extract the substrates
@@ -597,11 +600,10 @@ class NGS:
                         evaluateDNAQuality(throwaway, read)
                         break
                 if fixData:
-                    print(f'Note: The displayed substrates were not selected '
-                          f'for fixed {purple}{self.datasetTag}{resetColor}\n'
-                          f'      However the extracted substrates will meet '
-                          f'this restriction')
-                print('\n')
+                    print(f'\nNote: The displayed substrates were not filtered for '
+                          f'{purple}{self.datasetTag}{resetColor}\n'
+                          f'      The filter will be applied to the extracted substrates')
+                print('') # print('\n')
 
                 # Extract the substrates
                 totalSeqsDNA = 0
@@ -1325,7 +1327,11 @@ class NGS:
 
     def saveFigure(self, fig, figType, combinedMotif=False, releasedCounts=False):
         # Define: Save location
-        if combinedMotif and releasedCounts:
+        if self.motifFilter:
+            figLabel = (f'{self.enzymeName} - {figType} '
+                        f'{self.saveFigureIteration} - {self.datasetTagInit} - '
+                        f'MinCounts {self.minSubCount}.png')
+        elif combinedMotif and releasedCounts:
             figLabel = (f'{self.enzymeName} - {figType} - '
                         f'Combined Released Counts {self.datasetTag} - '
                         f'MinCounts {self.minSubCount}.png')
@@ -1334,19 +1340,15 @@ class NGS:
                             f'Combined {self.datasetTag} - '
                             f'N {self.nSubsFinal} - MinCounts {self.minSubCount}.png')
         elif releasedCounts:
-            if self.motifFilter:
-                figLabel = (f'{self.enzymeName} - {figType} '
-                            f'{self.saveFigureIteration} - {self.motifTag} - '
-                            f'MinCounts {self.minSubCount}.png')
-            else:
-                figLabel = (f'{self.enzymeName} -  {figType} Released Counts - '
-                            f'{self.motifTag} - MinCounts {self.minSubCount}.png')
+            figLabel = (f'{self.enzymeName} -  {figType} Released Counts - '
+                        f'{self.motifTag} - MinCounts {self.minSubCount}.png')
         else:
             figLabel = (f'{self.enzymeName} - {figType} - '
                         f'{self.datasetTag} - '
                         f'N {self.nSubsFinal} - MinCounts {self.minSubCount}.png')
         saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
+        print(f'Label:\n{figLabel}\n')
+        # sys.exit()
 
         # Save figure
         if os.path.exists(saveLocation):
@@ -1916,51 +1918,51 @@ class NGS:
 
 
 
-    def identifyMotif(self, entropy, minEntropy, fixFullFrame):
+    def identifyMotif(self, fixFullFrame):
         print('================================ Identify Motif '
               '=================================')
         if fixFullFrame:
             print(f'Selecting continuous motif')
         else:
             print(f'Selecting non-continuous motif')
-        print(f'Minimum ΔS Value:{red} {minEntropy} Bits{resetColor}\n\n'
+        print(f'Minimum ΔS Value:{red} {self.minEntropy} Bits{resetColor}\n\n'
               f'Positional Entropy:\n'
-              f'{entropy}{resetColor}\n')
-        subFrame = entropy.copy()
-        lastPosition = len(entropy) - 1
+              f'{self.entropy}{resetColor}\n')
+        subFrame = self.entropy.copy()
+        lastPosition = len(self.entropy) - 1
 
         # Determine Substrate Frame
         if fixFullFrame:
-            for indexPos, position in enumerate(entropy.index):
+            for indexPos, position in enumerate(self.entropy.index):
                 if indexPos == 0 or indexPos == lastPosition:
-                    if entropy.loc[position, 'ΔS'] < minEntropy:
+                    if self.entropy.loc[position, 'ΔS'] < self.minEntropy:
                         subFrame.drop(position, inplace=True)
                 else:
-                    if entropy.loc[position, 'ΔS'] < minEntropy:
-                        if (entropy.iloc[indexPos - 1, 0] > minEntropy and
-                                entropy.iloc[indexPos + 1, 0] > minEntropy):
+                    if self.entropy.loc[position, 'ΔS'] < self.minEntropy:
+                        if (self.entropy.iloc[indexPos - 1, 0] > self.minEntropy and
+                                self.entropy.iloc[indexPos + 1, 0] > self.minEntropy):
                             pass
                         else:
                             subFrame.drop(position, inplace=True)
         else:
-            for indexPos, position in enumerate(entropy.index):
-                if entropy.loc[position, 'ΔS'] < minEntropy:
+            for indexPos, position in enumerate(self.entropy.index):
+                if self.entropy.loc[position, 'ΔS'] < self.minEntropy:
                     subFrame.drop(position, inplace=True)
 
         # Sort the frame
-        subFrameSorted = subFrame.sort_values(by='ΔS', ascending=False).copy()
+        self.subFrame = subFrame.sort_values(by='ΔS', ascending=False).copy()
         print(f'Motif Frame:\n'
               f'{blue}{subFrame}{resetColor}\n\n'
               f'Ranked Motif Frame:\n'
-              f'{blue}{subFrameSorted}{resetColor}\n\n')
+              f'{blue}{self.subFrame}{resetColor}\n\n')
 
         # Define motif label
-        indexSubFrameList = list(entropy.index)
-        self.motifIndex = [indexSubFrameList.index(idx) for idx in subFrameSorted.index]
+        indexSubFrameList = list(self.entropy.index)
+        self.motifIndex = [indexSubFrameList.index(idx) for idx in self.subFrame.index]
         self.xAxisLabelsMotif = self.xAxisLabels[
                                 min(self.motifIndex):max(self.motifIndex)+1]
 
-        return subFrameSorted
+        return self.subFrame
 
 
 
@@ -2017,8 +2019,7 @@ class NGS:
         print('========================== Calculate: Enrichment Score '
               '==========================')
         print(f'Enrichment Scores:\n'
-              f'     {magenta}log₂(prob FinalAA / prob InitialAA){resetColor}\n\n'
-              f'Entropy:\n{self.entropy}\n\n')
+              f'     {magenta}log₂(prob FinalAA / prob InitialAA){resetColor}\n\n')
         # Calculate: Enrichment scores
         if len(probInitial.columns) == 1:
             matrix = pd.DataFrame(0.0, index=probFinal.index,
@@ -2037,7 +2038,6 @@ class NGS:
               '=======================')
         print(f'Scale Enrichment Scores:\n'
               f'     {magenta}Enrichment Scores * ΔS{resetColor}\n')
-        print(f'ΔS:\n{self.entropy}\n\n')
 
         # Calculate: Letter heights
         heights = pd.DataFrame(0, index=matrix.index,
@@ -2343,7 +2343,6 @@ class NGS:
         print('============================= Calculate: Weblogo '
               '================================')
         print(f'Probability: {self.datasetTag}\n{probability}\n\n'
-              f'{self.entropy}\n\n'
               f'Max Entropy: {red}{self.entropyMax.round(6)}{resetColor}\n\n')
 
         # Calculate: Weblogo
@@ -4133,7 +4132,8 @@ class NGS:
 
 
 
-    def calculateEntropy(self, probability, combinedMotif=False):
+    def calculateEntropy(self, probability, fixFullFrame,
+                        combinedMotif=False):
         print('============================== Calculate: Entropy '
               '===============================')
         self.entropy = pd.DataFrame(0.0, index=probability.columns, columns=['ΔS'])
@@ -4149,6 +4149,9 @@ class NGS:
             self.entropy.loc[indexColumn, 'ΔS'] = self.entropyMax - S
         print(f'{self.entropy}\n\nMax Entropy: {self.entropyMax.round(6)}\n\n')
 
+        # Identify motif frame
+        self.identifyMotif(fixFullFrame=fixFullFrame)
+
         if self.plotFigEntropy:
             self.plotEntropy(entropy=self.entropy, combinedMotif=combinedMotif)
 
@@ -4157,8 +4160,6 @@ class NGS:
 
 
     def plotEntropy(self, entropy, combinedMotif=False):
-        print('================================= Plot: Entropy '
-              '=================================')
         if self.filterSubs:
             if combinedMotif:
                 title = f'{self.enzymeName}\nCombined {self.datasetTag}'
@@ -4166,8 +4167,6 @@ class NGS:
                 title = f'{self.enzymeName}\n{self.datasetTag}'
         else:
             title = f'{self.enzymeName}'
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f'{entropy}\n\n')
 
         # Figure parameters
         yMax = self.entropyMax + 0.2
@@ -4392,6 +4391,7 @@ class NGS:
             plt.show()
 
             if self.saveFigures:
+                print(self.minSubCount)
                 # Define: Save location
                 if datasetTag is None:
                     figLabel = (f'AA Distribution - {self.enzymeName} - '
@@ -4399,7 +4399,8 @@ class NGS:
                                 f'MinCounts {self.minSubCount}.png')
                 else:
                     if codonType == datasetTag:
-                        figLabel = f'AA Distribution - {codonType} Codon.png'
+                        figLabel = (f'AA Distribution - {codonType} Codon - '
+                                    f'Y Max {yMax}.png')
                     else:
                         figLabel = (f'AA Distribution - {self.enzymeName} - {datasetTag} - '
                                     f'{sortType} - Y Max {yMax} - {codonType} - '

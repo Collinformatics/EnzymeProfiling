@@ -11,19 +11,23 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'MMP7'
 inPathFolder = f'/path/{inEnzymeName}'
+inPathFolder = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
+inWordsOnly = True
+
 # Input 2: Computational Parameters
-inFixResidues = False
-inFixedResidue = ['Q']
-inFixedPosition = [4]
+inFixResidues = True
+inFixedResidue = ['L']
+inFixedPosition = [6]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
+inMinDeltaS = 0.6
 inPrintFixedSubs = True
 inShowSampleSize = True
 inEvaluateSubstrateEnrichment = False
@@ -31,23 +35,28 @@ inEvaluateSubstrateEnrichment = False
 # Input 3: Making Figures
 inPlotEntropy = True
 inPlotEnrichmentMap = True
-inPlotEnrichmentMapScaled = True
+inPlotEnrichmentMapScaled = False
 inPlotLogo = True
 inPlotWeblogo = True
+
+if inWordsOnly:
+    inPlotEntropy = False
+    inPlotEnrichmentMap = False
+    inPlotEnrichmentMapScaled = False
+    inPlotLogo = False
+    inPlotWeblogo = False
+
 inPlotWordCloud = True
-inPlotBarGraphs = True
+inPlotBarGraphs = False
 inPlotPCA = False
 inPlotSuffixTree = True
 inPlotCounts = False
-inPlotAADistribution = True
+inPlotAADistribution = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotPositionalProbDist = False # For understanding shannon entropy
 
 # Input 4: Inspecting The Data
 inPrintNumber = 10
-
-# Input 5: Motif Extraction
-inMinDeltaS = 0.55
 
 # Input 6: Plot Heatmap
 inShowEnrichmentScores = True
@@ -62,7 +71,7 @@ inBigLettersOnTop = False
 
 # Input 8: Word Cloud
 inLimitWords = True
-inTotalWords = 100
+inTotalWords = 50
 
 # Input 9: Bar Graphs
 inNSequences = 30
@@ -118,14 +127,14 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           filterSubs=inFixResidues, fixedAA=inFixedResidue, fixedPosition=inFixedPosition,
           excludeAAs=inExcludeResidues, excludeAA=inExcludedResidue,
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
-          figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
-          printNumber=inPrintNumber, showNValues=inShowSampleSize,
+          minEntropy=inMinDeltaS, figEMSquares=inShowEnrichmentAsSquares,
+          xAxisLabels=labelAAPos, printNumber=inPrintNumber, showNValues=inShowSampleSize,
           bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
           filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
           plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
           plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo, 
           plotFigWords=inPlotWordCloud,  wordLimit=inLimitWords, wordsTotal=inTotalWords, 
-          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotPCA=inPlotPCA, 
+          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotFigPCA=inPlotPCA,
           numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
@@ -213,26 +222,20 @@ probFinal = ngs.calculateProbabilities(counts=countsFinal, N=countsFinalTotal,
                                        fileType='Final Sort')
 
 # Calculate: Positional entropy
-entropy = ngs.calculateEntropy(probability=probFinal)
+entropy = ngs.calculateEntropy(probability=probFinal, fixFullFrame=True)
 
 # Calculate: Enrichment scores
 enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinal)
 
 if inPlotWordCloud or inPlotPCA:
-    # Extract motif
-    ngs.identifyMotif(entropy=entropy, minEntropy=inMinDeltaS, fixFullFrame=True)
     finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
 
     # Plot: Work cloud
     if inPlotWordCloud:
         if inFixResidues:
-            ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None,
-                              limitWords=inLimitWords, N=inTotalWords,
-                              saveTag=ngs.datasetTag)
+            ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None)
         else:
-            ngs.plotWordCloud(substrates=substratesFinal, indexSet=None,
-                              limitWords=inLimitWords, N=inTotalWords,
-                              saveTag='Unfiltered')
+            ngs.plotWordCloud(substrates=substratesFinal, indexSet=None)
 
     # Plot: PCA
     if inPlotPCA:
