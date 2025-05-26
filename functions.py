@@ -63,7 +63,6 @@ resetColor = '\033[0m'
 
 # =================================== Define Functions ===================================
 def filePaths(enzyme):
-    print(enzyme)
     if enzyme.lower() == 'eln' or enzyme.lower() == 'hne':
         enzyme = 'ELN'
         inFileNamesInitialSort = ['ELN-I_S1_L001', 'ELN-I_S1_L002']
@@ -200,7 +199,7 @@ class NGS:
         self.NSubsPCA = NSubsPCA
         self.plotSuffixTree = plotSuffixTree
         self.datasetTag = None
-        self.datasetTagInit = None
+        self.datasetTagMotif = None
         self.title = ''
         self.titleCombined = ''
         self.titleReleased = ''
@@ -780,15 +779,15 @@ class NGS:
             if customTag is None:
                 pathSubs = os.path.join(
                     self.pathSaveData,
-                    f'fixedMotifSubs - {self.enzymeName} - {self.datasetTagInit} - '
+                    f'fixedMotifSubs - {self.enzymeName} - {self.datasetTagMotif} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
                 pathCounts = os.path.join(
                     self.pathSaveData,
-                    f'fixedMotifCounts - {self.enzymeName} - {self.datasetTagInit} - '
+                    f'fixedMotifCounts - {self.enzymeName} - {self.datasetTagMotif} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
                 pathCountsReleased = os.path.join(
                     self.pathSaveData,
-                    f'fixedMotifCountsRel - {self.enzymeName} - {self.datasetTagInit} - '
+                    f'fixedMotifCountsRel - {self.enzymeName} - {self.datasetTagMotif} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
                 paths = [pathSubs, pathCounts, pathCountsReleased]
             else:
@@ -1327,9 +1326,9 @@ class NGS:
 
     def saveFigure(self, fig, figType, combinedMotif=False, releasedCounts=False):
         # Define: Save location
-        if self.motifFilter:
+        if self.motifFilter and not releasedCounts:
             figLabel = (f'{self.enzymeName} - {figType} '
-                        f'{self.saveFigureIteration} - {self.datasetTagInit} - '
+                        f'{self.saveFigureIteration} - {self.datasetTagMotif} - '
                         f'MinCounts {self.minSubCount}.png')
         elif combinedMotif and releasedCounts:
             figLabel = (f'{self.enzymeName} - {figType} - '
@@ -1340,15 +1339,14 @@ class NGS:
                             f'Combined {self.datasetTag} - '
                             f'N {self.nSubsFinal} - MinCounts {self.minSubCount}.png')
         elif releasedCounts:
-            figLabel = (f'{self.enzymeName} -  {figType} Released Counts - '
-                        f'{self.motifTag} - MinCounts {self.minSubCount}.png')
+            figLabel = (f'{self.enzymeName} - {figType} Released Counts - '
+                        f'{self.datasetTagMotif} - MinCounts {self.minSubCount}.png')
         else:
             figLabel = (f'{self.enzymeName} - {figType} - '
                         f'{self.datasetTag} - '
                         f'N {self.nSubsFinal} - MinCounts {self.minSubCount}.png')
         saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-        print(f'Label:\n{figLabel}\n')
-        # sys.exit()
+
 
         # Save figure
         if os.path.exists(saveLocation):
@@ -1382,36 +1380,36 @@ class NGS:
         # Set figure titles
         if len(self.motifIndexExtracted) > 1:
             self.titleReleased = (f'{self.enzymeName}\n'
-                                  f'Combined {self.datasetTagInit}\n'
+                                  f'Combined {self.datasetTagMotif}\n'
                                   f'Released Counts')
         else:
             self.titleReleased = (f'{self.enzymeName}\n'
-                                  f'{self.datasetTagInit}\n'
+                                  f'{self.datasetTagMotif}\n'
                                   f'Released Counts')
         if self.showSampleSize:
             self.title = (f'{self.enzymeName}\n'
                           f'N Unsorted = {self.nSubsInitial:,}\n'
                           f'N Sorted = {self.nSubsFinal:,}')
             self.titleCombined = (f'{self.enzymeName}\n'
-                                  f'Combined {self.datasetTagInit}\n'
+                                  f'Combined {self.datasetTagMotif}\n'
                                   f'N Unsorted = {self.nSubsInitial:,}\n'
                                   f'N Sorted = {self.nSubsFinal:,}')
             self.titleWeblogo = f'{self.enzymeName}\nN = {self.nSubsFinal:,}'
             self.titleWeblogoCombined = (f'{self.enzymeName}\n'
-                                         f'Combined {self.datasetTagInit}\n'
+                                         f'Combined {self.datasetTagMotif}\n'
                                          f'N = {self.nSubsFinal:,}')
         else:
             self.title = f'{self.enzymeName}'
             self.titleWeblogo = f'{self.enzymeName}'
             self.titleWeblogoCombined = (f'{self.enzymeName}\n'
-                                         f'Combined {self.datasetTagInit}')
+                                         f'Combined {self.datasetTagMotif}')
         if self.filterSubs:
             if self.motifFilter:
                 self.titleWords = f'{self.enzymeName}\nMotif {self.motifTag}'
             else:
-                self.titleWords = f'{self.enzymeName}\n{self.datasetTagInit}'
+                self.titleWords = f'{self.enzymeName}\n{self.datasetTagMotif}'
                 self.titleWordsCombined = (f'{self.enzymeName}\n'
-                                           f'Combined {self.datasetTagInit}')
+                                           f'Combined {self.datasetTagMotif}')
         else:
             self.titleWords = f'{self.enzymeName}\nUnfiltered'
 
@@ -1780,9 +1778,8 @@ class NGS:
     
         # Define: Dataset Label
         if self.initialize:
-            self.datasetTagInit = self.datasetTag
+            self.datasetTagMotif = self.datasetTag
             self.initialize = False
-        self.motifTag = self.datasetTag
 
         return self.datasetTag
 
