@@ -4163,8 +4163,8 @@ class NGS:
 
 
 
-    def calculateEntropy(self, probability, fixFullFrame=None,
-                        combinedMotifs=False):
+    def calculateEntropy(self, probability, fixFullFrame=None, combinedMotifs=False,
+                         releasedCounts=False):
         print('============================== Calculate: Entropy '
               '===============================')
         self.entropy = pd.DataFrame(0.0, index=probability.columns, columns=['ΔS'])
@@ -4185,20 +4185,22 @@ class NGS:
             self.identifyMotif(fixFullFrame=fixFullFrame)
 
         if self.plotFigEntropy:
-            self.plotEntropy(entropy=self.entropy, combinedMotifs=combinedMotifs)
+            self.plotEntropy(entropy=self.entropy, combinedMotifs=combinedMotifs,
+                             releasedCounts=releasedCounts)
 
         return self.entropy
 
 
 
-    def plotEntropy(self, entropy, combinedMotifs=False):
+    def plotEntropy(self, entropy, combinedMotifs=False, releasedCounts=False):
         if self.filterSubs:
-            if combinedMotifs:
-                title = f'{self.enzymeName}\nCombined {self.datasetTag}'
-            else:
-                title = f'{self.enzymeName}\n{self.datasetTag}'
+            title = f'{self.enzymeName}\n{self.datasetTag}'
         else:
             title = f'{self.enzymeName}'
+        if combinedMotifs:
+            title = title.replace(self.datasetTag, f'Combined {self.datasetTag}')
+        if releasedCounts:
+            title = title.replace(self.datasetTag, f'Released {self.datasetTag}')
 
         # Figure parameters
         yMax = self.entropyMax + 0.2
@@ -4280,17 +4282,17 @@ class NGS:
         if self.saveFigures:
             # Define: Save location
             if self.filterSubs:
-                if combinedMotifs:
-                    figLabel = (f'{self.enzymeName} - Entropy - '
-                                f'Combined {self.datasetTag} - '
-                                f'MinCounts {self.minSubCount}.png')
-                else:
-
-                    figLabel = (f'{self.enzymeName} - Entropy - '
-                                f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+                figLabel = (f'{self.enzymeName} - Entropy - '
+                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
             else:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
                             f'Unfiltered - MinCounts {self.minSubCount}.png')
+            if combinedMotifs:
+                figLabel = figLabel.replace(
+                    self.datasetTag, f'Combined {self.datasetTag}')
+            if releasedCounts:
+                figLabel = figLabel.replace(self.datasetTag,
+                                            f'Released {self.datasetTag}')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure

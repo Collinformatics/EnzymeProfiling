@@ -24,13 +24,13 @@ inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
-inMotifPositions = ['P3', 'P2', 'P1', 'P1\''] # , 'P2\''
+inMotifPositions = ['P3', 'P2', 'P1', 'P1\'', 'P2\''] #
 inIndexNTerminus = 1 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
 inFixedResidue = ['L']
-inFixedPosition = [3, 4, 6]
+inFixedPosition = [3, 4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -46,6 +46,7 @@ inPlotLogo = True
 inPlotWeblogo = True
 inPlotMotifEnrichment = True
 inPlotMotifEnrichmentNBars = True
+inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
     inPlotEnrichmentMap = False
@@ -54,7 +55,7 @@ if inPlotOnlyWords:
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
-inPlotWordCloud = False
+    inPlotWordCloud = True
 inPlotBarGraphs = False
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
@@ -860,13 +861,16 @@ countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
 
 
 # Calculate: RF
-probCombinedMotif = ngs.calculateProbabilitiesCM(countsCombinedMotifs=countsRelCombined)
+probCombinedReleasedMotif = ngs.calculateProbabilitiesCM(
+    countsCombinedMotifs=countsRelCombined)
 
 # Calculate: Positional entropy
-ngs.calculateEntropy(probability=probCombinedMotif)
+ngs.calculateEntropy(probability=probCombinedReleasedMotif,
+                     combinedMotifs=combinedMotifs,
+                     releasedCounts=True)
 
 # Calculate enrichment scores
-ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
+ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedReleasedMotif,
                         combinedMotifs=combinedMotifs, releasedCounts=True)
 
 
@@ -880,7 +884,7 @@ probMotif = ngs.calculateProbabilities(counts=motifCountsFinal, N=motifsCountsTo
                                        fileType='Final Sort')
 
 # Calculate: Positional entropy
-ngs.calculateEntropy(probability=probMotif)
+ngs.calculateEntropy(probability=probMotif, combinedMotifs=combinedMotifs)
 
 # Calculate: AA Enrichment
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
