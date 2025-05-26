@@ -24,13 +24,13 @@ inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
-inMotifPositions = ['P3', 'P2', 'P1', 'P1\'', 'P2\''] #
+inMotifPositions = ['P3', 'P2', 'P1', 'P1\''] # , 'P2\''
 inIndexNTerminus = 1 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
-inPlotOnlyWords = False
+inPlotOnlyWords = True
 inFixedResidue = ['L']
-inFixedPosition = [3, 4]
+inFixedPosition = [3, 4, 6]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -54,7 +54,7 @@ if inPlotOnlyWords:
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
-inPlotWordCloud = True
+inPlotWordCloud = False
 inPlotBarGraphs = False
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
@@ -842,15 +842,15 @@ motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
     motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
 # Get dataset tag
-ngs.getDatasetTag(combinedMotif=True)
+ngs.getDatasetTag(combinedMotifs=True)
 
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
 
 # Evaluate dataset
-combinedMotif = False
+combinedMotifs = False
 if len(ngs.motifIndexExtracted) > 1:
-    combinedMotif = True
+    combinedMotifs = True
 
 
 # # Evaluate: Count Matrices
@@ -867,7 +867,7 @@ ngs.calculateEntropy(probability=probCombinedMotif)
 
 # Calculate enrichment scores
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedMotif,
-                        combinedMotif=combinedMotif, releasedCounts=True)
+                        combinedMotifs=combinedMotifs, releasedCounts=True)
 
 
 # # Evaluate: Motif Sequences
@@ -884,11 +884,11 @@ ngs.calculateEntropy(probability=probMotif)
 
 # Calculate: AA Enrichment
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
-                        combinedMotif=combinedMotif)
+                        combinedMotifs=combinedMotifs)
 
 ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
                       motifs=motifs, subLabel=inMotifPositions,
-                      combinedMotif=combinedMotif)
+                      combinedMotifs=combinedMotifs)
 
 sys.exit()
 
@@ -1000,21 +1000,8 @@ if (inPlotBarGraphs or inPlotBinnedSubstrateES
     
     # Plot: Motifs
     if inPlotBarGraphs:
-        ngs.plotBinnedSubstrates(
-            substrates=motifs, countsTotal=motifsTotal,
-            datasetTag=ngs.labelCombinedMotifs, dataType='Counts',
-            title=f'{inEnzymeName}\n{ngs.labelCombinedMotifs}\n'
-                  f'Top {inPlotBinnedSubNumber} Substrates',
-            numDatapoints=inPlotBinnedSubNumber,
-            barColor=inBarColor, barWidth=inBarWidth)
-
-        ngs.plotBinnedSubstrates(
-            substrates=motifs, countsTotal=frameTotalCountsFinal,
-            datasetTag=ngs.labelCombinedMotifs, dataType='Probability',
-            title=f'{inEnzymeName}\n{ngs.labelCombinedMotifs}\n'
-                  f'Top {inPlotBinnedSubNumber} Substrates',
-            numDatapoints=inPlotBinnedSubNumber,
-            barColor=inBarColor, barWidth=inBarWidth)
+        print(f'{orange}Warning: This part of the script has not been written\n'
+              f'# Plot: Motifs\nif inPlotBarGraphs:{resetColor}\n\n')
 
     if (inPlotBarGraphs or inPlotEnrichmentMap or inPlotLogo
             or inPredictSubstrateActivityPCA or inPlotWordCloud):
