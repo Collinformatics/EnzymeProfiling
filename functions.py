@@ -193,7 +193,7 @@ class NGS:
         self.plotFigLogo = plotFigLogo
         self.plotFigWebLogo = plotFigWebLogo
         self.plotFigMotifEnrich = plotFigMotifEnrich
-        self.plotFigMotifEnrichSelect = plotFigMotifEnrichSelect
+        self.plotFigMotifEnrichSelect = plotFigMotifEnrich # plotFigMotifEnrichSelect
         self.plotFigWords = plotFigWords
         self.wordsLimit = wordLimit
         self.wordsTotal = wordsTotal
@@ -2671,7 +2671,7 @@ class NGS:
             xTicks = np.arange(0, xMax + step, step)
             ax.set_xticks(xTicks)
             ax.set_xticklabels(xTicks)
-            ax.set_xlim(left=-div * 2, right=max(xTicks))
+            ax.set_xlim(left=-NSubs/30, right=xTicks[-1])
 
             # Set the edge color
             for bar in bars:
@@ -4201,6 +4201,8 @@ class NGS:
             title = title.replace(self.datasetTag, f'Combined {self.datasetTag}')
         if releasedCounts:
             title = title.replace(self.datasetTag, f'Released {self.datasetTag}')
+        print(releasedCounts)
+        print(title)
 
         # Figure parameters
         yMax = self.entropyMax + 0.2
