@@ -11,17 +11,17 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'MMP7'
+inEnzymeName = 'Mpro2'
 inPathFolder = f'/path/{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.64
+inMinDeltaS = 0.6
 inRefixMotif = True
-inFixedResidue = ['L'] # Only use 1 AA
-inFixedPosition = [3]
+inFixedResidue = ['Q'] # Only use 1 AA
+inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
