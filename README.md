@@ -22,7 +22,7 @@ When a figure has been plotted, and it is selected, press a key for the followin
 
 - R: Rerun the script
 
-- Backspace: Terminate the script that is currently running
+- E: End the script that is currently running
 
 Note:
 
