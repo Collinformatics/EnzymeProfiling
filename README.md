@@ -20,9 +20,9 @@ When a figure has been plotted, and it is selected, press a key for the followin
 
 - Esc: Close the current figure
 
-- R: Rerun the script
-
 - E: End the script that is currently running
+
+- R: Rerun the script
 
 Note:
 
