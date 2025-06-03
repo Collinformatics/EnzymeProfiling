@@ -750,7 +750,7 @@ class NGS:
                                       columns=['Total Counts'],
                                       index=self.xAxisLabels)
 
-        # Print counts
+        # Print: Counts
         columnSumsFormated = columnSums.apply(lambda col: col.map(includeCommas)).copy()
         print(f'{columnSumsFormated}\n')
         countedDataPrint = countedData.apply(lambda col: col.map(includeCommas))
@@ -884,7 +884,7 @@ class NGS:
                 formatters={column: '{:,.0f}'.format for column in
                             data.select_dtypes(include='number').columns})
 
-            # Print counts
+            # Print: Counts
             substrateCounts = sum(data.iloc[:, 0])
             totalCounts += substrateCounts
             print(f'Counts: {greenLightB}{fileName}{resetColor}\n'
@@ -956,7 +956,7 @@ class NGS:
         # Sort loaded data
         substrates = dict(sorted(substrates.items(), key=lambda x: x[1], reverse=True))
 
-        # Print loaded data substrates
+        # Print: Loaded data substrates
         print(f'Loaded Data: {purple}{fileType}{resetColor}')
         iteration = 0
         for substrate, count in substrates.items():
@@ -1138,7 +1138,7 @@ class NGS:
             formatters={column: '{:,.0f}'.format for column in
                         totalCountsFixedFrame.select_dtypes(include='number').columns})
 
-        # Print the data
+        # Print: Counts
         print(f'{pink}Combined Counts{resetColor}: {purple}{self.enzymeName} - '
               f'{self.datasetTag}{resetColor}\n{formattedCounts}\n')
         print('Total Counts:')
@@ -1211,7 +1211,7 @@ class NGS:
                     startSub = startPosition
                     endSub = motifIndex[-1]
 
-                # Print loaded data
+                # Print: Loaded data
                 iteration = 0
                 print(f'Loaded Substrates: {purple}{motifTag}{resetColor}')
                 print(f'     Motif Indices: {blue}{self.xAxisLabels[startSub]}-'
@@ -1338,10 +1338,10 @@ class NGS:
         elif combinedMotifs and releasedCounts:
             figLabel = (f'{self.enzymeName} - {figType} - '
                         f'Combined Released Counts {self.datasetTag} - '
-                        f'MinCounts {self.minSubCount}.png')
+                        f'{self.motifLen} AA - MinCounts {self.minSubCount}.png')
         elif combinedMotifs:
                 figLabel = (f'{self.enzymeName} - {figType} - '
-                            f'Combined {self.datasetTag} - '
+                            f'Combined {self.datasetTag} - {self.motifLen} AA - '
                             f'N {self.nSubsFinal} - MinCounts {self.minSubCount}.png')
         elif releasedCounts:
             figLabel = (f'{self.enzymeName} - {figType} Released Counts - '
@@ -1486,7 +1486,7 @@ class NGS:
                    for c, s in zip(codonSeq, combination)):
                 codons.append(''.join(combination))
 
-            # Print all possible codon combinations
+            # Print: All possible codon combinations
             for index, codon in enumerate(codons, 1):
                 print(f'Codon {index}: {codon}')
             print('')
@@ -1650,7 +1650,7 @@ class NGS:
             if not row.isnull().all():
                 outliersFinal.append(index)
 
-        # Print the outliers
+        # Print: Outliers
         if len(outliersInitial) != 0:
             print(f'Outliers: {purple}Initial Sort{resetColor}')
             for outlierPosition in outliersInitial:
@@ -1893,7 +1893,7 @@ class NGS:
         rankedFixedSubstrates = dict(sorted(fixedSubs.items(),
                                             key=lambda x: x[1], reverse=True))
 
-        # Print fixed substrates
+        # Print: Fixed substrates
         if printRankedSubs:
             iteration = 0
             fixedUniqueSubsTotal = len(rankedFixedSubstrates)
@@ -1976,7 +1976,7 @@ class NGS:
         indexEnd = max(self.motifIndex) + 1
         print(f'Motif Indices: {purple}{self.datasetTag}{resetColor}\n')
 
-        # Print data
+        # Print: Data
         iteration = 0
         print(f'Substrates:')
         for substrate, count in substrates.items():
@@ -2000,7 +2000,7 @@ class NGS:
         self.motifLen = len(next(iter(motifs)))
         motifs = dict(sorted(motifs.items(), key=lambda x: x[1], reverse=True))
 
-        # Print data
+        # Print: Data
         iteration = 0
         print(f'Motifs:')
         for motif, count in motifs.items():
@@ -2228,7 +2228,7 @@ class NGS:
         else:
             title = self.title
 
-        # Print data
+        # Print: Data
         if self.motifFilter:
             print(f'Figure Number: '
                   f'{magenta}{self.saveFigureIteration}{resetColor}')
@@ -2907,6 +2907,7 @@ class NGS:
         subsFinal = dict(sorted(subsFinal.items(),
                                       key=lambda x: x[1], reverse=True))
 
+        # Print: Substrates
         iteration = 0
         print(f'Substrates: {magenta}Final Sort{resetColor}')
         for substrate, count in subsFinal.items():
@@ -2931,6 +2932,7 @@ class NGS:
             if countInit == 1:
                 totalCountsInitAdj += countInit
             ratios[substrate] = count / countInit
+
 
         # Sort collected substrates and add to the list
         ratios = dict(sorted(ratios.items(), key=lambda x: x[1], reverse=True))
@@ -3416,7 +3418,7 @@ class NGS:
                                             key=lambda x: x[1], reverse=True))
                 collectedSubs.append(collectionSet)
 
-                # Print collected substrates
+                # Print: Collected substrates
                 for substrate, score in collectionSet.items():
                     if isinstance(score, float):
                         print(f'     {blue}{substrate}{resetColor}, '
@@ -3660,7 +3662,7 @@ class NGS:
                           f'{resetColor}')
                     totalSubstratesInitial += count
             iteration = 0
-            # Print dataset totals
+            # Print: Dataset totals
             print(f'\n     Total substrates {purple}Initial Sort{resetColor}:'
                   f'{red} {totalSubstratesInitial:,}{resetColor}\n'
                   f'     Unique substrates {purple}Initial Sort{resetColor}:'
@@ -3689,7 +3691,7 @@ class NGS:
                           f'Counts: {red}{count:,}{resetColor}')
                     totalsubstrates += count
             iteration = 0
-            # Print dataset totals
+            # Print: Dataset totals
             print(f'\n     Total substrates {purple}Final Sort{resetColor}:'
                   f'{red} {totalsubstrates:,}{resetColor}\n'
                   f'     Unique substrates {purple}Final Sort{resetColor}:'
@@ -3785,7 +3787,7 @@ class NGS:
         enrichedSubs = dict(sorted(enrichedSubs.items(),
                                    key=lambda x: x[1], reverse=True))
 
-        # Print top enriched substrates
+        # Print: top enriched substrates
         print(f'{purple}Enriched substrates{resetColor}:')
         for substrate, score in enrichedSubs.items():
             if iteration < self.printNumber:
@@ -3859,7 +3861,7 @@ class NGS:
                       f'Any data returned from this function that will be used for further '
                       f'analysis\nwill include the complete dataset\n\n')
 
-            # Print the sample sizes
+            # Print: Sample sizes
             print(f'{greyDark}Dataset Size{resetColor}:\n'
                   f'     Initial Substrates:{red} {len(initialSubsDF):,}{resetColor}\n'
                   f'     Final Substrates:{red} {len(finalSubsDF):,}{resetColor}\n'
@@ -4017,7 +4019,7 @@ class NGS:
         indexStart = min(indexSubFrame)
         indexEnd = max(indexSubFrame)
 
-        # Print substrates
+        # Print: Substrates
         iteration = 0
         substrates = dict(sorted(substrates.items(), key=lambda item: item[1],
                                  reverse=True))
@@ -4070,14 +4072,14 @@ class NGS:
         motifTrie = dict(sorted(motifTrie.items(), key=lambda item: item[1],
                                 reverse=True))
 
-        # Print motifs
+        # Print: Motifs
         print(f'Extracted Motifs:')
         for index, (motif, count) in enumerate(motifs.items()):
             print(f'{index+1}:{blue} {motif}{resetColor} '
                   f'Count:{red} {count:,}{resetColor}')
         print('\n')
 
-        # Print trie
+        # Print: Trie
         print(f'Extracted Trie:')
         for index, (seq, count) in enumerate(motifTrie.items()):
             print(f'{index + 1}:{pink} {seq}{resetColor} '
@@ -4295,6 +4297,9 @@ class NGS:
             if releasedCounts:
                 figLabel = figLabel.replace(self.datasetTag,
                                             f'Released {self.datasetTag}')
+            if self.motifLen is not None:
+                figLabel = figLabel.replace('- MinCounts',
+                                            f'- {self.motifLen} AA - MinCounts')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
@@ -4809,7 +4814,7 @@ class NGS:
             # print(f'Start:{red} {startSub}{resetColor}\n'
             #       f'Stop:{red} {endSub}{resetColor}\n\n')
 
-            # Print substrates
+            # Print: Substrates
             print(f'Fixed Motif: {purple}{self.fixedAA[0]}@{self.fixedPos[index]}'
                   f'{resetColor}')
             iteration = 0
@@ -4835,7 +4840,7 @@ class NGS:
         # Sort the dictionary
         motifs = dict(sorted(motifs.items(), key=lambda item: item[1], reverse=True))
 
-        # Print binned substrates
+        # Print: Binned substrates
         iteration = 0
         print(f'Binned Substrates{resetColor}: {purple}{datasetTag}{resetColor}')
         for substrate, count in motifs.items():
@@ -4906,7 +4911,7 @@ class NGS:
             if node is None:
                 return
 
-            # Print the current node's path and level
+            # Print: Current node's path and level
             print("  " * level + f"Level {level}: {path}")
 
             # Recursively print all children of the current node
@@ -4921,7 +4926,6 @@ class NGS:
 
         # Evaluate: Partial sequence counts
         subtreeCount = {}
-        self.motifLen = len(next(iter(substrates)))
         motifLength = len(next(iter(motifTrie)))
         for index in range(motifLength):
             for motif, count in motifTrie.items():
