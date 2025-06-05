@@ -1329,27 +1329,29 @@ class NGS:
 
 
 
-    def saveFigure(self, fig, figType, combinedMotifs=False, releasedCounts=False):
+    def saveFigure(self, fig, figType, seqLen, combinedMotifs=False, releasedCounts=False):
         # Define: Save location
         if self.motifFilter and not releasedCounts:
             figLabel = (f'{self.enzymeName} - {figType} '
                         f'{self.saveFigureIteration} - {self.datasetTagMotif} - '
-                        f'MinCounts {self.minSubCount}.png')
+                        f'{seqLen} AA - MinCounts {self.minSubCount}.png')
         elif combinedMotifs and releasedCounts:
             figLabel = (f'{self.enzymeName} - {figType} - '
                         f'Combined Released Counts {self.datasetTag} - '
-                        f'{self.motifLen} AA - MinCounts {self.minSubCount}.png')
+                        f'{seqLen} AA - MinCounts {self.minSubCount}.png')
         elif combinedMotifs:
                 figLabel = (f'{self.enzymeName} - {figType} - '
-                            f'Combined {self.datasetTag} - {self.motifLen} AA - '
+                            f'Combined {self.datasetTag} - {seqLen} AA - '
                             f'N {self.nSubsFinal} - MinCounts {self.minSubCount}.png')
         elif releasedCounts:
             figLabel = (f'{self.enzymeName} - {figType} Released Counts - '
-                        f'{self.datasetTagMotif} - MinCounts {self.minSubCount}.png')
+                        f'{self.datasetTagMotif} - {seqLen} AA - '
+                        f'MinCounts {self.minSubCount}.png')
         else:
             figLabel = (f'{self.enzymeName} - {figType} - '
                         f'{self.datasetTag} - '
-                        f'N {self.nSubsFinal} - MinCounts {self.minSubCount}.png')
+                        f'N {self.nSubsFinal} - {seqLen} AA - '
+                        f'MinCounts {self.minSubCount}.png')
         saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
 
@@ -2102,13 +2104,10 @@ class NGS:
 
         # Define: Figure title
         if releasedCounts:
-            print(1)
             title = self.titleReleased
         elif combinedMotifs:
-            print(2)
             title = self.titleCombined
         else:
-            print(3)
             title = self.title
 
 
@@ -2212,8 +2211,8 @@ class NGS:
                 print(f'{orange}ERROR: What do I do with this dataset type -'
                       f'{cyan} {dataType}{resetColor}\n')
                 sys.exit(1)
-            self.saveFigure(fig=fig, figType=datasetType, combinedMotifs=combinedMotifs,
-                            releasedCounts=releasedCounts)
+            self.saveFigure(fig=fig, figType=datasetType, seqLen=len(xTicks),
+                            combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
 
 
@@ -2336,8 +2335,8 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Logo'
-            self.saveFigure(fig=fig, figType=datasetType, combinedMotifs=combinedMotifs,
-                            releasedCounts=releasedCounts)
+            self.saveFigure(fig=fig, figType=datasetType,  seqLen=len(xTicks),
+                            combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
 
 
@@ -2470,8 +2469,8 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Weblogo'
-            self.saveFigure(fig=fig, figType=datasetType, combinedMotifs=combinedMotifs,
-                            releasedCounts=releasedCounts)
+            self.saveFigure(fig=fig, figType=datasetType, seqLen=len(xTicks),
+                            combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
 
 
@@ -2933,6 +2932,8 @@ class NGS:
                 totalCountsInitAdj += countInit
             ratios[substrate] = count / countInit
 
+        print(f'Motif Indices: {self.motifIndexExtracted}\n')
+        # sys.exit()
 
         # Sort collected substrates and add to the list
         ratios = dict(sorted(ratios.items(), key=lambda x: x[1], reverse=True))
@@ -4196,15 +4197,14 @@ class NGS:
 
     def plotEntropy(self, entropy, combinedMotifs=False, releasedCounts=False):
         if self.filterSubs:
-            title = f'{self.enzymeName}\n{self.datasetTag}'
+            title = f'\n\n{self.enzymeName}\n{self.datasetTag}'
         else:
-            title = f'{self.enzymeName}'
+            title = f'\n\n\n{self.enzymeName}'
         if combinedMotifs:
             title = title.replace(self.datasetTag, f'Combined {self.datasetTag}')
         if releasedCounts:
             title = title.replace(self.datasetTag, f'Released {self.datasetTag}')
-        print(releasedCounts)
-        print(title)
+
 
         # Figure parameters
         yMax = self.entropyMax + 0.2
@@ -4227,14 +4227,16 @@ class NGS:
         cMap = [colorBar(normalize(value)) for value in entropy['ΔS'].astype(float)]
 
         # Plotting the entropy values as a bar graph
-        fig, ax = plt.subplots(figsize=self.figSizeMini)
+        fig, ax = plt.subplots(figsize=self.figSize)
         plt.bar(entropy.index, entropy['ΔS'], color=cMap,
                 edgecolor='black', linewidth=self.lineThickness, width=0.8)
         plt.xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         plt.ylabel('ΔS', fontsize=self.labelSizeAxis, rotation=0, labelpad=15)
-        plt.title(title, fontsize=self.labelSizeTitle,
-                  fontweight='bold')
-        plt.subplots_adjust(top=0.898, bottom=0.098, left=0.121, right=0.917)
+        plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.subplots_adjust(top=0.852, bottom=0.075, left=0.12, right=0.9)
+        # self.figSizeMini
+        # plt.subplots_adjust(top=0.898, bottom=0.098, left=0.121, right=0.917)
+
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -4282,24 +4284,24 @@ class NGS:
         else:
             plt.show()
 
+
         # Save the figure
         if self.saveFigures:
             # Define: Save location
             if self.filterSubs:
                 figLabel = (f'{self.enzymeName} - Entropy - '
-                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+                            f'{self.datasetTag} - {len(xTicks)} AA - '
+                            f'MinCounts {self.minSubCount}.png')
             else:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
-                            f'Unfiltered - MinCounts {self.minSubCount}.png')
+                            f'Unfiltered - {len(xTicks)} AA - '
+                            f'MinCounts {self.minSubCount}.png')
             if combinedMotifs:
                 figLabel = figLabel.replace(
                     self.datasetTag, f'Combined {self.datasetTag}')
             if releasedCounts:
                 figLabel = figLabel.replace(self.datasetTag,
                                             f'Released {self.datasetTag}')
-            if self.motifLen is not None:
-                figLabel = figLabel.replace('- MinCounts',
-                                            f'- {self.motifLen} AA - MinCounts')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
@@ -4666,8 +4668,8 @@ class NGS:
 
         # Save the figure
         if self.saveFigures:
-            self.saveFigure(fig=fig, figType=dataType, combinedMotifs=combinedMotifs,
-                            releasedCounts=releasedCounts)
+            self.saveFigure(fig=fig, figType=dataType, seqLen=len(xTicks),
+                            combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
 
 
