@@ -13,11 +13,11 @@ from Bio import BiopythonWarning
 
 
 # ===================================== User Inputs ======================================
-# Input 1: File Location Information 'Mpro2-I_S1_L001_R1_001',
-inFileName = ['Mpro2-I_S1_L001_R2_001',
-              'Mpro2-I_S1_L002_R1_001', 'Mpro2-I_S1_L002_R2_001',
-              'Mpro2-I_S1_L003_R1_001', 'Mpro2-I_S1_L003_R2_001',
-              'Mpro2-I_S1_L004_R1_001', 'Mpro2-I_S1_L004_R2_001']
+# Input 1: File Location Information
+inFileName = ['Mpro2-R4_S3_L001_R1_001', 'Mpro2-R4_S3_L001_R2_001',
+              'Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L002_R2_001',
+              'Mpro2-R4_S3_L003_R1_001', 'Mpro2-R4_S3_L003_R2_001',
+              'Mpro2-R4_S3_L004_R1_001', 'Mpro2-R4_S3_L004_R2_001']
 inEnzymeName = inFileName[0].split('-')[0]
 inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
