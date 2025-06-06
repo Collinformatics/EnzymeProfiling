@@ -1939,18 +1939,18 @@ class NGS:
         if fixFullFrame:
             for indexPos, position in enumerate(self.entropy.index):
                 if indexPos == 0 or indexPos == lastPosition:
-                    if self.entropy.loc[position, 'ΔS'] < self.minEntropy:
+                    if self.entropy.loc[position, 'ΔS'] <= self.minEntropy:
                         subFrame.drop(position, inplace=True)
                 else:
                     if self.entropy.loc[position, 'ΔS'] < self.minEntropy:
-                        if (self.entropy.iloc[indexPos - 1, 0] > self.minEntropy and
-                                self.entropy.iloc[indexPos + 1, 0] > self.minEntropy):
+                        if (self.entropy.iloc[indexPos - 1, 0] >= self.minEntropy and
+                                self.entropy.iloc[indexPos + 1, 0] >= self.minEntropy):
                             pass
                         else:
                             subFrame.drop(position, inplace=True)
         else:
             for indexPos, position in enumerate(self.entropy.index):
-                if self.entropy.loc[position, 'ΔS'] < self.minEntropy:
+                if self.entropy.loc[position, 'ΔS'] <= self.minEntropy:
                     subFrame.drop(position, inplace=True)
 
         # Sort the frame
@@ -2335,7 +2335,7 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Logo'
-            self.saveFigure(fig=fig, figType=datasetType,  seqLen=len(xTicks),
+            self.saveFigure(fig=fig, figType=datasetType,  seqLen=len(data.columns),
                             combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
 
@@ -2469,7 +2469,7 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Weblogo'
-            self.saveFigure(fig=fig, figType=datasetType, seqLen=len(xTicks),
+            self.saveFigure(fig=fig, figType=datasetType, seqLen=len(self.weblogo.columns),
                             combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
 
@@ -4236,7 +4236,6 @@ class NGS:
         plt.subplots_adjust(top=0.852, bottom=0.075, left=0.12, right=0.9)
         # self.figSizeMini
         # plt.subplots_adjust(top=0.898, bottom=0.098, left=0.121, right=0.917)
-
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
