@@ -24,7 +24,7 @@ class NN:
 
 
 
-def ESM(substrates, subLabel, useSubCounts=True):
+def ESM(substrates, subLabel):
     print('=========================== Convert To Numerical: ESM '
           '===========================')
     print(f'Dataset: {purple}Template{resetColor}\n\n'
