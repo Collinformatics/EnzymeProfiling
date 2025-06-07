@@ -1,9 +1,12 @@
+import cudf
 import esm
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import GradientBoostingRegressor
 import sys
 import torch
 import time
+from xgboost import XGBRegressor, XGBRFRegressor, DMatrix
 
 
 
@@ -44,7 +47,7 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 # Set device
-print('\n''============================== Set Training Device '
+print('============================== Set Training Device '
       '==============================')
 if torch.cuda.is_available():
     device = 'cuda:0'
@@ -66,43 +69,55 @@ class CNN:
 
 
 class RandomForestRegressor:
-    def __init__(self, dfTrain, dfTest):
-        from xgboost import XGBRFRegressor
-
+    def __init__(self, dfTrain, dfTest, getSHAP=False):
         print('=========================== Random Forrest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}')
 
         # Record the embeddings for the predicted substrates
-        self.predSubEmbeddings = dfTest
+        self.dTest = DMatrix(dfTest)
 
         # Process dataframe
         x = dfTrain.drop(columns='activity').values
         y = np.log1p(dfTrain['activity'].values)
 
+
         # Train the model
         start = time.time()
-        self.model = XGBRFRegressor(device=device)
+        self.model = XGBRFRegressor(device=device, tree_method="hist")
         self.model.fit(x, y)
         end = time.time()
-        runtime = (end - start) * 100
+        runtime = (end - start) * 1000
         print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        self.predActivity()
 
-    def predActivity(self):
+        if getSHAP:
+            # Get: SHAP values
+            booster = self.model.get_booster()
+            booster.set_param({'device': device})
+            shapValues = booster.predict(self.dTest, pred_contribs=True)
+            shapInteractionValues = booster.predict(self.dTest, pred_interactions=True)
+            print(f'Shap Values:\n{shapValues}\n\n'
+                  f'Interaction Values:\n{shapInteractionValues}\n\n')
+
+
+        # Predict with the model
         print(f'Predicting Activity')
-        activityPred = self.model.predict(self.predSubEmbeddings)
+        start = time.time()
+        activityPred = self.model.predict(dfTest)
+        # activityPred = inplace_predict(self.model, self.dTest)
         activityPred = np.expm1(activityPred)  # Reverse log1p transform
-        print(activityPred)
-        sys.exit()
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'Predicted Activity:\n'
+              f'{activityPred}')
+        print(f'Testing time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
+        sys.exit()
 
 
 class GradBoostingRegressor:
     def __init__(self, dfTrain, dfTest):
-        from sklearn.ensemble import GradientBoostingRegressor
-
         print('========================== Gradient Boosting Regressor '
               '==========================')
         print(f'Module: {purple}SK Learn{resetColor}')
@@ -131,8 +146,6 @@ class GradBoostingRegressor:
 
 class GradBoostingRegressorXGB:
     def __init__(self, dfTrain, dfTest):
-        from xgboost import XGBRegressor
-
         print('========================== Gradient Boosting Regressor '
               '==========================')
         print(f'Module: {purple}XGBoost{resetColor}')
@@ -149,7 +162,7 @@ class GradBoostingRegressorXGB:
         self.model = XGBRegressor(device=device)
         self.model.fit(x, y)
         end = time.time()
-        runtime = (end - start) * 100
+        runtime = (end - start) * 1000
         print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
         self.predActivity()
