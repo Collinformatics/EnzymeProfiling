@@ -1,4 +1,3 @@
-import cudf
 import esm
 import numpy as np
 import pandas as pd
@@ -73,6 +72,7 @@ class RandomForestRegressor:
         print('=========================== Random Forrest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}')
+        subsPred = list(dfTest.index)
 
         # Record the embeddings for the predicted substrates
         self.dTest = DMatrix(dfTest)
@@ -90,6 +90,8 @@ class RandomForestRegressor:
         runtime = (end - start) * 1000
         print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
+        # Save model
+        
 
         if getSHAP:
             # Get: SHAP values
@@ -103,17 +105,18 @@ class RandomForestRegressor:
 
         # Predict with the model
         print(f'Predicting Activity')
+        self.model = 'cpu'
         start = time.time()
         activityPred = self.model.predict(dfTest)
-        # activityPred = inplace_predict(self.model, self.dTest)
         activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        for index, substrate in enumerate(subsPred):
+            print(f'     {substrate}: {red}{activityPred[index]}{resetColor}')
         end = time.time()
         runtime = (end - start) * 1000
-        print(f'Predicted Activity:\n'
-              f'{activityPred}')
+        # print(f'Predicted Activity:\n'
+        #       f'{activityPred}')
         print(f'Testing time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        sys.exit()
 
 
 class GradBoostingRegressor:
@@ -264,19 +267,25 @@ def ESM(substrates, subLabel, datasetType):
         columns = [f'feat_{i}' for i in range(embeddings.shape[1])]
     subEmbeddings = pd.DataFrame(data, index=batchSubs, columns=columns)
 
-    return slicedTokens, batchSubs, sampleSize, subEmbeddings
+    return subEmbeddings
 
 
 
-# ===================================== Run The Code =====================================
-subsTrain = ESM(substrates=substrates, subLabel=inAAPositions, datasetType='Template')
-subsPred = ESM(substrates=substratesPred, subLabel=inAAPositions,
-               datasetType='Predictions')
+class PredictActivity:
+    def __init__(self, subsTrain, subsTest):
+        # Generate embeddings
+        embedingsSubsTrain = ESM(substrates=subsTrain, subLabel=inAAPositions,
+                        datasetType='Template')
+        embedingsSubsPred = ESM(substrates=subsTest, subLabel=inAAPositions,
+                       datasetType='Predictions')
+        
+        # cnn = CNN(substrates=substrates)
+        RandomForestRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
+        sys.exit()
+        GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
+        GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
 
 
 
-# ================================== Initialize Classes ==================================
-# cnn = CNN(substrates=substrates)
-RandomForestRegressor(dfTrain=subsTrain[3], dfTest=subsPred[3])
-GradBoostingRegressor(dfTrain=subsTrain[3], dfTest=subsPred[3])
-GradBoostingRegressorXGB(dfTrain=subsTrain[3], dfTest=subsPred[3])
+# =================================== Initialize Class ===================================
+PredictActivity(subsTrain=substrates, subsTest=substratesPred)
