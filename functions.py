@@ -1,4 +1,5 @@
 # PURPOSE: This script contains the functions that you will need to process your NGS data
+import random
 import time
 
 from Bio import SeqIO
@@ -4705,9 +4706,9 @@ class NGS:
 
         # Define: Figure title
         if combinedMotifs and len(self.motifIndexExtracted) > 1:
-            title = self.titleCombined
+            title = self.titleWordsCombined
         elif combinedMotifs:
-            title = self.titleCombined
+            title = self.titleWordsCombined
             title = title.replace('Combined ', '')
         else:
             title = self.titleWords
@@ -5100,28 +5101,28 @@ class NGS:
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
               f'{df}\n\n')
 
-
-        # Get allowed AAs at each position (only those with nonzero probability)
+        # Select favorable AAs
+        print(f'Favorable Residues:')
         allowedResiduesPerPosition = []
         for column in df.columns:
-            print(f'Column: {column}')
-            nonzeroAAs = df[df[column] > 0].index.tolist()
+            nonzeroAAs = df[df[column] != 0].index.tolist()
+            print(f'Column {pink}{column}{resetColor}: '
+                  f'{red}{", ".join(nonzeroAAs)}{resetColor}')
             allowedResiduesPerPosition.append(nonzeroAAs)
+        print('\n')
 
-        # Generate all possible combinations (cartesian product)
+        # Generate all possible substrate combinations
         allCombos = list(product(*allowedResiduesPerPosition))
         # print(f'\n\nCombos:\n{allCombos}\n\n')
 
         # Convert tuples to strings (AA sequences)
-        print('Strings:')
-        comboStrings = [''.join(combo) for combo in allCombos]
-        for iteration, string in enumerate(comboStrings):
-            print(f'     {string}')
-            if iteration >= self.printNumber:
-                break
-
-        print(f'\nTotal combinations: {len(comboStrings):,}')
-        print(comboStrings[:5])  # Show first 5
+        substratesGenerated = [''.join(combo) for combo in allCombos]
+        NSubs = len(substratesGenerated)
+        print(f'\nNumber of generated substrates: {red}{NSubs:,}{resetColor}')
+        for iteration in range(0, self.printNumber):
+            index = random.randint(0, NSubs)
+            print(f'     {greenLight}{substratesGenerated[index]}{resetColor}')
+        print('\n')
 
         sys.exit()
 
