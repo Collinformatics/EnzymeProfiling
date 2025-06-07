@@ -44,8 +44,8 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 # Set device
-print('\n================================== Set Training Device '
-      '==================================')
+print('\n''============================== Set Training Device '
+      '==============================')
 if torch.cuda.is_available():
     device = 'cuda:0'
     print(f'Train with Device:{magenta} {device}{resetColor}\n'
@@ -88,7 +88,7 @@ class RandomForestRegressor:
         runtime = (end - start) * 100
         print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        self.predActivity(dfTest)
+        self.predActivity()
 
     def predActivity(self):
         print(f'Predicting Activity')
@@ -238,7 +238,7 @@ def ESM(substrates, subLabel, datasetType):
     tokenReps = results["representations"][numLayersESM]  # (N, seq_len, hidden_dim)
     sequenceEmbeddings = tokenReps[:, 0, :]  # [CLS] token embedding: (N, hidden_dim)
     print(f'Extracted embeddings shape: '
-          f'{greenLight}{sequenceEmbeddings.shape}{resetColor}\n\n')
+          f'{pink}{sequenceEmbeddings.shape}{resetColor}\n\n')
 
     # Convert to numpy and store substrate activity proxy
     embeddings = sequenceEmbeddings.cpu().numpy()
