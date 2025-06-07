@@ -97,8 +97,6 @@ def filePaths(enzyme):
         enzyme = f'SARS-CoV-2 M{'ᵖʳᵒ'}'
         inFileNamesInitialSort = ['Mpro2-I_S1_L001', 'Mpro2-I_S1_L002',
                                   'Mpro2-I_S1_L003', 'Mpro2-I_S1_L004']
-        # inFileNamesInitialSort = ['Mpro2-I_S1_L001']
-
         inFileNamesFinalSort = ['Mpro2-R4_S3_L001', 'Mpro2-R4_S3_L002',
                                 'Mpro2-R4_S3_L003', 'Mpro2-R4_S3_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
