@@ -87,8 +87,10 @@ def filePaths(enzyme):
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
     elif enzyme.lower() == 'mpro':
         enzyme = f'SARS-CoV M{'ᵖʳᵒ'}'
+
         inFileNamesInitialSort = ['Mpro-I_S1_L001', 'Mpro-I_S1_L002',
                                   'Mpro-I_S1_L003', 'Mpro-I_S1_L004']
+        inFileNamesInitialSort = ['Mpro-I_S1_L001']
         inFileNamesFinalSort = ['Mpro-R4_S3_L001', 'Mpro-R4_S3_L002',
                                 'Mpro-R4_S3_L003', 'Mpro-R4_S3_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
@@ -135,7 +137,7 @@ def pressKey(event):
     elif event.key == 'e':
         sys.exit()
     elif event.key == 'r':
-        python = sys.executable
+        python = sys.executable # Doesnt seem to work on windows?
         os.execl(python, python, *sys.argv)
 
 
@@ -157,7 +159,6 @@ class NGS:
                  plotFigMotifEnrichSelect=False):
         # Parameters: Dataset
         self.enzymeName = enzymeName
-
         self.filterSubs = filterSubs
         self.fixedAA = fixedAA
         self.fixedPos = fixedPosition
@@ -251,7 +252,7 @@ class NGS:
         self.filesInit = filesInit
         self.filesFinal = filesFinal
         self.pathFolder = folderPath
-        self.pathSaveData = os.path.join(self.pathFolder, 'Data')
+        self.pathData = os.path.join(self.pathFolder, 'Data')
         self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
         self.pathFilteredSubs = None
         self.pathFilteredCounts = None
@@ -268,9 +269,9 @@ class NGS:
                   f'Check input: "{cyan}inPathFolder{orange}"\n'
                   f'     inPathFolder = {self.pathFolder}\n')
             sys.exit(1)
-        if self.pathSaveData is not None:
-            if not os.path.exists(self.pathSaveData):
-                os.makedirs(self.pathSaveData, exist_ok=True)
+        if self.pathData is not None:
+            if not os.path.exists(self.pathData):
+                os.makedirs(self.pathData, exist_ok=True)
         if self.pathSaveFigs is not None:
             if not os.path.exists(self.pathSaveFigs):
                 os.makedirs(self.pathSaveFigs, exist_ok=True)
@@ -783,39 +784,39 @@ class NGS:
         if motifPath:
             if customTag is None:
                 pathSubs = os.path.join(
-                    self.pathSaveData,
+                    self.pathData,
                     f'fixedMotifSubs - {self.enzymeName} - {self.datasetTagMotif} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
                 pathCounts = os.path.join(
-                    self.pathSaveData,
+                    self.pathData,
                     f'fixedMotifCounts - {self.enzymeName} - {self.datasetTagMotif} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
                 pathCountsReleased = os.path.join(
-                    self.pathSaveData,
+                    self.pathData,
                     f'fixedMotifCountsRel - {self.enzymeName} - {self.datasetTagMotif} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
                 paths = [pathSubs, pathCounts, pathCountsReleased]
             else:
                 pathSubs = os.path.join(
-                    self.pathSaveData,
+                    self.pathData,
                     f'fixedMotifSubs - {self.enzymeName} - {customTag} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
                 pathCounts = os.path.join(
-                    self.pathSaveData,
+                    self.pathData,
                     f'fixedMotifCounts - {self.enzymeName} - {customTag} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
                 pathCountsReleased = os.path.join(
-                    self.pathSaveData,
+                    self.pathData,
                     f'fixedMotifCountsRel - {self.enzymeName} - {customTag} - '
                     f'FinalSort - MinCounts {self.minSubCount}')
                 paths = [pathSubs, pathCounts, pathCountsReleased]
         else:
             pathSubs = os.path.join(
-                self.pathSaveData,
+                self.pathData,
                 f'fixedSubs - {self.enzymeName} - {datasetTag} - '
                 f'FinalSort - MinCounts {self.minSubCount}')
             pathCounts = os.path.join(
-                self.pathSaveData,
+                self.pathData,
                 f'counts - {self.enzymeName} - {datasetTag} - '
                 f'FinalSort - MinCounts {self.minSubCount}')
             self.pathFilteredSubs = pathSubs
@@ -851,7 +852,7 @@ class NGS:
                 fileNames = self.filesFinal
 
             for fileName in fileNames:
-                files.append(os.path.join(self.pathSaveData, f'counts_{fileName}'))
+                files.append(os.path.join(self.pathData, f'counts_{fileName}'))
 
         print(f'Loading data:')
         for filePath in files:
@@ -867,7 +868,7 @@ class NGS:
         #  Load: AA counts
         countedData = None
         for index, filePath in enumerate(files):
-            fileName = filePath.replace(self.pathSaveData, '')
+            fileName = filePath.replace(self.pathData, '')
 
             # Load: File
             if index == 0:
@@ -924,7 +925,7 @@ class NGS:
 
         # Function to load each file
         def loadFile(fileName):
-            fileLocation = os.path.join(self.pathSaveData, f'substrates_{fileName}')
+            fileLocation = os.path.join(self.pathData, f'substrates_{fileName}')
             print(f'File path:\n     {greenDark}{fileLocation}{resetColor}\n')
             with open(fileLocation, 'rb') as openedFile:  # Open file
                 data = pk.load(openedFile) # Access the data
@@ -957,7 +958,7 @@ class NGS:
         substrates = dict(sorted(substrates.items(), key=lambda x: x[1], reverse=True))
 
         # Print: Loaded data substrates
-        print(f'Loaded Data: {purple}{fileType}{resetColor}')
+        print(f'Loaded data: {purple}{fileType}{resetColor}')
         iteration = 0
         for substrate, count in substrates.items():
             iteration += 1
@@ -1286,8 +1287,8 @@ class NGS:
         # Define: Save path
         filePathCountsReleased = None
         if self.expressDNA:
-            filePathSubs = os.path.join(self.pathSaveData, f'substrates_{saveTag}')
-            filePathCounts = os.path.join(self.pathSaveData, f'counts_{saveTag}')
+            filePathSubs = os.path.join(self.pathData, f'substrates_{saveTag}')
+            filePathCounts = os.path.join(self.pathData, f'counts_{saveTag}')
         else:
             if countsReleased is None:
                 (filePathSubs,
@@ -1300,7 +1301,7 @@ class NGS:
                                                             motifPath=True)
 
         if not os.path.exists(filePathSubs) or not os.path.exists(filePathCounts):
-            print('================================= Save The Data '
+            print('================================= Save The data '
                   '=================================')
             if countsReleased is None:
                 print(f'Substrate data saved at:\n'
@@ -1939,18 +1940,18 @@ class NGS:
         if fixFullFrame:
             for indexPos, position in enumerate(self.entropy.index):
                 if indexPos == 0 or indexPos == lastPosition:
-                    if self.entropy.loc[position, 'ΔS'] <= self.minEntropy:
+                    if self.entropy.loc[position, 'ΔS'] < self.minEntropy:
                         subFrame.drop(position, inplace=True)
                 else:
                     if self.entropy.loc[position, 'ΔS'] < self.minEntropy:
-                        if (self.entropy.iloc[indexPos - 1, 0] >= self.minEntropy and
-                                self.entropy.iloc[indexPos + 1, 0] >= self.minEntropy):
+                        if (self.entropy.iloc[indexPos - 1, 0] > self.minEntropy and
+                                self.entropy.iloc[indexPos + 1, 0] > self.minEntropy):
                             pass
                         else:
                             subFrame.drop(position, inplace=True)
         else:
             for indexPos, position in enumerate(self.entropy.index):
-                if self.entropy.loc[position, 'ΔS'] <= self.minEntropy:
+                if self.entropy.loc[position, 'ΔS'] < self.minEntropy:
                     subFrame.drop(position, inplace=True)
 
         # Sort the frame
@@ -1978,7 +1979,7 @@ class NGS:
         indexEnd = max(self.motifIndex) + 1
         print(f'Motif Indices: {purple}{self.datasetTag}{resetColor}\n')
 
-        # Print: Data
+        # Print: data
         iteration = 0
         print(f'Substrates:')
         for substrate, count in substrates.items():
@@ -2002,7 +2003,7 @@ class NGS:
         self.motifLen = len(next(iter(motifs)))
         motifs = dict(sorted(motifs.items(), key=lambda x: x[1], reverse=True))
 
-        # Print: Data
+        # Print: data
         iteration = 0
         print(f'Motifs:')
         for motif, count in motifs.items():
@@ -2227,7 +2228,7 @@ class NGS:
         else:
             title = self.title
 
-        # Print: Data
+        # Print: data
         if self.motifFilter:
             print(f'Figure Number: '
                   f'{magenta}{self.saveFigureIteration}{resetColor}')
@@ -2335,7 +2336,7 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Logo'
-            self.saveFigure(fig=fig, figType=datasetType,  seqLen=len(data.columns),
+            self.saveFigure(fig=fig, figType=datasetType,  seqLen=len(xTicks),
                             combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
 
@@ -2469,7 +2470,7 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Weblogo'
-            self.saveFigure(fig=fig, figType=datasetType, seqLen=len(self.weblogo.columns),
+            self.saveFigure(fig=fig, figType=datasetType, seqLen=len(xTicks),
                             combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
 
@@ -2871,6 +2872,7 @@ class NGS:
         plt.show()
 
 
+
     def motifEnrichment(self, subsInit, subsFinal, motifs):
         print('=============================== Motif Enrichment '
               '================================')
@@ -2972,7 +2974,7 @@ class NGS:
                                       key=lambda x: x[1], reverse=True))
 
         iteration = 0
-        print(f'Enrichment Motifs:')
+        print(f'Enrichment Motifs: {pink}Top Sequences{resetColor}')
         for motif, ratio in motifEnrichment.items():
             print(f'     {blue}{motif}{resetColor}, '
                   f'ER: {red}{round(ratio, 1):,}{resetColor}')
@@ -3181,7 +3183,7 @@ class NGS:
         else:
             print(f'Total Values:{red} {collectedTotalValues:,}{resetColor}\n\n')
 
-        # Step 1: Convert substrates to ESM model format and generate embeddings
+        # Step 1: Convert substrates to ESM model format and generate Embeddings
         subs = []
         counts = []
         if useSubCounts:
@@ -3200,7 +3202,7 @@ class NGS:
         batch_converter = alphabet.get_batch_converter()
 
 
-        # Step 3: Convert substrates to ESM model format and generate embeddings
+        # Step 3: Convert substrates to ESM model format and generate Embeddings
         try:
             batchLabels, batchSubs, batchTokens = batch_converter(subs)
         except Exception as exc:
@@ -3253,7 +3255,7 @@ class NGS:
 
         # Step 2: Create a DataFrame for PCA results
         dataPCA = pd.DataFrame(dataPCA, columns=pcaHeaders, index=indices)
-        print(f'PCA Data:{red} # of components = {self.NPCs}\n'
+        print(f'PCA data:{red} # of components = {self.NPCs}\n'
               f'{greenLight}{dataPCA}{resetColor}\n\n')
 
         # Step 3: Print explained variance ratio
@@ -3803,7 +3805,7 @@ class NGS:
         if saveData:
             # Define file path
             filePathCSV = os.path.join(
-                self.pathSaveData,
+                self.pathData,
                 f'{self.enzymeName} - Enriched Subs - {self.datasetTag} - '
                 f'MinCounts {self.minSubCount}.csv')
 
@@ -4236,6 +4238,7 @@ class NGS:
         plt.subplots_adjust(top=0.852, bottom=0.075, left=0.12, right=0.9)
         # self.figSizeMini
         # plt.subplots_adjust(top=0.898, bottom=0.098, left=0.121, right=0.917)
+
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -4698,6 +4701,7 @@ class NGS:
         else:
             title = self.titleWords
 
+
         # Limit the number of words
         if self.wordsLimit:
             print(f'Selecting: {red}{self.wordsTotal}{resetColor} words')
@@ -5075,3 +5079,252 @@ class NGS:
                 print(f'Saving figure at path:\n'
                       f'     {greenDark}{saveLocation}{resetColor}\n\n')
                 fig.savefig(saveLocation, dpi=self.figureResolution)
+
+
+
+
+
+
+class RandomForestRegressor:
+    def __init__(self, dfTrain, dfTest, modelName, printNumber, getSHAP=False):
+        print('=========================== Random Forrest Regressor '
+              '============================')
+        print(f'Module: {purple}XGBoost{resetColor}')
+        subsPred = list(dfTest.index)
+
+        # Record the Embeddings for the predicted substrates
+        self.dTest = DMatrix(dfTest)
+
+        # Process dataframe
+        x = dfTrain.drop(columns='activity').values
+        y = np.log1p(dfTrain['activity'].values)
+
+
+        # Save model
+        pathModel = os.path.join('Mpro2/Models', f'{modelName}.ubj') # ubj: Binary JSON file
+        if os.path.exists(pathModel):
+            print(f'Loading Trained ESM Model:\n'
+                  f'     {greenDark}{pathModel}{resetColor}\n\n')
+
+            # Load the model
+            self.model = XGBRFRegressor()
+            self.model.load_model(pathModel)
+        else:
+            # Train the model
+            print(f'Training the model')
+            start = time.time()
+            model = XGBRFRegressor(device=device, tree_method="hist")
+            model.fit(x, y)
+            end = time.time()
+            runtime = (end - start) * 1000
+            print(f'     Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
+            print(f'Saving Trained ESM Model:\n'
+                  f'     {greenDark}{pathModel}{resetColor}\n\n')
+            model.save_model(pathModel)
+
+        if getSHAP:
+            # Get: SHAP values
+            booster = self.model.get_booster()
+            booster.set_param({'device': device})
+            shapValues = booster.predict(self.dTest, pred_contribs=True)
+            shapInteractionValues = booster.predict(self.dTest, pred_interactions=True)
+            print(f'Shap Values:\n{shapValues}\n\n'
+                  f'Interaction Values:\n{shapInteractionValues}\n\n')
+
+
+        # Predict with the model
+        print(f'Predicting Activity')
+        start = time.time()
+        activityPred = self.model.predict(dfTest)
+        activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
+        # Evaluate prediction
+        predictions = {}
+        for index, substrate in enumerate(subsPred):
+            predictions[substrate] = activityPred[index]
+        predictions = dict(sorted(predictions.items(), key=lambda x: x[1], reverse=True))
+        print('Predicted Activity:')
+        for iteration, (substrate, value) in enumerate(predictions.items()):
+            value = float(value)
+            print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
+            if iteration >= printNumber:
+                break
+        print('\n')
+
+
+
+class PredictActivity:
+    def __init__(self, enzymeName, datasetTag, folderPath, filesInit, subsTrain, subsTest,
+                 labelsXAxis, printNumber):
+        # Parameters: Files
+        self.filesInit = filesInit
+        self.filesFinal = None
+        self.pathFolder = folderPath
+        self.pathData = os.path.join(self.pathFolder, 'Data')
+        self.pathEmbeddings = os.path.join(self.pathFolder, 'Embeddings')
+        self.pathModels = os.path.join(self.pathFolder, 'Models')
+        
+        self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
+        self.pathFilteredSubs = None
+        self.pathFilteredCounts = None
+
+        # Make sure the directory exists
+        os.makedirs(self.pathData, exist_ok=True)
+        os.makedirs(self.pathEmbeddings, exist_ok=True)
+        os.makedirs(self.pathModels, exist_ok=True)
+
+        # Parameters: Dataset
+        self.enzymeName = enzymeName
+        self.datasetTag = datasetTag
+        self.labelsXAxis = labelsXAxis
+        self.pathSubCounts = os.path.join('data', f'fixedMotifCounts - {datasetTag}.txt')
+        self.pathSubstrates = os.path.join('data', f'fixedMotifSubs - {datasetTag}')
+        self.printNumber = printNumber
+
+        # Parameters: Model
+        self.modelNameESM = ''
+        self.subsInitial = None
+        self.subsTrain = None
+        self.subsTrainCounts = None
+        self.subsTest = None
+        self.subsTrain = subsTrain
+        self.subsTest = subsTest
+
+
+        # Generate Embeddings
+        embedingsSubsTrain = self.ESM(substrates=self.subsTrain, subLabel=inAAPositions,
+                                      datasetType=self.datasetTag, trainModel=True)
+        embedingsSubsPred = self.ESM(substrates=self.subsTest, subLabel=inAAPositions,
+                                     datasetType='Predictions')
+
+        # Predict: Substrate activity
+        RandomForestRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
+                              modelName=self.modelNameESM, printNumber=self.printNumber)
+        # GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
+        # GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
+
+
+
+    def ESM(self, substrates, subLabel, datasetType, trainModel=False):
+        print('=========================== Convert To Numerical: ESM '
+              '===========================')
+
+        # Choose: ESM model
+        modelPrams = 1
+        if modelPrams == 0:
+            sizeESM = '15B Params'
+        else:
+            sizeESM = '3B Params'
+        tagEmbeddings = f'{self.enzymeName} - ESM {sizeESM} - {datasetType}'
+        if trainModel:
+            self.modelNameESM = tagEmbeddings
+        print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
+              f'Total unique substrates: {red}{len(substrates):,}{resetColor}\n')
+
+        # Load: ESM Embeddings
+        pathEmbeddings = os.path.join('Mpro2/Embeddings', f'{tagEmbeddings}.csv')
+        if os.path.exists(pathEmbeddings):
+            print(f'Loading: ESM Embeddings\n'
+                  f'     {greenDark}{pathEmbeddings}{resetColor}\n')
+            subEmbeddings = pd.read_csv(pathEmbeddings, index_col=0)
+            print(f'Substrate Embeddings shape: '
+                  f'{pink}{subEmbeddings.shape}{resetColor}\n\n')
+
+            return subEmbeddings
+
+
+        # Step 1: Convert substrates to ESM model format and generate Embeddings
+        totalSubActivity = 0
+        subs = []
+        values = []
+        if type(substrates) is dict:
+            for index, (substrate, value) in enumerate(substrates.items()):
+                totalSubActivity += value
+                subs.append((f'Sub{index}', substrate))
+                values.append(value)
+        else:
+            for index, substrate in enumerate(substrates):
+                subs.append((f'Sub{index}', substrate))
+        sampleSize = len(substrates)
+        print(f'Collected substrates:{red} {sampleSize:,}{resetColor}')
+        if totalSubActivity != 0:
+            if isinstance(totalSubActivity, float):
+                print(f'Total Values:{red} {round(totalSubActivity, 1):,}'
+                      f'{resetColor}')
+            else:
+                print(f'Total Values:{red} {totalSubActivity:,}{resetColor}')
+        print()
+
+        # Step 2: Load the ESM model and batch converter
+        if sizeESM == '15B Params':
+            model, alphabet = esm.pretrained.esm2_t48_15B_UR50D()
+            numLayersESM = 48
+        else:
+            model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
+            numLayersESM = 36
+        # esm2_t36_3B_UR50D has 36 layers
+        # esm2_t33_650M_UR50D has 33 layers
+        # esm2_t12_35M_UR50D has 12 layers
+        model = model.to(device)
+
+        # Get batch tensor
+        batchConverter = alphabet.get_batch_converter()
+
+        # Step 3: Convert substrates to ESM model format and generate Embeddings
+        try:
+            batchLabels, batchSubs, batchTokens = batchConverter(subs)
+            batchTokensCPU = batchTokens
+            batchTokens = batchTokens.to(device)
+
+        except Exception as exc:
+            print(f'{orange}ERROR: The ESM has failed to evaluate your substrates\n\n'
+                  f'Exception:\n{exc}\n\n'
+                  f'Suggestion:'
+                  f'     Try replacing: {cyan}esm.pretrained.esm2_t36_3B_UR50D()'
+                  f'{orange}\n'
+                  f'     With: {cyan}esm.pretrained.esm2_t33_650M_UR50D()'
+                  f'{resetColor}\n')
+            sys.exit(1)
+        print(f'Batch Tokens:{greenLight} {batchTokens.shape}{resetColor}\n'
+              f'{greenLight}{batchTokens}{resetColor}\n')
+
+        # Record tokens
+        slicedTokens = pd.DataFrame(batchTokensCPU[:, 1:-1],
+                                    index=batchSubs,
+                                    columns=subLabel)
+        if totalSubActivity != 0:
+            slicedTokens['Values'] = values
+        print(f'\nSliced Tokens:\n'
+              f'{greenLight}{slicedTokens}{resetColor}\n')
+
+        with torch.no_grad():
+            results = model(batchTokens, repr_layers=[numLayersESM],
+                            return_contacts=False)
+
+        # Step 4: Extract per-sequence Embeddings
+        tokenReps = results["representations"][numLayersESM]  # (N, seq_len, hidden_dim)
+        sequenceEmbeddings = tokenReps[:, 0, :]  # [CLS] token embedding: (N, hidden_dim)
+
+        # Convert to numpy and store substrate activity proxy
+        embeddings = sequenceEmbeddings.cpu().numpy()
+        if type(substrates) is dict:
+            values = np.array(values).reshape(-1, 1)
+            data = np.hstack([embeddings, values])
+            columns = [f'feat_{i}' for i in range(embeddings.shape[1])] + ['activity']
+        else:
+            data = np.hstack([embeddings])
+            columns = [f'feat_{i}' for i in range(embeddings.shape[1])]
+
+        # Process Embeddings
+        subEmbeddings = pd.DataFrame(data, index=batchSubs, columns=columns)
+        print(f'Substrate Embeddings shape: '
+              f'{pink}{sequenceEmbeddings.shape}{resetColor}\n\n')
+        print(f'Embeddings saved at:\n'
+              f'     {greenDark}{pathEmbeddings}{resetColor}\n\n')
+        subEmbeddings.to_csv(pathEmbeddings)
+
+        return subEmbeddings
