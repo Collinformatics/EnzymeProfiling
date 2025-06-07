@@ -46,6 +46,7 @@ if inPlotOnlyWords:
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
+# inPlotWordCloud = False
 inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
 inShowSampleSize = True  # Include the sample size in your figures
@@ -140,12 +141,10 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
 
 
 
-
-# =================================== Define Functions ===================================
-
-
-
 # ====================================== Load data =======================================
+# Set param
+combinedMotifs = True
+
 # Load: Counts
 countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
 
@@ -156,9 +155,6 @@ probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitia
 # Load: Substrates
 substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
-# Set param
-combinedMotifs = True
-
 # Get dataset tag
 ngs.getDatasetTag(combinedMotifs=combinedMotifs)
 
@@ -166,71 +162,12 @@ ngs.getDatasetTag(combinedMotifs=combinedMotifs)
 motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
     motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
-# Display current sample size
-ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
-
-# Evaluate: Sequences
-ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
-                      motifs=motifs, subLabel=inMotifPositions,
-                      combinedMotifs=combinedMotifs)
-
-# Calculate: Prob
-probMotif = ngs.calculateProbabilities(counts=motifCountsFinal, N=motifsCountsTotal,
-                                       fileType='Final Sort')
-
-# Calculate: Positional entropy
-ngs.calculateEntropy(probability=probMotif, combinedMotifs=combinedMotifs)
-
-# Calculate: AA Enrichment
-ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
-                        combinedMotifs=combinedMotifs)
-
-ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
-                      motifs=motifs, subLabel=inMotifPositions,
-                      combinedMotifs=combinedMotifs)
-sys.exit()
-
 
 
 # ===================================== Run The Code =====================================
-PredictActivity(enzymeName=enzymeName, datasetTag=ngs.datasetTa,
-                labelsXAxis=inMotifPositions,
-                subsTrain=substrates, subsTest=substratesPred, printNumber=inPrintNumber)
-
-sys.exit()
-
-# Load: Substrate motifs
-motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
-    motifLabel=inMotifPositions, motifIndex=motifFramePos)
-
-# Get dataset tag
-ngs.getDatasetTag(combinedMotifs=True)
-
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
 
-# Evaluate dataset
-combinedMotifs = False
-if len(ngs.motifIndexExtracted) > 1:
-    combinedMotifs = True
-
-# # Evaluate: Count Matrices
-# Load: Motif counts
-countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
-    motifLabel=inMotifPositions, motifIndex=motifFramePos)
-
-# Calculate: RF
-probCombinedReleasedMotif = ngs.calculateProbabilitiesCM(
-    countsCombinedMotifs=countsRelCombined)
-
-# Calculate: Positional entropy
-ngs.calculateEntropy(probability=probCombinedReleasedMotif,
-                     combinedMotifs=combinedMotifs,
-                     releasedCounts=True)
-
-# Calculate enrichment scores
-ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedReleasedMotif,
-                        combinedMotifs=combinedMotifs, releasedCounts=True)
 
 # # Evaluate: Motif Sequences
 # Count fixed substrates
@@ -248,8 +185,16 @@ ngs.calculateEntropy(probability=probMotif, combinedMotifs=combinedMotifs)
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
                         combinedMotifs=combinedMotifs)
 
+# Evaluate: Sequences
 ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
                       motifs=motifs, subLabel=inMotifPositions,
                       combinedMotifs=combinedMotifs)
+
+sys.exit()
+
+
+PredictActivity(enzymeName=enzymeName, datasetTag=ngs.datasetTa,
+                labelsXAxis=inMotifPositions,
+                subsTrain=substrates, subsTest=substratesPred, printNumber=inPrintNumber)
 
 sys.exit()
