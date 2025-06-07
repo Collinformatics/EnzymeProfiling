@@ -5095,7 +5095,7 @@ class NGS:
 
 
 
-    def generateSubstrates(self, df, dataType):
+    def generateSubstrates(self, df, dataType, filter={}):
         print('============================== Generate Substrates '
               '==============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -5106,8 +5106,8 @@ class NGS:
         print(f'Preferred Residues:')
         preferredAAs = []
         for pos in df.columns:
-            if self.fixedPos in pos:
-                nonzeroAAs = self.fixedAA
+            if pos in filter.keys():
+                nonzeroAAs = filter[pos]
             else:
                 nonzeroAAs = df[df[column] != 0].index.tolist()
             print(f'     Position {greenLight}{pos}{resetColor}: '
@@ -5210,6 +5210,7 @@ class GradBoostingRegressorXGB:
         end = time.time()
         runtime = (end - start) * 1000
         print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
 
 
 class RandomForestRegressor:
