@@ -19,6 +19,7 @@ substrates = {
     'IALQSTGG': 204658,
 }
 
+substratesPred = ['AILQSGFE', 'VVLQASFA', 'IALQSGFE']
 
 
 # ===================================== Set Options ======================================
@@ -65,110 +66,127 @@ class CNN:
 
 
 class RandomForestRegressor:
-    def __init__(self, df):
+    def __init__(self, dfTrain, dfTest):
         from xgboost import XGBRFRegressor
 
         print('=========================== Random Forrest Regressor '
               '============================')
-        print(f'Module: {purple}XGB Regressor{resetColor}')
+        print(f'Module: {purple}XGBoost{resetColor}')
+
+        # Record the embeddings for the predicted substrates
+        self.predSubEmbeddings = dfTest
 
         # Process dataframe
-        X = df.drop(columns='count').values
-        y = np.log1p(df['count'].values)
+        x = dfTrain.drop(columns='activity').values
+        y = np.log1p(dfTrain['activity'].values)
 
         # Train the model
         start = time.time()
-        self.model = XGBRFRegressor(device=device, predictor='gpu_predictor')
-        self.model.fit(X, y)
+        self.model = XGBRFRegressor(device=device)
+        self.model.fit(x, y)
         end = time.time()
         runtime = (end - start) * 100
-        print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n\n')
+        print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        self.predAvtivity()
+        self.predActivity(dfTest)
 
-    def predAvtivity(self):
-        print('Predicting Activity:')
+    def predActivity(self):
+        print(f'Predicting Activity')
+        activityPred = self.model.predict(self.predSubEmbeddings)
+        activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        print(activityPred)
+        sys.exit()
+
 
 
 class GradBoostingRegressor:
-    def __init__(self, df):
+    def __init__(self, dfTrain, dfTest):
         from sklearn.ensemble import GradientBoostingRegressor
 
         print('========================== Gradient Boosting Regressor '
               '==========================')
         print(f'Module: {purple}SK Learn{resetColor}')
 
+        # Record the embeddings for the predicted substrates
+        self.predSubEmbeddings = dfTest
+
         # Process dataframe
-        X = df.drop(columns='count').values
-        y = np.log1p(df['count'].values)
+        x = dfTrain.drop(columns='activity').values
+        y = np.log1p(dfTrain['activity'].values)
 
         # Train the model
         start = time.time()
         self.model = GradientBoostingRegressor()
-        self.model.fit(X, y)
+        self.model.fit(x, y)
         end = time.time()
         runtime = (end - start) * 1000
-        print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n\n')
+        print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
+        self.predActivity()
+
+    def predActivity(self):
+        print('Here\n\n')
+
 
 
 class GradBoostingRegressorXGB:
-    def __init__(self, df):
+    def __init__(self, dfTrain, dfTest):
         from xgboost import XGBRegressor
 
         print('========================== Gradient Boosting Regressor '
               '==========================')
-        print(f'Module: {purple}XGB Regressor{resetColor}')
+        print(f'Module: {purple}XGBoost{resetColor}')
+
+        # Record the embeddings for the predicted substrates
+        self.predSubEmbeddings = dfTest
 
         # Process dataframe
-        X = df.drop(columns='count').values
-        y = np.log1p(df['count'].values)
+        x = dfTrain.drop(columns='activity').values
+        y = np.log1p(dfTrain['activity'].values)
 
         # Train the model
         start = time.time()
         self.model = XGBRegressor(device=device)
-        self.model.fit(X, y)
+        self.model.fit(x, y)
         end = time.time()
         runtime = (end - start) * 100
-        print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n\n')
+        print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        self.predAvtivity()
+        self.predActivity()
 
-    def predAvtivity(self):
-        print('Predicting Activity:')
-
-
+    def predActivity(self):
+        print('Here\n\n')
 
 
-def ESM(substrates, subLabel):
+
+
+def ESM(substrates, subLabel, datasetType):
     print('=========================== Convert To Numerical: ESM '
           '===========================')
-    print(f'Dataset: {purple}Template{resetColor}\n\n'
-          f'Total unique substrates: {red}{len(substrates):,}{resetColor}\n')
-
-    # Extract: Datapoints
-    iteration = 0
-    collectedTotalValues = 0
-    evaluateSubs = {}
-    for substrate, value in substrates.items():
-        evaluateSubs[str(substrate)] = value
-        iteration += 1
-        collectedTotalValues += value
-        # if iteration >= self.NSubsPCA:
-        #     break
-    sampleSize = len(evaluateSubs)
-    print(f'Collected substrates:{red} {sampleSize:,}{resetColor}')
-    if isinstance(collectedTotalValues, float):
-          print(f'Total Values:{red} {round(collectedTotalValues, 1):,}'
-                f'{resetColor}\n\n')
-    else:
-        print(f'Total Values:{red} {collectedTotalValues:,}{resetColor}\n\n')
+    print(f'Dataset: {purple}{datasetType}{resetColor}\n'
+          f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
 
     # Step 1: Convert substrates to ESM model format and generate embeddings
+    totalSubActivity = 0
     subs = []
     values = []
-    for index, (seq, value) in enumerate(evaluateSubs.items()):
-        subs.append((f'Sub{index}', seq))
-        values.append(value)
+    if type(substrates) is dict:
+        for index, (substrate, value) in enumerate(substrates.items()):
+            totalSubActivity += value
+            subs.append((f'Sub{index}', substrate))
+            values.append(value)
+    else:
+        for index, substrate in enumerate(substrates):
+            subs.append((f'Sub{index}', substrate))
+    sampleSize = len(substrates)
+    print(f'Collected substrates:{red} {sampleSize:,}{resetColor}')
+    if totalSubActivity != 0:
+        if isinstance(totalSubActivity, float):
+              print(f'Total Values:{red} {round(totalSubActivity, 1):,}'
+                    f'{resetColor}')
+        else:
+            print(f'Total Values:{red} {totalSubActivity:,}{resetColor}')
+    print()
 
 
 
@@ -202,15 +220,16 @@ def ESM(substrates, subLabel):
               f'{resetColor}\n')
         sys.exit(1)
     print(f'Batch Tokens:{greenLight} {batchTokens.shape}{resetColor}\n'
-          f'{greenLight}{batchTokens}{resetColor}\n\n')
+          f'{greenLight}{batchTokens}{resetColor}\n')
 
     # Record tokens
     slicedTokens = pd.DataFrame(batchTokensCPU[:, 1:-1],
                                 index=batchSubs,
                                 columns=subLabel)
-    slicedTokens['Values'] = values
-    print(f'Sliced Tokens:\n'
-          f'{greenLight}{slicedTokens}{resetColor}\n\n')
+    if totalSubActivity != 0:
+        slicedTokens['Values'] = values
+    print(f'\nSliced Tokens:\n'
+          f'{greenLight}{slicedTokens}{resetColor}\n')
 
     with torch.no_grad():
         results = model(batchTokens, repr_layers=[numLayersESM], return_contacts=False)
@@ -221,12 +240,15 @@ def ESM(substrates, subLabel):
     print(f'Extracted embeddings shape: '
           f'{greenLight}{sequenceEmbeddings.shape}{resetColor}\n\n')
 
-    # Convert to numpy + store with counts
+    # Convert to numpy and store substrate activity proxy
     embeddings = sequenceEmbeddings.cpu().numpy()
-    values = np.array(values).reshape(-1, 1)
-    data = np.hstack([embeddings, values])
-
-    columns = [f'feat_{i}' for i in range(embeddings.shape[1])] + ['count']
+    if type(substrates) is dict:
+        values = np.array(values).reshape(-1, 1)
+        data = np.hstack([embeddings, values])
+        columns = [f'feat_{i}' for i in range(embeddings.shape[1])] + ['activity']
+    else:
+        data = np.hstack([embeddings])
+        columns = [f'feat_{i}' for i in range(embeddings.shape[1])]
     subEmbeddings = pd.DataFrame(data, index=batchSubs, columns=columns)
 
     return slicedTokens, batchSubs, sampleSize, subEmbeddings
@@ -234,12 +256,14 @@ def ESM(substrates, subLabel):
 
 
 # ===================================== Run The Code =====================================
-output = ESM(substrates=substrates, subLabel=inAAPositions)
+subsTrain = ESM(substrates=substrates, subLabel=inAAPositions, datasetType='Template')
+subsPred = ESM(substrates=substratesPred, subLabel=inAAPositions,
+               datasetType='Predictions')
 
 
 
 # ================================== Initialize Classes ==================================
 # cnn = CNN(substrates=substrates)
-RandomForestRegressor(df=output[3])
-GradBoostingRegressor(df=output[3])
-GradBoostingRegressorXGB(df=output[3])
+RandomForestRegressor(dfTrain=subsTrain[3], dfTest=subsPred[3])
+GradBoostingRegressor(dfTrain=subsTrain[3], dfTest=subsPred[3])
+GradBoostingRegressorXGB(dfTrain=subsTrain[3], dfTest=subsPred[3])
