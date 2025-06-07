@@ -183,12 +183,11 @@ subsTrain = ngs.processSubstrates(
 
 
 # # Predicting Substrate Activity
+# Generate: Prediction substrates
 subsPred = ngs.generateSubstrates(df=ngs.eMap)
 
-
+# Predict activity
 PredictActivity(enzymeName=enzymeName, datasetTag=ngs.datasetTag,
                 subsTrain=subsTrain, subsTest=substratesPred,
                 folderPath=inPathFolder, labelsXAxis=inMotifPositions,
                 printNumber=inPrintNumber)
-
-sys.exit()
