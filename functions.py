@@ -5114,6 +5114,8 @@ class NGS:
         print(f'\nTotal combinations: {len(comboStrings):,}')
         print(comboStrings[:5])  # Show first 5
 
+        sys.exit()
+
 
 
 
@@ -5143,8 +5145,8 @@ class GradBoostingRegressor:
         self.model = GradientBoostingRegressor()
         self.model.fit(x, y)
         end = time.time()
-        runtime = (end - start) * 1000
-        print(f'      Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
+        runtime = (end - start) / 60
+        print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
 
         # Predict with the model
         print(f'Predicting Activity')
@@ -5176,8 +5178,8 @@ class GradBoostingRegressorXGB:
         self.model = XGBRegressor(device=device)
         self.model.fit(x, y)
         end = time.time()
-        runtime = (end - start) * 1000
-        print(f'     Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
+        runtime = (end - start) / 60
+        print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
 
 
         # Predict with the model
@@ -5221,8 +5223,8 @@ class RandomForestRegressor:
             model = XGBRFRegressor(device=self.device, tree_method="hist")
             model.fit(x, y)
             end = time.time()
-            runtime = (end - start)
-            print(f'     Training time: {red}{round(runtime, 3):,} s{resetColor}\n')
+            runtime = (end - start) / 60
+            print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
 
             print(f'Saving Trained ESM Model:\n'
                   f'     {greenDark}{pathModel}{resetColor}\n\n')
@@ -5244,8 +5246,8 @@ class RandomForestRegressor:
         activityPred = self.model.predict(dfTest)
         activityPred = np.expm1(activityPred)  # Reverse log1p transform
         end = time.time()
-        runtime = (end - start)
-        print(f'     Runtime: {red}{round(runtime, 3):,} s{resetColor}\n')
+        runtime = (end - start) / 60
+        print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
 
         # Evaluate prediction
         predictions = {}
