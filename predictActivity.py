@@ -48,7 +48,8 @@ if inPlotOnlyWords:
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
-# inPlotWordCloud = False
+inPlotWordCloud = False # <--------------------
+
 inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
 inShowSampleSize = True  # Include the sample size in your figures
@@ -257,7 +258,7 @@ subsTrain = ngs.processSubstrates(
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
-subsPred = ngs.generateSubstrates(df=ngs.eMap)
+subsPred = ngs.generateSubstrates(df=probMotif, dataType='AA Probabilities')
 
 # Predict activity
 PredictActivity(enzymeName=enzymeName, datasetTag=ngs.datasetTag,

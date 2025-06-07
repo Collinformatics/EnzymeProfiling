@@ -5095,37 +5095,47 @@ class NGS:
 
 
 
-    def generateSubstrates(self, df):
+    def generateSubstrates(self, df, dataType):
         print('============================== Generate Substrates '
               '==============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f'{df}\n\n')
+              f'DataFrame Type: {purple}{dataType}{resetColor}\n'
+              f'{df}\n')
 
         # Select favorable AAs
-        print(f'Favorable Residues:')
-        allowedResiduesPerPosition = []
-        for column in df.columns:
-            nonzeroAAs = df[df[column] != 0].index.tolist()
-            print(f'Column {pink}{column}{resetColor}: '
-                  f'{red}{", ".join(nonzeroAAs)}{resetColor}')
-            allowedResiduesPerPosition.append(nonzeroAAs)
+        print(f'Preferred Residues:')
+        preferredAAs = []
+        for pos in df.columns:
+            if self.fixedPos in pos:
+                nonzeroAAs = self.fixedAA
+            else:
+                nonzeroAAs = df[df[column] != 0].index.tolist()
+            print(f'     Position {greenLight}{pos}{resetColor}: '
+                  f'{pink}{", ".join(nonzeroAAs)}{resetColor}')
+            if self.fixedPos in pos:
+                print('Stop')
+                sys.exit()
+
+            preferredAAs.append(nonzeroAAs)
         print('\n')
 
+        print('Stop')
+        sys.exit()
+
         # Generate all possible substrate combinations
-        allCombos = list(product(*allowedResiduesPerPosition))
+        allCombos = list(product(*preferredAAs))
         # print(f'\n\nCombos:\n{allCombos}\n\n')
 
         # Convert tuples to strings (AA sequences)
-        substratesGenerated = [''.join(combo) for combo in allCombos]
-        NSubs = len(substratesGenerated)
-        print(f'\nNumber of generated substrates: {red}{NSubs:,}{resetColor}')
+        genSubstrates = [''.join(combo) for combo in allCombos]
+        NSubs = len(genSubstrates)
+        print(f'Generated substrates: {red}N = {NSubs:,}{resetColor}')
         for iteration in range(0, self.printNumber):
             index = random.randint(0, NSubs)
-            print(f'     {greenLight}{substratesGenerated[index]}{resetColor}')
+            print(f'     {pink}{genSubstrates[index]}{resetColor}')
         print('\n')
-
-        sys.exit()
-
+        
+        return genSubstrates
 
 
 
@@ -5353,6 +5363,10 @@ class PredictActivity:
     def ESM(self, substrates, subLabel, datasetType, trainModel=False):
         print('=========================== Generate Embeddings: ESM '
               '============================')
+        if type(substrates) is dict:
+            NSubs = len(substrates.keys())
+        else:
+            NSubs = len(substrates)
 
         # Choose: ESM model
         modelPrams = 1
@@ -5360,7 +5374,8 @@ class PredictActivity:
             sizeESM = '15B Params'
         else:
             sizeESM = '3B Params'
-        tagEmbeddings = f'{self.enzymeName} - ESM {sizeESM} - {datasetType}'
+        tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType}'
+                         f'N {NSubs} - {len(self.labelsXAxis)} AA')
         if trainModel:
             self.embeddingsNameESM = tagEmbeddings
         print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
