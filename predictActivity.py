@@ -1,8 +1,8 @@
-import os.path
-
 import esm
+import os
 import numpy as np
 import pandas as pd
+import pickle as pk
 from sklearn.ensemble import GradientBoostingRegressor
 import sys
 import torch
@@ -11,8 +11,21 @@ from xgboost import XGBRegressor, XGBRFRegressor, DMatrix
 
 
 
+# ===================================== User Inputs ======================================
 inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
 enzymeName = f'SARS-CoV-2 M{'ᵖʳᵒ'}'
+
+inFixedResidue = ['Q']
+inFixedPosition = [4]
+inExcludeResidues = False
+inExcludedResidue = ['Q']
+inExcludedPosition = [8]
+inMinimumSubstrateCount = 10
+inPrintNumber = 10
+
+
+
+# ===================================== Misc Inputs ======================================
 substrates = {
     'VVLQSAFE': 357412,
     'VALQAASA': 311191,
@@ -25,6 +38,7 @@ substrates = {
 }
 
 substratesPred = ['AILQSGFE', 'VVLQASFA', 'IALQSGFE']
+
 
 
 # ===================================== Set Options ======================================
@@ -61,6 +75,10 @@ else:
     print(f'Train with Device:{magenta} {device}{resetColor}\n'
           f'Device Name:{magenta} {platform.processor()}{resetColor}\n\n')
 
+# Define: Dataset tag
+datasetTag = (f'{enzymeName} - {inFixedResidue[0]}@R{inFixedPosition[0]} - '
+              f'FinalSort - MinCounts {inMinimumSubstrateCount}')
+
 
 
 # =================================== Define Functions ===================================
@@ -92,10 +110,14 @@ class GradBoostingRegressor:
         runtime = (end - start) * 1000
         print(f'      Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        self.predActivity()
-
-    def predActivity(self):
-        print('Here\n\n')
+        # Predict with the model
+        print(f'Predicting Activity')
+        start = time.time()
+        # activityPred = self.model.predict(dfTest)
+        # activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
 
 
@@ -121,15 +143,20 @@ class GradBoostingRegressorXGB:
         runtime = (end - start) * 1000
         print(f'     Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        self.predActivity()
 
-    def predActivity(self):
-        print('Here\n\n')
+        # Predict with the model
+        print(f'Predicting Activity')
+        start = time.time()
+        # activityPred = self.model.predict(dfTest)
+        # activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
 
 
 class RandomForestRegressor:
-    def __init__(self, dfTrain, dfTest, modelName, getSHAP=False):
+    def __init__(self, dfTrain, dfTest, modelName, printNumber, getSHAP=False):
         print('=========================== Random Forrest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}')
@@ -194,38 +221,77 @@ class RandomForestRegressor:
         for iteration, (substrate, value) in enumerate(predictions.items()):
             value = float(value)
             print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
-            if iteration >= 10:
+            if iteration >= printNumber:
                 break
         print('\n')
 
 
 
 class PredictActivity:
-    def __init__(self, enzymeName, datasetTag, subsTrain, subsTest, labelsXAxis):
-        self.enzymeName = enzymeName
-        self.datasetTag = datasetTag
-        self.labelsXAxis = labelsXAxis
-        self.subsTrain = subsTrain
-        self.subsTest = subsTest
-        self.modelNameESM = ''
-
+    def __init__(self, enzymeName, datasetTag, subsTrain, subsTest, labelsXAxis,
+                 printNumber, evalTemplatres=False):
         # Make sure the directory exists
+        os.makedirs('data', exist_ok=True)
         os.makedirs('embeddings', exist_ok=True)
         os.makedirs('models', exist_ok=True)
 
+        # Parameters: Dataset
+        self.enzymeName = enzymeName
+        self.datasetTag = datasetTag
+        self.labelsXAxis = labelsXAxis
+        self.pathSubCounts = os.path.join('data', f'fixedMotifCounts - {datasetTag}.txt')
+        self.pathSubstrates = os.path.join('data', f'fixedMotifSubs - {datasetTag}')
+        self.printNumber = printNumber
+
+        # Parameters: Model
+        self.modelNameESM = ''
+        self.subsTrain = None
+        self.subsTrainCounts = None
+        self.subsTest = None
+        if evalTemplatres:
+            self.subsTrain = subsTrain
+            self.subsTest = subsTest
+        else:
+            self.loadData()  # Load data
+
         # Generate embeddings
         embedingsSubsTrain = self.ESM(substrates=self.subsTrain, subLabel=inAAPositions,
-                        datasetType=self.datasetTag, trainModel=True)
+                                      datasetType=self.datasetTag, trainModel=True)
         embedingsSubsPred = self.ESM(substrates=self.subsTest, subLabel=inAAPositions,
-                       datasetType='Predictions')
-        
-        # cnn = CNN(substrates=substrates)
-        RandomForestRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
-                              modelName=self.modelNameESM)
-        sys.exit()
-        GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
-        GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
+                                     datasetType='Predictions')
 
+        # Predict: Substrate activity
+        RandomForestRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
+                              modelName=self.modelNameESM, printNumber=self.printNumber)
+        # GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
+        # GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
+
+
+
+    def loadData(self):
+        print('================================= Loading Data '
+              '==================================')
+        # Load: Counts matrix
+        print(f'Loading Counts:\n'
+              f'     {greenDark}{self.pathSubCounts}{resetColor}\n')
+        self.subsTrainCounts = pd.read_csv(self.pathSubCounts, index_col=0)
+        print(f'Counts: {purple}{self.datasetTag}{resetColor}\n{self.subsTrainCounts}\n\n')
+
+        # Load: Substrates
+        print(f'Loading Substrates:\n'
+              f'     {greenDark}{self.pathSubstrates}{resetColor}\n')
+        with open(self.pathSubstrates, 'rb') as file:
+            self.subsTrain = pk.load(file)
+        self.subsTrain = dict(sorted(self.subsTrain.items(),
+                                     key=lambda x: x[1], reverse=True))
+        print(f'Loaded Substrates: {purple}{self.datasetTag}{resetColor}')
+        for iteration, (substrate, value) in enumerate(self.subsTrain.items()):
+            print(f'     {substrate}, Value: {red}{value:,}{resetColor}')
+            if iteration >= self.printNumber:
+                break
+        print('\n')
+
+        sys.exit()
 
 
     def ESM(self, substrates, subLabel, datasetType, trainModel=False):
@@ -351,5 +417,5 @@ class PredictActivity:
 
 
 # =================================== Initialize Class ===================================
-PredictActivity(enzymeName=enzymeName, datasetTag='Template', labelsXAxis=inAAPositions,
-                subsTrain=substrates, subsTest=substratesPred)
+PredictActivity(enzymeName=enzymeName, datasetTag=datasetTag, labelsXAxis=inAAPositions,
+                subsTrain=substrates, subsTest=substratesPred, printNumber=inPrintNumber)
