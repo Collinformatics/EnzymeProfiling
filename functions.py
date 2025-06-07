@@ -1,6 +1,5 @@
 # PURPOSE: This script contains the functions that you will need to process your NGS data
-
-
+import time
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -1332,6 +1331,7 @@ class NGS:
 
     def saveFigure(self, fig, figType, seqLen, combinedMotifs=False, releasedCounts=False):
         # Define: Save location
+        figLabel = ''
         if self.motifFilter and not releasedCounts:
             figLabel = (f'{self.enzymeName} - {figType} '
                         f'{self.saveFigureIteration} - {self.datasetTagMotif} - '
@@ -1353,6 +1353,8 @@ class NGS:
                         f'{self.datasetTag} - '
                         f'N {self.nSubsFinal} - {seqLen} AA - '
                         f'MinCounts {self.minSubCount}.png')
+        if combinedMotifs and len(self.motifIndexExtracted) < 2:
+            figLabel = figLabel.replace('Combined ', '')
         saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
 
@@ -1386,14 +1388,9 @@ class NGS:
                   f'     N Final: {pink}{type(NFinal)}{resetColor}\n\n')
 
         # Set figure titles
-        if len(self.motifIndexExtracted) > 1:
-            self.titleReleased = (f'{self.enzymeName}\n'
-                                  f'Combined {self.datasetTagMotif}\n'
-                                  f'Released Counts')
-        else:
-            self.titleReleased = (f'{self.enzymeName}\n'
-                                  f'{self.datasetTagMotif}\n'
-                                  f'Released Counts')
+        self.titleReleased = (f'{self.enzymeName}\n'
+                              f'Combined {self.datasetTagMotif}\n'
+                              f'Released Counts')
         if self.showSampleSize:
             self.title = (f'{self.enzymeName}\n'
                           f'N Unsorted = {self.nSubsInitial:,}\n'
@@ -1420,7 +1417,11 @@ class NGS:
                                            f'Combined {self.datasetTagMotif}')
         else:
             self.titleWords = f'{self.enzymeName}\nUnfiltered'
-
+        if len(self.motifIndexExtracted) > 1:
+            self.titleReleased = self.titleReleased.replace('Combined ', '')
+            self.titleCombined = self.titleCombined.replace('Combined ', '')
+            self.titleWeblogoCombined =  self.titleWeblogoCombined.replace('Combined ', '')
+            self.titleWordsCombined = self.titleWordsCombined.replace('Combined ', '')
 
 
     def calculateProbabilitiesCM(self, countsCombinedMotifs):
@@ -1715,7 +1716,7 @@ class NGS:
     def getDatasetTag(self, combinedMotifs=False):
         if combinedMotifs:
             if len(self.fixedPos) == 1:
-                self.datasetTag = f'Motif {self.fixedAA[0]}@R{self.fixedPos[0]}'
+                self.datasetTag = f'Reading Frame {self.fixedAA[0]}@R{self.fixedPos[0]}'
             else:
                 fixedPos = sorted(self.fixedPos)
                 continuous = True
@@ -1727,10 +1728,10 @@ class NGS:
                         continuous = False
                         break
                 if continuous:
-                    self.datasetTag = (f'Motifs {self.fixedAA[0]}@R{fixedPos[0]}-'
+                    self.datasetTag = (f'Reading Frames {self.fixedAA[0]}@R{fixedPos[0]}-'
                                   f'R{fixedPos[-1]}')
                 else:
-                    self.datasetTag = (f'Motifs {self.fixedAA[0]}@R{fixedPos[0]}-'
+                    self.datasetTag = (f'Reading Frames {self.fixedAA[0]}@R{fixedPos[0]}-'
                                   f'R{fixedPos[1]}, R{fixedPos[-1]}')
         else:
             if self.filterSubs:
@@ -1956,7 +1957,7 @@ class NGS:
 
         # Sort the frame
         self.subFrame = subFrame.sort_values(by='ΔS', ascending=False).copy()
-        print(f'Motif Frame:\n'
+        print(f'Reading Frame :\n'
               f'{blue}{subFrame}{resetColor}\n\n'
               f'Ranked Motif Frame:\n'
               f'{blue}{self.subFrame}{resetColor}\n\n')
@@ -1977,7 +1978,7 @@ class NGS:
         motifs = {}
         indexStart = min(self.motifIndex)
         indexEnd = max(self.motifIndex) + 1
-        print(f'Motif Indices: {purple}{self.datasetTag}{resetColor}\n')
+        print(f'Reading Frame Indices: {purple}{self.datasetTag}{resetColor}\n')
 
         # Print: data
         iteration = 0
@@ -2106,8 +2107,11 @@ class NGS:
         # Define: Figure title
         if releasedCounts:
             title = self.titleReleased
+        elif combinedMotifs and len(self.motifIndexExtracted) > 1:
+            title = self.titleCombined
         elif combinedMotifs:
             title = self.titleCombined
+            title = title.replace('Combined ', '')
         else:
             title = self.title
 
@@ -2223,8 +2227,11 @@ class NGS:
         # Define: Figure title
         if releasedCounts:
             title = self.titleReleased
+        elif combinedMotifs and len(self.motifIndexExtracted) > 1:
+            title = self.titleCombined
         elif combinedMotifs:
             title = self.titleCombined
+            title = title.replace('Combined ', '')
         else:
             title = self.title
 
@@ -2373,8 +2380,11 @@ class NGS:
         # Define: Figure title
         if releasedCounts:
             title = self.titleReleased
+        elif combinedMotifs and len(self.motifIndexExtracted) > 1:
+            title = self.titleWeblogoCombined
         elif combinedMotifs:
             title = self.titleWeblogoCombined
+            title = title.replace(f'Combined ', '')
         else:
             title = self.titleWeblogo
 
@@ -2687,10 +2697,9 @@ class NGS:
         else:
             title = (f'{self.enzymeName}\n{self.datasetTag}\n'
                      f'{NSubs:,} Unique Motifs')
-        if combinedMotifs:
+        if combinedMotifs and len(self.motifIndexExtracted) > 1:
             title = title.replace(self.datasetTag,
                                   f'Combined {self.datasetTag}')
-        # title = title.replace('Motif', 'Motifs')
         if limitNBars:
             title = title.replace(f'{NSubs:,}', f'Top {plotNSubs:,}')
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
@@ -2729,7 +2738,7 @@ class NGS:
                 figLabel = (f'{self.enzymeName} - Motif Enrichment - '
                             f'{self.datasetTag} - {motifLen} AA - '
                             f'N {plotNSubs} - MinCounts {self.minSubCount}.png')
-            if combinedMotifs:
+            if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 figLabel = figLabel.replace(self.datasetTag,
                                             f'Combined {self.datasetTag}')
             if clusterNumPCA is not None:
@@ -2835,7 +2844,6 @@ class NGS:
 
         accuracy = 1.0
         label = f'R² = {np.round(accuracy, 3)}'
-
         title = (f'{self.enzymeName}\n'
                  f'Combined {self.datasetTag}\n'
                  f'{matrixType}')
@@ -3103,7 +3111,7 @@ class NGS:
         print(f'Number of plotted sequences: {red}{NSubs}{resetColor}\n\n')
 
         # Define: Figure title
-        if combinedMotifs:
+        if combinedMotifs and len(self.motifIndexExtracted) > 1:
             title = (f'{self.enzymeName}\n Combined {self.datasetTag}\n'
                      f'Top {NSubs} Substrates')
         else:
@@ -3142,11 +3150,11 @@ class NGS:
             # Define: Save location
             if combinedMotifs:
                 figLabel = (f'{self.enzymeName} - Bars - {dataType} - N {NSubs} - '
-                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
-            else:
-                figLabel = (f'{self.enzymeName} - Bars - {dataType} - N {NSubs} - '
                             f'Combined {self.datasetTag} - MinCounts {self.minSubCount}.'
                             f'png')
+            else:
+                figLabel = (f'{self.enzymeName} - Bars - {dataType} - N {NSubs} - '
+                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
@@ -3282,7 +3290,7 @@ class NGS:
             title = (f'\n{self.enzymeName}\n'
                      f'Unfiltered'
                      f'{N:,} Unique Substrates')
-        if combinedMotifs:
+        if combinedMotifs  and len(self.motifIndexExtracted) > 1:
             title = title.replace('Motifs', 'Combined Motifs')
 
 
@@ -3393,7 +3401,7 @@ class NGS:
             # Define: Save location
             figLabel = (f'{self.enzymeName} - PCA - {self.datasetTag} - '
                         f'{N} - MinCounts {self.minSubCount}.png')
-            if combinedMotifs:
+            if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 figLabel = figLabel.replace(self.datasetTag,
                                             f'Combined {self.datasetTag}')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
@@ -4205,7 +4213,7 @@ class NGS:
             title = f'\n\n{self.enzymeName}\n{self.datasetTag}'
         else:
             title = f'\n\n\n{self.enzymeName}'
-        if combinedMotifs:
+        if combinedMotifs and len(self.motifIndexExtracted) > 1:
             title = title.replace(self.datasetTag, f'Combined {self.datasetTag}')
         if releasedCounts:
             title = title.replace(self.datasetTag, f'Released {self.datasetTag}')
@@ -4301,7 +4309,7 @@ class NGS:
                 figLabel = (f'{self.enzymeName} - Positional Entropy - '
                             f'Unfiltered - {len(xTicks)} AA - '
                             f'MinCounts {self.minSubCount}.png')
-            if combinedMotifs:
+            if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 figLabel = figLabel.replace(
                     self.datasetTag, f'Combined {self.datasetTag}')
             if releasedCounts:
@@ -4696,11 +4704,11 @@ class NGS:
         print('')
 
         # Define: Figure title
-        if combinedMotifs:
-            if len(self.motifIndexExtracted) == 1:
-                title = self.titleWords
-            else:
-                title = self.titleWordsCombined
+        if combinedMotifs and len(self.motifIndexExtracted) > 1:
+            title = self.titleCombined
+        elif combinedMotifs:
+            title = self.titleCombined
+            title = title.replace('Combined ', '')
         else:
             title = self.titleWords
 
@@ -4765,7 +4773,8 @@ class NGS:
                     f'Plot {totalWords}',
                     f'Select {self.wordsTotal} Plot {totalWords}')
             if len(self.motifIndexExtracted) > 1:
-                figLabel = figLabel.replace('Motif', 'Combined Motif')
+                figLabel = figLabel.replace('Reading Frame',
+                                            'Combined Reading Frame')
             if clusterNumPCA is not None:
                 figLabel = figLabel.replace('Words',
                                             f'Words - PCA {clusterNumPCA}')
@@ -5193,7 +5202,8 @@ class GradBoostingRegressorXGB:
 
 
 class RandomForestRegressor:
-    def __init__(self, dfTrain, dfTest, modelName, printNumber, getSHAP=False):
+    def __init__(self, dfTrain, dfTest, datasetTag, embeddingsName, printNumber,
+                 getSHAP=False):
         print('=========================== Random Forrest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}')
@@ -5206,9 +5216,14 @@ class RandomForestRegressor:
         x = dfTrain.drop(columns='activity').values
         y = np.log1p(dfTrain['activity'].values)
 
+        print(f'Dataset: {datasetTag}\n'
+              f'Embeddings: {embeddingsName}')
+        sys.exit()
+
 
         # Save model
-        pathModel = os.path.join('Mpro2/Models', f'{modelName}.ubj') # ubj: Binary JSON file
+        modelTag = f'Random Forrest - {embeddingsName}'
+        pathModel = os.path.join('Mpro2/Models', f'{modelTag}.ubj') # ubj: Binary JSON file
         if os.path.exists(pathModel):
             print(f'Loading Trained ESM Model:\n'
                   f'     {greenDark}{pathModel}{resetColor}\n\n')
@@ -5290,7 +5305,7 @@ class PredictActivity:
 
         # Parameters: Model
         self.device = self.getDevice()
-        self.modelNameESM = ''
+        self.embeddingsNameESM = ''
         self.subsInitial = None
         self.subsTrain = None
         self.subsTrainCounts = None
@@ -5308,8 +5323,9 @@ class PredictActivity:
             datasetType='Predictions')
 
         # Predict: Substrate activity
-        RandomForestRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
-                              modelName=self.modelNameESM, printNumber=self.printNumber)
+        RandomForestRegressor(
+            dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
+            embeddingsName=self.embeddingsNameESM, printNumber=self.printNumber)
         # GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
         # GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
 
@@ -5345,7 +5361,7 @@ class PredictActivity:
             sizeESM = '3B Params'
         tagEmbeddings = f'{self.enzymeName} - ESM {sizeESM} - {datasetType}'
         if trainModel:
-            self.modelNameESM = tagEmbeddings
+            self.embeddingsNameESM = tagEmbeddings
         print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
 
@@ -5425,22 +5441,36 @@ class PredictActivity:
         print(f'\nSliced Tokens:\n'
               f'{greenLight}{slicedTokens}{resetColor}\n')
 
+        # Generate embeddings
+        batchSize = 128
+        allEmbeddings = []
+        allValues = []
+        start = time.time()
         with torch.no_grad():
-            results = model(batchTokens, repr_layers=[numLayersESM],
-                            return_contacts=False)
+            for i in range(0, len(batchTokens), batchSize):
+                batch = batchTokens[i:i + batchSize].to(self.device)
+                result = model(batch, repr_layers=[numLayersESM], return_contacts=False)
+                tokenReps = result["representations"][numLayersESM]
+                seqEmbed = tokenReps[:, 0, :].cpu().numpy()
+                allEmbeddings.append(seqEmbed)
+                if type(substrates) is dict:
+                    allValues.extend(values[i:i + batchSize])
+        end = time.time()
+        runtime = (end - start) / 60
+        print(f'      Runtime: {red}{round(runtime, 3):,} min{resetColor}\n')
 
         # Step 4: Extract per-sequence Embeddings
         tokenReps = results["representations"][numLayersESM]  # (N, seq_len, hidden_dim)
         sequenceEmbeddings = tokenReps[:, 0, :]  # [CLS] token embedding: (N, hidden_dim)
 
         # Convert to numpy and store substrate activity proxy
-        embeddings = sequenceEmbeddings.cpu().numpy()
+        embeddings = np.vstack(allEmbeddings)
         if type(substrates) is dict:
-            values = np.array(values).reshape(-1, 1)
+            values = np.array(allValues).reshape(-1, 1)
             data = np.hstack([embeddings, values])
             columns = [f'feat_{i}' for i in range(embeddings.shape[1])] + ['activity']
         else:
-            data = np.hstack([embeddings])
+            data = embeddings
             columns = [f'feat_{i}' for i in range(embeddings.shape[1])]
 
         # Process Embeddings

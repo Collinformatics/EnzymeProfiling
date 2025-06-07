@@ -5,7 +5,7 @@ from xgboost import XGBRegressor, XGBRFRegressor, DMatrix
 
 
 
-substratesPred = ['AILQSGFE', 'VVLQASFA', 'IALQSGFE']
+substratesPred = ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']
 
 
 
@@ -48,7 +48,7 @@ if inPlotOnlyWords:
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
-inPlotWordCloud = False
+# inPlotWordCloud = False
 inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
 inShowSampleSize = True  # Include the sample size in your figures
