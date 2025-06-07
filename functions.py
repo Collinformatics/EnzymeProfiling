@@ -8,7 +8,6 @@ from Bio import BiopythonWarning
 import esm
 import gzip
 import math
-# import itertools
 from itertools import combinations, product
 import logomaker
 import matplotlib.patheffects as path_effects
@@ -5095,20 +5094,22 @@ class NGS:
 
         # Get allowed AAs at each position (only those with nonzero probability)
         allowedResiduesPerPosition = []
-        for column in probMotif.columns:
+        for column in df.columns:
             print(f'Column: {column}')
-            nonzeroAAs = probMotif[probMotif[column] > 0].index.tolist()
+            nonzeroAAs = df[df[column] > 0].index.tolist()
             allowedResiduesPerPosition.append(nonzeroAAs)
 
         # Generate all possible combinations (cartesian product)
-        allCombos = list(itertools.product(*allowedResiduesPerPosition))
-        print(f'\n\nCombos:\n{allCombos}\n\n')
+        allCombos = list(product(*allowedResiduesPerPosition))
+        # print(f'\n\nCombos:\n{allCombos}\n\n')
 
         # Convert tuples to strings (AA sequences)
         print('Strings:')
         comboStrings = [''.join(combo) for combo in allCombos]
         for iteration, string in enumerate(comboStrings):
             print(f'     {string}')
+            if iteration >= self.printNumber:
+                break
 
         print(f'\nTotal combinations: {len(comboStrings):,}')
         print(comboStrings[:5])  # Show first 5
@@ -5116,6 +5117,77 @@ class NGS:
 
 
 
+# =================================== Machine Learning ===================================
+class CNN:
+    def __init__(self, substrates):
+        self.substrates = substrates
+
+
+
+class GradBoostingRegressor:
+    def __init__(self, dfTrain, dfTest):
+        print('========================== Gradient Boosting Regressor '
+              '==========================')
+        print(f'Module: {purple}SK Learn{resetColor}')
+
+        # Record the Embeddings for the predicted substrates
+        self.predSubEmbeddings = dfTest
+
+        # Process dataframe
+        x = dfTrain.drop(columns='activity').values
+        y = np.log1p(dfTrain['activity'].values)
+
+        # Train the model
+        print(f'Training the model')
+        start = time.time()
+        self.model = GradientBoostingRegressor()
+        self.model.fit(x, y)
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'      Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
+        # Predict with the model
+        print(f'Predicting Activity')
+        start = time.time()
+        # activityPred = self.model.predict(dfTest)
+        # activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
+
+
+class GradBoostingRegressorXGB:
+    def __init__(self, dfTrain, dfTest):
+        print('========================== Gradient Boosting Regressor '
+              '==========================')
+        print(f'Module: {purple}XGBoost{resetColor}')
+
+        # Record the Embeddings for the predicted substrates
+        self.predSubEmbeddings = dfTest
+
+        # Process dataframe
+        x = dfTrain.drop(columns='activity').values
+        y = np.log1p(dfTrain['activity'].values)
+
+        # Train the model
+        print(f'Training the model')
+        start = time.time()
+        self.model = XGBRegressor(device=device)
+        self.model.fit(x, y)
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'     Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
+
+        # Predict with the model
+        print(f'Predicting Activity')
+        start = time.time()
+        # activityPred = self.model.predict(dfTest)
+        # activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
 
 class RandomForestRegressor:
