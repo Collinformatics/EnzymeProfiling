@@ -1,7 +1,12 @@
 from functions import filePaths, NGS, PredictActivity
 import pandas as pd
 import sys
+
 from xgboost import XGBRegressor, XGBRFRegressor, DMatrix
+
+
+
+substratesPred = ['AILQSGFE', 'VVLQASFA', 'IALQSGFE']
 
 
 
@@ -27,8 +32,6 @@ inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 
 # Input 4: Figures
-# inPlotPCA = False # PCA plot of an individual fixed frame
-# inPlotPCACombined = True
 inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = False
@@ -46,7 +49,7 @@ if inPlotOnlyWords:
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
-# inPlotWordCloud = False
+inPlotWordCloud = False
 inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
 inShowSampleSize = True  # Include the sample size in your figures
@@ -79,21 +82,14 @@ inTotalSubsPCA = int(5 * 10 ** 4)
 inIncludeSubCountsESM = True
 inPlotEntropyPCAPopulations = False
 
-# Input 11: Printing The data
-inPrintLoadedSubs = True
-inPrintSampleSize = True
-inPrintCounts = True
-inPrintRF = True
-inPrintES = True
-inPrintEntropy = True
-inPrintMotifData = True
-inPrintNumber = 10
-inCodonSequence = 'NNS'  # Base probabilities of degenerate codons (can be N, S, or K)
-inUseCodonProb = False  # If True: use "inCodonSequence" for baseline probabilities
-
 
 
 # ==================================== Set Parameters ====================================
+# Print options
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', 1000)
+pd.set_option('display.float_format', '{:,.3f}'.format)
+
 # Colors:
 white = '\033[38;2;255;255;255m'
 greyDark = '\033[38;2;144;144;144m'
@@ -108,11 +104,6 @@ yellow = '\033[38;2;255;217;24m'
 orange = '\033[38;2;247;151;31m'
 red = '\033[91m'
 resetColor = '\033[0m'
-
-# Print options
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', 1000)
-pd.set_option('display.float_format', '{:,.3f}'.format)
 
 # Load: Dataset labels
 enzymeName, filesInitial, filesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
@@ -186,15 +177,18 @@ ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
                         combinedMotifs=combinedMotifs)
 
 # Evaluate: Sequences
-ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
-                      motifs=motifs, subLabel=inMotifPositions,
-                      combinedMotifs=combinedMotifs)
-
-sys.exit()
+subsTrain = ngs.processSubstrates(
+    subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
+    subLabel=inMotifPositions, combinedMotifs=combinedMotifs)
 
 
-PredictActivity(enzymeName=enzymeName, datasetTag=ngs.datasetTa,
-                labelsXAxis=inMotifPositions,
-                subsTrain=substrates, subsTest=substratesPred, printNumber=inPrintNumber)
+# # Predicting Substrate Activity
+subsPred = ngs.generateSubstrates(df=ngs.eMap)
+
+
+PredictActivity(enzymeName=enzymeName, datasetTag=ngs.datasetTag,
+                subsTrain=subsTrain, subsTest=substratesPred,
+                folderPath=inPathFolder, labelsXAxis=inMotifPositions,
+                printNumber=inPrintNumber)
 
 sys.exit()

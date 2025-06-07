@@ -8,6 +8,7 @@ from Bio import BiopythonWarning
 import esm
 import gzip
 import math
+# import itertools
 from itertools import combinations, product
 import logomaker
 import matplotlib.patheffects as path_effects
@@ -24,6 +25,7 @@ import pickle as pk
 import seaborn as sns
 import sys
 import threading
+import torch
 import warnings
 from wordcloud import WordCloud
 
@@ -2608,6 +2610,8 @@ class NGS:
             print(f'ADD: Suffix tree')
             sys.exit()
 
+        return motifES
+
 
 
     def plotMotifEnrichment(self, motifs, barColor='#CC5500',
@@ -3163,7 +3167,7 @@ class NGS:
               '===========================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
               f'Collecting up to {red}{self.NSubsPCA:,}{resetColor} substrates\n'
-              f'Total unique substrates: {red}{len(substrates):,}{resetColor}\n')
+              f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
 
         # Extract: Datapoints
         iteration = 0
@@ -5082,6 +5086,35 @@ class NGS:
 
 
 
+    def generateSubstrates(self, df):
+        print('============================== Generate Substrates '
+              '==============================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'{df}\n\n')
+
+
+        # Get allowed AAs at each position (only those with nonzero probability)
+        allowedResiduesPerPosition = []
+        for column in probMotif.columns:
+            print(f'Column: {column}')
+            nonzeroAAs = probMotif[probMotif[column] > 0].index.tolist()
+            allowedResiduesPerPosition.append(nonzeroAAs)
+
+        # Generate all possible combinations (cartesian product)
+        allCombos = list(itertools.product(*allowedResiduesPerPosition))
+        print(f'\n\nCombos:\n{allCombos}\n\n')
+
+        # Convert tuples to strings (AA sequences)
+        print('Strings:')
+        comboStrings = [''.join(combo) for combo in allCombos]
+        for iteration, string in enumerate(comboStrings):
+            print(f'     {string}')
+
+        print(f'\nTotal combinations: {len(comboStrings):,}')
+        print(comboStrings[:5])  # Show first 5
+
+
+
 
 
 
@@ -5113,11 +5146,11 @@ class RandomForestRegressor:
             # Train the model
             print(f'Training the model')
             start = time.time()
-            model = XGBRFRegressor(device=device, tree_method="hist")
+            model = XGBRFRegressor(device=self.device, tree_method="hist")
             model.fit(x, y)
             end = time.time()
-            runtime = (end - start) * 1000
-            print(f'     Training time: {red}{round(runtime, 3):,} ms{resetColor}\n')
+            runtime = (end - start)
+            print(f'     Training time: {red}{round(runtime, 3):,} s{resetColor}\n')
 
             print(f'Saving Trained ESM Model:\n'
                   f'     {greenDark}{pathModel}{resetColor}\n\n')
@@ -5126,7 +5159,7 @@ class RandomForestRegressor:
         if getSHAP:
             # Get: SHAP values
             booster = self.model.get_booster()
-            booster.set_param({'device': device})
+            booster.set_param({'device': self.device})
             shapValues = booster.predict(self.dTest, pred_contribs=True)
             shapInteractionValues = booster.predict(self.dTest, pred_interactions=True)
             print(f'Shap Values:\n{shapValues}\n\n'
@@ -5139,8 +5172,8 @@ class RandomForestRegressor:
         activityPred = self.model.predict(dfTest)
         activityPred = np.expm1(activityPred)  # Reverse log1p transform
         end = time.time()
-        runtime = (end - start) * 1000
-        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+        runtime = (end - start)
+        print(f'     Runtime: {red}{round(runtime, 3):,} s{resetColor}\n')
 
         # Evaluate prediction
         predictions = {}
@@ -5158,11 +5191,9 @@ class RandomForestRegressor:
 
 
 class PredictActivity:
-    def __init__(self, enzymeName, datasetTag, folderPath, filesInit, subsTrain, subsTest,
+    def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsTest,
                  labelsXAxis, printNumber):
         # Parameters: Files
-        self.filesInit = filesInit
-        self.filesFinal = None
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
         self.pathEmbeddings = os.path.join(self.pathFolder, 'Embeddings')
@@ -5181,11 +5212,10 @@ class PredictActivity:
         self.enzymeName = enzymeName
         self.datasetTag = datasetTag
         self.labelsXAxis = labelsXAxis
-        self.pathSubCounts = os.path.join('data', f'fixedMotifCounts - {datasetTag}.txt')
-        self.pathSubstrates = os.path.join('data', f'fixedMotifSubs - {datasetTag}')
         self.printNumber = printNumber
 
         # Parameters: Model
+        self.device = self.getDevice()
         self.modelNameESM = ''
         self.subsInitial = None
         self.subsTrain = None
@@ -5196,10 +5226,12 @@ class PredictActivity:
 
 
         # Generate Embeddings
-        embedingsSubsTrain = self.ESM(substrates=self.subsTrain, subLabel=inAAPositions,
-                                      datasetType=self.datasetTag, trainModel=True)
-        embedingsSubsPred = self.ESM(substrates=self.subsTest, subLabel=inAAPositions,
-                                     datasetType='Predictions')
+        embedingsSubsTrain = self.ESM(
+            substrates=self.subsTrain, subLabel=self.labelsXAxis,
+            datasetType=self.datasetTag, trainModel=True)
+        embedingsSubsPred = self.ESM(
+            substrates=self.subsTest, subLabel=self.labelsXAxis,
+            datasetType='Predictions')
 
         # Predict: Substrate activity
         RandomForestRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
@@ -5209,9 +5241,27 @@ class PredictActivity:
 
 
 
+    def getDevice(self):
+        # Set device
+        print('============================== Set Training Device '
+              '==============================')
+        if torch.cuda.is_available():
+            device = 'cuda:0'
+            print(f'Train with Device:{magenta} {device}{resetColor}\n'
+                  f'Device Name:{magenta} {torch.cuda.get_device_name(device)}{resetColor}\n\n')
+        else:
+            import platform
+            device = 'cpu'
+            print(f'Train with Device:{magenta} {device}{resetColor}\n'
+                  f'Device Name:{magenta} {platform.processor()}{resetColor}\n\n')
+
+        return device
+
+
+
     def ESM(self, substrates, subLabel, datasetType, trainModel=False):
-        print('=========================== Convert To Numerical: ESM '
-              '===========================')
+        print('=========================== Generate Embeddings: ESM '
+              '============================')
 
         # Choose: ESM model
         modelPrams = 1
@@ -5223,12 +5273,12 @@ class PredictActivity:
         if trainModel:
             self.modelNameESM = tagEmbeddings
         print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
-              f'Total unique substrates: {red}{len(substrates):,}{resetColor}\n')
+              f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
 
         # Load: ESM Embeddings
         pathEmbeddings = os.path.join('Mpro2/Embeddings', f'{tagEmbeddings}.csv')
         if os.path.exists(pathEmbeddings):
-            print(f'Loading: ESM Embeddings\n'
+            print(f'\nLoading: ESM Embeddings\n'
                   f'     {greenDark}{pathEmbeddings}{resetColor}\n')
             subEmbeddings = pd.read_csv(pathEmbeddings, index_col=0)
             print(f'Substrate Embeddings shape: '
@@ -5269,7 +5319,7 @@ class PredictActivity:
         # esm2_t36_3B_UR50D has 36 layers
         # esm2_t33_650M_UR50D has 33 layers
         # esm2_t12_35M_UR50D has 12 layers
-        model = model.to(device)
+        model = model.to(self.device)
 
         # Get batch tensor
         batchConverter = alphabet.get_batch_converter()
@@ -5278,7 +5328,7 @@ class PredictActivity:
         try:
             batchLabels, batchSubs, batchTokens = batchConverter(subs)
             batchTokensCPU = batchTokens
-            batchTokens = batchTokens.to(device)
+            batchTokens = batchTokens.to(self.device)
 
         except Exception as exc:
             print(f'{orange}ERROR: The ESM has failed to evaluate your substrates\n\n'
