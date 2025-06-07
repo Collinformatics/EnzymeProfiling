@@ -3,17 +3,20 @@ import numpy as np
 import pandas as pd
 import sys
 import torch
+import time
+
 
 
 inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
 substrates = {
     'VVLQSAFE': 357412,
-    'VALQAAFA': 311191,
+    'VALQAASA': 311191,
     'VILQAGNS': 309441,
     'LILQSAFK': 291445,
-    'IVLQSAFH': 267741,
-    'VLLQAAFT': 243158,
-    'AVLQAAFN': 218612
+    'IVLQSAYH': 267741,
+    'LVLQAAFT': 243158,
+    'AVLQGAHN': 218612,
+    'IALQSTGG': 204658,
 }
 
 
@@ -61,17 +64,78 @@ class CNN:
 
 
 
+class RandomForestRegressor:
+    def __init__(self, df):
+        from xgboost import XGBRFRegressor
+
+        print('=========================== Random Forrest Regressor '
+              '============================')
+        print(f'Module: {purple}XGB Regressor{resetColor}')
+
+        # Process dataframe
+        X = df.drop(columns='count').values
+        y = np.log1p(df['count'].values)
+
+        # Train the model
+        start = time.time()
+        self.model = XGBRFRegressor(device=device, predictor='gpu_predictor')
+        self.model.fit(X, y)
+        end = time.time()
+        runtime = (end - start) * 100
+        print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n\n')
+
+        self.predAvtivity()
+
+    def predAvtivity(self):
+        print('Predicting Activity:')
+
+
 class GradBoostingRegressor:
     def __init__(self, df):
         from sklearn.ensemble import GradientBoostingRegressor
 
+        print('========================== Gradient Boosting Regressor '
+              '==========================')
+        print(f'Module: {purple}SK Learn{resetColor}')
 
+        # Process dataframe
         X = df.drop(columns='count').values
         y = np.log1p(df['count'].values)
 
-        model = GradientBoostingRegressor()
-        model = model.to(device)
-        model.fit(X, y)
+        # Train the model
+        start = time.time()
+        self.model = GradientBoostingRegressor()
+        self.model.fit(X, y)
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n\n')
+
+
+class GradBoostingRegressorXGB:
+    def __init__(self, df):
+        from xgboost import XGBRegressor
+
+        print('========================== Gradient Boosting Regressor '
+              '==========================')
+        print(f'Module: {purple}XGB Regressor{resetColor}')
+
+        # Process dataframe
+        X = df.drop(columns='count').values
+        y = np.log1p(df['count'].values)
+
+        # Train the model
+        start = time.time()
+        self.model = XGBRegressor(device=device)
+        self.model.fit(X, y)
+        end = time.time()
+        runtime = (end - start) * 100
+        print(f'Training time: {red}{round(runtime, 3):,} ms{resetColor}\n\n')
+
+        self.predAvtivity()
+
+    def predAvtivity(self):
+        print('Predicting Activity:')
+
 
 
 
@@ -113,9 +177,12 @@ def ESM(substrates, subLabel):
     numLayersESM = 36
     # model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
     # numLayersESM = 33
+    # esm2_t36_3B_UR50D has 36 layers
+    # esm2_t33_650M_UR50D has 33 layers
+    # esm2_t12_35M_UR50D has 12 layers
     model = model.to(device)
 
-
+    # Get batch tensor
     batchConverter = alphabet.get_batch_converter()
 
 
@@ -124,6 +191,7 @@ def ESM(substrates, subLabel):
         batchLabels, batchSubs, batchTokens = batchConverter(subs)
         batchTokensCPU = batchTokens
         batchTokens = batchTokens.to(device)
+
     except Exception as exc:
         print(f'{orange}ERROR: The ESM has failed to evaluate your substrates\n\n'
               f'Exception:\n{exc}\n\n'
@@ -133,9 +201,10 @@ def ESM(substrates, subLabel):
               f'     With: {cyan}esm.pretrained.esm2_t33_650M_UR50D()'
               f'{resetColor}\n')
         sys.exit(1)
-
     print(f'Batch Tokens:{greenLight} {batchTokens.shape}{resetColor}\n'
           f'{greenLight}{batchTokens}{resetColor}\n\n')
+
+    # Record tokens
     slicedTokens = pd.DataFrame(batchTokensCPU[:, 1:-1],
                                 index=batchSubs,
                                 columns=subLabel)
@@ -148,14 +217,9 @@ def ESM(substrates, subLabel):
 
     # Step 4: Extract per-sequence embeddings
     tokenReps = results["representations"][numLayersESM]  # (N, seq_len, hidden_dim)
-    # esm2_t36_3B_UR50D has 36 layers
-    # esm2_t33_650M_UR50D has 33 layers
-    # esm2_t12_35M_UR50D has 12 layers
     sequenceEmbeddings = tokenReps[:, 0, :]  # [CLS] token embedding: (N, hidden_dim)
-
-
-    print(f'{greenLight}Extracted embeddings shape: '
-          f'{sequenceEmbeddings.shape}{resetColor}\n')
+    print(f'Extracted embeddings shape: '
+          f'{greenLight}{sequenceEmbeddings.shape}{resetColor}\n\n')
 
     # Convert to numpy + store with counts
     embeddings = sequenceEmbeddings.cpu().numpy()
@@ -176,6 +240,6 @@ output = ESM(substrates=substrates, subLabel=inAAPositions)
 
 # ================================== Initialize Classes ==================================
 # cnn = CNN(substrates=substrates)
-regressor = GradBoostingRegressor(df=output[3])
-
-
+RandomForestRegressor(df=output[3])
+GradBoostingRegressor(df=output[3])
+GradBoostingRegressorXGB(df=output[3])
