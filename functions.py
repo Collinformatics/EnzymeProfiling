@@ -5391,7 +5391,8 @@ class PredictActivity:
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
 
         # Load: ESM Embeddings
-        pathEmbeddings = os.path.join('Mpro2/Embeddings', f'{tagEmbeddings}.csv')
+        pathEmbeddings = os.path.join('Mpro2/Embeddings',
+                                      f'Embeddings - {tagEmbeddings}.csv')
         if os.path.exists(pathEmbeddings):
             print(f'\nLoading: ESM Embeddings\n'
                   f'     {greenDark}{pathEmbeddings}{resetColor}\n')
@@ -5483,13 +5484,18 @@ class PredictActivity:
                 tokenReps = result["representations"][numLayersESM]
                 seqEmbed = tokenReps[:, 0, :].cpu().numpy()
                 allEmbeddings.append(seqEmbed)
+
+                # Clear data to help free memory
+                del result, tokenReps, batch
+                torch.cuda.empty_cache()
+
                 end = time.time()
                 runtime = end - start
                 runtimeTotal = (end - startInit) / 60
                 percentCompletion = round((i / batchTotal)* 100, 1)
-                print(f'Progress: {red}{i}{resetColor} / {red}{batchTotal}'
+                print(f'Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
                       f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
-                      f'     Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
+                      f'     Batch Shape: {greenLight}{batch.shape:,}{resetColor}\n'
                       f'     Iteration Runtime: {red}{round(runtime, 3):,} s'
                       f'{resetColor}\n'
                       f'     Total Runtime: {red}{round(runtimeTotal, 3):,} min'
