@@ -2571,10 +2571,10 @@ class NGS:
                 subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
                 predActivity=predActivity, predModel=predModel, predType=predType)
             #
-            # predType = 'Chosen'
-            # self.motifEnrichment(
-            #     subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
-            #     predActivity=predActivity, predModel=predModel, predType=predType)
+            predType = 'Chosen'
+            self.motifEnrichment(
+                subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
+                predActivity=predActivity, predModel=predModel, predType=predType)
 
             # Plot: Work cloud
             self.plotWordCloud(

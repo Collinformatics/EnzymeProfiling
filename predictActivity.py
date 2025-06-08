@@ -263,14 +263,12 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
     df=probMotif, eMap=ngs.eMap, minES=inMinES, dataType='AA Probabilities',
     subsReq=inSubsPred, filter=inGeneratedSubsFilter)
 
-
 # Predict activity
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
     subsTrain=subsTrain, subsTest=substratesPred, subsPredChosen=inSubsPred,
     tagChosenSubs=tagPredSubs, minES=inMinES, labelsXAxis=inMotifPositions,
     printNumber=inPrintNumber)
-
 
 # Evaluate: Predictions
 ngs.processSubstrates(
