@@ -13,6 +13,7 @@ import logomaker
 import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.pyplot import ylabel
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import RectangleSelector
 from sklearn.decomposition import PCA
@@ -2562,10 +2563,13 @@ class NGS:
 
 
     def processSubstrates(self, subsInit, subsFinal, motifs, subLabel,
-                          combinedMotifs=False):
+                          combinedMotifs=False, predActivity=False, predModel=False):
         # Calculate: Motif enrichment
         motifES = self.motifEnrichment(subsInit=subsInit, subsFinal=subsFinal,
-                                       motifs=motifs)
+                                       motifs=motifs, predActivity=predActivity,
+                                       predModel=predModel)
+        if predActivity:
+            sys.exit()
 
         # Plot: Work cloud
         if self.plotFigWords:
@@ -2612,10 +2616,6 @@ class NGS:
                 self.plotWordCloud(substrates=motifCluster, clusterNumPCA=NClusterAdj,
                                    combinedMotifs=combinedMotifs)
 
-
-            # Why is the PCA getting stuck?
-
-
         # Suffix tree
         if self.plotSuffixTree:
             print(f'ADD: Suffix tree')
@@ -2625,9 +2625,9 @@ class NGS:
 
 
 
-    def plotMotifEnrichment(self, motifs, barColor='#CC5500',
-                            barWidth=0.65, combinedMotifs=False,
-                            limitNBars=False, clusterNumPCA=None):
+    def plotMotifEnrichment(self, motifs, barColor='#CC5500', barWidth=0.65,
+                            clusterNumPCA=None, combinedMotifs=False, limitNBars=False,
+                            predActivity=False, predModel=None):
         NSubs = len(motifs.keys())
         if limitNBars:
             # Collect top datapoints
@@ -2693,19 +2693,25 @@ class NGS:
                 bar.set_edgecolor(barColor)
 
         # Define: Figure title
-        if clusterNumPCA is not None:
-            title = (f'{self.enzymeName}\n{self.datasetTag}\n'
-                     f'{NSubs:,} Unique Motifs - PCA Cluster #{clusterNumPCA}')
+        yLabel = 'Enrichment Factor'
+        if predActivity:
+            title = (f'{self.enzymeName}\n{predModel}\n'
+                         f'{NSubs:,} Unique Sequences')
+            yLabel = 'Predicted Activity'
         else:
-            title = (f'{self.enzymeName}\n{self.datasetTag}\n'
-                     f'{NSubs:,} Unique Motifs')
-        if combinedMotifs and len(self.motifIndexExtracted) > 1:
-            title = title.replace(self.datasetTag,
-                                  f'Combined {self.datasetTag}')
+            if clusterNumPCA is not None:
+                title = (f'{self.enzymeName}\n{self.datasetTag}\n'
+                         f'{NSubs:,} Unique Motifs - PCA Cluster #{clusterNumPCA}')
+            else:
+                title = (f'{self.enzymeName}\n{self.datasetTag}\n'
+                         f'{NSubs:,} Unique Motifs')
+            if combinedMotifs and len(self.motifIndexExtracted) > 1:
+                title = title.replace(self.datasetTag,
+                                      f'Combined {self.datasetTag}')
         if limitNBars:
             title = title.replace(f'{NSubs:,}', f'Top {plotNSubs:,}')
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-        plt.ylabel('Enrichment Factor', fontsize=self.labelSizeAxis)
+        plt.ylabel(yLabel, fontsize=self.labelSizeAxis)
         plt.axhline(y=0, color='black', linewidth=self.lineThickness)
         plt.ylim(yMin, yMax)
 
@@ -2886,7 +2892,8 @@ class NGS:
 
 
 
-    def motifEnrichment(self, subsInit, subsFinal, motifs):
+    def motifEnrichment(self, subsInit, subsFinal, motifs,
+                        predActivity=False, predModel=False):
         print('=============================== Motif Enrichment '
               '================================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
@@ -2894,93 +2901,99 @@ class NGS:
               f'{purple}Final Sort{resetColor} library:\n'
               f'     Enrichment Ratio (ER) = {magenta}Counts Final{resetColor} / '
               f'{magenta}Counts Initial{resetColor}\n')
-        k = None
-        motifEnrichment = {}
-        ratios = {}
-        totalCountsInit = 0
-        totalCountsInitAdj = 0
-        totalCountsFinal = 0
-        totalUniqueSubsFinal = len(subsFinal)
+        combinedMotifs = False
         if len(self.motifIndexExtracted) > 1:
             combinedMotifs = True
+
+        if predActivity:
+            motifEnrichment = motifs
+            print(f'Data Type: {type(motifEnrichment)}')
         else:
-            combinedMotifs = False
-
-        # ================================================================================
-
-        # Calc: ER
-            # Use: CountFinal / CountInit
-
-            # Or Use: (CountFinal / NFinalSubs) / (CountInit / NInitSubs)
-
-            # Use?: log2(ratio)
-
-        # ================================================================================
-
-        # Sort input sequences
-        subsFinal = dict(sorted(subsFinal.items(),
-                                      key=lambda x: x[1], reverse=True))
-
-        # Print: Substrates
-        iteration = 0
-        print(f'Substrates: {magenta}Final Sort{resetColor}')
-        for substrate, count in subsFinal.items():
-            print(f'     {pink}{substrate}{resetColor}, '
-                  f'Count:{red} {count:,}{resetColor}')
-            iteration += 1
-            if iteration >= self.printNumber:
-                print('')
-                break
+            k = None
+            motifEnrichment = {}
+            ratios = {}
+            totalCountsInit = 0
+            totalCountsInitAdj = 0
+            totalCountsFinal = 0
+            totalUniqueSubsFinal = len(subsFinal)
 
 
-        # Evaluate: Motif enrichment
-        for substrate, count in subsFinal.items():
-            totalCountsFinal += count
-            if substrate in subsInit.keys():
-                # Limit subInit length to match frame extraction zones
-                countInit = subsInit[substrate]
-            else:
-                countInit = 1
-                totalCountsFinal += 1
-            totalCountsInit += countInit
-            if countInit == 1:
-                totalCountsInitAdj += countInit
-            ratios[substrate] = count / countInit
+            # ============================================================================
 
-        print(f'Motif Indices: {self.motifIndexExtracted}\n')
-        # sys.exit()
+            # Calc: ER
+                # Use: CountFinal / CountInit
 
-        # Sort collected substrates and add to the list
-        ratios = dict(sorted(ratios.items(), key=lambda x: x[1], reverse=True))
+                # Or Use: (CountFinal / NFinalSubs) / (CountInit / NInitSubs)
 
-        iteration = 0
-        print('Enrichment Ratios:')
-        for substrate, ratio in ratios.items():
-            # if int(ratio) != subsFinal[substrate]:
-            iteration += 1
-            print(f'     {pink}{substrate}{resetColor}, '
-                  f'ER: {red}{round(ratio, 1):,}{resetColor}')
-            if iteration >= self.printNumber:
-                print('')
-                break
+                # Use?: log2(ratio)
 
-        print(f'Unique Substrates: {red}{totalUniqueSubsFinal:,}{resetColor}\n'
-              f'Counts +1: {red}{totalCountsInitAdj:,}{resetColor}\n'
-              f'Percent +1: {yellow}{round(100*(totalCountsInitAdj / 
-                                                totalUniqueSubsFinal), self.roundVal)} %'
-              f'{resetColor}')
+            # ============================================================================
+
+            # Sort input sequences
+            subsFinal = dict(sorted(subsFinal.items(),
+                                          key=lambda x: x[1], reverse=True))
+
+            # Print: Substrates
+            iteration = 0
+            print(f'Substrates: {magenta}Final Sort{resetColor}')
+            for substrate, count in subsFinal.items():
+                print(f'     {pink}{substrate}{resetColor}, '
+                      f'Count:{red} {count:,}{resetColor}')
+                iteration += 1
+                if iteration >= self.printNumber:
+                    print('')
+                    break
 
 
-        # Evaluate: Motifs
-        for motif in motifs.keys():
+            # Evaluate: Motif enrichment
+            for substrate, count in subsFinal.items():
+                totalCountsFinal += count
+                if substrate in subsInit.keys():
+                    # Limit subInit length to match frame extraction zones
+                    countInit = subsInit[substrate]
+                else:
+                    countInit = 1
+                    totalCountsFinal += 1
+                totalCountsInit += countInit
+                if countInit == 1:
+                    totalCountsInitAdj += countInit
+                ratios[substrate] = count / countInit
+
+            print(f'Motif Indices: {self.motifIndexExtracted}\n')
+            # sys.exit()
+
+            # Sort collected substrates and add to the list
+            ratios = dict(sorted(ratios.items(), key=lambda x: x[1], reverse=True))
+
+            iteration = 0
+            print('Enrichment Ratios:')
             for substrate, ratio in ratios.items():
-                if motif in substrate:
-                    if motif in motifEnrichment.keys():
-                        motifEnrichment[motif] += ratio
-                    else:
-                        motifEnrichment[motif] = ratio
-        totalMotifs = len(motifs.keys())
-        print(f'Unique Motifs: {red}{totalMotifs:,}{resetColor}\n')
+                # if int(ratio) != subsFinal[substrate]:
+                iteration += 1
+                print(f'     {pink}{substrate}{resetColor}, '
+                      f'ER: {red}{round(ratio, 1):,}{resetColor}')
+                if iteration >= self.printNumber:
+                    print('')
+                    break
+
+            print(f'Unique Substrates: {red}{totalUniqueSubsFinal:,}{resetColor}\n'
+                  f'Counts +1: {red}{totalCountsInitAdj:,}{resetColor}\n'
+                  f'Percent +1: {yellow}'
+                  f'{round(100*(totalCountsInitAdj / 
+                                totalUniqueSubsFinal), self.roundVal)} %'
+                  f'{resetColor}')
+
+
+            # Evaluate: Motifs
+            for motif in motifs.keys():
+                for substrate, ratio in ratios.items():
+                    if motif in substrate:
+                        if motif in motifEnrichment.keys():
+                            motifEnrichment[motif] += ratio
+                        else:
+                            motifEnrichment[motif] = ratio
+            totalMotifs = len(motifs.keys())
+            print(f'Unique Motifs: {red}{totalMotifs:,}{resetColor}\n')
 
         # Sort collected substrates and add to the list
         motifEnrichment = dict(sorted(motifEnrichment.items(),
@@ -2999,12 +3012,13 @@ class NGS:
 
         # Plot: Motif enrichment
         if self.plotFigMotifEnrich:
-            self.plotMotifEnrichment(motifs=motifEnrichment, 
-                                     combinedMotifs=combinedMotifs)
+            self.plotMotifEnrichment(
+                motifs=motifEnrichment, combinedMotifs=combinedMotifs,
+                predActivity=predActivity, predModel=predModel)
         if self.plotFigMotifEnrichSelect:
-            self.plotMotifEnrichment(motifs=motifEnrichment, 
-                                     combinedMotifs=combinedMotifs, 
-                                     limitNBars=True)
+            self.plotMotifEnrichment(
+                motifs=motifEnrichment, combinedMotifs=combinedMotifs,
+                limitNBars=True, predActivity=predActivity, predModel=predModel)
 
         return motifEnrichment
 
@@ -5234,9 +5248,9 @@ class GradBoostingRegressorXGB:
 
 
 
-class RandomForestRegressor:
-    def __init__(self, dfTrain, dfTest, subsPredCustom, minES, device, embeddingsName,
-                 printNumber, getSHAP=False):
+class RandomForestRegressorXGB:
+    def __init__(self, dfTrain, dfTest, subsPredCustom, minES, embeddingsName, pathModels,
+                 device, printNumber, getSHAP=False):
         print('=========================== Random Forrest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}\n'
@@ -5253,10 +5267,11 @@ class RandomForestRegressor:
         y = np.log1p(dfTrain['activity'].values)
 
 
-        # Save model
+        # Get: Model
         modelTag = f'Random Forrest - {embeddingsName}'
-        pathModel = os.path.join('Mpro2/Models', f'{modelTag}.ubj') # ubj: Binary JSON file
+        pathModel = os.path.join(pathModels, f'{modelTag}.ubj') # ubj: Binary JSON file
         if os.path.exists(pathModel):
+            # Load the model
             self.loadModel(model=XGBRFRegressor(), pathModel=pathModel)
         else:
             # Train the model
@@ -5285,7 +5300,7 @@ class RandomForestRegressor:
                   f'Interaction Values:\n{shapInteractionValues}\n\n')
 
 
-        # Predict with the model
+        # Predict substrate activity
         print(f'Predicting Substrate Activity:\n'
               f'     N Substrates: {red}{len(dfTest.index)}{resetColor}')
         start = time.time()
@@ -5296,14 +5311,14 @@ class RandomForestRegressor:
         print(f'      Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
         # Rank predictions
-        self.activityPred = {}
+        self.activityPredRandom = {}
         for index, substrate in enumerate(subsPred):
-            self.activityPred[substrate] = activityPred[index]
-        self.activityPred = dict(sorted(self.activityPred.items(),
+            self.activityPredRandom[substrate] = activityPred[index]
+        self.activityPredRandom = dict(sorted(self.activityPredRandom.items(),
                                         key=lambda x: x[1], reverse=True))
         print(f'Predicted Activity: {purple}Random Substrates - Min ES: {minES}'
               f'{resetColor}')
-        for iteration, (substrate, value) in enumerate(self.activityPred.items()):
+        for iteration, (substrate, value) in enumerate(self.activityPredRandom.items()):
             if iteration >= printNumber:
                 break
             value = float(value)
@@ -5313,18 +5328,20 @@ class RandomForestRegressor:
         # Get: Custom substrate predictions
         if subsPredCustom != []:
             print(f'Predicted Activity: {purple}Custom Substrates{resetColor}')
-            activityCustomSubs = {}
+            self.activityPredCustom = {}
             for substrate in subsPredCustom:
-                if substrate in self.activityPred.keys():
-                    activityCustomSubs[substrate] = self.activityPred[substrate]
-            activityCustomSubs = dict(sorted(activityCustomSubs.items(),
+                if substrate in self.activityPredRandom.keys():
+                    self.activityPredCustom[substrate] = (
+                        self.activityPredRandom)[substrate]
+            self.activityPredCustom = dict(sorted(self.activityPredCustom.items(),
                                              key=lambda x: x[1], reverse=True))
-
-            for iteration, (substrate, activity) in enumerate(activityCustomSubs.items()):
+            for iteration, (substrate, activity) in (
+                    enumerate(self.activityPredCustom.items())):
                 activity = float(activity)
                 print(f'     {pink}{substrate}{resetColor}: '
                       f'{red}{round(activity, 3):,}{resetColor}')
             print('\n')
+
 
     def loadModel(self, model, pathModel):
         print(f'Loading Trained ESM Model:\n'
@@ -5378,10 +5395,15 @@ class PredictActivity:
             datasetType='Predictions')
 
         # Predict: Substrate activity
-        RandomForestRegressor(
+        activityRandonForrestXGB = RandomForestRegressorXGB(
             dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
-            subsPredCustom=self.subsPredCustom, minES=self.minES, device=self.device,
-            embeddingsName=self.embeddingsNameESM, printNumber=self.printNumber)
+            subsPredCustom=self.subsPredCustom, minES=self.minES,
+            pathModels=self.pathModels, embeddingsName=self.embeddingsNameESM,
+            device=self.device, printNumber=self.printNumber)
+        self.predActivityRandonForrestXGB = {}
+        self.predActivityRandonForrestXGB['Random'] = activityRandonForrestXGB.activityPredRandom
+        self.predActivityRandonForrestXGB['Custom'] = activityRandonForrestXGB.activityPredCustom
+
         # GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
         # GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
 
@@ -5409,7 +5431,7 @@ class PredictActivity:
     def ESM(self, substrates, subLabel, datasetType, trainingSet=False):
         print('=========================== Generate Embeddings: ESM '
               '============================')
-        # Choose: ESM model
+        # Choose: ESM PLM model
         modelPrams = 2
         if modelPrams == 0:
             sizeESM = '15B Params'
@@ -5434,14 +5456,13 @@ class PredictActivity:
                 tagEmbeddings = tagEmbeddings.replace(f'Min ES {self.minES}',
                                                       f'Min ES {self.minES} - '
                                                       f'Added {self.tagCustomSubs}')
-
         if trainingSet:
             self.embeddingsNameESM = tagEmbeddings
         print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
 
         # Load: ESM Embeddings
-        pathEmbeddings = os.path.join('Mpro2/Embeddings',
+        pathEmbeddings = os.path.join(self.pathEmbeddings,
                                       f'Embeddings - {tagEmbeddings}.csv')
         if os.path.exists(pathEmbeddings):
             print(f'\nLoading: ESM Embeddings\n'
@@ -5453,6 +5474,7 @@ class PredictActivity:
             return subEmbeddings
 
 
+        # # Generate Embeddings
         # Step 1: Convert substrates to ESM model format and generate Embeddings
         totalSubActivity = 0
         subs = []
@@ -5557,8 +5579,8 @@ class PredictActivity:
         end = time.time()
         runtime = end - start
         runtimeTotal = (end - startInit) / 60
-        percentCompletion = round((i / batchTotal) * 100, 1)
-        print(f'ESM Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
+        percentCompletion = round((batchTotal / batchTotal) * 100, 1)
+        print(f'ESM Progress: {red}{batchTotal:,}{resetColor} / {red}{batchTotal:,}'
               f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
               f'     Runtime: {red}{round(runtime, 3):,} s'
               f'{resetColor}\n'

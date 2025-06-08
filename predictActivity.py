@@ -265,7 +265,14 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
 
 
 # Predict activity
-PredictActivity(enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
-                subsTrain=subsTrain, subsTest=substratesPred, subsPredCustom=inSubsPred,
-                tagCustomSubs=tagPredSubs, minES=inMinES, labelsXAxis=inMotifPositions,
-                printNumber=inPrintNumber)
+predictions = PredictActivity(
+    enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
+    subsTrain=subsTrain, subsTest=substratesPred, subsPredCustom=inSubsPred,
+    tagCustomSubs=tagPredSubs, minES=inMinES, labelsXAxis=inMotifPositions,
+    printNumber=inPrintNumber)
+
+# Evaluate: Predictions
+ngs.processSubstrates(
+    subsInit=None, subsFinal=None, motifs=predictions.predActivityRandonForrestXGB,
+    subLabel=inMotifPositions, predActivity=True, predModel='XGBoost Random Forrest')
+
