@@ -5364,11 +5364,13 @@ class PredictActivity:
             NSubs = len(substrates)
 
         # Choose: ESM model
-        modelPrams = 1
+        modelPrams = 2
         if modelPrams == 0:
             sizeESM = '15B Params'
-        else:
+        elif modelPrams == 1:
             sizeESM = '3B Params'
+        else:
+            sizeESM = '650M Params'
         tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType} - '
                          f'N {NSubs} - {len(self.labelsXAxis)} AA')
         if trainModel:
@@ -5414,15 +5416,18 @@ class PredictActivity:
         if sizeESM == '15B Params':
             model, alphabet = esm.pretrained.esm2_t48_15B_UR50D()
             numLayersESM = 48
-        else:
+        elif sizeESM == '3B Params':
             model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
             numLayersESM = 36
+        else:
+            model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
+            numLayersESM = 33
         # esm2_t36_3B_UR50D has 36 layers
         # esm2_t33_650M_UR50D has 33 layers
         # esm2_t12_35M_UR50D has 12 layers
         model = model.to(self.device)
 
-        # Get batch tensor
+        # Get: batch tensor
         batchConverter = alphabet.get_batch_converter()
 
         # Step 3: Convert substrates to ESM model format and generate Embeddings
@@ -5470,8 +5475,8 @@ class PredictActivity:
                 runtime = end - start
                 runtimeTotal = (end - startInit) / 60
 
-                print(f'Batch Index: {red}{i}{resetColor} / {red}{batchTotal}'
-                      f'{resetColor}\n'
+                print(f'Iteration: {red}{i}{resetColor} / {red}{batchTotal}'
+                      f'{resetColor} ({red}{round((i / batchTotal), 1)} %{resetColor})\n'
                       f'Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
                       f'Runtime: {red}{round(runtime, 3):,} s{resetColor}\n'
                       f'Total Time: {red}{round(runtimeTotal, 3):,} min'
