@@ -2565,8 +2565,6 @@ class NGS:
     def processSubstrates(self, subsInit, subsFinal, motifs, subLabel,
                           combinedMotifs=False, predActivity=False, predModel=False):
         if predActivity:
-            self.plotFigMotifEnrich = True
-
             # Calculate: Motif enrichment
             predType = 'Random'
             motifES = self.motifEnrichment(
@@ -2643,22 +2641,40 @@ class NGS:
                             clusterNumPCA=None, combinedMotifs=False, limitNBars=False,
                             predActivity=False, predModel=None, predType=None):
         NSubs = len(motifs.keys())
-        if limitNBars:
-            # Collect top datapoints
-            iteration = 0
-            x, y = [], []
-            for motif, count in motifs.items():
-                x.append(str(motif))
-                y.append(count)
-                iteration += 1
-                if iteration == self.NSubBars:
-                    break
+        if predActivity:
+            if predType.lower() == 'custom':
+                # Collect all datapoints
+                x, y = [], []
+                for motif, count in motifs.items():
+                    x.append(str(motif))
+                    y.append(count)
+            else:
+                # Collect top datapoints
+                iteration = 0
+                x, y = [], []
+                for motif, count in motifs.items():
+                    x.append(str(motif))
+                    y.append(count)
+                    iteration += 1
+                    if iteration == self.NSubBars:
+                        break
         else:
-            # Collect all datapoints
-            x, y = [], []
-            for motif, count in motifs.items():
-                x.append(str(motif))
-                y.append(count)
+            if limitNBars:
+                # Collect top datapoints
+                iteration = 0
+                x, y = [], []
+                for motif, count in motifs.items():
+                    x.append(str(motif))
+                    y.append(count)
+                    iteration += 1
+                    if iteration == self.NSubBars:
+                        break
+            else:
+                # Collect all datapoints
+                x, y = [], []
+                for motif, count in motifs.items():
+                    x.append(str(motif))
+                    y.append(count)
         plotNSubs = len(x)
         motifLen = len(x[0])
 
@@ -2710,7 +2726,7 @@ class NGS:
         yLabel = 'Enrichment Factor'
         if predActivity:
             title = (f'{self.enzymeName}\n{predModel}\n'
-                         f'{NSubs:,} Unique Sequences')
+                         f'{NSubs:,} {predType} Sequences')
             yLabel = 'Predicted Activity'
         else:
             if clusterNumPCA is not None:
@@ -2722,7 +2738,7 @@ class NGS:
             if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 title = title.replace(self.datasetTag,
                                       f'Combined {self.datasetTag}')
-        if limitNBars:
+        if limitNBars and predType.lower() != 'custom':
             title = title.replace(f'{NSubs:,}', f'Top {plotNSubs:,}')
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.ylabel(yLabel, fontsize=self.labelSizeAxis)
@@ -2752,15 +2768,15 @@ class NGS:
         if self.saveFigures:
             # Define: Save location
             if predActivity:
-                if limitNBars:
+                if predType.lower() == 'custom':
                     figLabel = (f'{self.enzymeName} - Predicted Activity - '
-                                f'{predType} Subs - {predModel} - '
-                                f'{self.datasetTag} - {motifLen} AA - '
-                                f'Select N {self.NSubBars} Plot N {plotNSubs}.png')
+                                f'{self.datasetTag} - {predType} Subs - {predModel} - '
+                                f'{motifLen} AA - Plot N {plotNSubs}.png')
                 else:
                     figLabel = (f'{self.enzymeName} - Predicted Activity - '
-                                f'{predType} Subs - {predModel} - {self.datasetTag} - '
-                                f'{motifLen} AA - Plot N {plotNSubs}.png')
+                                f'{self.datasetTag} - {predType} Subs - {predModel} - '
+                                f'{motifLen} AA - Select N {self.NSubBars} '
+                                f'Plot N {plotNSubs}.png')
             else:
                 if limitNBars:
                     figLabel = (f'{self.enzymeName} - Motif Enrichment - '
@@ -3025,7 +3041,7 @@ class NGS:
 
         iteration = 0
         if predActivity:
-            print(f'Predicted Activity: {pink}Top Sequences{resetColor}')
+            print(f'Predicted Activity: {pink}Top {predType} Sequences{resetColor}')
         else:
             print(f'Enrichment Motifs: {pink}Top Sequences{resetColor}')
         for motif, value in motifEnrichment.items():
@@ -3034,21 +3050,26 @@ class NGS:
                   f'ER: {red}{round(value, 1):,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
-                print('\n')
                 break
+        print('\n')
     
 
         # Plot: Motif enrichment
-        if not predActivity:
-            if self.plotFigMotifEnrich:
-                self.plotMotifEnrichment(
-                    motifs=motifEnrichment, combinedMotifs=combinedMotifs,
-                    predActivity=predActivity, predModel=predModel, predType=predType)
-        if self.plotFigMotifEnrichSelect:
+        if predActivity:
             self.plotMotifEnrichment(
                 motifs=motifEnrichment, combinedMotifs=combinedMotifs,
                 limitNBars=True, predActivity=predActivity, predModel=predModel,
                 predType=predType)
+        else:
+            if self.plotFigMotifEnrich:
+                self.plotMotifEnrichment(
+                    motifs=motifEnrichment, combinedMotifs=combinedMotifs,
+                    predActivity=predActivity, predModel=predModel, predType=predType)
+            if self.plotFigMotifEnrichSelect:
+                self.plotMotifEnrichment(
+                    motifs=motifEnrichment, combinedMotifs=combinedMotifs,
+                    limitNBars=True, predActivity=predActivity, predModel=predModel,
+                    predType=predType)
 
         return motifEnrichment
 
