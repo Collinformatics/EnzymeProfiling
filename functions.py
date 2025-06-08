@@ -2570,11 +2570,18 @@ class NGS:
             motifES = self.motifEnrichment(
                 subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
                 predActivity=predActivity, predModel=predModel, predType=predType)
+            #
+            # predType = 'Chosen'
+            # self.motifEnrichment(
+            #     subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
+            #     predActivity=predActivity, predModel=predModel, predType=predType)
 
-            predType = 'Chosen'
-            self.motifEnrichment(
-                subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
-                predActivity=predActivity, predModel=predModel, predType=predType)
+            # Plot: Work cloud
+            self.plotWordCloud(
+                substrates=motifES, combinedMotifs=combinedMotifs,
+                predActivity=predActivity, predModel=predModel)
+
+            return None
         else:
             # Calculate: Motif enrichment
             motifES = self.motifEnrichment(
@@ -2738,7 +2745,7 @@ class NGS:
             if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 title = title.replace(self.datasetTag,
                                       f'Combined {self.datasetTag}')
-        if limitNBars and predType.lower() != 'custom':
+        if limitNBars and predType.lower() != 'chosen':
             title = title.replace(f'{NSubs:,}', f'Top {plotNSubs:,}')
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.ylabel(yLabel, fontsize=self.labelSizeAxis)
@@ -2768,7 +2775,7 @@ class NGS:
         if self.saveFigures:
             # Define: Save location
             if predActivity:
-                if predType.lower() == 'custom':
+                if predType.lower() == 'chosen':
                     figLabel = (f'{self.enzymeName} - Predicted Activity - '
                                 f'{self.datasetTag} - {predType} Subs - {predModel} - '
                                 f'{motifLen} AA - Plot N {plotNSubs}.png')
@@ -4753,8 +4760,8 @@ class NGS:
 
 
 
-    def plotWordCloud(self, substrates, clusterNumPCA=None,
-                      combinedMotifs=False):
+    def plotWordCloud(self, substrates, clusterNumPCA=None, combinedMotifs=False,
+                      predActivity=False, predModel=False):
         print('=============================== Plot: Word Cloud '
               '================================')
         if clusterNumPCA is not None:
@@ -4771,13 +4778,16 @@ class NGS:
         print('')
 
         # Define: Figure title
-        if combinedMotifs and len(self.motifIndexExtracted) > 1:
-            title = self.titleWordsCombined
-        elif combinedMotifs:
-            title = self.titleWordsCombined
-            title = title.replace('Combined ', '')
+        if predActivity:
+            title = f'{self.enzymeName}\n{predModel}'
         else:
-            title = self.titleWords
+            if combinedMotifs and len(self.motifIndexExtracted) > 1:
+                title = self.titleWordsCombined
+            elif combinedMotifs:
+                title = self.titleWordsCombined
+                title = title.replace('Combined ', '')
+            else:
+                title = self.titleWords
 
 
         # Limit the number of words
@@ -4845,6 +4855,10 @@ class NGS:
             if clusterNumPCA is not None:
                 figLabel = figLabel.replace('Words',
                                             f'Words - PCA {clusterNumPCA}')
+            if predActivity:
+                figLabel = figLabel.replace(
+                    self.datasetTag,
+                    f'{self.datasetTag} - Predictions - {predModel}')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
@@ -5300,7 +5314,7 @@ class GradBoostingRegressorXGB:
 
 
 class RandomForestRegressorXGB:
-    def __init__(self, dfTrain, dfTest, subsPredCustom, minES, embeddingsName, pathModels,
+    def __init__(self, dfTrain, dfTest, subsPredChosen, minES, embeddingsName, pathModels,
                  device, printNumber, getSHAP=False):
         print('=========================== Random Forrest Regressor '
               '============================')
