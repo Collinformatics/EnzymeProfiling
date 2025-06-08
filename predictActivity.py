@@ -19,7 +19,7 @@ inSetFigureTimer = False
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
 inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
-inMinES = -1
+inMinES = 0
 inGeneratedSubsFilter = { # Only generate substrates with these requirements
     'R3': ['L'],
     'R4': ['Q']
@@ -269,5 +269,5 @@ substratesPred = ngs.generateSubstrates(df=probMotif, eMap=ngs.eMap, minES=inMin
 # Predict activity
 PredictActivity(enzymeName=enzymeName, datasetTag=ngs.datasetTag,
                 subsTrain=subsTrain, subsTest=substratesPred,
-                folderPath=inPathFolder, labelsXAxis=inMotifPositions,
-                printNumber=inPrintNumber)
+                folderPath=inPathFolder, minES=inMinES,
+                labelsXAxis=inMotifPositions, printNumber=inPrintNumber)

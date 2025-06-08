@@ -5298,7 +5298,7 @@ class RandomForestRegressor:
 
 
 class PredictActivity:
-    def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsTest,
+    def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsTest, minES,
                  labelsXAxis, printNumber):
         # Parameters: Files
         self.pathFolder = folderPath
@@ -5318,8 +5318,10 @@ class PredictActivity:
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.datasetTag = datasetTag
+        self.minES = minES
         self.labelsXAxis = labelsXAxis
         self.printNumber = printNumber
+
 
         # Parameters: Model
         self.device = self.getDevice()
@@ -5335,7 +5337,7 @@ class PredictActivity:
         # Generate Embeddings
         embedingsSubsTrain = self.ESM(
             substrates=self.subsTrain, subLabel=self.labelsXAxis,
-            datasetType=self.datasetTag, trainModel=True)
+            datasetType=self.datasetTag, trainingSet=True)
         embedingsSubsPred = self.ESM(
             substrates=self.subsTest, subLabel=self.labelsXAxis,
             datasetType='Predictions')
@@ -5367,14 +5369,9 @@ class PredictActivity:
 
 
 
-    def ESM(self, substrates, subLabel, datasetType, trainModel=False):
+    def ESM(self, substrates, subLabel, datasetType, trainingSet=False):
         print('=========================== Generate Embeddings: ESM '
               '============================')
-        if type(substrates) is dict:
-            NSubs = len(substrates.keys())
-        else:
-            NSubs = len(substrates)
-
         # Choose: ESM model
         modelPrams = 2
         if modelPrams == 0:
@@ -5383,9 +5380,21 @@ class PredictActivity:
             sizeESM = '3B Params'
         else:
             sizeESM = '650M Params'
-        tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType} - '
-                         f'N {NSubs} - {len(self.labelsXAxis)} AA')
-        if trainModel:
+
+        # Inspect: Data type
+        dataTypeDict = True
+        if type(substrates) is dict:
+            NSubs = len(substrates.keys())
+            tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType} - '
+                             f'N {NSubs} - {len(self.labelsXAxis)} AA')
+        else:
+            dataTypeDict = False
+            NSubs = len(substrates)
+            tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType} - '
+                             f'Min ES {self.minES} - N {NSubs} - '
+                             f'{len(self.labelsXAxis)} AA')
+
+        if trainingSet:
             self.embeddingsNameESM = tagEmbeddings
         print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
@@ -5407,7 +5416,7 @@ class PredictActivity:
         totalSubActivity = 0
         subs = []
         values = []
-        if type(substrates) is dict:
+        if dataTypeDict:
             for index, (substrate, value) in enumerate(substrates.items()):
                 totalSubActivity += value
                 subs.append((f'Sub{index}', substrate))
@@ -5435,9 +5444,9 @@ class PredictActivity:
         else:
             model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
             numLayersESM = 33
-        # esm2_t36_3B_UR50D has 36 layers
-        # esm2_t33_650M_UR50D has 33 layers
-        # esm2_t12_35M_UR50D has 12 layers
+            # esm2_t36_3B_UR50D has 36 layers
+            # esm2_t33_650M_UR50D has 33 layers
+            # esm2_t12_35M_UR50D has 12 layers
         model = model.to(self.device)
 
         # Get: batch tensor
@@ -5484,25 +5493,23 @@ class PredictActivity:
                 tokenReps = result["representations"][numLayersESM]
                 seqEmbed = tokenReps[:, 0, :].cpu().numpy()
                 allEmbeddings.append(seqEmbed)
-
-                # Clear data to help free memory
-                del result, tokenReps, batch
-                torch.cuda.empty_cache()
-
                 end = time.time()
                 runtime = end - start
                 runtimeTotal = (end - startInit) / 60
                 percentCompletion = round((i / batchTotal)* 100, 1)
                 print(f'Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
                       f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
-                      f'     Batch Shape: {greenLight}{batch.shape:,}{resetColor}\n'
+                      f'     Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
                       f'     Iteration Runtime: {red}{round(runtime, 3):,} s'
                       f'{resetColor}\n'
                       f'     Total Runtime: {red}{round(runtimeTotal, 3):,} min'
                       f'{resetColor}\n')
-                if type(substrates) is dict:
+                if dataTypeDict:
                     allValues.extend(values[i:i + batchSize])
 
+                # Clear data to help free memory
+                del tokenReps, batch
+                torch.cuda.empty_cache()
 
         # Step 4: Extract per-sequence Embeddings
         tokenReps = result["representations"][numLayersESM]  # (N, seq_len, hidden_dim)
@@ -5510,7 +5517,7 @@ class PredictActivity:
 
         # Convert to numpy and store substrate activity proxy
         embeddings = np.vstack(allEmbeddings)
-        if type(substrates) is dict:
+        if dataTypeDict:
             values = np.array(allValues).reshape(-1, 1)
             data = np.hstack([embeddings, values])
             columns = [f'feat_{i}' for i in range(embeddings.shape[1])] + ['activity']
