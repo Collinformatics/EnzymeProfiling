@@ -17,7 +17,7 @@
 
 - For GPU accelleration on an NIVIDA GPU, you will need to install a different version of PyTorch:
 
-  To uninstall the previous PyTorch, before reinstalling run:
+  If you already ran the previous PyTorch installation, you will need to uninstall it with:
 
       pip uninstall torch
 
