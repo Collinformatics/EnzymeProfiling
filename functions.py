@@ -5096,7 +5096,7 @@ class NGS:
 
 
 
-    def generateSubstrates(self, df, eMap, minES, dataType, filter={}):
+    def generateSubstrates(self, df, eMap, minES, dataType, subsReq=[], filter={}):
         print('============================== Generate Substrates '
               '==============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -5106,7 +5106,8 @@ class NGS:
         # Select favorable AAs
         print(f'Preferred Residues:')
         preferredAAs = []
-        for pos in df.columns:
+        addedAAsTag = ''
+        for index, pos in enumerate(df.columns):
             if pos in filter.keys():
                 nonzeroAAs = filter[pos]
             else:
@@ -5115,11 +5116,32 @@ class NGS:
                 # Filter out AAs with low ES
                 ES = eMap.loc[:, pos]
                 nonzeroAAs = [aa for aa in nonzeroAAs if ES[aa] >= minES]
+
+            # Add AAs for inSubsPred
+            if subsReq != []:
+                addedAAs = []
+                for substrate in subsReq:
+                    AA = substrate[index]
+                    if AA not in addedAAs and AA not in nonzeroAAs:
+                        addedAAs.append(AA)
+                        nonzeroAAs.append(AA)
+
+                # Record added AAs
+                if addedAAs:
+                    if len(addedAAs) == 1:
+                        label = f'{addedAAs[0]}@{pos}'
+                    else:
+                        label = f'[{", ".join(addedAAs)}]@{pos}'
+                    if index == len(df.columns) - 1:
+                        addedAAsTag += f'{label}'
+                    else:
+                        addedAAsTag += f'{label}_'
             print(f'     Position {greenLight}{pos}{resetColor}: '
-                  f'{pink}{", ".join(nonzeroAAs)}{resetColor}')
+              f'{pink}{", ".join(nonzeroAAs)}{resetColor}')
             preferredAAs.append(nonzeroAAs)
         print(f'\nMinimum ES: {red}{minES}{resetColor}\n')
-
+        if addedAAsTag != '':
+            print(f'Added AAs: {pink}{addedAAsTag}{resetColor}\n')
 
         # Generate all possible substrate combinations
         allCombos = list(product(*preferredAAs))
@@ -5134,7 +5156,7 @@ class NGS:
             print(f'     {pink}{genSubstrates[index]}{resetColor}')
         print('\n')
         
-        return genSubstrates
+        return genSubstrates, addedAAsTag
 
 
 
@@ -5314,7 +5336,7 @@ class RandomForestRegressor:
 
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsTest,
-                 subsPredCustom, minES, labelsXAxis, printNumber):
+                 subsPredCustom, tagCustomSubs, minES, labelsXAxis, printNumber):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
@@ -5331,6 +5353,7 @@ class PredictActivity:
         self.enzymeName = enzymeName
         self.datasetTag = datasetTag
         self.subsPredCustom = subsPredCustom
+        self.tagCustomSubs = tagCustomSubs
         self.minES = minES
         self.labelsXAxis = labelsXAxis
         self.printNumber = printNumber
@@ -5407,6 +5430,10 @@ class PredictActivity:
             tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType} - '
                              f'Min ES {self.minES} - N {NSubs} - '
                              f'{len(self.labelsXAxis)} AA')
+            if self.tagCustomSubs != '':
+                tagEmbeddings = tagEmbeddings.replace(f'Min ES {self.minES}',
+                                                      f'Min ES {self.minES} - '
+                                                      f'Added {self.tagCustomSubs}')
 
         if trainingSet:
             self.embeddingsNameESM = tagEmbeddings

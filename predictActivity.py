@@ -25,7 +25,7 @@ inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inSubsPred = ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']
-inMinES = -0.5
+inMinES = 0
 inGeneratedSubsFilter = { # Only generate substrates with these requirements
     'R3': ['L'],
     'R4': ['Q']
@@ -259,11 +259,13 @@ subsTrain = ngs.processSubstrates(
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
-substratesPred = ngs.generateSubstrates(df=probMotif, eMap=ngs.eMap, minES=inMinES,
-                                        dataType='AA Probabilities',
-                                        filter=inGeneratedSubsFilter)
+substratesPred, tagPredSubs = ngs.generateSubstrates(
+    df=probMotif, eMap=ngs.eMap, minES=inMinES, dataType='AA Probabilities',
+    subsReq=inSubsPred, filter=inGeneratedSubsFilter)
+
 
 # Predict activity
 PredictActivity(enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
                 subsTrain=subsTrain, subsTest=substratesPred, subsPredCustom=inSubsPred,
-                minES=inMinES, labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
+                tagCustomSubs=tagPredSubs, minES=inMinES, labelsXAxis=inMotifPositions,
+                printNumber=inPrintNumber)
