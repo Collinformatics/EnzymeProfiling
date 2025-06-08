@@ -5213,8 +5213,8 @@ class GradBoostingRegressorXGB:
 
 
 class RandomForestRegressor:
-    def __init__(self, dfTrain, dfTest, device, embeddingsName, printNumber,
-                 getSHAP=False):
+    def __init__(self, dfTrain, dfTest, subsPredCustom, minES, device, embeddingsName,
+                 printNumber, getSHAP=False):
         print('=========================== Random Forrest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}\n'
@@ -5263,28 +5263,43 @@ class RandomForestRegressor:
 
 
         # Predict with the model
-        print(f'Predicting Activity')
+        print(f'Predicting Substrate Activity:')
         start = time.time()
         activityPred = self.model.predict(dfTest)
         activityPred = np.expm1(activityPred)  # Reverse log1p transform
         end = time.time()
-        runtime = (end - start) / 60
-        print(f'      Runtime: {red}{round(runtime, 3):,} min{resetColor}\n')
+        runtime = (end - start) * 1000
+        print(f'      Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        # Evaluate prediction
-        predictions = {}
+        # Rank predictions
+        self.activityPred = {}
         for index, substrate in enumerate(subsPred):
-            predictions[substrate] = activityPred[index]
-        predictions = dict(sorted(predictions.items(), key=lambda x: x[1], reverse=True))
-        print('Predicted Activity:')
-        for iteration, (substrate, value) in enumerate(predictions.items()):
-            value = float(value)
-            print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
+            self.activityPred[substrate] = activityPred[index]
+        self.activityPred = dict(sorted(self.activityPred.items(),
+                                        key=lambda x: x[1], reverse=True))
+        print(f'Predicted Activity: {purple}Random Substrates - Min ES: {minES}'
+              f'{resetColor}')
+        for iteration, (substrate, value) in enumerate(self.activityPred.items()):
             if iteration >= printNumber:
                 break
+            value = float(value)
+            print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
         print('\n')
 
+        # Get: Custom substrate predictions
+        if subsPredCustom != []:
+            print(f'Predicted Activity: {purple}Custom Substrates{resetColor}')
+            activityCustomSubs = {}
+            for substrate in subsPredCustom:
+                if substrate in self.activityPred.keys():
+                    activityCustomSubs[substrate] = self.activityPred[substrate]
+            activityCustomSubs = dict(sorted(activityCustomSubs.items(),
+                                             key=lambda x: x[1], reverse=True))
 
+            for iteration, (substrate, activity) in enumerate(activityCustomSubs.items()):
+                print(f'     {pink}{substrate}{resetColor}: '
+                      f'{red}{round(activity, 3):,}{resetColor}')
+            print('\n')
 
     def loadModel(self, model, pathModel):
         print(f'Loading Trained ESM Model:\n'
@@ -5294,12 +5309,9 @@ class RandomForestRegressor:
 
 
 
-
-
-
 class PredictActivity:
-    def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsTest, minES,
-                 labelsXAxis, printNumber):
+    def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsTest,
+                 subsPredCustom, minES, labelsXAxis, printNumber):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
@@ -5318,6 +5330,7 @@ class PredictActivity:
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.datasetTag = datasetTag
+        self.subsPredCustom = subsPredCustom
         self.minES = minES
         self.labelsXAxis = labelsXAxis
         self.printNumber = printNumber
@@ -5344,7 +5357,8 @@ class PredictActivity:
 
         # Predict: Substrate activity
         RandomForestRegressor(
-            dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred, device=self.device,
+            dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
+            subsPredCustom=self.subsPredCustom, minES=self.minES, device=self.device,
             embeddingsName=self.embeddingsNameESM, printNumber=self.printNumber)
         # GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
         # GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
@@ -5358,7 +5372,8 @@ class PredictActivity:
         if torch.cuda.is_available():
             device = 'cuda:0'
             print(f'Train with Device:{magenta} {device}{resetColor}\n'
-                  f'Device Name:{magenta} {torch.cuda.get_device_name(device)}{resetColor}\n\n')
+                  f'Device Name:{magenta} {torch.cuda.get_device_name(device)}'
+                  f'{resetColor}\n\n')
         else:
             import platform
             device = 'cpu'
@@ -5485,6 +5500,7 @@ class PredictActivity:
         allEmbeddings = []
         allValues = []
         startInit = time.time()
+        print('Generate ESM Embeddings')
         with torch.no_grad():
             for i in range(0, len(batchTokens), batchSize):
                 start = time.time()
@@ -5497,12 +5513,12 @@ class PredictActivity:
                 runtime = end - start
                 runtimeTotal = (end - startInit) / 60
                 percentCompletion = round((i / batchTotal)* 100, 1)
-                print(f'Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
+                print(f'ESM Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
                       f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
                       f'     Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
-                      f'     Iteration Runtime: {red}{round(runtime, 3):,} s'
+                      f'     Runtime: {red}{round(runtime, 3):,} s'
                       f'{resetColor}\n'
-                      f'     Total Runtime: {red}{round(runtimeTotal, 3):,} min'
+                      f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
                       f'{resetColor}\n')
                 if dataTypeDict:
                     allValues.extend(values[i:i + batchSize])

@@ -4,10 +4,6 @@ import sys
 
 
 
-substratesPred = ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']
-
-
-
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
@@ -19,11 +15,6 @@ inSetFigureTimer = False
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
 inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
-inMinES = 0
-inGeneratedSubsFilter = { # Only generate substrates with these requirements
-    'R3': ['L'],
-    'R4': ['Q']
-}
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
@@ -33,6 +24,12 @@ inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
+inSubsPred = ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']
+inMinES = -0.5
+inGeneratedSubsFilter = { # Only generate substrates with these requirements
+    'R3': ['L'],
+    'R4': ['Q']
+}
 
 # Input 4: Figures
 inPlotEntropy = True
@@ -267,7 +264,6 @@ substratesPred = ngs.generateSubstrates(df=probMotif, eMap=ngs.eMap, minES=inMin
                                         filter=inGeneratedSubsFilter)
 
 # Predict activity
-PredictActivity(enzymeName=enzymeName, datasetTag=ngs.datasetTag,
-                subsTrain=subsTrain, subsTest=substratesPred,
-                folderPath=inPathFolder, minES=inMinES,
-                labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
+PredictActivity(enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
+                subsTrain=subsTrain, subsTest=substratesPred, subsPredCustom=inSubsPred,
+                minES=inMinES, labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
