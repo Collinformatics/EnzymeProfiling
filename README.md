@@ -1,18 +1,19 @@
 # Python Modules
 - You will need to install the following modules:
 
-        pip install biopython
-        pip install fair-esm
-        pip install logomaker
-        pip install matplotlib
-        pip install numpy
-        pip install pandas
-        pip install playsound
-        pip install PyObjC
-        pip install seaborn
-        pip install scikit-learn
-        pip install torch
-        pip install wordcloud
+      pip install biopython
+      pip install fair-esm
+      pip install logomaker
+      pip install matplotlib
+      pip install numpy
+      pip install pandas
+      pip install playsound
+      pip install PyObjC
+      pip install seaborn
+      pip install scikit-learn
+      pip install torch
+      pip install wordcloud
+      pip install xgboost
 
 # Keyboard Shortcuts
 
