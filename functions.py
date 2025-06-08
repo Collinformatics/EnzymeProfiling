@@ -5449,6 +5449,7 @@ class PredictActivity:
                 print(f'Total Values:{red} {totalSubActivity:,}{resetColor}')
         print()
 
+
         # Step 2: Load the ESM model and batch converter
         if sizeESM == '15B Params':
             model, alphabet = esm.pretrained.esm2_t48_15B_UR50D()
@@ -5466,6 +5467,7 @@ class PredictActivity:
 
         # Get: batch tensor
         batchConverter = alphabet.get_batch_converter()
+
 
         # Step 3: Convert substrates to ESM model format and generate Embeddings
         try:
@@ -5526,6 +5528,17 @@ class PredictActivity:
                 # Clear data to help free memory
                 del tokenReps, batch
                 torch.cuda.empty_cache()
+        end = time.time()
+        runtime = end - start
+        runtimeTotal = (end - startInit) / 60
+        percentCompletion = round((i / batchTotal) * 100, 1)
+        print(f'ESM Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
+              f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
+              f'     Runtime: {red}{round(runtime, 3):,} s'
+              f'{resetColor}\n'
+              f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
+              f'{resetColor}\n')
+
 
         # Step 4: Extract per-sequence Embeddings
         tokenReps = result["representations"][numLayersESM]  # (N, seq_len, hidden_dim)
