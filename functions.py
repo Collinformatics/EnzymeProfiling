@@ -5109,18 +5109,12 @@ class NGS:
             if pos in filter.keys():
                 nonzeroAAs = filter[pos]
             else:
-                nonzeroAAs = df[df[column] != 0].index.tolist()
+                nonzeroAAs = df[df[pos] != 0].index.tolist()
             print(f'     Position {greenLight}{pos}{resetColor}: '
                   f'{pink}{", ".join(nonzeroAAs)}{resetColor}')
-            if self.fixedPos in pos:
-                print('Stop')
-                sys.exit()
-
             preferredAAs.append(nonzeroAAs)
         print('\n')
 
-        print('Stop')
-        sys.exit()
 
         # Generate all possible substrate combinations
         allCombos = list(product(*preferredAAs))
@@ -5375,7 +5369,7 @@ class PredictActivity:
             sizeESM = '15B Params'
         else:
             sizeESM = '3B Params'
-        tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType}'
+        tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType} - '
                          f'N {NSubs} - {len(self.labelsXAxis)} AA')
         if trainModel:
             self.embeddingsNameESM = tagEmbeddings
@@ -5459,17 +5453,29 @@ class PredictActivity:
               f'{greenLight}{slicedTokens}{resetColor}\n')
 
         # Generate embeddings
-        batchSize = 128
+        batchSize = 64
+        batchTotal = len(batchTokens)
         allEmbeddings = []
         allValues = []
-        start = time.time()
+        startInit = time.time()
         with torch.no_grad():
             for i in range(0, len(batchTokens), batchSize):
+                start = time.time()
                 batch = batchTokens[i:i + batchSize].to(self.device)
                 result = model(batch, repr_layers=[numLayersESM], return_contacts=False)
                 tokenReps = result["representations"][numLayersESM]
                 seqEmbed = tokenReps[:, 0, :].cpu().numpy()
                 allEmbeddings.append(seqEmbed)
+                end = time.time()
+                runtime = end - start
+                runtimeTotal = (end - startInit) / 60
+
+                print(f'Batch Index: {red}{i}{resetColor} / {red}{batchTotal}'
+                      f'{resetColor}\n'
+                      f'Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
+                      f'Runtime: {red}{round(runtime, 3):,} s{resetColor}\n'
+                      f'Total Time: {red}{round(runtimeTotal, 3):,} min'
+                      f'{resetColor}\n')
                 if type(substrates) is dict:
                     allValues.extend(values[i:i + batchSize])
         end = time.time()

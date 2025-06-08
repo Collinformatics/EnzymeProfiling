@@ -20,7 +20,7 @@ inSetFigureTimer = False
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
 inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
-inGeneratedSubsFilter = {'R4': ['Q']} # Restricts for generated substrates
+inGeneratedSubsFilter = {'R3': ['L'], 'R4': ['Q']} # Restricts for generated substrates
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
