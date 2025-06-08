@@ -1,7 +1,6 @@
 from functions import filePaths, NGS, PredictActivity
 import pandas as pd
 import sys
-from xgboost import XGBRegressor, XGBRFRegressor, DMatrix
 
 
 
@@ -20,7 +19,11 @@ inSetFigureTimer = False
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
 inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
-inGeneratedSubsFilter = {'R3': ['L'], 'R4': ['Q']} # Restricts for generated substrates
+inMinES = -1
+inGeneratedSubsFilter = { # Only generate substrates with these requirements
+    'R3': ['L'],
+    'R4': ['Q']
+}
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
@@ -259,8 +262,9 @@ subsTrain = ngs.processSubstrates(
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
-subsPred = ngs.generateSubstrates(df=probMotif, dataType='AA Probabilities',
-                                  filter=inGeneratedSubsFilter)
+substratesPred = ngs.generateSubstrates(df=probMotif, eMap=ngs.eMap, minES=inMinES,
+                                        dataType='AA Probabilities',
+                                        filter=inGeneratedSubsFilter)
 
 # Predict activity
 PredictActivity(enzymeName=enzymeName, datasetTag=ngs.datasetTag,

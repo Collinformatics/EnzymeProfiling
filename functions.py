@@ -27,6 +27,7 @@ import threading
 import torch
 import warnings
 from wordcloud import WordCloud
+from xgboost import XGBRegressor, XGBRFRegressor, DMatrix
 
 
 
@@ -5095,7 +5096,7 @@ class NGS:
 
 
 
-    def generateSubstrates(self, df, dataType, filter={}):
+    def generateSubstrates(self, df, eMap, minES, dataType, filter={}):
         print('============================== Generate Substrates '
               '==============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -5110,10 +5111,14 @@ class NGS:
                 nonzeroAAs = filter[pos]
             else:
                 nonzeroAAs = df[df[pos] != 0].index.tolist()
+
+                # Filter out AAs with low ES
+                ES = eMap.loc[:, pos]
+                nonzeroAAs = [aa for aa in nonzeroAAs if ES[aa] >= minES]
             print(f'     Position {greenLight}{pos}{resetColor}: '
                   f'{pink}{", ".join(nonzeroAAs)}{resetColor}')
             preferredAAs.append(nonzeroAAs)
-        print('\n')
+        print(f'\nMinimum ES: {red}{minES}{resetColor}\n')
 
 
         # Generate all possible substrate combinations
@@ -5208,11 +5213,13 @@ class GradBoostingRegressorXGB:
 
 
 class RandomForestRegressor:
-    def __init__(self, dfTrain, dfTest, datasetTag, embeddingsName, printNumber,
+    def __init__(self, dfTrain, dfTest, device, embeddingsName, printNumber,
                  getSHAP=False):
         print('=========================== Random Forrest Regressor '
               '============================')
-        print(f'Module: {purple}XGBoost{resetColor}')
+        print(f'Module: {purple}XGBoost{resetColor}\n'
+              f'Embeddings: {purple}{embeddingsName}{resetColor}\n')
+        self.device = device
         subsPred = list(dfTest.index)
 
         # Record the Embeddings for the predicted substrates
@@ -5222,21 +5229,12 @@ class RandomForestRegressor:
         x = dfTrain.drop(columns='activity').values
         y = np.log1p(dfTrain['activity'].values)
 
-        print(f'Dataset: {datasetTag}\n'
-              f'Embeddings: {embeddingsName}')
-        sys.exit()
-
 
         # Save model
         modelTag = f'Random Forrest - {embeddingsName}'
         pathModel = os.path.join('Mpro2/Models', f'{modelTag}.ubj') # ubj: Binary JSON file
         if os.path.exists(pathModel):
-            print(f'Loading Trained ESM Model:\n'
-                  f'     {greenDark}{pathModel}{resetColor}\n\n')
-
-            # Load the model
-            self.model = XGBRFRegressor()
-            self.model.load_model(pathModel)
+            self.loadModel(model=XGBRFRegressor(), pathModel=pathModel)
         else:
             # Train the model
             print(f'Training the model')
@@ -5250,6 +5248,9 @@ class RandomForestRegressor:
             print(f'Saving Trained ESM Model:\n'
                   f'     {greenDark}{pathModel}{resetColor}\n\n')
             model.save_model(pathModel)
+
+            self.loadModel(model=XGBRFRegressor(), pathModel=pathModel)
+
 
         if getSHAP:
             # Get: SHAP values
@@ -5268,7 +5269,7 @@ class RandomForestRegressor:
         activityPred = np.expm1(activityPred)  # Reverse log1p transform
         end = time.time()
         runtime = (end - start) / 60
-        print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
+        print(f'      Runtime: {red}{round(runtime, 3):,} min{resetColor}\n')
 
         # Evaluate prediction
         predictions = {}
@@ -5282,6 +5283,17 @@ class RandomForestRegressor:
             if iteration >= printNumber:
                 break
         print('\n')
+
+
+
+    def loadModel(self, model, pathModel):
+        print(f'Loading Trained ESM Model:\n'
+              f'     {greenDark}{pathModel}{resetColor}\n\n')
+        self.model = model
+        self.model.load_model(pathModel)
+
+
+
 
 
 
@@ -5330,7 +5342,7 @@ class PredictActivity:
 
         # Predict: Substrate activity
         RandomForestRegressor(
-            dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
+            dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred, device=self.device,
             embeddingsName=self.embeddingsNameESM, printNumber=self.printNumber)
         # GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
         # GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
@@ -5458,7 +5470,7 @@ class PredictActivity:
               f'{greenLight}{slicedTokens}{resetColor}\n')
 
         # Generate embeddings
-        batchSize = 64
+        batchSize = 4096
         batchTotal = len(batchTokens)
         allEmbeddings = []
         allValues = []
@@ -5474,21 +5486,20 @@ class PredictActivity:
                 end = time.time()
                 runtime = end - start
                 runtimeTotal = (end - startInit) / 60
-
-                print(f'Iteration: {red}{i}{resetColor} / {red}{batchTotal}'
-                      f'{resetColor} ({red}{round((i / batchTotal), 1)} %{resetColor})\n'
-                      f'Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
-                      f'Runtime: {red}{round(runtime, 3):,} s{resetColor}\n'
-                      f'Total Time: {red}{round(runtimeTotal, 3):,} min'
+                percentCompletion = round((i / batchTotal)* 100, 1)
+                print(f'Progress: {red}{i}{resetColor} / {red}{batchTotal}'
+                      f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
+                      f'     Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
+                      f'     Iteration Runtime: {red}{round(runtime, 3):,} s'
+                      f'{resetColor}\n'
+                      f'     Total Runtime: {red}{round(runtimeTotal, 3):,} min'
                       f'{resetColor}\n')
                 if type(substrates) is dict:
                     allValues.extend(values[i:i + batchSize])
-        end = time.time()
-        runtime = (end - start) / 60
-        print(f'      Runtime: {red}{round(runtime, 3):,} min{resetColor}\n')
+
 
         # Step 4: Extract per-sequence Embeddings
-        tokenReps = results["representations"][numLayersESM]  # (N, seq_len, hidden_dim)
+        tokenReps = result["representations"][numLayersESM]  # (N, seq_len, hidden_dim)
         sequenceEmbeddings = tokenReps[:, 0, :]  # [CLS] token embedding: (N, hidden_dim)
 
         # Convert to numpy and store substrate activity proxy
