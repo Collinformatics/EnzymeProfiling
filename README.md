@@ -15,6 +15,16 @@
       pip install wordcloud
       pip install xgboost
 
+- For GPU accelleration on an NIVIDA GPU, you will need to install a different version of PyTorch:
+
+  To uninstall the previous PyTorch, before reinstalling run:
+
+      pip uninstall torch
+
+  To install a CUDA (V 12.1) enabled version of PyTorch run:
+
+      pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
 # Keyboard Shortcuts
 
 When a figure has been plotted, and it is selected, press a key for the following shortcuts:
