@@ -17,7 +17,7 @@
 
 - For GPU accelleration on an NIVIDA GPU, you will need to install a different version of PyTorch:
 
-  - Ignore this section if your computer does not have an NVIDIA graphis card.
+  - NOTE: Ignore this section if your computer does not have an NVIDIA graphis card.
 
   If you already ran the previous PyTorch installation, you will need to uninstall it with:
 
