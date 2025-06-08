@@ -5218,7 +5218,8 @@ class RandomForestRegressor:
         print('=========================== Random Forrest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}\n'
-              f'Embeddings: {purple}{embeddingsName}{resetColor}\n')
+              f'Model: {purple}Random Forrest Regressor{resetColor}\n'
+              f'Trained With: {purple}{embeddingsName}{resetColor}\n')
         self.device = device
         subsPred = list(dfTest.index)
 
@@ -5263,7 +5264,8 @@ class RandomForestRegressor:
 
 
         # Predict with the model
-        print(f'Predicting Substrate Activity:')
+        print(f'Predicting Substrate Activity:\n'
+              f'     N Substrates: {red}{len(dfTest.index)}{resetColor}')
         start = time.time()
         activityPred = self.model.predict(dfTest)
         activityPred = np.expm1(activityPred)  # Reverse log1p transform
@@ -5297,13 +5299,14 @@ class RandomForestRegressor:
                                              key=lambda x: x[1], reverse=True))
 
             for iteration, (substrate, activity) in enumerate(activityCustomSubs.items()):
+                activity = float(activity)
                 print(f'     {pink}{substrate}{resetColor}: '
                       f'{red}{round(activity, 3):,}{resetColor}')
             print('\n')
 
     def loadModel(self, model, pathModel):
         print(f'Loading Trained ESM Model:\n'
-              f'     {greenDark}{pathModel}{resetColor}\n\n')
+              f'     {greenDark}{pathModel}{resetColor}\n')
         self.model = model
         self.model.load_model(pathModel)
 
@@ -5317,10 +5320,7 @@ class PredictActivity:
         self.pathData = os.path.join(self.pathFolder, 'Data')
         self.pathEmbeddings = os.path.join(self.pathFolder, 'Embeddings')
         self.pathModels = os.path.join(self.pathFolder, 'Models')
-        
         self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
-        self.pathFilteredSubs = None
-        self.pathFilteredCounts = None
 
         # Make sure the directory exists
         os.makedirs(self.pathData, exist_ok=True)
@@ -5334,7 +5334,6 @@ class PredictActivity:
         self.minES = minES
         self.labelsXAxis = labelsXAxis
         self.printNumber = printNumber
-
 
         # Parameters: Model
         self.device = self.getDevice()
