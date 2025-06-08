@@ -274,6 +274,6 @@ predictions = PredictActivity(
 
 # Evaluate: Predictions
 ngs.processSubstrates(
-    subsInit=None, subsFinal=None, motifs=predictions.predActivityRandonForrestXGB,
+    subsInit=None, subsFinal=None, motifs=predictions.activityRandomForrestXGB,
     subLabel=inMotifPositions, predActivity=True, predModel='XGBoost Random Forest')
 

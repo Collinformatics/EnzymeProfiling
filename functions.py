@@ -5427,6 +5427,7 @@ class PredictActivity:
         self.printNumber = printNumber
 
         # Parameters: Model
+        self.batchSize = 8192 # 4096
         self.device = self.getDevice()
         self.embeddingsNameESM = ''
         self.subsInitial = None
@@ -5451,9 +5452,11 @@ class PredictActivity:
             subsPredCustom=self.subsPredCustom, minES=self.minES,
             pathModels=self.pathModels, embeddingsName=self.embeddingsNameESM,
             device=self.device, printNumber=self.printNumber)
-        self.predActivityRandonForrestXGB = {}
-        self.predActivityRandonForrestXGB['Random'] = activityRandonForrestXGB.activityPredRandom
-        self.predActivityRandonForrestXGB['Custom'] = activityRandonForrestXGB.activityPredCustom
+        self.activityRandomForrestXGB = {}
+        self.activityRandomForrestXGB['Random'] = (
+            activityRandonForrestXGB.activityPredRandom)
+        self.activityRandomForrestXGB['Custom'] = (
+            activityRandonForrestXGB.activityPredCustom)
 
         # GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
         # GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
@@ -5495,14 +5498,16 @@ class PredictActivity:
         dataTypeDict = True
         if type(substrates) is dict:
             NSubs = len(substrates.keys())
-            tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType} - '
-                             f'N {NSubs} - {len(self.labelsXAxis)} AA')
+            tagEmbeddings = (
+                f'{self.enzymeName} - ESM {sizeESM} - Batch {self.batchSize} - '
+                f'{datasetType} - N {NSubs} - {len(self.labelsXAxis)} AA')
         else:
             dataTypeDict = False
             NSubs = len(substrates)
-            tagEmbeddings = (f'{self.enzymeName} - ESM {sizeESM} - {datasetType} - '
-                             f'Min ES {self.minES} - N {NSubs} - '
-                             f'{len(self.labelsXAxis)} AA')
+            tagEmbeddings = (
+                f'{self.enzymeName} - ESM {sizeESM} - Batch {self.batchSize} - '
+                f'{datasetType} - Min ES {self.minES} - N {NSubs} - '
+                f'{len(self.labelsXAxis)} AA')
             if self.tagCustomSubs != '':
                 tagEmbeddings = tagEmbeddings.replace(f'Min ES {self.minES}',
                                                       f'Min ES {self.minES} - '
@@ -5596,16 +5601,15 @@ class PredictActivity:
               f'{greenLight}{slicedTokens}{resetColor}\n')
 
         # Generate embeddings
-        batchSize = 4096
         batchTotal = len(batchTokens)
         allEmbeddings = []
         allValues = []
         startInit = time.time()
-        print('Generate ESM Embeddings')
+        print('Generating ESM Embeddings:')
         with torch.no_grad():
-            for i in range(0, len(batchTokens), batchSize):
+            for i in range(0, len(batchTokens), self.batchSize):
                 start = time.time()
-                batch = batchTokens[i:i + batchSize].to(self.device)
+                batch = batchTokens[i:i + self.batchSize].to(self.device)
                 result = model(batch, repr_layers=[numLayersESM], return_contacts=False)
                 tokenReps = result["representations"][numLayersESM]
                 seqEmbed = tokenReps[:, 0, :].cpu().numpy()
@@ -5622,7 +5626,7 @@ class PredictActivity:
                       f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
                       f'{resetColor}\n')
                 if dataTypeDict:
-                    allValues.extend(values[i:i + batchSize])
+                    allValues.extend(values[i:i + self.batchSize])
 
                 # Clear data to help free memory
                 del tokenReps, batch
