@@ -2571,7 +2571,7 @@ class NGS:
                 subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
                 predActivity=predActivity, predModel=predModel, predType=predType)
 
-            predType = 'Custom'
+            predType = 'Chosen'
             self.motifEnrichment(
                 subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
                 predActivity=predActivity, predModel=predModel, predType=predType)
@@ -5353,13 +5353,13 @@ class RandomForestRegressorXGB:
 
         # Predict substrate activity
         print(f'Predicting Substrate Activity:\n'
-              f'     N Substrates: {red}{len(dfTest.index)}{resetColor}')
+              f'     Total Substrates: {red}{len(dfTest.index):,}{resetColor}')
         start = time.time()
         activityPred = self.model.predict(dfTest)
         activityPred = np.expm1(activityPred)  # Reverse log1p transform
         end = time.time()
         runtime = (end - start) * 1000
-        print(f'      Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
         # Rank predictions
         self.activityPredRandom = {}
@@ -5376,18 +5376,18 @@ class RandomForestRegressorXGB:
             print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
         print('\n')
 
-        # Get: Custom substrate predictions
-        if subsPredCustom != []:
-            print(f'Predicted Activity: {purple}Custom Substrates{resetColor}')
-            self.activityPredCustom = {}
-            for substrate in subsPredCustom:
+        # Get: Chosen substrate predictions
+        if subsPredChosen != []:
+            print(f'Predicted Activity: {purple}Chosen Substrates{resetColor}')
+            self.activityPredChosen = {}
+            for substrate in subsPredChosen:
                 if substrate in self.activityPredRandom.keys():
-                    self.activityPredCustom[substrate] = (
+                    self.activityPredChosen[substrate] = (
                         self.activityPredRandom)[substrate]
-            self.activityPredCustom = dict(sorted(self.activityPredCustom.items(),
+            self.activityPredChosen = dict(sorted(self.activityPredChosen.items(),
                                              key=lambda x: x[1], reverse=True))
             for iteration, (substrate, activity) in (
-                    enumerate(self.activityPredCustom.items())):
+                    enumerate(self.activityPredChosen.items())):
                 activity = float(activity)
                 print(f'     {pink}{substrate}{resetColor}: '
                       f'{red}{round(activity, 3):,}{resetColor}')
@@ -5404,7 +5404,7 @@ class RandomForestRegressorXGB:
 
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsTest,
-                 subsPredCustom, tagCustomSubs, minES, labelsXAxis, printNumber):
+                 subsPredChosen, tagChosenSubs, minES, labelsXAxis, printNumber):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
@@ -5420,14 +5420,14 @@ class PredictActivity:
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.datasetTag = datasetTag
-        self.subsPredCustom = subsPredCustom
-        self.tagCustomSubs = tagCustomSubs
+        self.subsPredChosen = subsPredChosen
+        self.tagChosenSubs = tagChosenSubs
         self.minES = minES
         self.labelsXAxis = labelsXAxis
         self.printNumber = printNumber
 
         # Parameters: Model
-        self.batchSize = 8192 # 4096
+        self.batchSize = 4096
         self.device = self.getDevice()
         self.embeddingsNameESM = ''
         self.subsInitial = None
@@ -5449,14 +5449,14 @@ class PredictActivity:
         # Predict: Substrate activity
         activityRandonForrestXGB = RandomForestRegressorXGB(
             dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
-            subsPredCustom=self.subsPredCustom, minES=self.minES,
+            subsPredChosen=self.subsPredChosen, minES=self.minES,
             pathModels=self.pathModels, embeddingsName=self.embeddingsNameESM,
             device=self.device, printNumber=self.printNumber)
         self.activityRandomForrestXGB = {}
         self.activityRandomForrestXGB['Random'] = (
             activityRandonForrestXGB.activityPredRandom)
-        self.activityRandomForrestXGB['Custom'] = (
-            activityRandonForrestXGB.activityPredCustom)
+        self.activityRandomForrestXGB['Chosen'] = (
+            activityRandonForrestXGB.activityPredChosen)
 
         # GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
         # GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
@@ -5508,10 +5508,10 @@ class PredictActivity:
                 f'{self.enzymeName} - ESM {sizeESM} - Batch {self.batchSize} - '
                 f'{datasetType} - Min ES {self.minES} - N {NSubs} - '
                 f'{len(self.labelsXAxis)} AA')
-            if self.tagCustomSubs != '':
+            if self.tagChosenSubs != '':
                 tagEmbeddings = tagEmbeddings.replace(f'Min ES {self.minES}',
                                                       f'Min ES {self.minES} - '
-                                                      f'Added {self.tagCustomSubs}')
+                                                      f'Added {self.tagChosenSubs}')
         if trainingSet:
             self.embeddingsNameESM = tagEmbeddings
         print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
