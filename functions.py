@@ -5257,18 +5257,20 @@ class CNN:
 
 
 class RandomForestRegressorXGB:
-    def __init__(self, dfTrain, dfTest, subsPredChosen, minES, embeddingsName, pathModels,
-                 device, printNumber, getSHAP=False):
+    def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
+                 embeddingsName, device, NTrees, printNumber, getSHAP=False):
         print('=========================== Random Forrest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}\n'
-              f'Model: {purple}Random Forrest Regressor{resetColor}\n'
+              f'Model: {purple}Random Forrest Regressor'
+              f'       {modelTag}{resetColor}\n'
               f'Trained With: {purple}{embeddingsName}{resetColor}\n')
         self.device = device
-        subsPred = list(dfTest.index)
+        self.NTrees = NTrees
+        subsPred = list(dfPred.index)
 
         # Record the Embeddings for the predicted substrates
-        self.dTest = DMatrix(dfTest)
+        self.dTest = DMatrix(dfPred)
 
         # Process dataframe
         x = dfTrain.drop(columns='activity').values
@@ -5276,8 +5278,6 @@ class RandomForestRegressorXGB:
 
 
         # Get Model: Gradient Boosting
-        modelTag = f'Random Forrest - XGB - {embeddingsName}'
-        pathModel = os.path.join(pathModels, f'{modelTag}.ubj') # ubj: Binary JSON file
         if os.path.exists(pathModel):
             # Load the model
             self.loadModel(model=XGBRFRegressor(), pathModel=pathModel)
@@ -5285,7 +5285,8 @@ class RandomForestRegressorXGB:
             # Train the model
             print(f'Training the model')
             start = time.time()
-            model = XGBRFRegressor(device=self.device, tree_method="hist")
+            model = XGBRFRegressor(device=self.device, tree_method="hist",
+                                   n_estimators=100, random_state=42)
             model.fit(x, y)
             end = time.time()
             runtime = (end - start) / 60
@@ -5309,9 +5310,9 @@ class RandomForestRegressorXGB:
 
         # Predict substrate activity
         print(f'Predicting Substrate Activity:\n'
-              f'     Total Substrates: {red}{len(dfTest.index):,}{resetColor}')
+              f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
         start = time.time()
-        activityPred = self.model.predict(dfTest)
+        activityPred = self.model.predict(dfPred)
         activityPred = np.expm1(activityPred)  # Reverse log1p transform
         end = time.time()
         runtime = (end - start) * 1000
@@ -5360,32 +5361,40 @@ class RandomForestRegressorXGB:
 
 
 class RandomForestRegressor:
-    def __init__(self, dfTrain, dfTest, subsPredChosen, minES, embeddingsName, pathModels,
-                 device, printNumber, getSHAP=False):
+    def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
+                 embeddingsName, device, NTrees, printNumber):
         print('=========================== Random Forrest Regressor '
               '============================')
         from sklearn.ensemble import RandomForestRegressor
 
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
-              f'Model: {purple}Random Forrest Regressor{resetColor}\n'
+              f'Model: {purple}Random Forrest Regressor'
+              f'       {modelTag}{resetColor}\n'
               f'Trained With: {purple}{embeddingsName}{resetColor}\n')
         self.device = device
-        subsPred = list(dfTest.index)
-
-        # Process dataframe
-        x = dfTrain.drop(columns='activity').values
-        y = np.log1p(dfTrain['activity'].values)
+        self.NTrees = NTrees
+        self.predictions = {}
+        subsPred = list(dfPred.index)
 
 
         # # Get Model: Random Forrest Regressor
-        modelTag = f'Random Forrest - Scikit - {embeddingsName}'
-        pathModel = os.path.join(pathModels, f'{modelTag}.ubj') # ubj: Binary JSON file
         if os.path.exists(pathModel):
             self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
         else:
+            from sklearn.model_selection import train_test_split
+            from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
             print(f'Training the model')
+            # Process dataframe
+            x = dfTrain.drop(columns='activity').values
+            y = np.log1p(dfTrain['activity'].values)
+            xtrain, xTest, yTrain, yTest = train_test_split(x, y)
+
+            print(f'     Testing Accuracy:\n'
+                  f'          Train: {red}{}{resetColor}\n'
+                  f'          Test: {red}{}{resetColor}\n')
             start = time.time()
-            self.model = RandomForestRegressor(n_estimators=100, random_state=42)
+            self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
             self.model.fit(x, y)
             end = time.time()
             runtime = (end - start) / 60
@@ -5397,22 +5406,12 @@ class RandomForestRegressor:
             self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
 
 
-        if getSHAP:
-            # Get: SHAP values
-            booster = self.model.get_booster()
-            booster.set_param({'device': self.device})
-            shapValues = booster.predict(self.dTest, pred_contribs=True)
-            shapInteractionValues = booster.predict(self.dTest, pred_interactions=True)
-            print(f'Shap Values:\n{shapValues}\n\n'
-                  f'Interaction Values:\n{shapInteractionValues}\n\n')
-
-
         # # Predict substrate activity
         print(f'Predicting Substrate Activity:\n'
-              f'     Total Substrates: {red}{len(dfTest.index):,}{resetColor}')
+              f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
         start = time.time()
-        activityPred = self.model.predict(dfTest.values)
-        activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        activityPred = self.model.predict(dfPred.values)
+        activityPred = np.expm1(activityPred) # Reverse log1p transform
         end = time.time()
         runtime = (end - start) * 1000
         print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
@@ -5480,9 +5479,11 @@ class PredictActivity:
         self.minES = minES
         self.labelsXAxis = labelsXAxis
         self.printNumber = printNumber
+        self.predictions = {}
 
         # Parameters: Model
         self.batchSize = 4096
+        self.NTrees = 100
         self.device = self.getDevice()
         self.embeddingsNameESM = ''
         self.subsInitial = None
@@ -5493,10 +5494,20 @@ class PredictActivity:
         self.subsTest = subsTest
 
 
+        # Define: Model paths
+        modelTagScikit = (f'Random Forrest - Scikit - N Trees {self.NTrees} - '
+                    f'{self.embeddingsNameESM}')
+        modelTagXGBoost = (f'Random Forrest - Scikit - N Trees {self.NTrees} - '
+                          f'{self.embeddingsNameESM}')
+        pathModelScikit = os.path.join(self.pathModels, f'{modelTagScikit}.ubj')
+        pathModelXGBoost = os.path.join(self.pathModels, f'{modelTagXGBoost}.ubj')
+        # ubj: Binary JSON file
+
         # Generate Embeddings
-        self.embeddingsSubsTrain = self.ESM(
-            substrates=self.subsTrain, subLabel=self.labelsXAxis,
-            datasetType=self.datasetTag, trainingSet=True)
+        if not os.path.exists(pathModelScikit) or not os.path.exists(pathModelXGBoost):
+            self.embeddingsSubsTrain = self.ESM(
+                substrates=self.subsTrain, subLabel=self.labelsXAxis,
+                datasetType=self.datasetTag, trainingSet=True)
         self.embeddingsSubsPred = self.ESM(
             substrates=self.subsTest, subLabel=self.labelsXAxis,
             datasetType='Predictions')
@@ -5505,20 +5516,23 @@ class PredictActivity:
         # # Predict: Substrate activity
         # Model: Scikit-Learn Random Forest Regressor
         activityRandonForrest = RandomForestRegressor(
-            dfTrain=self.embeddingsSubsTrain, dfTest=self.embeddingsSubsPred,
+            dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
-            pathModels=self.pathModels, embeddingsName=self.embeddingsNameESM,
-            device=self.device, printNumber=self.printNumber)
+            pathModels=pathModelScikit, modelTag=modelTagScikit,
+            embeddingsName=self.embeddingsNameESM, device=self.device,
+            NTrees=self.NTrees, printNumber=self.printNumber)
+        self.predictions['Scikit-Learn'] = 1
         self.activityRandomForrest = {}
         self.activityRandomForrest['Random'] = (activityRandonForrest.activityPredRandom)
         self.activityRandomForrest['Chosen'] = (activityRandonForrest.activityPredChosen)
 
         # Model: XGBoost Random Forest
         activityRandonForrestXGB = RandomForestRegressorXGB(
-            dfTrain=self.embeddingsSubsTrain, dfTest=self.embeddingsSubsPred,
+            dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
-            pathModels=self.pathModels, embeddingsName=self.embeddingsNameESM,
-            device=self.device, printNumber=self.printNumber)
+            pathModels=pathModelXGBoost, modelTag=modelTagScikit,
+            embeddingsName=self.embeddingsNameESM,
+            device=self.device, NTrees=self.NTrees, printNumber=self.printNumber)
         self.activityRandomForrestXGB = {}
         self.activityRandomForrestXGB['Random'] = (
             activityRandonForrestXGB.activityPredRandom)
