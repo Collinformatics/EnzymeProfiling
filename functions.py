@@ -5506,7 +5506,8 @@ class RandomForestRegressor:
 
         # # Get Model: Random Forrest Regressor
         if os.path.exists(pathModel):
-            self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
+            tag = 'All Substrates'
+            self.loadModel(pathModel=pathModel, tag=tag)
         else:
             from sklearn.model_selection import train_test_split
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -5543,16 +5544,16 @@ class RandomForestRegressor:
                 print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
 
                 # Evaluate the model
+                accuracy = pd.DataFrame(0.0)
                 print(f'Evaluate Model Accuracy:')
                 yPred = model.predict(xTest)
-                print(f'Y Values:\n'
-                      f'     Pred:\n{yPred[:10]}\n\n'
-                      f'     Test:\n{yTest[:10]}\n\n')
+                accuracy.loc[:, 'yPred_log'] = yPred
+                accuracy.loc[:, 'yTest_log'] = yTest
                 yPred = np.expm1(yPred) # Reverse log1p transform
                 yTest = np.expm1(yTest)
-                print(f'Y Values: Transformed\n'
-                      f'     Pred:\n{yPred[:10]}\n\n'
-                      f'     Test:\n{yTest[:10]}\n\n')
+                accuracy.loc[:, 'yPred'] = yPred
+                accuracy.loc[:, 'yTest'] = yTest
+                print(f'Y Values:\n{accuracy}\n\n')
                 MAE = mean_absolute_error(yPred, yTest)
                 MSE = mean_squared_error(yPred, yTest)
                 R2 = r2_score(yTest, yPred)
