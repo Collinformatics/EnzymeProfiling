@@ -28,7 +28,7 @@ inSubsPred = {
     'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
 inBatchSize = 4096 # Batch size for ESM
 inMinES = 0
-inGeneratedSubsFilter = { # Only generate substrates with these requirements
+inGeneratedSubsFilter = { # Restrictions for generated substrates
     'R3': ['L'],
     'R4': ['Q']
 }

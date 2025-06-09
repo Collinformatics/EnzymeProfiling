@@ -5256,7 +5256,7 @@ class CNN:
 
 class RandomForestRegressorXGB:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
-                 NTrees, device, printNumber):
+                 testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
         from xgboost import XGBRFRegressor
@@ -5278,27 +5278,26 @@ class RandomForestRegressorXGB:
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
             # Process dataframe
-            testSize = 0.2
             x = dfTrain.drop(columns='activity').values
             y = np.log1p(dfTrain['activity'].values)
-            xtrain, xTest, yTrain, yTest = train_test_split(
+            xTrain, xTest, yTrain, yTest = train_test_split(
                 x, y, test_size=testSize, random_state=19)
 
             # Train the model
-            print(f'Training Model: {blue}Split Training Set '
-                  f'{round((1 - testSize) * 100, 0)}{pink}:'
+            print(f'Training Model:\n'
+                  f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}{pink}:'
                   f'{blue}{round((testSize) * 100, 0)}{resetColor}\n'
-                f'     Train: {red}{xtrain.shape}{resetColor}\n'
+                f'     Train: {red}{xTrain.shape}{resetColor}\n'
                 f'     Test: {red}{xTest.shape}{resetColor}')
             start = time.time()
-            model = XGBRFRegressor(device=self.device, tree_method="hist",
-                                   n_estimators=100, random_state=42)
-            model.fit(xtrain, yTrain)
+            self.model = XGBRFRegressor(device=self.device, tree_method="hist",
+                                        n_estimators=100, random_state=42)
+            self.model.fit(xTrain, yTrain)
             end = time.time()
             runtime = (end - start) / 60
             print(f'      Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
             print(f'Evaluate Model Accuracy:')
-            yPred = model.predict(xTest)
+            yPred = self.model.predict(xTest)
             MAE = mean_absolute_error(yPred, yTest)
             MSE = mean_squared_error(yPred, yTest)
             R2 = r2_score(yTest, yPred)
@@ -5306,18 +5305,9 @@ class RandomForestRegressorXGB:
                   f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
                   f'     R2: {red}{round(R2, 3)}{resetColor}\n\n')
 
-            # Train the model
-            print(f'Training the model: {purple}Full Training Set{resetColor}')
-            start = time.time()
-            model = XGBRFRegressor(device=self.device, tree_method="hist",
-                                   n_estimators=100, random_state=42)
-            model.fit(x, y)
-            end = time.time()
-            runtime = (end - start) / 60
-            print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
             print(f'Saving Trained ESM Model:\n'
                   f'     {greenDark}{pathModel}{resetColor}\n\n')
-            model.save_model(pathModel)
+            self.model.save_model(pathModel)
 
             self.loadModel(model=XGBRFRegressor(), pathModel=pathModel)
 
@@ -5378,7 +5368,7 @@ class RandomForestRegressorXGB:
 
 class RandomForestRegressor:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
-                 NTrees, device, printNumber):
+                 testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
         from sklearn.ensemble import RandomForestRegressor
@@ -5399,44 +5389,44 @@ class RandomForestRegressor:
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
             # Process dataframe
-            testSize = 0.2
             x = dfTrain.drop(columns='activity').values
             y = np.log1p(dfTrain['activity'].values)
-            xtrain, xTest, yTrain, yTest = train_test_split(
+            xTrain, xTest, yTrain, yTest = train_test_split(
                 x, y, test_size=testSize, random_state=19)
+            print(f'Index: Subs\n{dfTrain.index}')
 
             # Train the model
-            print(f'Training Model: {blue}Split Training Set '
-                  f'{round((1 - testSize) * 100, 0)}{pink}:'
+            print(f'Training Model:\n'
+                  f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}{pink}:'
                   f'{blue}{round((testSize) * 100, 0)}{resetColor}\n'
-                  f'     Train: {red}{xtrain.shape}{resetColor}\n'
+                  f'     Train: {red}{xTrain.shape}{resetColor}\n'
                   f'     Test: {red}{xTest.shape}{resetColor}')
+
             start = time.time()
-            model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
-            model.fit(xtrain, yTrain)
+            self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
+            self.model.fit(xTrain, yTrain)
             end = time.time()
             runtime = (end - start) / 60
             print(f'      Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
 
             # Evaluate the model
             print(f'Evaluate Model Accuracy:')
-            yPred = model.predict(xTest)
+            yPred = self.model.predict(xTest)
             MAE = mean_absolute_error(yPred, yTest)
             MSE = mean_squared_error(yPred, yTest)
             R2 = r2_score(yTest, yPred)
             print(f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
                   f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
                   f'     R2: {red}{round(R2, 3)}{resetColor}\n')
-
-
-            # Train the model
-            print(f'Training the model: {purple}Full Training Set{resetColor}')
-            start = time.time()
-            self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
-            self.model.fit(x, y)
-            end = time.time()
-            runtime = (end - start) / 60
-            print(f'Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
+            #
+            # # Train the model
+            # print(f'Training the model: {purple}Full Training Set{resetColor}')
+            # start = time.time()
+            # self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
+            # self.model.fit(x, y)
+            # end = time.time()
+            # runtime = (end - start) / 60
+            # print(f'Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
             print(f'Saving Trained ESM Model:\n'
                   f'     {greenDark}{pathModel}{resetColor}\n\n')
             joblib.dump(self.model, pathModel)
@@ -5523,6 +5513,7 @@ class PredictActivity:
 
         # Parameters: Model
         self.batchSize = batchSize
+        self.testSize = 0.2
         self.NTrees = 100
         self.device = self.getDevice()
         self.embeddingsNameESM = ''
@@ -5554,10 +5545,12 @@ class PredictActivity:
 
 
         # Define: Model paths
-        modelTagScikit = (f'Random Forrest - Scikit - N Trees {self.NTrees} - '
-                          f'{self.tagEmbeddingsTrain}')
-        modelTagXGBoost = (f'Random Forrest - XGBoost - N Trees {self.NTrees} - '
-                          f'{self.tagEmbeddingsTrain}')
+        modelTag = (f'Random Forrest - Test Size {self.testSize} - '
+                    f'N Trees {self.NTrees} - {self.tagEmbeddingsTrain}')
+        modelTagScikit = modelTag.replace('Test Size',
+                                          f'Scikit - Test Size')
+        modelTagXGBoost = modelTag.replace('Test Size',
+                                           f'XGBoost - Test Size')
         pathModelScikit = os.path.join(self.pathModels, f'{modelTagScikit}.ubj')
         pathModelXGBoost = os.path.join(self.pathModels, f'{modelTagXGBoost}.ubj')
         # ubj: Binary JSON file
@@ -5576,8 +5569,8 @@ class PredictActivity:
         randomForestRegressor = RandomForestRegressor(
             dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
-            pathModel=pathModelScikit, modelTag=modelTagScikit, NTrees=self.NTrees,
-            device=self.device, printNumber=self.printNumber)
+            pathModel=pathModelScikit, modelTag=modelTagScikit, testSize=self.testSize,
+            NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
         self.predictions['Scikit-Learn: Random Forest Regressor'] = (
             randomForestRegressor.predictions)
 
@@ -5585,8 +5578,8 @@ class PredictActivity:
         randomForestRegressorXGB = RandomForestRegressorXGB(
             dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
-            pathModels=pathModelXGBoost, modelTag=modelTagScikit,
-            device=self.device, NTrees=self.NTrees, printNumber=self.printNumber)
+            pathModel=pathModelXGBoost, modelTag=modelTagScikit, testSize=self.testSize,
+            NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
         self.predictions['XGBoost: Random Forest Regressor'] = (
             randomForestRegressorXGB.predictions)
 
