@@ -5182,7 +5182,7 @@ class NGS:
 
 
 
-    def generateSubstrates(self, df, eMap, minES, dataType, subsReq=[], filter={}):
+    def generateSubstrates(self, df, eMap, minES, dataType, subsReq={}, filter={}):
         print('============================== Generate Substrates '
               '==============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -5204,31 +5204,32 @@ class NGS:
                 nonzeroAAs = [aa for aa in nonzeroAAs if ES[aa] >= minES]
 
             # Add AAs for inSubsPred
-            if subsReq != []:
+            if subsReq != {}:
                 addedAAs = []
-                for substrate in subsReq:
-                    AA = substrate[index]
-                    if AA not in addedAAs and AA not in nonzeroAAs:
-                        addedAAs.append(AA)
-                        nonzeroAAs.append(AA)
+                for key, substrates in subsReq.items():
+                    for substrate in substrates:
+                        AA = substrate[index]
+                        if AA not in addedAAs and AA not in nonzeroAAs:
+                            addedAAs.append(AA)
+                            nonzeroAAs.append(AA)
 
-                # Record added AAs
-                if addedAAs:
-                    if len(addedAAs) == 1:
-                        label = f'{addedAAs[0]}@{pos}'
-                    else:
-                        label = f'[{", ".join(addedAAs)}]@{pos}'
-                    if index == len(df.columns) - 1:
-                        addedAAsTag += f'{label}'
-                    else:
-                        addedAAsTag += f'{label}_'
+                    # Record added AAs
+                    if addedAAs:
+                        if len(addedAAs) == 1:
+                            label = f'{addedAAs[0]}@{pos}'
+                        else:
+                            label = f'[{", ".join(addedAAs)}]@{pos}'
+                        if index == len(df.columns) - 1:
+                            addedAAsTag += f'{label}'
+                        else:
+                            addedAAsTag += f'{label}_'
             print(f'     Position {greenLight}{pos}{resetColor}: '
-              f'{pink}{", ".join(nonzeroAAs)}{resetColor}')
+                  f'{pink}{", ".join(nonzeroAAs)}{resetColor}')
             preferredAAs.append(nonzeroAAs)
-        print(f'\nMinimum ES: {red}{minES}{resetColor}\n')
-        if addedAAsTag != '':
-            print(f'Added AAs: {pink}{addedAAsTag}{resetColor}\n')
 
+        if addedAAsTag != '':
+            print(f'Added AAs: {pink}{addedAAsTag}{resetColor}')
+        print(f'\nMinimum ES: {red}{minES}{resetColor}\n')
         # Generate all possible substrate combinations
         allCombos = list(product(*preferredAAs))
         # print(f'\n\nCombos:\n{allCombos}\n\n')
@@ -5241,7 +5242,7 @@ class NGS:
             index = random.randint(0, NSubs)
             print(f'     {pink}{genSubstrates[index]}{resetColor}')
         print('\n')
-        
+
         return genSubstrates, addedAAsTag
 
 
@@ -5256,7 +5257,7 @@ class CNN:
 class RandomForestRegressorXGB:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  embeddingsName, device, NTrees, printNumber, getSHAP=False):
-        print('=========================== Random Forrest Regressor '
+        print('============================ Random Forest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}Random Forrest Regressor'
@@ -5360,13 +5361,12 @@ class RandomForestRegressorXGB:
 class RandomForestRegressor:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  NTrees, embeddingsName, device, printNumber):
-        print('=========================== Random Forrest Regressor '
+        print('============================ Random Forest Regressor '
               '============================')
         from sklearn.ensemble import RandomForestRegressor
 
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
-              f'Model: {purple}Random Forrest Regressor\n'
-              f'       {modelTag}{resetColor}\n'
+              f'Model: {purple}{modelTag}{resetColor}\n'
               f'Trained With: {purple}{embeddingsName}{resetColor}\n')
         self.device = device
         self.NTrees = NTrees
@@ -5475,7 +5475,7 @@ class RandomForestRegressor:
 
 
 class PredictActivity:
-    def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsTest,
+    def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsPred,
                  subsPredChosen, tagChosenSubs, minES, labelsXAxis, printNumber):
         # Parameters: Files
         self.pathFolder = folderPath
@@ -5483,8 +5483,6 @@ class PredictActivity:
         self.pathEmbeddings = os.path.join(self.pathFolder, 'Embeddings')
         self.pathModels = os.path.join(self.pathFolder, 'Models')
         self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
-
-        # Make sure the directory exists
         os.makedirs(self.pathData, exist_ok=True)
         os.makedirs(self.pathEmbeddings, exist_ok=True)
         os.makedirs(self.pathModels, exist_ok=True)
@@ -5505,18 +5503,35 @@ class PredictActivity:
         self.device = self.getDevice()
         self.embeddingsNameESM = ''
         self.subsInitial = None
-        self.subsTrain = None
-        self.subsTrainCounts = None
-        self.subsTest = None
         self.subsTrain = subsTrain
-        self.subsTest = subsTest
+        self.subsTrainN = len(self.subsTrain.keys())
+        self.subsPred = subsPred
+
+        # Parameters: ESM
+        modelPrams = 2
+        if modelPrams == 0: # Choose: ESM PLM model
+            self.sizeESM = '15B Params'
+        elif modelPrams == 1:
+            self.sizeESM = '3B Params'
+        else:
+            self.sizeESM = '650M Params'
+        self.tagEmbeddingsTrain = (
+            f'Embeddings - {self.enzymeName} - {self.datasetTag} - ESM {self.sizeESM} - '
+            f'Batch {self.batchSize} - N {self.subsTrainN} - {len(self.labelsXAxis)} AA')
+        if self.tagChosenSubs != '':
+            self.tagEmbeddingsTrain = self.tagEmbeddingsTrain.replace(
+                f'Min ES {self.minES}',
+                f'Min ES {self.minES} - Added {self.tagChosenSubs}')
+        self.tagEmbeddingsPred = (
+            f'Embeddings - {self.enzymeName} - Predictions - ESM {self.sizeESM} - '
+            f'Batch {self.batchSize} - N {self.subsTrainN} - {len(self.labelsXAxis)} AA')
 
 
         # Define: Model paths
         modelTagScikit = (f'Random Forrest - Scikit - N Trees {self.NTrees} - '
-                    f'{self.embeddingsNameESM}')
-        modelTagXGBoost = (f'Random Forrest - Scikit - N Trees {self.NTrees} - '
-                          f'{self.embeddingsNameESM}')
+                          f'{self.tagEmbeddingsTrain}')
+        modelTagXGBoost = (f'Random Forrest - XGBoost - N Trees {self.NTrees} - '
+                          f'{self.tagEmbeddingsTrain}')
         pathModelScikit = os.path.join(self.pathModels, f'{modelTagScikit}.ubj')
         pathModelXGBoost = os.path.join(self.pathModels, f'{modelTagXGBoost}.ubj')
         # ubj: Binary JSON file
@@ -5524,11 +5539,10 @@ class PredictActivity:
         # Generate Embeddings
         if not os.path.exists(pathModelScikit) or not os.path.exists(pathModelXGBoost):
             self.embeddingsSubsTrain = self.ESM(
-                substrates=self.subsTrain, subLabel=self.labelsXAxis,
-                datasetType=self.datasetTag, trainingSet=True)
+                substrates=self.subsTrain, embeddings=self.tagEmbeddingsTrain,
+                trainingSet=True)
         self.embeddingsSubsPred = self.ESM(
-            substrates=self.subsTest, subLabel=self.labelsXAxis,
-            datasetType='Predictions')
+            substrates=self.subsPred, embeddings=self.tagEmbeddingsPred)
 
 
         # # Predict: Substrate activity
@@ -5537,7 +5551,7 @@ class PredictActivity:
             dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
             pathModel=pathModelScikit, modelTag=modelTagScikit, NTrees=self.NTrees,
-            embeddingsName=self.embeddingsNameESM, device=self.device,
+            embeddingsName=self.embeddingsNameT, device=self.device,
             printNumber=self.printNumber)
         self.predictions['Scikit-Learn: Random Forest Regressor'] = (
             randomForestRegressor.predictions)
@@ -5573,7 +5587,7 @@ class PredictActivity:
 
 
 
-    def ESM(self, substrates, subLabel, datasetType, trainingSet=False):
+    def ESM(self, substrates, embeddings, trainingSet=False):
         print('=========================== Generate Embeddings: ESM '
               '============================')
         # Choose: ESM PLM model
@@ -5586,31 +5600,15 @@ class PredictActivity:
             sizeESM = '650M Params'
 
         # Inspect: Data type
-        dataTypeDict = True
-        if type(substrates) is dict:
-            NSubs = len(substrates.keys())
-            tagEmbeddings = (
-                f'{self.enzymeName} - ESM {sizeESM} - Batch {self.batchSize} - '
-                f'{datasetType} - N {NSubs} - {len(self.labelsXAxis)} AA')
-        else:
-            dataTypeDict = False
-            NSubs = len(substrates)
-            tagEmbeddings = (
-                f'{self.enzymeName} - ESM {sizeESM} - Batch {self.batchSize} - '
-                f'{datasetType} - Min ES {self.minES} - N {NSubs} - '
-                f'{len(self.labelsXAxis)} AA')
-            if self.tagChosenSubs != '':
-                tagEmbeddings = tagEmbeddings.replace(f'Min ES {self.minES}',
-                                                      f'Min ES {self.minES} - '
-                                                      f'Added {self.tagChosenSubs}')
+        predictions = True
         if trainingSet:
-            self.embeddingsNameESM = tagEmbeddings
-        print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
+            predictions = False
+        print(f'Dataset: {purple}{embeddings}{resetColor}\n'
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
 
         # Load: ESM Embeddings
         pathEmbeddings = os.path.join(self.pathEmbeddings,
-                                      f'Embeddings - {tagEmbeddings}.csv')
+                                      f'Embeddings - {embeddings}.csv')
         if os.path.exists(pathEmbeddings):
             print(f'\nLoading: ESM Embeddings\n'
                   f'     {greenDark}{pathEmbeddings}{resetColor}\n')
@@ -5740,13 +5738,14 @@ class PredictActivity:
 
         # Convert to numpy and store substrate activity proxy
         embeddings = np.vstack(allEmbeddings)
-        if dataTypeDict:
+        if predictions:
+            values = np.array(allValues).reshape(-1, 1)
+            data = np.hstack([embeddings, values])
+            columns = [f'feat_{i}' for i in range(embeddings.shape[1])]
+        else:
             values = np.array(allValues).reshape(-1, 1)
             data = np.hstack([embeddings, values])
             columns = [f'feat_{i}' for i in range(embeddings.shape[1])] + ['activity']
-        else:
-            data = embeddings
-            columns = [f'feat_{i}' for i in range(embeddings.shape[1])]
 
         # Process Embeddings
         subEmbeddings = pd.DataFrame(data, index=batchSubs, columns=columns)
