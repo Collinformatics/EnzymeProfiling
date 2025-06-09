@@ -3051,16 +3051,24 @@ class NGS:
         if predActivity:
             print(f'Predicted Activity: {pink}Top {predType} Sequences{resetColor}')
             print(f'Model: {purple}{predModel}{resetColor}')
+            for substrate, value in motifEnrichment.items():
+                value = float(value)
+                print(f'     {pink}{substrate}{resetColor}: {red}{round(value, 3):,}'
+                      f'{resetColor}')
+                iteration += 1
+                if iteration >= self.printNumber:
+                    break
+            print('\n')
         else:
             print(f'Enrichment Motifs: {pink}Top Sequences{resetColor}')
-        for motif, value in motifEnrichment.items():
-            value = float(value)
-            print(f'     {blue}{motif}{resetColor}, '
-                  f'ER: {red}{round(value, 3):,}{resetColor}')
-            iteration += 1
-            if iteration >= self.printNumber:
-                break
-        print('\n')
+            for motif, value in motifEnrichment.items():
+                value = float(value)
+                print(f'     {blue}{motif}{resetColor}, '
+                      f'ER: {red}{round(value, 3):,}{resetColor}')
+                iteration += 1
+                if iteration >= self.printNumber:
+                    break
+            print('\n')
     
 
         # Plot: Motif enrichment
@@ -5321,7 +5329,8 @@ class RandomForestRegressorXGB:
             if iteration >= printNumber:
                 break
             value = float(value)
-            print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
+            print(f'     {pink}{substrate}{resetColor}: {red}{round(value, 3):,}'
+                  f'{resetColor}')
         print('\n')
 
         # Get: Chosen substrate predictions
