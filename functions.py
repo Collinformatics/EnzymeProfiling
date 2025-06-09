@@ -5259,7 +5259,7 @@ class RandomForestRegressorXGB:
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
-        from xgboost import XGBRFRegressor
+        from xgboost import DMatrix, XGBRFRegressor
 
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
@@ -5267,6 +5267,9 @@ class RandomForestRegressorXGB:
         self.NTrees = NTrees
         self.predictions = {}
         subsPred = list(dfPred.index)
+
+        dfTrain = DMatrix(dfTrain)
+        dfPred = DMatrix(dfPred)
 
 
         # Get Model: Gradient Boosting
@@ -5366,7 +5369,7 @@ class RandomForestRegressorXGB:
 
 
 
-class RandomForestRegressor:
+class RandomForestRegressorPrev:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
@@ -5391,9 +5394,10 @@ class RandomForestRegressor:
             # Process dataframe
             x = dfTrain.drop(columns='activity').values
             y = np.log1p(dfTrain['activity'].values)
+            print(f'DF:\n{dfTrain.iloc[:10, -1]}\n\n'
+                  f'Y: {y[0:10]}\n\n')
             xTrain, xTest, yTrain, yTest = train_test_split(
                 x, y, test_size=testSize, random_state=19)
-            print(f'Index: Subs\n{dfTrain.index}')
 
             # Train the model
             print(f'Training Model:\n'
@@ -5401,36 +5405,33 @@ class RandomForestRegressor:
                   f'{blue}{round((testSize) * 100, 0)}{resetColor}\n'
                   f'     Train: {red}{xTrain.shape}{resetColor}\n'
                   f'     Test: {red}{xTest.shape}{resetColor}')
-
             start = time.time()
             self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
             self.model.fit(xTrain, yTrain)
             end = time.time()
             runtime = (end - start) / 60
-            print(f'      Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
+            print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
 
             # Evaluate the model
             print(f'Evaluate Model Accuracy:')
             yPred = self.model.predict(xTest)
+            print(f'Y Values:\n'
+                  f'     Pred:\n{yPred[:10]}\n\n'
+                  f'     Test:\n{yTest[:10]}\n\n')
+            yPred = np.expm1(yPred) # Reverse log1p transform
+            yTest = np.expm1(yTest)
+            print(f'Y Values: Transformed\n'
+                  f'     Pred:\n{yPred[:10]}\n\n'
+                  f'     Test:\n{yTest[:10]}\n\n')
             MAE = mean_absolute_error(yPred, yTest)
             MSE = mean_squared_error(yPred, yTest)
             R2 = r2_score(yTest, yPred)
             print(f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
                   f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
                   f'     R2: {red}{round(R2, 3)}{resetColor}\n')
-            #
-            # # Train the model
-            # print(f'Training the model: {purple}Full Training Set{resetColor}')
-            # start = time.time()
-            # self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
-            # self.model.fit(x, y)
-            # end = time.time()
-            # runtime = (end - start) / 60
-            # print(f'Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
             print(f'Saving Trained ESM Model:\n'
                   f'     {greenDark}{pathModel}{resetColor}\n\n')
             joblib.dump(self.model, pathModel)
-
             self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
 
 
@@ -5478,12 +5479,153 @@ class RandomForestRegressor:
                     print(f'     {pink}{substrate}{resetColor}: '
                           f'{red}{round(activity, 3):,}{resetColor}')
                 print('\n')
+        sys.exit()
 
     def loadModel(self, model, pathModel):
         print(f'Loading Trained ESM Model:\n'
               f'     {greenDark}{pathModel}{resetColor}\n')
         self.model = model
         self.model = joblib.load(pathModel)
+
+
+
+class RandomForestRegressor:
+    def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
+                 testSize, NTrees, device, printNumber):
+        print('============================ Random Forest Regressor '
+              '============================')
+        from sklearn.ensemble import RandomForestRegressor
+
+        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
+              f'Model: {purple}{modelTag}{resetColor}\n')
+        self.device = device
+        self.NTrees = NTrees
+        self.predictions = {}
+        subsPred = list(dfPred.index)
+
+
+        # # Get Model: Random Forrest Regressor
+        if os.path.exists(pathModel):
+            self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
+        else:
+            from sklearn.model_selection import train_test_split
+            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+            # Process dataframe
+            tag = 'All Substrates'
+            x = dfTrain.drop(columns='activity').values
+            y = np.log1p(dfTrain['activity'].values)
+            print(f'DF:\n{dfTrain.iloc[:10, -1]}\n\n'
+                  f'Y: {y[0:10]}\n\n')
+
+            # Get High-value subset
+            tagHigh = 'Top 20 Substrates'
+            threshold = dfTrain['activity'].quantile(0.8) # 0.8 = Top 20
+            dfHigh = dfTrain[dfTrain['activity'] > threshold]
+            xHigh = dfHigh.drop(columns='activity').values
+            yHigh = np.log1p(dfHigh['activity'].values)
+
+
+            def trainModel(model, x, y, tag):
+                xTrain, xTest, yTrain, yTest = train_test_split(
+                    x, y, test_size=testSize, random_state=19)
+
+                # Train the model
+                print(f'Training Model: {purple}{tag}{resetColor}\n'
+                      f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}{pink}:'
+                      f'{blue}{round((testSize) * 100, 0)}{resetColor}\n'
+                      f'     Train: {red}{xTrain.shape}{resetColor}\n'
+                      f'     Test: {red}{xTest.shape}{resetColor}')
+                start = time.time()
+                model.fit(xTrain, yTrain)
+                end = time.time()
+                runtime = (end - start) / 60
+                print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
+
+                # Evaluate the model
+                print(f'Evaluate Model Accuracy:')
+                yPred = model.predict(xTest)
+                print(f'Y Values:\n'
+                      f'     Pred:\n{yPred[:10]}\n\n'
+                      f'     Test:\n{yTest[:10]}\n\n')
+                yPred = np.expm1(yPred) # Reverse log1p transform
+                yTest = np.expm1(yTest)
+                print(f'Y Values: Transformed\n'
+                      f'     Pred:\n{yPred[:10]}\n\n'
+                      f'     Test:\n{yTest[:10]}\n\n')
+                MAE = mean_absolute_error(yPred, yTest)
+                MSE = mean_squared_error(yPred, yTest)
+                R2 = r2_score(yTest, yPred)
+                print(f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
+                      f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
+                      f'     R2: {red}{round(R2, 3)}{resetColor}\n')
+                print(f'Saving Trained ESM Model:\n'
+                      f'     {greenDark}{pathModel}{resetColor}\n\n')
+                joblib.dump(self.model, pathModel)
+
+                return model
+
+            self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
+            self.model = trainModel(model=self.model, x=x, y=y, tag=tag)
+            self.modelH = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
+            self.modelH = trainModel(model=self.modelH, x=xHigh, y=yHigh, tag=tagHigh)
+
+            self.model = self.loadModel(pathModel=pathModel, tag=tag)
+
+
+        # Predict substrate activity
+        print(f'Predicting Substrate Activity:\n'
+              f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
+        start = time.time()
+        activityPred = self.model.predict(dfPred.values)
+        activityPred = np.expm1(activityPred) # Reverse log1p transform
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
+        # Rank predictions
+        activityPredRandom = {
+            substrate: float(score)
+            for substrate, score in zip(subsPred, activityPred)
+        }
+        activityPredRandom = dict(sorted(
+            activityPredRandom.items(), key=lambda x: x[1], reverse=True))
+        self.predictions['Random'] = activityPredRandom
+        print(f'Predicted Activity: {purple}Random Substrates - Min ES: {minES}'
+              f'{resetColor}')
+        for iteration, (substrate, value) in enumerate(activityPredRandom.items()):
+            if iteration >= printNumber:
+                break
+            print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
+        print('\n')
+
+        # Get: Chosen substrate predictions
+        if subsPredChosen != {}:
+            print(f'Predicted Activity: {purple}Chosen Substrates{resetColor}')
+            for key, substrates in subsPredChosen.items():
+                activityPredChosen = {}
+                for substrate in substrates:
+                    activityPredChosen[substrate] = (
+                        activityPredRandom)[substrate]
+                activityPredChosen = dict(sorted(activityPredChosen.items(),
+                                                      key=lambda x: x[1], reverse=True))
+                self.predictions[key] = activityPredChosen
+                print(f'Substrate Set: {purple}{key}{resetColor}')
+                for iteration, (substrate, activity) in (
+                        enumerate(activityPredChosen.items())):
+                    activity = float(activity)
+                    print(f'     {pink}{substrate}{resetColor}: '
+                          f'{red}{round(activity, 3):,}{resetColor}')
+                print('\n')
+        sys.exit()
+
+    def loadModel(self, pathModel, tag):
+        print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
+              f'     {greenDark}{pathModel}{resetColor}\n')
+        model = joblib.load(pathModel)
+
+        return model
+
 
 
 
@@ -5533,11 +5675,11 @@ class PredictActivity:
             self.sizeESM = '650M Params'
         self.tagEmbeddingsTrain = (
             f'Embeddings - ESM {self.sizeESM} - {self.enzymeName} - {self.datasetTag} - '
-            f'Batch {self.batchSize} - N {self.subsTrainN} - {len(self.labelsXAxis)} AA')
+            f'N {self.subsTrainN} - {len(self.labelsXAxis)} AA - Batch {self.batchSize}')
         self.tagEmbeddingsPred = (
             f'Embeddings - ESM {self.sizeESM} - {self.enzymeName} - Predictions - '
-            f'Min ES {self.minES} - Batch {self.batchSize} - N {self.subsPredN} - '
-            f'{len(self.labelsXAxis)} AA')
+            f'Min ES {self.minES} - N {self.subsPredN} - {len(self.labelsXAxis)} AA - '
+            f'Batch {self.batchSize}')
         if self.tagChosenSubs != '':
             self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
                 f'Min ES {self.minES}',
