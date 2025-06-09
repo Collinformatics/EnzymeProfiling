@@ -275,7 +275,3 @@ predictions = PredictActivity(
 ngs.processSubstrates(
     subsInit=None, subsFinal=None, motifs=predictions.predictions,
     subLabel=inMotifPositions, predActivity=True)
-
-ngs.processSubstrates(
-    subsInit=None, subsFinal=None, motifs=predictions.activityRandomForrestXGB,
-    subLabel=inMotifPositions, predActivity=True, predModel='XGBoost Random Forest')

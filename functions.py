@@ -31,7 +31,6 @@ import time
 import torch
 import warnings
 from wordcloud import WordCloud
-from xgboost import XGBRegressor, XGBRFRegressor, DMatrix
 
 
 
@@ -3275,7 +3274,7 @@ class NGS:
         else:
             print(f'Total Values:{red} {collectedTotalValues:,}{resetColor}\n\n')
 
-        # Step 1: Convert substrates to ESM model format and generate Embeddings
+        # Step 1: Convert substrates to ESM model format and generate embeddings
         subs = []
         counts = []
         if useSubCounts:
@@ -3294,7 +3293,7 @@ class NGS:
         batch_converter = alphabet.get_batch_converter()
 
 
-        # Step 3: Convert substrates to ESM model format and generate Embeddings
+        # Step 3: Convert substrates to ESM model format and generate embeddings
         try:
             batchLabels, batchSubs, batchTokens = batch_converter(subs)
         except Exception as exc:
@@ -5256,18 +5255,18 @@ class CNN:
 
 class RandomForestRegressorXGB:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
-                 embeddingsName, device, NTrees, printNumber, getSHAP=False):
+                 device, NTrees, printNumber, getSHAP=False):
         print('============================ Random Forest Regressor '
               '============================')
+        from xgboost import XGBRFRegressor, DMatrix
+
         print(f'Module: {purple}XGBoost{resetColor}\n'
-              f'Model: {purple}Random Forrest Regressor'
-              f'       {modelTag}{resetColor}\n'
-              f'Trained With: {purple}{embeddingsName}{resetColor}\n')
+              f'Model: {purple}{modelTag}{resetColor}\n')
         self.device = device
         self.NTrees = NTrees
         subsPred = list(dfPred.index)
 
-        # Record the Embeddings for the predicted substrates
+        # Record the embeddings for the predicted substrates
         self.dTest = DMatrix(dfPred)
 
         # Process dataframe
@@ -5280,6 +5279,38 @@ class RandomForestRegressorXGB:
             # Load the model
             self.loadModel(model=XGBRFRegressor(), pathModel=pathModel)
         else:
+            from sklearn.model_selection import train_test_split
+            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+            # Process dataframe
+            testSize = 0.2
+            x = dfTrain.drop(columns='activity').values
+            y = np.log1p(dfTrain['activity'].values)
+            xtrain, xTest, yTrain, yTest = train_test_split(
+                x, y, test_size=testSize, random_state=19)
+            print(f'Training Model: {blue}Splitting Dataset {round((1 - testSize) * 100, 0)}'
+                f'{resetColor}:{blue}{round((testSize) * 100, 0)}{resetColor}\n'
+                f'     Train: {red}{xtrain.shape}{resetColor}\n'
+                f'     Test: {red}{xTest.shape}{resetColor}')
+
+            # Train the model
+            print(f'Training the model')
+            start = time.time()
+            model = XGBRFRegressor(device=self.device, tree_method="hist",
+                                   n_estimators=100, random_state=42)
+            model.fit(xtrain, yTrain)
+            end = time.time()
+            runtime = (end - start) / 60
+            print(f'      Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
+            print(f'Evaluate Model Accuracy:')
+            yPred = model.predict(xTest)
+            MAE = mean_absolute_error(yPred, yTest)
+            MSE = mean_squared_error(yPred, yTest)
+            R2 = r2_score(yTest, yPred)
+            print(f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
+                  f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
+                  f'     R2: {red}{round(R2, 3)}{resetColor}\n')
+
             # Train the model
             print(f'Training the model')
             start = time.time()
@@ -5360,14 +5391,13 @@ class RandomForestRegressorXGB:
 
 class RandomForestRegressor:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
-                 NTrees, embeddingsName, device, printNumber):
+                 NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
         from sklearn.ensemble import RandomForestRegressor
 
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
-              f'Model: {purple}{modelTag}{resetColor}\n'
-              f'Trained With: {purple}{embeddingsName}{resetColor}\n')
+              f'Model: {purple}{modelTag}{resetColor}\n')
         self.device = device
         self.NTrees = NTrees
         self.predictions = {}
@@ -5388,7 +5418,8 @@ class RandomForestRegressor:
             xtrain, xTest, yTrain, yTest = train_test_split(
                 x, y, test_size=testSize, random_state=19)
 
-            print(f'Training Model: {blue}Dataset Splitting{resetColor}\n'
+            print(f'Training Model: {blue}Splitting Dataset {round((1-testSize)*100, 0)}'
+                  f'{resetColor}:{blue}{round((testSize)*100, 0)}{resetColor}\n'
                   f'     Train: {red}{xtrain.shape}{resetColor}\n'
                   f'     Test: {red}{xTest.shape}{resetColor}')
             start = time.time()
@@ -5516,14 +5547,14 @@ class PredictActivity:
         else:
             self.sizeESM = '650M Params'
         self.tagEmbeddingsTrain = (
-            f'Embeddings - {self.enzymeName} - {self.datasetTag} - ESM {self.sizeESM} - '
+            f'Embeddings - ESM {self.sizeESM} - {self.enzymeName} - {self.datasetTag} - '
             f'Batch {self.batchSize} - N {self.subsTrainN} - {len(self.labelsXAxis)} AA')
         if self.tagChosenSubs != '':
             self.tagEmbeddingsTrain = self.tagEmbeddingsTrain.replace(
                 f'Min ES {self.minES}',
                 f'Min ES {self.minES} - Added {self.tagChosenSubs}')
         self.tagEmbeddingsPred = (
-            f'Embeddings - {self.enzymeName} - Predictions - ESM {self.sizeESM} - '
+            f'Embeddings - ESM {self.sizeESM} - {self.enzymeName} - Predictions - '
             f'Batch {self.batchSize} - N {self.subsTrainN} - {len(self.labelsXAxis)} AA')
 
 
@@ -5536,7 +5567,7 @@ class PredictActivity:
         pathModelXGBoost = os.path.join(self.pathModels, f'{modelTagXGBoost}.ubj')
         # ubj: Binary JSON file
 
-        # Generate Embeddings
+        # Generate: Embeddings
         if not os.path.exists(pathModelScikit) or not os.path.exists(pathModelXGBoost):
             self.embeddingsSubsTrain = self.ESM(
                 substrates=self.subsTrain, embeddings=self.tagEmbeddingsTrain,
@@ -5551,8 +5582,7 @@ class PredictActivity:
             dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
             pathModel=pathModelScikit, modelTag=modelTagScikit, NTrees=self.NTrees,
-            embeddingsName=self.embeddingsNameT, device=self.device,
-            printNumber=self.printNumber)
+            device=self.device, printNumber=self.printNumber)
         self.predictions['Scikit-Learn: Random Forest Regressor'] = (
             randomForestRegressor.predictions)
 
@@ -5561,7 +5591,6 @@ class PredictActivity:
         #     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
         #     subsPredChosen=self.subsPredChosen, minES=self.minES,
         #     pathModels=pathModelXGBoost, modelTag=modelTagScikit,
-        #     embeddingsName=self.embeddingsNameESM,
         #     device=self.device, NTrees=self.NTrees, printNumber=self.printNumber)
         # self.predictions['XGBoost: Random Forest Regressor'] = (
         #     randomForestRegressorXGB.predictions)
@@ -5607,8 +5636,7 @@ class PredictActivity:
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
 
         # Load: ESM Embeddings
-        pathEmbeddings = os.path.join(self.pathEmbeddings,
-                                      f'Embeddings - {embeddings}.csv')
+        pathEmbeddings = os.path.join(self.pathEmbeddings, f'{embeddings}.csv')
         if os.path.exists(pathEmbeddings):
             print(f'\nLoading: ESM Embeddings\n'
                   f'     {greenDark}{pathEmbeddings}{resetColor}\n')
@@ -5624,7 +5652,7 @@ class PredictActivity:
         totalSubActivity = 0
         subs = []
         values = []
-        if dataTypeDict:
+        if trainingSet:
             for index, (substrate, value) in enumerate(substrates.items()):
                 totalSubActivity += value
                 subs.append((f'Sub{index}', substrate))
@@ -5683,7 +5711,7 @@ class PredictActivity:
         # Record tokens
         slicedTokens = pd.DataFrame(batchTokensCPU[:, 1:-1],
                                     index=batchSubs,
-                                    columns=subLabel)
+                                    columns=self.labelsXAxis)
         if totalSubActivity != 0:
             slicedTokens['Values'] = values
         print(f'\nSliced Tokens:\n'
@@ -5714,7 +5742,7 @@ class PredictActivity:
                       f'{resetColor}\n'
                       f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
                       f'{resetColor}\n')
-                if dataTypeDict:
+                if trainingSet:
                     allValues.extend(values[i:i + self.batchSize])
 
                 # Clear data to help free memory
@@ -5739,8 +5767,7 @@ class PredictActivity:
         # Convert to numpy and store substrate activity proxy
         embeddings = np.vstack(allEmbeddings)
         if predictions:
-            values = np.array(allValues).reshape(-1, 1)
-            data = np.hstack([embeddings, values])
+            data = np.hstack([embeddings])
             columns = [f'feat_{i}' for i in range(embeddings.shape[1])]
         else:
             values = np.array(allValues).reshape(-1, 1)
