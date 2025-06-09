@@ -272,5 +272,11 @@ predictions = PredictActivity(
 
 # Evaluate: Predictions
 ngs.processSubstrates(
+    subsInit=None, subsFinal=None, motifs=predictions.activityRandomForrest,
+    subLabel=inMotifPositions, predActivity=True, predModel='Scikit Learn Random Forest')
+
+ngs.processSubstrates(
     subsInit=None, subsFinal=None, motifs=predictions.activityRandomForrestXGB,
     subLabel=inMotifPositions, predActivity=True, predModel='XGBoost Random Forest')
+
+

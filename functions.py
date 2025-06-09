@@ -1,12 +1,13 @@
 # PURPOSE: This script contains the functions that you will need to process your NGS data
-import random
-import time
+
+
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio import BiopythonWarning
 import esm
 import gzip
+import joblib
 import math
 from itertools import combinations, product
 import logomaker
@@ -22,9 +23,11 @@ import numpy as np
 import os
 import pandas as pd
 import pickle as pk
+import random
 import seaborn as sns
 import sys
 import threading
+import time
 import torch
 import warnings
 from wordcloud import WordCloud
@@ -2587,8 +2590,6 @@ class NGS:
             motifES = self.motifEnrichment(
                 subsInit=subsInit, subsFinal=subsFinal, motifs=motifs,
                 predActivity=predActivity, predModel=predModel)
-        if predActivity:
-            sys.exit()
 
         # Plot: Work cloud
         if self.plotFigWords:
@@ -3049,12 +3050,13 @@ class NGS:
         iteration = 0
         if predActivity:
             print(f'Predicted Activity: {pink}Top {predType} Sequences{resetColor}')
+            print(f'Model: {purple}{predModel}{resetColor}')
         else:
             print(f'Enrichment Motifs: {pink}Top Sequences{resetColor}')
         for motif, value in motifEnrichment.items():
             value = float(value)
             print(f'     {blue}{motif}{resetColor}, '
-                  f'ER: {red}{round(value, 1):,}{resetColor}')
+                  f'ER: {red}{round(value, 3):,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
                 break
@@ -5246,73 +5248,6 @@ class CNN:
 
 
 
-class GradBoostingRegressor:
-    def __init__(self, dfTrain, dfTest):
-        print('========================== Gradient Boosting Regressor '
-              '==========================')
-        print(f'Module: {purple}SK Learn{resetColor}')
-
-        # Record the Embeddings for the predicted substrates
-        self.predSubEmbeddings = dfTest
-
-        # Process dataframe
-        x = dfTrain.drop(columns='activity').values
-        y = np.log1p(dfTrain['activity'].values)
-
-        # Train the model
-        print(f'Training the model')
-        start = time.time()
-        self.model = GradientBoostingRegressor()
-        self.model.fit(x, y)
-        end = time.time()
-        runtime = (end - start) / 60
-        print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
-
-        # Predict with the model
-        print(f'Predicting Activity')
-        start = time.time()
-        # activityPred = self.model.predict(dfTest)
-        # activityPred = np.expm1(activityPred)  # Reverse log1p transform
-        end = time.time()
-        runtime = (end - start) * 1000
-        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
-
-
-
-class GradBoostingRegressorXGB:
-    def __init__(self, dfTrain, dfTest):
-        print('========================== Gradient Boosting Regressor '
-              '==========================')
-        print(f'Module: {purple}XGBoost{resetColor}')
-
-        # Record the Embeddings for the predicted substrates
-        self.predSubEmbeddings = dfTest
-
-        # Process dataframe
-        x = dfTrain.drop(columns='activity').values
-        y = np.log1p(dfTrain['activity'].values)
-
-        # Train the model
-        print(f'Training the model')
-        start = time.time()
-        self.model = XGBRegressor(device=device)
-        self.model.fit(x, y)
-        end = time.time()
-        runtime = (end - start) / 60
-        print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
-
-
-        # Predict with the model
-        print(f'Predicting Activity')
-        start = time.time()
-        # activityPred = self.model.predict(dfTest)
-        # activityPred = np.expm1(activityPred)  # Reverse log1p transform
-        end = time.time()
-        runtime = (end - start) * 1000
-        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
-
-
-
 class RandomForestRegressorXGB:
     def __init__(self, dfTrain, dfTest, subsPredChosen, minES, embeddingsName, pathModels,
                  device, printNumber, getSHAP=False):
@@ -5332,8 +5267,8 @@ class RandomForestRegressorXGB:
         y = np.log1p(dfTrain['activity'].values)
 
 
-        # Get: Model
-        modelTag = f'Random Forrest - {embeddingsName}'
+        # Get Model: Gradient Boosting
+        modelTag = f'Random Forrest - XGB - {embeddingsName}'
         pathModel = os.path.join(pathModels, f'{modelTag}.ubj') # ubj: Binary JSON file
         if os.path.exists(pathModel):
             # Load the model
@@ -5347,7 +5282,6 @@ class RandomForestRegressorXGB:
             end = time.time()
             runtime = (end - start) / 60
             print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
-
             print(f'Saving Trained ESM Model:\n'
                   f'     {greenDark}{pathModel}{resetColor}\n\n')
             model.save_model(pathModel)
@@ -5416,6 +5350,104 @@ class RandomForestRegressorXGB:
 
 
 
+class RandomForestRegressor:
+    def __init__(self, dfTrain, dfTest, subsPredChosen, minES, embeddingsName, pathModels,
+                 device, printNumber, getSHAP=False):
+        print('=========================== Random Forrest Regressor '
+              '============================')
+        from sklearn.ensemble import RandomForestRegressor
+
+        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
+              f'Model: {purple}Random Forrest Regressor{resetColor}\n'
+              f'Trained With: {purple}{embeddingsName}{resetColor}\n')
+        self.device = device
+        subsPred = list(dfTest.index)
+
+        # Process dataframe
+        x = dfTrain.drop(columns='activity').values
+        y = np.log1p(dfTrain['activity'].values)
+
+
+        # # Get Model: Random Forrest Regressor
+        modelTag = f'Random Forrest - Scikit - {embeddingsName}'
+        pathModel = os.path.join(pathModels, f'{modelTag}.ubj') # ubj: Binary JSON file
+        if os.path.exists(pathModel):
+            self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
+        else:
+            print(f'Training the model')
+            start = time.time()
+            self.model = RandomForestRegressor(n_estimators=100, random_state=42)
+            self.model.fit(x, y)
+            end = time.time()
+            runtime = (end - start) / 60
+            print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
+            print(f'Saving Trained ESM Model:\n'
+                  f'     {greenDark}{pathModel}{resetColor}\n\n')
+            joblib.dump(self.model, pathModel)
+
+            self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
+
+
+        if getSHAP:
+            # Get: SHAP values
+            booster = self.model.get_booster()
+            booster.set_param({'device': self.device})
+            shapValues = booster.predict(self.dTest, pred_contribs=True)
+            shapInteractionValues = booster.predict(self.dTest, pred_interactions=True)
+            print(f'Shap Values:\n{shapValues}\n\n'
+                  f'Interaction Values:\n{shapInteractionValues}\n\n')
+
+
+        # # Predict substrate activity
+        print(f'Predicting Substrate Activity:\n'
+              f'     Total Substrates: {red}{len(dfTest.index):,}{resetColor}')
+        start = time.time()
+        activityPred = self.model.predict(dfTest.values)
+        activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        end = time.time()
+        runtime = (end - start) * 1000
+        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
+        # Rank predictions
+        self.activityPredRandom = {
+            substrate: float(score)
+            for substrate, score in zip(subsPred, activityPred)
+        }
+        self.activityPredRandom = dict(sorted(
+            self.activityPredRandom.items(), key=lambda x: x[1], reverse=True))
+        print(f'Predicted Activity: {purple}Random Substrates - Min ES: {minES}'
+              f'{resetColor}')
+        for iteration, (substrate, value) in enumerate(self.activityPredRandom.items()):
+            if iteration >= printNumber:
+                break
+            print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
+        print('\n')
+
+        # Get: Chosen substrate predictions
+        if subsPredChosen != []:
+            print(f'Predicted Activity: {purple}Chosen Substrates{resetColor}')
+            self.activityPredChosen = {}
+            for substrate in subsPredChosen:
+                if substrate in self.activityPredRandom.keys():
+                    self.activityPredChosen[substrate] = (
+                        self.activityPredRandom)[substrate]
+            self.activityPredChosen = dict(sorted(self.activityPredChosen.items(),
+                                             key=lambda x: x[1], reverse=True))
+            for iteration, (substrate, activity) in (
+                    enumerate(self.activityPredChosen.items())):
+                activity = float(activity)
+                print(f'     {pink}{substrate}{resetColor}: '
+                      f'{red}{round(activity, 3):,}{resetColor}')
+            print('\n')
+
+    def loadModel(self, model, pathModel):
+        print(f'Loading Trained ESM Model:\n'
+              f'     {greenDark}{pathModel}{resetColor}\n')
+        self.model = model
+        self.model = joblib.load(pathModel)
+
+
+
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsTest,
                  subsPredChosen, tagChosenSubs, minES, labelsXAxis, printNumber):
@@ -5453,16 +5485,28 @@ class PredictActivity:
 
 
         # Generate Embeddings
-        embedingsSubsTrain = self.ESM(
+        self.embeddingsSubsTrain = self.ESM(
             substrates=self.subsTrain, subLabel=self.labelsXAxis,
             datasetType=self.datasetTag, trainingSet=True)
-        embedingsSubsPred = self.ESM(
+        self.embeddingsSubsPred = self.ESM(
             substrates=self.subsTest, subLabel=self.labelsXAxis,
             datasetType='Predictions')
 
-        # Predict: Substrate activity
+
+        # # Predict: Substrate activity
+        # Model: Scikit-Learn Random Forest Regressor
+        activityRandonForrest = RandomForestRegressor(
+            dfTrain=self.embeddingsSubsTrain, dfTest=self.embeddingsSubsPred,
+            subsPredChosen=self.subsPredChosen, minES=self.minES,
+            pathModels=self.pathModels, embeddingsName=self.embeddingsNameESM,
+            device=self.device, printNumber=self.printNumber)
+        self.activityRandomForrest = {}
+        self.activityRandomForrest['Random'] = (activityRandonForrest.activityPredRandom)
+        self.activityRandomForrest['Chosen'] = (activityRandonForrest.activityPredChosen)
+
+        # Model: XGBoost Random Forest
         activityRandonForrestXGB = RandomForestRegressorXGB(
-            dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred,
+            dfTrain=self.embeddingsSubsTrain, dfTest=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
             pathModels=self.pathModels, embeddingsName=self.embeddingsNameESM,
             device=self.device, printNumber=self.printNumber)
@@ -5471,9 +5515,6 @@ class PredictActivity:
             activityRandonForrestXGB.activityPredRandom)
         self.activityRandomForrestXGB['Chosen'] = (
             activityRandonForrestXGB.activityPredChosen)
-
-        # GradBoostingRegressor(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
-        # GradBoostingRegressorXGB(dfTrain=embedingsSubsTrain, dfTest=embedingsSubsPred)
 
 
 
