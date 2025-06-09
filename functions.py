@@ -5362,7 +5362,7 @@ class RandomForestRegressorXGB:
 
 class RandomForestRegressor:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
-                 embeddingsName, device, NTrees, printNumber):
+                 NTrees, embeddingsName, device, printNumber):
         print('=========================== Random Forrest Regressor '
               '============================')
         from sklearn.ensemble import RandomForestRegressor
@@ -5381,18 +5381,37 @@ class RandomForestRegressor:
         if os.path.exists(pathModel):
             self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
         else:
+            print(f'Training a partial model and testing Model Accuracy:')
             from sklearn.model_selection import train_test_split
-            from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-            print(f'Training the model')
             # Process dataframe
+            testSize = 0.2
             x = dfTrain.drop(columns='activity').values
             y = np.log1p(dfTrain['activity'].values)
-            xtrain, xTest, yTrain, yTest = train_test_split(x, y)
+            xtrain, xTest, yTrain, yTest = train_test_split(
+                x, y, test_size=testSize, random_state=19)
 
-            print(f'     Testing Accuracy:\n'
-                  f'          Train: {red}{}{resetColor}\n'
-                  f'          Test: {red}{}{resetColor}\n')
+            print(f'Training Model: {blue}Dataset Splitting{resetColor}\n'
+                  f'     Train: {red}{xtrain.shape}{resetColor}\n'
+                  f'     Test: {red}{xTest.shape}{resetColor}')
+            start = time.time()
+            model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
+            model.fit(xtrain, yTrain)
+            end = time.time()
+            runtime = (end - start) / 60
+            print(f'      Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
+
+            print(f'Evaluate Model Accuracy:')
+            yPred = model.predict(xTest)
+            MAE = mean_absolute_error(yPred, yTest)
+            MSE = mean_squared_error(yPred, yTest)
+            R2 = r2_score(yPred, yTest)
+            print(f'     MAE: {red}{MAE}{resetColor}\n'
+                  f'     MSE: {red}{MSE}{resetColor}\n'
+                  f'     R2: {red}{R2}{resetColor}\n')
+
+            print(f'Training the Model:')
             start = time.time()
             self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
             self.model.fit(x, y)
@@ -5518,9 +5537,9 @@ class PredictActivity:
         activityRandonForrest = RandomForestRegressor(
             dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
-            pathModels=pathModelScikit, modelTag=modelTagScikit,
+            pathModel=pathModelScikit, modelTag=modelTagScikit, NTrees=self.NTrees,
             embeddingsName=self.embeddingsNameESM, device=self.device,
-            NTrees=self.NTrees, printNumber=self.printNumber)
+            printNumber=self.printNumber)
         self.predictions['Scikit-Learn'] = 1
         self.activityRandomForrest = {}
         self.activityRandomForrest['Random'] = (activityRandonForrest.activityPredRandom)
