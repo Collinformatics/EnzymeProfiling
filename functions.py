@@ -2569,20 +2569,17 @@ class NGS:
                           combinedMotifs=False, predActivity=False, predModel=False):
         if predActivity:
             # Calculate: Motif enrichment
-            predType = 'Random'
-            motifES = self.motifEnrichment(
-                subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
-                predActivity=predActivity, predModel=predModel, predType=predType)
-            #
-            predType = 'Chosen'
-            self.motifEnrichment(
-                subsInit=subsInit, subsFinal=subsFinal, motifs=motifs[predType],
-                predActivity=predActivity, predModel=predModel, predType=predType)
+            for predType, predictions in motifs.items():
+                print(f'Evaluating Predictions: {purple}{predType}{resetColor}\n'
+                      f'Predictions: {type(predictions)}')
+                motifES = self.motifEnrichment(
+                    subsInit=subsInit, subsFinal=subsFinal, motifs=predictions,
+                    predActivity=predActivity, predModel=predModel, predType=predType)
 
-            # Plot: Work cloud
-            self.plotWordCloud(
-                substrates=motifES, combinedMotifs=combinedMotifs,
-                predActivity=predActivity, predModel=predModel)
+                # Plot: Work cloud
+                self.plotWordCloud(
+                    substrates=motifES, combinedMotifs=combinedMotifs,
+                    predActivity=predActivity, predModel=predModel)
 
             return None
         else:
@@ -5368,7 +5365,7 @@ class RandomForestRegressor:
         from sklearn.ensemble import RandomForestRegressor
 
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
-              f'Model: {purple}Random Forrest Regressor'
+              f'Model: {purple}Random Forrest Regressor\n'
               f'       {modelTag}{resetColor}\n'
               f'Trained With: {purple}{embeddingsName}{resetColor}\n')
         self.device = device
@@ -5381,7 +5378,6 @@ class RandomForestRegressor:
         if os.path.exists(pathModel):
             self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
         else:
-            print(f'Training a partial model and testing Model Accuracy:')
             from sklearn.model_selection import train_test_split
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -5406,10 +5402,10 @@ class RandomForestRegressor:
             yPred = model.predict(xTest)
             MAE = mean_absolute_error(yPred, yTest)
             MSE = mean_squared_error(yPred, yTest)
-            R2 = r2_score(yPred, yTest)
-            print(f'     MAE: {red}{MAE}{resetColor}\n'
-                  f'     MSE: {red}{MSE}{resetColor}\n'
-                  f'     R2: {red}{R2}{resetColor}\n')
+            R2 = r2_score(yTest, yPred)
+            print(f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
+                  f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
+                  f'     R2: {red}{round(R2, 3)}{resetColor}\n')
 
             print(f'Training the Model:')
             start = time.time()
@@ -5417,7 +5413,7 @@ class RandomForestRegressor:
             self.model.fit(x, y)
             end = time.time()
             runtime = (end - start) / 60
-            print(f'      Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
+            print(f'Training time: {red}{round(runtime, 3):,} min{resetColor}\n')
             print(f'Saving Trained ESM Model:\n'
                   f'     {greenDark}{pathModel}{resetColor}\n\n')
             joblib.dump(self.model, pathModel)
@@ -5451,21 +5447,24 @@ class RandomForestRegressor:
         print('\n')
 
         # Get: Chosen substrate predictions
-        if subsPredChosen != []:
+        if subsPredChosen != {}:
             print(f'Predicted Activity: {purple}Chosen Substrates{resetColor}')
-            self.activityPredChosen = {}
-            for substrate in subsPredChosen:
-                if substrate in self.activityPredRandom.keys():
-                    self.activityPredChosen[substrate] = (
+            self.predictions = {}
+            for key, substrates in subsPredChosen.items():
+                activityPredChosen = {}
+                for substrate in substrates:
+                    activityPredChosen[substrate] = (
                         self.activityPredRandom)[substrate]
-            self.activityPredChosen = dict(sorted(self.activityPredChosen.items(),
-                                             key=lambda x: x[1], reverse=True))
-            for iteration, (substrate, activity) in (
-                    enumerate(self.activityPredChosen.items())):
-                activity = float(activity)
-                print(f'     {pink}{substrate}{resetColor}: '
-                      f'{red}{round(activity, 3):,}{resetColor}')
-            print('\n')
+                activityPredChosen = dict(sorted(activityPredChosen.items(),
+                                                      key=lambda x: x[1], reverse=True))
+                self.predictions[key] = activityPredChosen
+                print(f'Substrate Set: {purple}{key}{resetColor}')
+                for iteration, (substrate, activity) in (
+                        enumerate(activityPredChosen.items())):
+                    activity = float(activity)
+                    print(f'     {pink}{substrate}{resetColor}: '
+                          f'{red}{round(activity, 3):,}{resetColor}')
+                print('\n')
 
     def loadModel(self, model, pathModel):
         print(f'Loading Trained ESM Model:\n'
@@ -5534,29 +5533,24 @@ class PredictActivity:
 
         # # Predict: Substrate activity
         # Model: Scikit-Learn Random Forest Regressor
-        activityRandonForrest = RandomForestRegressor(
+        randomForestRegressor = RandomForestRegressor(
             dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
             pathModel=pathModelScikit, modelTag=modelTagScikit, NTrees=self.NTrees,
             embeddingsName=self.embeddingsNameESM, device=self.device,
             printNumber=self.printNumber)
-        self.predictions['Scikit-Learn'] = 1
-        self.activityRandomForrest = {}
-        self.activityRandomForrest['Random'] = (activityRandonForrest.activityPredRandom)
-        self.activityRandomForrest['Chosen'] = (activityRandonForrest.activityPredChosen)
+        self.predictions['Scikit-Learn: Random Forest Regressor'] = (
+            randomForestRegressor.predictions)
 
-        # Model: XGBoost Random Forest
-        activityRandonForrestXGB = RandomForestRegressorXGB(
-            dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-            subsPredChosen=self.subsPredChosen, minES=self.minES,
-            pathModels=pathModelXGBoost, modelTag=modelTagScikit,
-            embeddingsName=self.embeddingsNameESM,
-            device=self.device, NTrees=self.NTrees, printNumber=self.printNumber)
-        self.activityRandomForrestXGB = {}
-        self.activityRandomForrestXGB['Random'] = (
-            activityRandonForrestXGB.activityPredRandom)
-        self.activityRandomForrestXGB['Chosen'] = (
-            activityRandonForrestXGB.activityPredChosen)
+        # # Model: XGBoost Random Forest
+        # randomForestRegressorXGB = RandomForestRegressorXGB(
+        #     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+        #     subsPredChosen=self.subsPredChosen, minES=self.minES,
+        #     pathModels=pathModelXGBoost, modelTag=modelTagScikit,
+        #     embeddingsName=self.embeddingsNameESM,
+        #     device=self.device, NTrees=self.NTrees, printNumber=self.printNumber)
+        # self.predictions['XGBoost: Random Forest Regressor'] = (
+        #     randomForestRegressorXGB.predictions)
 
 
 

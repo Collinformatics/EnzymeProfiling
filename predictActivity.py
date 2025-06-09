@@ -24,7 +24,8 @@ inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
-inSubsPred = ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']
+inSubsPred = {
+    'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
 inMinES = 0
 inGeneratedSubsFilter = { # Only generate substrates with these requirements
     'R3': ['L'],
@@ -272,11 +273,9 @@ predictions = PredictActivity(
 
 # Evaluate: Predictions
 ngs.processSubstrates(
-    subsInit=None, subsFinal=None, motifs=predictions.activityRandomForrest,
-    subLabel=inMotifPositions, predActivity=True, predModel='Scikit Learn Random Forest')
+    subsInit=None, subsFinal=None, motifs=predictions.predictions,
+    subLabel=inMotifPositions, predActivity=True)
 
 ngs.processSubstrates(
     subsInit=None, subsFinal=None, motifs=predictions.activityRandomForrestXGB,
     subLabel=inMotifPositions, predActivity=True, predModel='XGBoost Random Forest')
-
-
