@@ -1,6 +1,5 @@
 # PURPOSE: This script contains the functions that you will need to process your NGS data
-
-
+from operator import index
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -5369,7 +5368,7 @@ class RandomForestRegressorXGB:
 
 
 
-class RandomForestRegressorPrev:
+class RandomForestRegressor:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
@@ -5489,19 +5488,22 @@ class RandomForestRegressorPrev:
 
 
 
-class RandomForestRegressor:
+class RandomForestRegressorCombo:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
         from sklearn.ensemble import RandomForestRegressor
 
+        cutoff = 0.2 # 0.8 = Top 20
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
-              f'Model: {purple}{modelTag}{resetColor}\n')
+              f'Model: {purple}{modelTag}{resetColor}'
+              f'Combine predictions with top {int(100*(1-cutoff))} substrates\n')
         self.device = device
         self.NTrees = NTrees
         self.predictions = {}
         subsPred = list(dfPred.index)
+        pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
 
 
         # # Get Model: Random Forrest Regressor
@@ -5516,18 +5518,16 @@ class RandomForestRegressor:
             tag = 'All Substrates'
             x = dfTrain.drop(columns='activity').values
             y = np.log1p(dfTrain['activity'].values)
-            print(f'DF:\n{dfTrain.iloc[:10, -1]}\n\n'
-                  f'Y: {y[0:10]}\n\n')
 
             # Get High-value subset
             tagHigh = 'Top 20 Substrates'
-            threshold = dfTrain['activity'].quantile(0.8) # 0.8 = Top 20
+            threshold = dfTrain['activity'].quantile(cutoff)
             dfHigh = dfTrain[dfTrain['activity'] > threshold]
             xHigh = dfHigh.drop(columns='activity').values
             yHigh = np.log1p(dfHigh['activity'].values)
 
 
-            def trainModel(model, x, y, tag):
+            def trainModel(model, x, y, tag, path):
                 xTrain, xTest, yTrain, yTest = train_test_split(
                     x, y, test_size=testSize, random_state=19)
 
@@ -5544,36 +5544,44 @@ class RandomForestRegressor:
                 print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
 
                 # Evaluate the model
-                accuracy = pd.DataFrame(0.0)
                 print(f'Evaluate Model Accuracy:')
                 yPred = model.predict(xTest)
-                accuracy.loc[:, 'yPred_log'] = yPred
-                accuracy.loc[:, 'yTest_log'] = yTest
-                yPred = np.expm1(yPred) # Reverse log1p transform
+                accuracy = pd.DataFrame({
+                    'yPred_log': yPred,
+                    'yTest_log': yTest,
+                })
+                yPred = np.expm1(yPred)  # Reverse log1p transform
                 yTest = np.expm1(yTest)
                 accuracy.loc[:, 'yPred'] = yPred
                 accuracy.loc[:, 'yTest'] = yTest
-                print(f'Y Values:\n{accuracy}\n\n')
                 MAE = mean_absolute_error(yPred, yTest)
                 MSE = mean_squared_error(yPred, yTest)
-                R2 = r2_score(yTest, yPred)
-                print(f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
+                R2 = r2_score(yPred, yTest)
+                print(f'{greenLight}{accuracy}{resetColor}\n\n')
+                print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
+                      f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
                       f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
                       f'     R2: {red}{round(R2, 3)}{resetColor}\n')
                 print(f'Saving Trained ESM Model:\n'
-                      f'     {greenDark}{pathModel}{resetColor}\n\n')
-                joblib.dump(self.model, pathModel)
+                      f'     {greenDark}{path}{resetColor}\n\n')
+                joblib.dump(self.model, path)
 
                 return model
 
-            self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
-            self.model = trainModel(model=self.model, x=x, y=y, tag=tag)
-            self.modelH = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
-            self.modelH = trainModel(model=self.modelH, x=xHigh, y=yHigh, tag=tagHigh)
-
-            self.model = self.loadModel(pathModel=pathModel, tag=tag)
-
-
+            # Train Models
+            randomState = 13
+            self.model = RandomForestRegressor(n_estimators=self.NTrees,
+                                               random_state=randomState)
+            self.model = trainModel(model=self.model, x=x, y=y,
+                                    tag=tag, path=pathModel)
+            self.modelH = RandomForestRegressor(n_estimators=self.NTrees,
+                                                random_state=randomState)
+            self.modelH = trainModel(model=self.modelH, x=xHigh, y=yHigh,
+                                     tag=tagHigh, path=pathModelH)
+        
+        sys.exit()
+        # def predictActivity(model, tag):
+            
         # Predict substrate activity
         print(f'Predicting Substrate Activity:\n'
               f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
@@ -5709,6 +5717,19 @@ class PredictActivity:
 
         # # Predict: Substrate activity
         # Model: Scikit-Learn Random Forest Regressor
+        randomForestRegressor = RandomForestRegressorCombo(
+            dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+            subsPredChosen=self.subsPredChosen, minES=self.minES,
+            pathModel=pathModelScikit, modelTag=modelTagScikit, testSize=self.testSize,
+            NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
+        self.predictions['Scikit-Learn: Random Forest Regressor'] = (
+            randomForestRegressor.predictions)
+        
+
+        # Model: Scikit-Learn Random Forest Regressor
+        print(f'Do you want to run the single dataset Regressor?\n'
+              f'Will it was the figures at a different name than the combined models?')
+        sys.exit()
         randomForestRegressor = RandomForestRegressor(
             dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
             subsPredChosen=self.subsPredChosen, minES=self.minES,
@@ -5716,6 +5737,7 @@ class PredictActivity:
             NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
         self.predictions['Scikit-Learn: Random Forest Regressor'] = (
             randomForestRegressor.predictions)
+
 
         # Model: XGBoost Random Forest
         randomForestRegressorXGB = RandomForestRegressorXGB(
