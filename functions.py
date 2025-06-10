@@ -5753,7 +5753,7 @@ class RandomForestRegressorXGBDualModels:
         if 'cuda' in device:
             import cupy
             useGPU = True
-            cupy.cuda.Device(self.device.split(':')[1]).use()
+            cupy.cuda.Device(device.split(':')[1]).use()
 
         trainModels = True
 
