@@ -5494,17 +5494,26 @@ class RandomForestRegressorCombo:
         print('============================ Random Forest Regressor '
               '============================')
         from sklearn.ensemble import RandomForestRegressor
+        from sklearn.model_selection import GridSearchCV
 
-        cutoff = 0.2 # 0.8 = Top 20
-        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
-              f'Model: {purple}{modelTag}{resetColor}'
-              f'Combine predictions with top {int(100*(1-cutoff))} substrates\n')
         self.device = device
-        self.NTrees = NTrees
+        self.paramGrid = {
+            'n_estimators': [100, 200, 300],
+            'max_depth': [10, 20, 30],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1, 2, 4]
+        }
         self.predictions = {}
         subsPred = list(dfPred.index)
-        pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
 
+        # Parameters: High value dataset
+        cutoff = 0.2 # 0.8 = Top 20
+        pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
+        tag = 'All Substrates'
+        tagHigh = 'Top 20 Substrates'
+        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
+              f'Model: {purple}{modelTag}{resetColor}\n'
+              f'Combine predictions with top {int(100*(1-cutoff))} substrates\n')
 
         # # Get Model: Random Forrest Regressor
         if os.path.exists(pathModel):
@@ -5515,37 +5524,43 @@ class RandomForestRegressorCombo:
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
             # Process dataframe
-            tag = 'All Substrates'
             x = dfTrain.drop(columns='activity').values
             y = np.log1p(dfTrain['activity'].values)
 
             # Get High-value subset
-            tagHigh = 'Top 20 Substrates'
             threshold = dfTrain['activity'].quantile(cutoff)
             dfHigh = dfTrain[dfTrain['activity'] > threshold]
             xHigh = dfHigh.drop(columns='activity').values
             yHigh = np.log1p(dfHigh['activity'].values)
 
 
-            def trainModel(model, x, y, tag, path):
+            def trainModel(model, x, y, tag, path, saveModel=True):
                 xTrain, xTest, yTrain, yTest = train_test_split(
                     x, y, test_size=testSize, random_state=19)
 
+
+                modelCV = GridSearchCV(estimator=model, param_grid=self.paramGrid, cv=3,
+                                       scoring='neg_mean_squared_error', n_jobs=-1)
+
                 # Train the model
                 print(f'Training Model: {purple}{tag}{resetColor}\n'
-                      f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}{pink}:'
-                      f'{blue}{round((testSize) * 100, 0)}{resetColor}\n'
+                      f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
+                      f'{pink}:{blue}{round((testSize) * 100, 0)}{resetColor}\n'
                       f'     Train: {red}{xTrain.shape}{resetColor}\n'
                       f'     Test: {red}{xTest.shape}{resetColor}')
                 start = time.time()
-                model.fit(xTrain, yTrain)
+                # model.fit(xTrain, yTrain)
+                modelCV.fit(xTrain, yTrain)
                 end = time.time()
                 runtime = (end - start) / 60
                 print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
+                print(f'Best Hyperparameters: '
+                      f'{greenLight}{modelCV.best_params_}{resetColor}')
 
                 # Evaluate the model
                 print(f'Evaluate Model Accuracy:')
-                yPred = model.predict(xTest)
+                # yPred = model.predict(xTest)
+                yPred = modelCV.predict(xTest)
                 accuracy = pd.DataFrame({
                     'yPred_log': yPred,
                     'yTest_log': yTest,
@@ -5562,70 +5577,71 @@ class RandomForestRegressorCombo:
                       f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
                       f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
                       f'     R2: {red}{round(R2, 3)}{resetColor}\n')
-                print(f'Saving Trained ESM Model:\n'
-                      f'     {greenDark}{path}{resetColor}\n\n')
-                joblib.dump(self.model, path)
+                if saveModel and not os.path.exists(path):
+                    print(f'Saving Trained ESM Model:\n'
+                          f'     {greenDark}{path}{resetColor}\n')
+                    joblib.dump(modelCV.best_estimator_, path)
+                print()
 
-                return model
+                return modelCV.best_estimator_
 
             # Train Models
-            randomState = 13
-            self.model = RandomForestRegressor(n_estimators=self.NTrees,
-                                               random_state=randomState)
-            self.model = trainModel(model=self.model, x=x, y=y,
-                                    tag=tag, path=pathModel)
-            self.modelH = RandomForestRegressor(n_estimators=self.NTrees,
-                                                random_state=randomState)
-            self.modelH = trainModel(model=self.modelH, x=xHigh, y=yHigh,
-                                     tag=tagHigh, path=pathModelH)
+            # self.model = RandomForestRegressor(n_estimators=self.NTrees,
+            #                                    random_state=self.randomState)
+            self.model = trainModel(model=RandomForestRegressor(), x=x, y=y,
+                                    tag=tag, path=pathModel, saveModel=True)
+            self.modelH = trainModel(model=RandomForestRegressor(), x=xHigh, y=yHigh,
+                                     tag=tagHigh, path=pathModelH, saveModel=True)
         
-        sys.exit()
-        # def predictActivity(model, tag):
-            
-        # Predict substrate activity
-        print(f'Predicting Substrate Activity:\n'
-              f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
-        start = time.time()
-        activityPred = self.model.predict(dfPred.values)
-        activityPred = np.expm1(activityPred) # Reverse log1p transform
-        end = time.time()
-        runtime = (end - start) * 1000
-        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        # Rank predictions
-        activityPredRandom = {
-            substrate: float(score)
-            for substrate, score in zip(subsPred, activityPred)
-        }
-        activityPredRandom = dict(sorted(
-            activityPredRandom.items(), key=lambda x: x[1], reverse=True))
-        self.predictions['Random'] = activityPredRandom
-        print(f'Predicted Activity: {purple}Random Substrates - Min ES: {minES}'
-              f'{resetColor}')
-        for iteration, (substrate, value) in enumerate(activityPredRandom.items()):
-            if iteration >= printNumber:
-                break
-            print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
-        print('\n')
+        def predictActivity(model, tag):
+            # Predict substrate activity
+            print(f'Predicting Substrate Activity: {purple}{tag}{resetColor}\n'
+                  f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
+            start = time.time()
+            activityPred = model.predict(dfPred.values)
+            activityPred = np.expm1(activityPred) # Reverse log1p transform
+            end = time.time()
+            runtime = (end - start) * 1000
+            print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
 
-        # Get: Chosen substrate predictions
-        if subsPredChosen != {}:
-            print(f'Predicted Activity: {purple}Chosen Substrates{resetColor}')
-            for key, substrates in subsPredChosen.items():
-                activityPredChosen = {}
-                for substrate in substrates:
-                    activityPredChosen[substrate] = (
-                        activityPredRandom)[substrate]
-                activityPredChosen = dict(sorted(activityPredChosen.items(),
-                                                      key=lambda x: x[1], reverse=True))
-                self.predictions[key] = activityPredChosen
-                print(f'Substrate Set: {purple}{key}{resetColor}')
-                for iteration, (substrate, activity) in (
-                        enumerate(activityPredChosen.items())):
-                    activity = float(activity)
-                    print(f'     {pink}{substrate}{resetColor}: '
-                          f'{red}{round(activity, 3):,}{resetColor}')
-                print('\n')
+            # Rank predictions
+            activityPredRandom = {
+                substrate: float(score)
+                for substrate, score in zip(subsPred, activityPred)
+            }
+            activityPredRandom = dict(sorted(
+                activityPredRandom.items(), key=lambda x: x[1], reverse=True))
+            self.predictions['Random'] = activityPredRandom
+            print(f'Predicted Activity: {purple}Random Substrates - Min ES: {minES}'
+                  f'{resetColor}')
+            for iteration, (substrate, value) in enumerate(activityPredRandom.items()):
+                if iteration >= printNumber:
+                    break
+                print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
+            print('\n')
+
+            # Get: Chosen substrate predictions
+            if subsPredChosen != {}:
+                print(f'Predicted Activity: {purple}Chosen Substrates{resetColor}')
+                for key, substrates in subsPredChosen.items():
+                    activityPredChosen = {}
+                    for substrate in substrates:
+                        activityPredChosen[substrate] = (
+                            activityPredRandom)[substrate]
+                    activityPredChosen = dict(sorted(activityPredChosen.items(),
+                                                          key=lambda x: x[1], reverse=True))
+                    self.predictions[key] = activityPredChosen
+                    print(f'Substrate Set: {purple}{key}{resetColor}')
+                    for iteration, (substrate, activity) in (
+                            enumerate(activityPredChosen.items())):
+                        activity = float(activity)
+                        print(f'     {pink}{substrate}{resetColor}: '
+                              f'{red}{round(activity, 3):,}{resetColor}')
+                    print('\n')
+        predictActivity(model=self.model, tag=tag)
+        predictActivity(model=self.modelH, tag=tagHigh)
+        print(f'Find a way to record predictions.')
         sys.exit()
 
     def loadModel(self, pathModel, tag):
@@ -5697,7 +5713,9 @@ class PredictActivity:
 
         # Define: Model paths
         modelTag = (f'Random Forrest - Test Size {self.testSize} - '
-                    f'N Trees {self.NTrees} - {self.tagEmbeddingsTrain}')
+                    f'{self.tagEmbeddingsTrain}')
+        # modelTag = (f'Random Forrest - Test Size {self.testSize} - '
+        #             f'N Trees {self.NTrees} - {self.tagEmbeddingsTrain}')
         modelTagScikit = modelTag.replace('Test Size',
                                           f'Scikit - Test Size')
         modelTagXGBoost = modelTag.replace('Test Size',
