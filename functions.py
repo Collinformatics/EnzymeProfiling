@@ -5743,13 +5743,12 @@ class RandomForestRegressorXGBCombo:
                 MAE = mean_absolute_error(yPred, yTest)
                 MSE = mean_squared_error(yPred, yTest)
                 R2 = r2_score(yPred, yTest)
-                print(f'{greenLight}{accuracy}{resetColor}\n\n')
                 print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
                       f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
                       f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
                       f'     R2: {red}{round(R2, 3)}{resetColor}\n\n')
 
-                return model, MSE
+                return model, MSE, accuracy
 
 
             # Train Model
@@ -5761,7 +5760,7 @@ class RandomForestRegressorXGBCombo:
                 params = dict(zip(paramNames, combo))
 
                 # Train Model
-                model, MSE = trainModel(
+                model, MSE, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        tree_method="hist",
                                        random_state=42),
@@ -5773,6 +5772,7 @@ class RandomForestRegressorXGBCombo:
                 if MSE < bestMSE:
                     print(f'New Best Hyperparameters: {purple}{tag}{resetColor}'
                           f'{greenLight}{params}{resetColor}\n\n'
+                          f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
                           f'     {greenDark}{pathModel}{resetColor}\n')
                     bestMSE = MSE
@@ -5782,7 +5782,7 @@ class RandomForestRegressorXGBCombo:
 
 
                 # Train Model
-                self.modelH, MSE = trainModel(
+                self.modelH, MSE, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        tree_method="hist",
                                        random_state=42),
@@ -5794,6 +5794,7 @@ class RandomForestRegressorXGBCombo:
                 if MSE < bestMSEHigh:
                     print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}'
                           f'{greenLight}{params}{resetColor}\n\n'
+                          f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
                           f'     {greenDark}{pathModel}{resetColor}\n')
                     bestMSEHigh = MSE
@@ -5802,7 +5803,7 @@ class RandomForestRegressorXGBCombo:
                     joblib.dump(self.modelH, pathModelH)
 
 
-        def makePredictions(model, xReal, yReal, yPreds, tag):
+        def makePredictions(model, tag):
             # Predict substrate activity
             print(f'Predicting Substrate Activity: {purple}{tag}{resetColor}\n'
                   f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
