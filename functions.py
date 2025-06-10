@@ -49,6 +49,7 @@ defaultResidues = (('Alanine', 'Ala', 'A'), ('Arginine', 'Arg', 'R'),
 
 # ===================================== Set Options ======================================
 pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', 10)
 pd.set_option('display.width', 1000)
 pd.set_option('display.float_format', '{:,.5f}'.format)
 
@@ -5292,7 +5293,7 @@ class RandomForestRegressorXGB:
             # Train the model
             print(f'Training Model:\n'
                   f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}{pink}:'
-                  f'{blue}{round((testSize) * 100, 0)}{resetColor}\n'
+                  f'{blue}{round(testSize * 100, 0)}{resetColor}\n'
                 f'     Train: {red}{xTrain.shape}{resetColor}\n'
                 f'     Test: {red}{xTest.shape}{resetColor}')
             start = time.time()
@@ -5522,7 +5523,8 @@ class RandomForestRegressorCombo:
         print(f'Combine predictions with {pink}{tagHigh}{resetColor}\n')
 
         # # Get Model: Random Forest Regressor
-        if os.path.exists(pathModel):
+        if os.path.exists(pathModel) and os.path.exists(pathModelH):
+            print('load')
             self.model = self.loadModel(pathModel=pathModel, tag=tag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
         else:
@@ -5727,7 +5729,7 @@ class RandomForestRegressorXGBCombo:
                 print(f'Training Model: {purple}{tag}{resetColor}\n'
                       f'Parameters: {greenLight}{params}{resetColor}\n'
                       f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
-                      f'{pink}:{blue}{round((testSize) * 100, 0)}{resetColor}\n'
+                      f'{pink}:{blue}{round(testSize * 100, 0)}{resetColor}\n'
                       f'     Train: {red}{xTrain.shape}{resetColor}\n'
                       f'     Test: {red}{xTest.shape}{resetColor}')
                 start = time.time()
@@ -5753,7 +5755,7 @@ class RandomForestRegressorXGBCombo:
                 print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
                       f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
                       f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
-                      f'     R2: {red}{round(R2, 3)}{resetColor}\n\n')
+                      f'     R2: {red}{round(R2, 3)}{resetColor}\n')
 
                 return model, MSE, accuracy
 
@@ -5787,12 +5789,13 @@ class RandomForestRegressorXGBCombo:
                     bestMSE = MSE
                     self.model = model
                     self.modelHyperparams = params
-                    sys.exit()
                     joblib.dump(self.model, pathModel)
+                print()
+
 
 
                 # Train Model
-                self.modelH, MSE, accuracy = trainModel(
+                modelH, MSE, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
@@ -5810,7 +5813,7 @@ class RandomForestRegressorXGBCombo:
                           f'Saving Trained Model:\n'
                           f'     {greenDark}{pathModel}{resetColor}\n\n')
                     bestMSEHigh = MSE
-                    self.modelH = model
+                    self.modelH = modelH
                     self.modelHHyperparams = params
                     sys.exit()
                     joblib.dump(self.modelH, pathModelH)
