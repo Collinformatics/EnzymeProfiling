@@ -5811,7 +5811,6 @@ class RandomForestRegressorXGBDualModels:
 
             # Put data on the training device
             if useGPU:
-
                 xTraining, yTraining = cupy.array(xTraining), cupy.array(yTraining)
                 xTesting, yTesting = cupy.array(xTesting), cupy.array(yTesting)
                 xTrainingH, yTrainingH = cupy.array(xTrainingH), cupy.array(yTrainingH)
