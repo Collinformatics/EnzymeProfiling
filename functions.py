@@ -5937,8 +5937,8 @@ class PredictActivity:
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
                 pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
-                testSize=self.testSize,
-                NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
+                testSize=self.testSize, NTrees=self.NTrees, device=self.device, 
+                printNumber=self.printNumber)
             self.predictions['XGBoost: Random Forest Regressor'] = (
                 randomForestRegressorXGBCombo.predictions)
         else:
@@ -5946,8 +5946,9 @@ class PredictActivity:
             randomForestRegressorXGB = RandomForestRegressorXGB(
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
-                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost, testSize=self.testSize,
-                NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
+                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost, 
+                testSize=self.testSize, NTrees=self.NTrees, device=self.device, 
+                printNumber=self.printNumber)
             self.predictions['XGBoost: Random Forest Regressor'] = (
                 randomForestRegressorXGB.predictions)
 
