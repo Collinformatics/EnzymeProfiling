@@ -2,6 +2,7 @@
 - You will need to install the following modules:
 
       pip install biopython
+      pip install cupy-cuda12x
       pip install fair-esm
       pip install logomaker
       pip install matplotlib
