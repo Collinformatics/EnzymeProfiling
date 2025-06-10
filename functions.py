@@ -5815,7 +5815,6 @@ class RandomForestRegressorXGBCombo:
                     bestMSEHigh = MSE
                     self.modelH = modelH
                     self.modelHHyperparams = params
-                    sys.exit()
                     joblib.dump(self.modelH, pathModelH)
 
 
