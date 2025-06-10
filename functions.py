@@ -5686,18 +5686,18 @@ class RandomForestRegressorXGBCombo:
         x = dfTrain.drop(columns='activity').values
         y = np.log1p(dfTrain['activity'].values)
 
-        # Process dataframe
-        threshold = dfTrain['activity'].quantile(cutoff)  # Get High-value subset
-        dfHigh = dfTrain[dfTrain['activity'] > threshold]
-        xHigh = dfHigh.drop(columns='activity').values
-        yHigh = np.log1p(dfHigh['activity'].values)
-
         # Parameters: High value dataset
         cutoff = 0.8  # 0.8 = Top 20
         tag = 'All Substrates'
         tagHigh = f'Top {int(round((100 * (1 - cutoff)), 0))} Substrates'
         pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
         print(f'Combine predictions with {pink}{tagHigh}{resetColor}\n')
+
+        # Process dataframe
+        threshold = dfTrain['activity'].quantile(cutoff)  # Get High-value subset
+        dfHigh = dfTrain[dfTrain['activity'] > threshold]
+        xHigh = dfHigh.drop(columns='activity').values
+        yHigh = np.log1p(dfHigh['activity'].values)
 
 
         # # Get Model: Random Forest Regressor
@@ -5762,7 +5762,7 @@ class RandomForestRegressorXGBCombo:
                 return model, MSE, accuracy
 
 
-            # Train Model
+            # Train Models
             self.bestParams = None
             bestMSE = float('inf')
             bestMSEHigh = bestMSE
@@ -5795,13 +5795,11 @@ class RandomForestRegressorXGBCombo:
                 print()
 
 
-
                 # Train Model
                 modelH, MSE, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
-                                       predictor='gpu_predictor',
                                        random_state=42),
                     xTrain=xTrainingH, yTrain=yTrainingH, xTest=xTestingH,
                     yTest=yTestingH, params=params, tag=tagHigh)
@@ -5867,17 +5865,17 @@ class RandomForestRegressorXGBCombo:
                               f'{red}{round(activity, 3):,}{resetColor}')
                     print('\n')
 
-        self.model = self.loadModel(path=pathModel, tag=tag)
-        self.modelH = self.loadModel(path=pathModelH, tag=tagHigh)
+        self.model = self.loadModel(pathModel=pathModel, tag=tag)
+        self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
         makePredictions(model=self.model, tag=tag)
         makePredictions(model=self.modelH, tag=tagHigh)
         print(f'Find a way to record multiple predictions.')
 
-    def loadModel(self, path, tag):
+    def loadModel(self, pathModel, tag):
         print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
-              f'     {greenDark}{path}{resetColor}\n')
+              f'     {greenDark}{pathModel}{resetColor}\n')
 
-        return joblib.load(path)
+        return joblib.load(pathModel)
 
 
 
