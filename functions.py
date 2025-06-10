@@ -5234,11 +5234,11 @@ class NGS:
             print(f'Added AAs: {pink}{addedAAsTag}{resetColor}')
         print(f'Minimum ES: {red}{minES}{resetColor}\n')
         # Generate all possible substrate combinations
-        allCombos = list(product(*preferredAAs))
-        # print(f'\n\nCombos:\n{allCombos}\n\n')
+        allDualModelss = list(product(*preferredAAs))
+        # print(f'\n\nDualModelss:\n{allDualModelss}\n\n')
 
         # Convert tuples to strings (AA sequences)
-        genSubstrates = [''.join(combo) for combo in allCombos]
+        genSubstrates = [''.join(DualModels) for DualModels in allDualModelss]
         NSubs = len(genSubstrates)
         print(f'Generated substrates: {red}N = {NSubs:,}{resetColor}')
         for iteration in range(0, self.printNumber):
@@ -5294,8 +5294,8 @@ class RandomForestRegressorXGB:
             print(f'Training Model:\n'
                   f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}{pink}:'
                   f'{blue}{round(testSize * 100, 0)}{resetColor}\n'
-                f'     Train: {red}{xTrain.shape}{resetColor}\n'
-                f'     Test: {red}{xTest.shape}{resetColor}')
+                f'     Train: {blue}{xTrain.shape}{resetColor}\n'
+                f'     Test: {blue}{xTest.shape}{resetColor}')
             start = time.time()
             self.model = XGBRFRegressor(device=self.device, tree_method="hist",
                                         n_estimators=100, random_state=42)
@@ -5408,8 +5408,8 @@ class RandomForestRegressor:
             print(f'Training Model:\n'
                   f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}{pink}:'
                   f'{blue}{round((testSize) * 100, 0)}{resetColor}\n'
-                  f'     Train: {red}{xTrain.shape}{resetColor}\n'
-                  f'     Test: {red}{xTest.shape}{resetColor}')
+                  f'     Train: {blue}{xTrain.shape}{resetColor}\n'
+                  f'     Test: {blue}{xTest.shape}{resetColor}')
             start = time.time()
             self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
             self.model.fit(xTrain, yTrain)
@@ -5494,7 +5494,7 @@ class RandomForestRegressor:
 
 
 
-class RandomForestRegressorCombo:
+class RandomForestRegressorDualModels:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
@@ -5551,8 +5551,8 @@ class RandomForestRegressorCombo:
                 print(f'Training Model: {purple}{tag}{resetColor}\n'
                       f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
                       f'{pink}:{blue}{round((testSize) * 100, 0)}{resetColor}\n'
-                      f'     Train: {red}{xTrain.shape}{resetColor}\n'
-                      f'     Test: {red}{xTest.shape}{resetColor}\n')
+                      f'     Train: {blue}{xTrain.shape}{resetColor}\n'
+                      f'     Test: {blue}{xTest.shape}{resetColor}\n')
                 start = time.time()
                 # model.fit(xTrain, yTrain)
                 modelCV.fit(xTrain, yTrain)
@@ -5656,7 +5656,7 @@ class RandomForestRegressorCombo:
 
 
 
-class RandomForestRegressorXGBCombo:
+class RandomForestRegressorXGBDualModels:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
@@ -5732,8 +5732,8 @@ class RandomForestRegressorXGBCombo:
                       f'Parameters: {greenLight}{params}{resetColor}\n'
                       f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
                       f'{pink}:{blue}{round(testSize * 100, 0)}{resetColor}\n'
-                      f'     Train: {red}{xTrain.shape}{resetColor}\n'
-                      f'     Test: {red}{xTest.shape}{resetColor}')
+                      f'     Train: {blue}{xTrain.shape}{resetColor}\n'
+                      f'     Test: {blue}{xTest.shape}{resetColor}')
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
@@ -5768,8 +5768,8 @@ class RandomForestRegressorXGBCombo:
             bestMSEHigh = bestMSE
             evalMetric='rmse'
             results = {}
-            for iteration, combo in enumerate(paramCombinations):
-                params = dict(zip(paramNames, combo))
+            for iteration, DualModels in enumerate(paramCombinations):
+                params = dict(zip(paramNames, DualModels))
 
                 # Train Model
                 model, MSE, accuracy = trainModel(
@@ -5965,13 +5965,13 @@ class PredictActivity:
         useModel = 2
         if useModel == 0:
             # Model: Scikit-Learn Random Forest Regressor
-            randomForestRegressorCombo = RandomForestRegressorCombo(
+            RandomForestRegressorDualModels = RandomForestRegressorDualModels(
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
                 pathModel=pathModelScikit, modelTag=modelTagScikit, testSize=self.testSize,
                 NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
             self.predictions['Scikit-Learn: Random Forest Regressor'] = (
-                randomForestRegressorCombo.predictions)
+                RandomForestRegressorDualModels.predictions)
         elif useModel == 1:
             # Model: Scikit-Learn Random Forest Regressor
             randomForestRegressor = RandomForestRegressor(
@@ -5983,14 +5983,14 @@ class PredictActivity:
                 randomForestRegressor.predictions)
         elif useModel == 2:
             # Model: XGBoost Random Forest
-            randomForestRegressorXGBCombo = RandomForestRegressorXGBCombo(
+            randomForestRegressorXGBDualModels = RandomForestRegressorXGBDualModels(
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
                 pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
                 testSize=self.testSize, NTrees=self.NTrees, device=self.device,
                 printNumber=self.printNumber)
             self.predictions['XGBoost: Random Forest Regressor'] = (
-                randomForestRegressorXGBCombo.predictions)
+                randomForestRegressorXGBDualModels.predictions)
         else:
             # Model: XGBoost Random Forest
             randomForestRegressorXGB = RandomForestRegressorXGB(
