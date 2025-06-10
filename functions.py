@@ -5756,12 +5756,12 @@ class RandomForestRegressorXGBDualModels:
         subsPred = list(dfPred.index)
         self.device = device
         paramGrid = {
-            'colsample_bytree': range(0.6, 1.0, 0.2),
+            'colsample_bytree': np.arange(0.6, 1.0, 0.2),
             'learning_rate': [0.01, 0.05, 0.1],
             'max_leaves': range(2, 10, 1),
             'min_child_weight': range(1, 5, 1),
             'n_estimators': range(100, 500, 100),
-            'subsample': range(0.5, 1.0, 0.1)
+            'subsample': np.arange(0.5, 1.0, 0.1)
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
         # 'max_depth': range(2, 6, 1),
@@ -5858,7 +5858,7 @@ class RandomForestRegressorXGBDualModels:
                     print(f'Time Training Model: {red}{round(runtime, 3):,} min'
                           f'{resetColor}\n'
                           f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
-                          f'{resetColor}\n')
+                          f'{resetColor}')
                     print(f'--------------------------------------------------------\n\n')
 
 
