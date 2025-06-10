@@ -5815,7 +5815,7 @@ class RandomForestRegressorXGBDualModels:
 
 
             def trainModel(model, xTrain, xTest, yTrain, yTest, tag,
-                           bestScore, bestScoreR2):
+                           bestScoreMAE, bestScoreMSE, bestScoreR2):
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
@@ -5850,25 +5850,26 @@ class RandomForestRegressorXGBDualModels:
                           f'     Train: {blue}{xTrain.shape}{resetColor}\n'
                           f'     Test: {blue}{xTest.shape}{resetColor}\n')
                     print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
-                          f'Best MSE: {yellow}{round(bestScore, 3):,}{resetColor}\n'
-                          f'     MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
-                          f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n'
-                          f' Best R2: {yellow}{round(bestR2, 3):,}{resetColor}\n'
+                          f'Best MAE: {yellow}{round(bestScoreMAE, 3):,}{resetColor}\n'
+                          f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n\n'
+                          f'Best MSE: {yellow}{round(bestScoreMSE, 3):,}{resetColor}\n'
+                          f'     MSE: {yellow}{round(MSE, 3):,}{resetColor}\n\n'
+                          f' Best R2: {yellow}{round(bestScoreR2, 3):,}{resetColor}\n'
                           f'      R2: {yellow}{round(R2, 3):,}{resetColor}\n')
                     print(f'Time Training Model: {red}{round(runtime, 3):,} min'
                           f'{resetColor}\n'
                           f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
-                          f'{resetColor}')
-                    print(f'--------------------------------------------------------\n\n')
+                          f'{resetColor}\n\n')
 
-
-                return model, MSE, R2, accuracy
+                return model, MAE, MSE, R2, accuracy
 
 
             # Train Models
             self.bestParams = None
             bestMSE = float('inf')
             bestMSEHigh = bestMSE
+            bestMAE = bestMSE
+            bestMAEHigh = bestMSE
             bestR2 = float('-inf')
             bestR2High = bestR2
             evalMetric='rmse'
@@ -5882,28 +5883,31 @@ class RandomForestRegressorXGBDualModels:
 
 
                 # Train Model
-                model, MSE, R2, accuracy = trainModel(
+                model, MAE, MSE, R2, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
                                        **params),
                     xTrain=xTraining, yTrain=yTraining, xTest=xTesting,
-                    yTest=yTesting, tag=tag,
-                    bestScore=bestMSE, bestScoreR2=bestR2)
+                    yTest=yTesting, tag=tag, bestScoreMAE=bestMAE,
+                    bestScoreMSE=bestMSE, bestScoreR2=bestR2)
 
                 # Inspect results
                 results[tag] = {str(iteration): (MSE, params)}
                 if R2 > bestR2:
                     bestR2 = R2
+                if MAE < bestMAE:
+                    bestMAE = MAE
                 if MSE < bestMSE:
                     print(f'--------------------------------------------------------\n'
                           f'--------------- New Best Hyperparameters ---------------\n'
                           f'--------------------------------------------------------\n')
                     print(f'New Best Hyperparameters: {purple}{tag}{resetColor}\n'
                           f'Combination: {red}{iteration}{resetColor}\n'
-                          f'Best MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
-                          f'Best R2: {yellow}{round(bestR2, 3):,}{resetColor}\n'
+                          f'MSE: {yellow}{round(MAE, 3):,}{resetColor}\n'
+                          f'MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
+                          f'R2: {yellow}{round(R2, 3):,}{resetColor}\n'
                           f'Params: {greenLight}{params}{resetColor}{resetColor}'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
@@ -5918,28 +5922,31 @@ class RandomForestRegressorXGBDualModels:
 
 
                 # Train Model
-                modelH, MSE, R2, accuracy = trainModel(
+                modelH, MAE, MSE, R2, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
                                        **params),
                     xTrain=xTrainingH, yTrain=yTrainingH, xTest=xTestingH,
-                    yTest=yTestingH, tag=tagHigh,
-                    bestScore=bestMSE, bestScoreR2=bestR2High)
+                    yTest=yTestingH, tag=tagHigh, bestScoreMAE=bestMAEHigh,
+                    bestScoreMSE=bestMSEHigh, bestScoreR2=bestR2High)
 
                 # Inspect results
                 results[tagHigh] = {str(iteration): (MSE, params)}
                 if R2 > bestR2High:
                     bestR2High = R2
+                if MAE < bestMAEHigh:
+                    bestMAEHigh = MAE
                 if MSE < bestMSEHigh:
                     print(f'--------------------------------------------------------\n'
                           f'--------------- New Best Hyperparameters ---------------\n'
                           f'--------------------------------------------------------\n')
                     print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}\n'
                           f'Combination: {red}{iteration}{resetColor}\n'
-                          f'Best MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
-                          f'Best R2: {yellow}{round(bestR2High, 3):,}{resetColor}\n'
+                          f'MSE: {yellow}{round(MAE, 3):,}{resetColor}\n'
+                          f'MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
+                          f'R2: {yellow}{round(R2, 3):,}{resetColor}\n'
                           f'Params: {greenLight}{params}{resetColor}{resetColor}'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
