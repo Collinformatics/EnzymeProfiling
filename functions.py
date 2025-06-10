@@ -5772,13 +5772,14 @@ class RandomForestRegressorXGBCombo:
                 results[tag] = {str(iteration): (MSE, params)}
                 if MSE < bestMSE:
                     print(f'New Best Hyperparameters: {purple}{tag}{resetColor}'
-                          f'{greenLight}{model.best_params_}{resetColor}\n\n'
+                          f'{greenLight}{params}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
                           f'     {greenDark}{pathModel}{resetColor}\n')
                     bestMSE = MSE
                     self.model = model
                     self.modelHyperparams = params
                     joblib.dump(self.model, pathModel)
+
 
                 # Train Model
                 self.modelH, MSE = trainModel(
@@ -5792,15 +5793,13 @@ class RandomForestRegressorXGBCombo:
                 results[tagHigh] = {str(iteration): (MSE, params)}
                 if MSE < bestMSEHigh:
                     print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}'
-                          f'{greenLight}{model.best_params_}{resetColor}\n\n'
+                          f'{greenLight}{params}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
                           f'     {greenDark}{pathModel}{resetColor}\n')
                     bestMSEHigh = MSE
                     self.modelH = model
                     self.modelHHyperparams = params
-                    joblib.dump(self.modelH, pathModel)
-
-
+                    joblib.dump(self.modelH, pathModelH)
 
 
         def makePredictions(model, xReal, yReal, yPreds, tag):
@@ -5849,17 +5848,17 @@ class RandomForestRegressorXGBCombo:
                               f'{red}{round(activity, 3):,}{resetColor}')
                     print('\n')
 
-        self.model = self.loadModel(model=XGBRegressor(), tag=tag, path=pathModel)
-        self.modelH = self.loadModel(model=XGBRegressor(), tag=tagHigh, path=pathModelH)
+        self.model = self.loadModel(path=pathModel, tag=tag)
+        self.modelH = self.loadModel(path=pathModelH, tag=tagHigh)
         makePredictions(model=self.model, tag=tag)
         makePredictions(model=self.modelH, tag=tagHigh)
         print(f'Find a way to record multiple predictions.')
 
-    def loadModel(self, model, path, tag):
+    def loadModel(self, path, tag):
         print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
               f'     {greenDark}{path}{resetColor}\n')
 
-        return model.load_model(path)
+        return joblib.load(path)
 
 
 
