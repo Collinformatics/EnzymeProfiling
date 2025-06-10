@@ -5519,7 +5519,8 @@ class RandomForestRegressorDualModels:
         cutoff = 0.8  # 0.8 = Top 20
         tag = 'All Substrates'
         tagHigh = f'Top {int(round((100 * (1 - cutoff)), 0))} Substrates'
-        pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
+        pathModelH = pathModel.replace('Test Size',
+                                       f'High Values - Test Size {self.testSize}')
         print(f'Combine predictions with {pink}{tagHigh}{resetColor}\n')
 
         # # Get Model: Random Forest Regressor
@@ -5776,7 +5777,8 @@ class RandomForestRegressorXGBDualModels:
         cutoff = 0.8  # 0.8 = Top 20
         tag = 'All Substrates'
         tagHigh = f'Top {int(round((100 * (1 - cutoff)), 0))} Substrates'
-        pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
+        pathModelH = pathModel.replace('Embeddings',
+                                       f'High Values - Embeddings')
         print(f'Combine predictions with {pink}{tagHigh}{resetColor}\n')
 
         # Process dataframe
@@ -5854,8 +5856,8 @@ class RandomForestRegressorXGBDualModels:
                           f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n\n'
                           f'Best MSE: {yellow}{round(bestScoreMSE, 3):,}{resetColor}\n'
                           f'     MSE: {yellow}{round(MSE, 3):,}{resetColor}\n\n'
-                          f' Best R2: {yellow}{round(bestScoreR2, 3):,}{resetColor}\n'
-                          f'      R2: {yellow}{round(R2, 3):,}{resetColor}\n')
+                          f'Best R2: {yellow}{round(bestScoreR2, 3):,}{resetColor}\n'
+                          f'     R2: {yellow}{round(R2, 3):,}{resetColor}\n')
                     print(f'Time Training Model: {red}{round(runtime, 3):,} min'
                           f'{resetColor}\n'
                           f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
@@ -5866,6 +5868,7 @@ class RandomForestRegressorXGBDualModels:
 
             # Train Models
             self.bestParams = None
+            self.bestParamsHigh = None
             bestMSE = float('inf')
             bestMSEHigh = bestMSE
             bestMAE = bestMSE
@@ -5880,7 +5883,6 @@ class RandomForestRegressorXGBDualModels:
                 params = dict(zip(paramNames, paramCombo))
                 percentComplete = round((iteration / totalParamCombos) * 100, 3)
                 printData = (iteration % 10 == 0)
-
 
                 # Train Model
                 model, MAE, MSE, R2, accuracy = trainModel(
@@ -5917,7 +5919,7 @@ class RandomForestRegressorXGBDualModels:
                           f'--------------------------------------------------------\n\n')
                     bestMSE = MSE
                     self.model = model
-                    self.modelHyperparams = params
+                    self.bestParams = params
                     joblib.dump(self.model, pathModel)
 
 
@@ -5956,7 +5958,7 @@ class RandomForestRegressorXGBDualModels:
                           f'--------------------------------------------------------\n\n')
                     bestMSEHigh = MSE
                     self.modelH = modelH
-                    self.modelHHyperparams = params
+                    self.bestParamsHigh = params
                     joblib.dump(self.modelH, pathModelH)
 
 
