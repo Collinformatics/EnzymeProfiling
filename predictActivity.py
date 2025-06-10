@@ -23,7 +23,7 @@ inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 10
+inMinimumSubstrateCount = 1000
 inSubsPred = {
     'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
 inBatchSize = 4096 # Batch size for ESM
@@ -269,8 +269,8 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
     subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
-    tagChosenSubs=tagPredSubs, batchSize=inBatchSize, minES=inMinES,
-    labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
+    tagChosenSubs=tagPredSubs, minSubCount=inMinimumSubstrateCount, minES=inMinES,
+    batchSize=inBatchSize, labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
 
 # Evaluate: Predictions
 ngs.processSubstrates(

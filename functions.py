@@ -5547,7 +5547,7 @@ class RandomForestRegressorCombo:
                       f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
                       f'{pink}:{blue}{round((testSize) * 100, 0)}{resetColor}\n'
                       f'     Train: {red}{xTrain.shape}{resetColor}\n'
-                      f'     Test: {red}{xTest.shape}{resetColor}')
+                      f'     Test: {red}{xTest.shape}{resetColor}\n')
                 start = time.time()
                 # model.fit(xTrain, yTrain)
                 modelCV.fit(xTrain, yTrain)
@@ -5594,7 +5594,7 @@ class RandomForestRegressorCombo:
                                      tag=tagHigh, path=pathModelH, saveModel=True)
         
 
-        def predictActivity(model, tag):
+        def makePredictions(model, tag):
             # Predict substrate activity
             print(f'Predicting Substrate Activity: {purple}{tag}{resetColor}\n'
                   f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
@@ -5639,10 +5639,9 @@ class RandomForestRegressorCombo:
                         print(f'     {pink}{substrate}{resetColor}: '
                               f'{red}{round(activity, 3):,}{resetColor}')
                     print('\n')
-        predictActivity(model=self.model, tag=tag)
-        predictActivity(model=self.modelH, tag=tagHigh)
-        print(f'Find a way to record predictions.')
-        sys.exit()
+        makePredictions(model=self.model, tag=tag)
+        makePredictions(model=self.modelH, tag=tagHigh)
+        print(f'Find a way to record multiple predictions.')
 
     def loadModel(self, pathModel, tag):
         print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
@@ -5653,11 +5652,179 @@ class RandomForestRegressorCombo:
 
 
 
+class RandomForestRegressorXGBCombo:
+    def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
+                 testSize, NTrees, device, printNumber):
+        print('============================ Random Forest Regressor '
+              '============================')
+        from sklearn.model_selection import GridSearchCV
+        from xgboost import XGBRFRegressor
+
+
+        print(f'Module: {purple}XGBoost{resetColor}\n'
+              f'Model: {purple}{modelTag}{resetColor}\n')
+        self.device = device
+        self.NTrees = NTrees
+        self.predictions = {}
+        subsPred = list(dfPred.index)
+        self.device = device
+        self.paramGrid = {
+            'n_estimators': [100, 200],
+            'max_depth': [5, 10],
+            'learning_rate': [0.01, 0.1],
+            'subsample': [0.8, 1.0],
+            'colsample_bytree': [0.8, 1.0]
+        }
+        self.predictions = {}
+
+        # Process dataframe
+        x = dfTrain.drop(columns='activity').values
+        y = np.log1p(dfTrain['activity'].values)
+        # dfTrain = DMatrix(dfTrain)
+        # dfPred = DMatrix(dfPred)
+
+        # Parameters: High value dataset
+        cutoff = 0.2  # 0.8 = Top 20
+        pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
+        tag = 'All Substrates'
+        tagHigh = 'Top 20 Substrates'
+        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
+              f'Model: {purple}{modelTag}{resetColor}\n'
+              f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
+
+        # # Get Model: Random Forrest Regressor
+        if not os.path.exists(pathModel):
+            from sklearn.model_selection import train_test_split
+            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+            # Get High-value subset
+            threshold = dfTrain['activity'].quantile(cutoff)
+            dfHigh = dfTrain[dfTrain['activity'] > threshold]
+            xHigh = dfHigh.drop(columns='activity').values
+            yHigh = np.log1p(dfHigh['activity'].values)
+
+            def trainModel(model, x, y, tag, path, saveModel=True):
+                xTrain, xTest, yTrain, yTest = train_test_split(
+                    x, y, test_size=testSize, random_state=19)
+
+                modelCV = GridSearchCV(estimator=model, param_grid=self.paramGrid, cv=3,
+                                       scoring='neg_mean_squared_error', n_jobs=-1)
+
+                # Train the model
+                print(f'Training Model: {purple}{tag}{resetColor}\n'
+                      f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
+                      f'{pink}:{blue}{round((testSize) * 100, 0)}{resetColor}\n'
+                      f'     Train: {red}{xTrain.shape}{resetColor}\n'
+                      f'     Test: {red}{xTest.shape}{resetColor}\n')
+                start = time.time()
+                # model.fit(xTrain, yTrain)
+                modelCV.fit(xTrain, yTrain)
+                end = time.time()
+                runtime = (end - start) / 60
+                print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
+                print(f'Best Hyperparameters: '
+                      f'{greenLight}{modelCV.best_params_}{resetColor}')
+
+                # Evaluate the model
+                print(f'Evaluate Model Accuracy:')
+                # yPred = model.predict(xTest)
+                yPred = modelCV.predict(xTest)
+                accuracy = pd.DataFrame({
+                    'yPred_log': yPred,
+                    'yTest_log': yTest,
+                })
+                yPred = np.expm1(yPred)  # Reverse log1p transform
+                yTest = np.expm1(yTest)
+                accuracy.loc[:, 'yPred'] = yPred
+                accuracy.loc[:, 'yTest'] = yTest
+                MAE = mean_absolute_error(yPred, yTest)
+                MSE = mean_squared_error(yPred, yTest)
+                R2 = r2_score(yPred, yTest)
+                print(f'{greenLight}{accuracy}{resetColor}\n\n')
+                print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
+                      f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
+                      f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
+                      f'     R2: {red}{round(R2, 3)}{resetColor}\n')
+                if saveModel and not os.path.exists(path):
+                    print(f'Saving Trained ESM Model:\n'
+                          f'     {greenDark}{path}{resetColor}\n')
+                    joblib.dump(modelCV.best_estimator_, path)
+                print()
+
+                return modelCV.best_estimator_
+
+            # Train Models
+            self.model = trainModel(
+                model=XGBRFRegressor(device=self.device), x=x, y=y,
+                tag=tag, path=pathModel, saveModel=True)
+            self.modelH = trainModel(
+                model=XGBRFRegressor(device=self.device), x=xHigh, y=yHigh,
+                tag=tagHigh, path=pathModelH, saveModel=True)
+
+        def makePredictions(model, tag):
+            # Predict substrate activity
+            print(f'Predicting Substrate Activity: {purple}{tag}{resetColor}\n'
+                  f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
+            start = time.time()
+            activityPred = model.predict(dfPred.values)
+            activityPred = np.expm1(activityPred)  # Reverse log1p transform
+            end = time.time()
+            runtime = (end - start) * 1000
+            print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+
+            # Rank predictions
+            activityPredRandom = {
+                substrate: float(score)
+                for substrate, score in zip(subsPred, activityPred)
+            }
+            activityPredRandom = dict(sorted(
+                activityPredRandom.items(), key=lambda x: x[1], reverse=True))
+            self.predictions['Random'] = activityPredRandom
+            print(f'Predicted Activity: {purple}Random Substrates - Min ES: {minES}'
+                  f'{resetColor}')
+            for iteration, (substrate, value) in enumerate(activityPredRandom.items()):
+                if iteration >= printNumber:
+                    break
+                print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
+            print('\n')
+
+            # Get: Chosen substrate predictions
+            if subsPredChosen != {}:
+                print(f'Predicted Activity: {purple}Chosen Substrates{resetColor}')
+                for key, substrates in subsPredChosen.items():
+                    activityPredChosen = {}
+                    for substrate in substrates:
+                        activityPredChosen[substrate] = (
+                            activityPredRandom)[substrate]
+                    activityPredChosen = dict(sorted(activityPredChosen.items(),
+                                                     key=lambda x: x[1], reverse=True))
+                    self.predictions[key] = activityPredChosen
+                    print(f'Substrate Set: {purple}{key}{resetColor}')
+                    for iteration, (substrate, activity) in (
+                            enumerate(activityPredChosen.items())):
+                        activity = float(activity)
+                        print(f'     {pink}{substrate}{resetColor}: '
+                              f'{red}{round(activity, 3):,}{resetColor}')
+                    print('\n')
+
+        self.model = loadModel(model=XGBRFRegressor(), tag=tag, path=pathModel)
+        self.modelH = loadModel(model=XGBRFRegressor(), tag=tagHigh, path=pathModelH)
+        makePredictions(model=self.model, tag=tag)
+        makePredictions(model=self.modelH, tag=tagHigh)
+        print(f'Find a way to record multiple predictions.')
+
+    def loadModel(self, model, pathModel, tag):
+        print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
+              f'     {greenDark}{pathModel}{resetColor}\n')
+
+        return model.load_model(pathModel)
+
+
 
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsPred,
-                 subsPredChosen, tagChosenSubs, batchSize, minES, labelsXAxis,
-                 printNumber):
+                 subsPredChosen, tagChosenSubs, minSubCount, minES, batchSize,
+                 labelsXAxis, printNumber):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
@@ -5673,6 +5840,7 @@ class PredictActivity:
         self.datasetTag = datasetTag
         self.subsPredChosen = subsPredChosen
         self.tagChosenSubs = tagChosenSubs
+        self.minSubCount = minSubCount
         self.minES = minES
         self.labelsXAxis = labelsXAxis
         self.printNumber = printNumber
@@ -5700,15 +5868,16 @@ class PredictActivity:
             self.sizeESM = '650M Params'
         self.tagEmbeddingsTrain = (
             f'Embeddings - ESM {self.sizeESM} - {self.enzymeName} - {self.datasetTag} - '
-            f'N {self.subsTrainN} - {len(self.labelsXAxis)} AA - Batch {self.batchSize}')
+            f'MinCounts {self.minSubCount} - N {self.subsTrainN} - '
+            f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
         self.tagEmbeddingsPred = (
             f'Embeddings - ESM {self.sizeESM} - {self.enzymeName} - Predictions - '
-            f'Min ES {self.minES} - N {self.subsPredN} - {len(self.labelsXAxis)} AA - '
-            f'Batch {self.batchSize}')
+            f'Min ES {self.minES} - MinCounts {self.minSubCount} - N {self.subsPredN} - '
+            f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
         if self.tagChosenSubs != '':
             self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
-                f'Min ES {self.minES}',
-                f'Min ES {self.minES} - Added {self.tagChosenSubs}')
+                f'MinCounts {self.minSubCount}',
+                f'MinCounts {self.minSubCount} - Added {self.tagChosenSubs}')
 
 
         # Define: Model paths
@@ -5734,37 +5903,44 @@ class PredictActivity:
 
 
         # # Predict: Substrate activity
-        # Model: Scikit-Learn Random Forest Regressor
-        randomForestRegressor = RandomForestRegressorCombo(
-            dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-            subsPredChosen=self.subsPredChosen, minES=self.minES,
-            pathModel=pathModelScikit, modelTag=modelTagScikit, testSize=self.testSize,
-            NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
-        self.predictions['Scikit-Learn: Random Forest Regressor'] = (
-            randomForestRegressor.predictions)
-        
-
-        # Model: Scikit-Learn Random Forest Regressor
-        print(f'Do you want to run the single dataset Regressor?\n'
-              f'Will it was the figures at a different name than the combined models?')
-        sys.exit()
-        randomForestRegressor = RandomForestRegressor(
-            dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-            subsPredChosen=self.subsPredChosen, minES=self.minES,
-            pathModel=pathModelScikit, modelTag=modelTagScikit, testSize=self.testSize,
-            NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
-        self.predictions['Scikit-Learn: Random Forest Regressor'] = (
-            randomForestRegressor.predictions)
-
-
-        # Model: XGBoost Random Forest
-        randomForestRegressorXGB = RandomForestRegressorXGB(
-            dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-            subsPredChosen=self.subsPredChosen, minES=self.minES,
-            pathModel=pathModelXGBoost, modelTag=modelTagScikit, testSize=self.testSize,
-            NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
-        self.predictions['XGBoost: Random Forest Regressor'] = (
-            randomForestRegressorXGB.predictions)
+        useModel = 2
+        if useModel == 0:
+            # Model: Scikit-Learn Random Forest Regressor
+            randomForestRegressorCombo = RandomForestRegressorCombo(
+                dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+                subsPredChosen=self.subsPredChosen, minES=self.minES,
+                pathModel=pathModelScikit, modelTag=modelTagScikit, testSize=self.testSize,
+                NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
+            self.predictions['Scikit-Learn: Random Forest Regressor'] = (
+                randomForestRegressorCombo.predictions)
+        elif useModel == 1:
+            # Model: Scikit-Learn Random Forest Regressor
+            randomForestRegressor = RandomForestRegressor(
+                dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+                subsPredChosen=self.subsPredChosen, minES=self.minES,
+                pathModel=pathModelScikit, modelTag=modelTagScikit, testSize=self.testSize,
+                NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
+            self.predictions['Scikit-Learn: Random Forest Regressor'] = (
+                randomForestRegressor.predictions)
+        elif useModel == 2:
+            # Model: XGBoost Random Forest
+            randomForestRegressorXGBCombo = RandomForestRegressorXGBCombo(
+                dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+                subsPredChosen=self.subsPredChosen, minES=self.minES,
+                pathModel=pathModelXGBoost, modelTag=modelTagScikit,
+                testSize=self.testSize,
+                NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
+            self.predictions['XGBoost: Random Forest Regressor'] = (
+                randomForestRegressorXGBCombo.predictions)
+        else:
+            # Model: XGBoost Random Forest
+            randomForestRegressorXGB = RandomForestRegressorXGB(
+                dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+                subsPredChosen=self.subsPredChosen, minES=self.minES,
+                pathModel=pathModelXGBoost, modelTag=modelTagScikit, testSize=self.testSize,
+                NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
+            self.predictions['XGBoost: Random Forest Regressor'] = (
+                randomForestRegressorXGB.predictions)
 
 
 
