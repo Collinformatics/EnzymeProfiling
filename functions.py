@@ -5761,8 +5761,8 @@ class RandomForestRegressorXGBDualModels:
                           f'{round(testSize * 100, 0)}{resetColor}\n'
                           f'     Train: {blue}{xTrain.shape}{resetColor}\n'
                           f'     Test: {blue}{xTest.shape}{resetColor}\n')
-                    print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n'
-                          f'Total Runtime: {red}{round(runtimeTotal, 3):,} min'
+                    print(f'Time Training Model: {red}{round(runtime, 3):,} min{resetColor}\n'
+                          f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
                           f'{resetColor}\n')
                     print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
                           f'     MAE: {yellow}{round(MAE, 3)}{resetColor}\n'
@@ -5785,7 +5785,7 @@ class RandomForestRegressorXGBDualModels:
                 params = dict(zip(paramNames, DualModels))
                 percentComplete = round((iteration / totalParamCombos) * 100, 3)
 
-                printData = (iteration % 5 == 0)
+                printData = (iteration % 10 == 0)
                 if printData:
                     print('-------------------- Training Model --------------------')
 
@@ -5802,6 +5802,7 @@ class RandomForestRegressorXGBDualModels:
                 results[tag] = {str(iteration): (MSE, params)}
                 if MSE < bestMSE:
                     print(f'New Best Hyperparameters: {purple}{tag}{resetColor}\n'
+                          f'Combination: {red}{iteration}{resetColor}\n'
                           f'Params: {greenLight}{params}{resetColor}\n'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
