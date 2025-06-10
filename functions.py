@@ -5261,10 +5261,11 @@ class RandomForestRegressorXGB:
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
-        from xgboost import DMatrix, XGBRFRegressor
-
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
+
+        from xgboost import DMatrix, XGBRFRegressor
+
         self.device = device
         self.NTrees = NTrees
         self.predictions = {}
@@ -5322,7 +5323,7 @@ class RandomForestRegressorXGB:
               f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
         start = time.time()
         activityPred = self.model.predict(dfPred)
-        activityPred = np.expm1(activityPred)  # Reverse log1p transform
+        activityPred = np.expm1(activityPred) # Reverse log1p transform
         end = time.time()
         runtime = (end - start) * 1000
         print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
@@ -5376,10 +5377,11 @@ class RandomForestRegressor:
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
-        from sklearn.ensemble import RandomForestRegressor
-
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
+
+        from sklearn.ensemble import RandomForestRegressor
+
         self.device = device
         self.NTrees = NTrees
         self.predictions = {}
@@ -5513,13 +5515,13 @@ class RandomForestRegressorCombo:
         subsPred = list(dfPred.index)
 
         # Parameters: High value dataset
-        cutoff = 0.2 # 0.8 = Top 20
+        cutoff = 0.2  # 0.8 = Top 20
         pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
         tag = 'All Substrates'
         tagHigh = 'Top 20 Substrates'
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n\n'
-              f'Combine predictions with top {int(100*(1-cutoff))} substrates\n')
+              f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
 
         # # Get Model: Random Forrest Regressor
         if os.path.exists(pathModel):
@@ -5539,11 +5541,9 @@ class RandomForestRegressorCombo:
             xHigh = dfHigh.drop(columns='activity').values
             yHigh = np.log1p(dfHigh['activity'].values)
 
-
             def trainModel(model, x, y, tag, path, saveModel=True):
                 xTrain, xTest, yTrain, yTest = train_test_split(
                     x, y, test_size=testSize, random_state=19)
-
 
                 modelCV = GridSearchCV(estimator=model, param_grid=self.paramGrid, cv=3,
                                        scoring='neg_mean_squared_error', n_jobs=-1)
@@ -5598,7 +5598,6 @@ class RandomForestRegressorCombo:
                                     tag=tag, path=pathModel, saveModel=True)
             self.modelH = trainModel(model=RandomForestRegressor(), x=xHigh, y=yHigh,
                                      tag=tagHigh, path=pathModelH, saveModel=True)
-        
 
         def makePredictions(model, tag):
             # Predict substrate activity
@@ -5606,7 +5605,7 @@ class RandomForestRegressorCombo:
                   f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
             start = time.time()
             activityPred = model.predict(dfPred.values)
-            activityPred = np.expm1(activityPred) # Reverse log1p transform
+            activityPred = np.expm1(activityPred)  # Reverse log1p transform
             end = time.time()
             runtime = (end - start) * 1000
             print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
@@ -5636,7 +5635,7 @@ class RandomForestRegressorCombo:
                         activityPredChosen[substrate] = (
                             activityPredRandom)[substrate]
                     activityPredChosen = dict(sorted(activityPredChosen.items(),
-                                                          key=lambda x: x[1], reverse=True))
+                                                     key=lambda x: x[1], reverse=True))
                     self.predictions[key] = activityPredChosen
                     print(f'Substrate Set: {purple}{key}{resetColor}')
                     for iteration, (substrate, activity) in (
@@ -5645,6 +5644,7 @@ class RandomForestRegressorCombo:
                         print(f'     {pink}{substrate}{resetColor}: '
                               f'{red}{round(activity, 3):,}{resetColor}')
                     print('\n')
+
         makePredictions(model=self.model, tag=tag)
         makePredictions(model=self.modelH, tag=tagHigh)
         print(f'Find a way to record multiple predictions.')
@@ -5654,9 +5654,6 @@ class RandomForestRegressorCombo:
               f'     {greenDark}{pathModel}{resetColor}\n')
 
         return joblib.load(pathModel)
-
-
-
 
 
 
@@ -5677,8 +5674,8 @@ class RandomForestRegressorXGBCombo:
         subsPred = list(dfPred.index)
         self.device = device
         self.paramGrid = {
-            'n_estimators': [100, 200],
-            'max_depth': [5, 10],
+            'n_estimators': range(100, 250, 50),
+            'max_depth': range (2, 10, 1),
             'learning_rate': [0.01, 0.1],
             'subsample': [0.8, 1.0],
             'colsample_bytree': [0.8, 1.0]
@@ -5687,7 +5684,9 @@ class RandomForestRegressorXGBCombo:
 
         # Process dataframe
         x = dfTrain.drop(columns='activity').values
+        x = DMatrix(x)
         y = np.log1p(dfTrain['activity'].values)
+        # y = DMatrix(y)
         # dfTrain = DMatrix(dfTrain)
         # dfPred = DMatrix(dfPred)
 
@@ -5697,24 +5696,24 @@ class RandomForestRegressorXGBCombo:
         tag = 'All Substrates'
         tagHigh = 'Top 20 Substrates'
         print(f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
+        threshold = dfTrain['activity'].quantile(cutoff) # Get High-value subset
+        dfHigh = dfTrain[dfTrain['activity'] > threshold]
+        xHigh = dfHigh.drop(columns='activity').values
+        yHigh = np.log1p(dfHigh['activity'].values)
+        xHigh = DMatrix(xHigh)
+        yHigh = DMatrix(yHigh)
 
         # # Get Model: Random Forrest Regressor
         if not os.path.exists(pathModel):
             from sklearn.model_selection import train_test_split
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-            # Get High-value subset
-            threshold = dfTrain['activity'].quantile(cutoff)
-            dfHigh = dfTrain[dfTrain['activity'] > threshold]
-            xHigh = dfHigh.drop(columns='activity').values
-            yHigh = np.log1p(dfHigh['activity'].values)
-
             def trainModel(model, x, y, tag, path, saveModel=True):
                 xTrain, xTest, yTrain, yTest = train_test_split(
                     x, y, test_size=testSize, random_state=19)
 
                 modelCV = GridSearchCV(estimator=model, param_grid=self.paramGrid, cv=3,
-                                       scoring='neg_mean_squared_error', n_jobs=1)
+                                       scoring='neg_mean_squared_error', n_jobs=4)
 
                 # Train the model
                 print(f'Training Model: {purple}{tag}{resetColor}\n'
@@ -5761,10 +5760,14 @@ class RandomForestRegressorXGBCombo:
 
             # Train Models
             self.model = trainModel(
-                model=XGBRFRegressor(device=self.device, tree_method="hist",),
+                model=XGBRFRegressor(device=self.device,
+                                     tree_method="hist",
+                                     random_state=42),
                 x=x, y=y, tag=tag, path=pathModel, saveModel=True)
             self.modelH = trainModel(
-                model=XGBRFRegressor(device=self.device, tree_method="hist",),
+                model=XGBRFRegressor(device=self.device,
+                                     tree_method="hist",
+                                     random_state=42),
                 x=xHigh, y=yHigh, tag=tagHigh, path=pathModelH, saveModel=True)
 
         def makePredictions(model, tag):
