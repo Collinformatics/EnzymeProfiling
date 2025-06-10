@@ -5686,7 +5686,6 @@ class RandomForestRegressorXGBCombo:
         x = dfTrain.drop(columns='activity').values
         x = DMatrix(x)
         y = np.log1p(dfTrain['activity'].values)
-        # y = DMatrix(y)
         # dfTrain = DMatrix(dfTrain)
         # dfPred = DMatrix(dfPred)
 
@@ -5701,7 +5700,7 @@ class RandomForestRegressorXGBCombo:
         xHigh = dfHigh.drop(columns='activity').values
         yHigh = np.log1p(dfHigh['activity'].values)
         xHigh = DMatrix(xHigh)
-        yHigh = DMatrix(yHigh)
+
 
         # # Get Model: Random Forest Regressor
         if not os.path.exists(pathModel):
@@ -5937,7 +5936,7 @@ class PredictActivity:
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
                 pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
-                testSize=self.testSize, NTrees=self.NTrees, device=self.device, 
+                testSize=self.testSize, NTrees=self.NTrees, device=self.device,
                 printNumber=self.printNumber)
             self.predictions['XGBoost: Random Forest Regressor'] = (
                 randomForestRegressorXGBCombo.predictions)
@@ -5946,8 +5945,8 @@ class PredictActivity:
             randomForestRegressorXGB = RandomForestRegressorXGB(
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
-                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost, 
-                testSize=self.testSize, NTrees=self.NTrees, device=self.device, 
+                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
+                testSize=self.testSize, NTrees=self.NTrees, device=self.device,
                 printNumber=self.printNumber)
             self.predictions['XGBoost: Random Forest Regressor'] = (
                 randomForestRegressorXGB.predictions)
