@@ -5516,7 +5516,7 @@ class RandomForestRegressorCombo:
 
         # Parameters: High value dataset
         cutoff = 0.2  # 0.8 = Top 20
-        pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
+        pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
         tag = 'All Substrates'
         tagHigh = 'Top 20 Substrates'
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
@@ -5692,7 +5692,7 @@ class RandomForestRegressorXGBCombo:
 
         # Parameters: High value dataset
         cutoff = 0.2  # 0.8 = Top 20
-        pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
+        pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
         tag = 'All Substrates'
         tagHigh = 'Top 20 Substrates'
         print(f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
