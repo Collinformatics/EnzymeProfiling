@@ -5826,6 +5826,7 @@ class RandomForestRegressorXGBDualModels:
                 results[tagHigh] = {str(iteration): (MSE, params)}
                 if MSE < bestMSEHigh:
                     print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}\n'
+                          f'Combination: {red}{iteration}{resetColor}\n'
                           f'Params: {greenLight}{params}{resetColor}\n'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
