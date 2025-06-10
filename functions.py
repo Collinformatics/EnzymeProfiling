@@ -5693,6 +5693,7 @@ class RandomForestRegressorXGBDualModels:
                 Fraction of features randomly sampled for each tree level (depth).
                 More granular version of colsample_bytree; rarely used alone but can
                 improve regularization.
+                improve regularization.
 
             colsample_bynode:
                 Fraction of features used per tree split.
@@ -5715,10 +5716,6 @@ class RandomForestRegressorXGBDualModels:
                 Minimum sum of instance weights (hessian) needed in a child.
                 Larger values prevent splitting nodes with few samples—controls
                 overfitting.
-
-            scale_pos_weight:
-                Balances positive/negative classes, useful in imbalanced classification.
-                Not needed for regression but key for skewed class data.
 
             tree_method:
                 Algorithm used to train trees.
@@ -5759,11 +5756,12 @@ class RandomForestRegressorXGBDualModels:
         subsPred = list(dfPred.index)
         self.device = device
         paramGrid = {
-            'n_estimators': range(100, 250, 50),
+            'colsample_bytree': range(0.6, 1.0, 0.2),
+            'learning_rate': [0.01, 0.05, 0.1],
             'max_leaves': range(2, 10, 1),
-            'learning_rate': [0.01, 0.1],
-            'subsample': [0.8, 1.0],
-            'colsample_bytree': [0.8, 1.0]
+            'min_child_weight': range(1, 5, 1),
+            'n_estimators': range(100, 500, 100),
+            'subsample': range(0.5, 1.0, 0.1)
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
         # 'max_depth': range(2, 6, 1),
@@ -5816,7 +5814,8 @@ class RandomForestRegressorXGBDualModels:
 
 
 
-            def trainModel(model, xTrain, xTest, yTrain, yTest, tag, bestScore):
+            def trainModel(model, xTrain, xTest, yTrain, yTest, tag,
+                           bestScore, bestScoreR2):
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
@@ -5854,6 +5853,7 @@ class RandomForestRegressorXGBDualModels:
                           f'Best MSE: {yellow}{round(bestScore, 3):,}{resetColor}\n'
                           f'     MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
                           f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n'
+                          f' Best R2: {yellow}{round(bestR2, 3):,}{resetColor}\n'
                           f'      R2: {yellow}{round(R2, 3):,}{resetColor}\n')
                     print(f'Time Training Model: {red}{round(runtime, 3):,} min'
                           f'{resetColor}\n'
@@ -5862,13 +5862,15 @@ class RandomForestRegressorXGBDualModels:
                     print(f'--------------------------------------------------------\n\n')
 
 
-                return model, MSE, accuracy
+                return model, MSE, R2, accuracy
 
 
             # Train Models
             self.bestParams = None
             bestMSE = float('inf')
             bestMSEHigh = bestMSE
+            bestR2 = float('-inf')
+            bestR2High = bestR2
             evalMetric='rmse'
             results = {}
             startTraining = time.time()
@@ -5880,17 +5882,20 @@ class RandomForestRegressorXGBDualModels:
 
 
                 # Train Model
-                model, MSE, accuracy = trainModel(
+                model, MSE, R2, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
                                        **params),
                     xTrain=xTraining, yTrain=yTraining, xTest=xTesting,
-                    yTest=yTesting, tag=tag, bestScore=bestMSE)
+                    yTest=yTesting, tag=tag,
+                    bestScore=bestMSE, bestScoreR2=bestR2)
 
                 # Inspect results
                 results[tag] = {str(iteration): (MSE, params)}
+                if R2 > bestR2:
+                    bestR2 = R2
                 if MSE < bestMSE:
                     print(f'--------------------------------------------------------\n'
                           f'--------------- New Best Hyperparameters ---------------\n'
@@ -5898,7 +5903,8 @@ class RandomForestRegressorXGBDualModels:
                     print(f'New Best Hyperparameters: {purple}{tag}{resetColor}\n'
                           f'Combination: {red}{iteration}{resetColor}\n'
                           f'Best MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
-                          f'Params: {greenLight}{model.get_params()}{resetColor}\n'
+                          f'Best R2: {yellow}{round(bestR2, 3):,}{resetColor}\n'
+                          f'Params: {greenLight}{params}{resetColor}{resetColor}'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
                           f'     {greenDark}{pathModel}{resetColor}\n')
@@ -5912,24 +5918,29 @@ class RandomForestRegressorXGBDualModels:
 
 
                 # Train Model
-                modelH, MSE, accuracy = trainModel(
+                modelH, MSE, R2, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
                                        **params),
                     xTrain=xTrainingH, yTrain=yTrainingH, xTest=xTestingH,
-                    yTest=yTestingH, tag=tagHigh, bestScore=bestMSE)
+                    yTest=yTestingH, tag=tagHigh,
+                    bestScore=bestMSE, bestScoreR2=bestR2High)
 
                 # Inspect results
                 results[tagHigh] = {str(iteration): (MSE, params)}
+                if R2 > bestR2High:
+                    bestR2High = R2
                 if MSE < bestMSEHigh:
                     print(f'--------------------------------------------------------\n'
                           f'--------------- New Best Hyperparameters ---------------\n'
                           f'--------------------------------------------------------\n')
                     print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}\n'
                           f'Combination: {red}{iteration}{resetColor}\n'
-                          f'Params: {greenLight}{params}{resetColor}\n'
+                          f'Best MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
+                          f'Best R2: {yellow}{round(bestR2High, 3):,}{resetColor}\n'
+                          f'Params: {greenLight}{params}{resetColor}{resetColor}'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
                           f'     {greenDark}{pathModel}{resetColor}\n')
@@ -5990,15 +6001,18 @@ class RandomForestRegressorXGBDualModels:
 
         self.model = self.loadModel(pathModel=pathModel, tag=tag)
         self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
+        print(f'Find a way to record multiple predictions.')
+        sys.exit()
         makePredictions(model=self.model, tag=tag)
         makePredictions(model=self.modelH, tag=tagHigh)
-        print(f'Find a way to record multiple predictions.')
-
+        
     def loadModel(self, pathModel, tag):
         print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
               f'     {greenDark}{pathModel}{resetColor}\n')
+        model = joblib.load(pathModel)
+        print(f'Model Params: {greenLight}{model.get_params()}{resetColor}\n\n')
 
-        return joblib.load(pathModel)
+        return model
 
 
 
