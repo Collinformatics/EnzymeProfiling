@@ -5657,16 +5657,20 @@ class RandomForestRegressorCombo:
 
 
 
+
+
+
 class RandomForestRegressorXGBCombo:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
-        from sklearn.model_selection import GridSearchCV
-        from xgboost import XGBRFRegressor
-
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
+
+        from sklearn.model_selection import GridSearchCV
+        from xgboost import DMatrix, XGBRFRegressor
+
         self.device = device
         self.NTrees = NTrees
         self.predictions = {}
@@ -5735,7 +5739,7 @@ class RandomForestRegressorXGBCombo:
                     'yPred_log': yPred,
                     'yTest_log': yTest,
                 })
-                yPred = np.expm1(yPred)  # Reverse log1p transform
+                yPred = np.expm1(yPred) # Reverse log1p transform
                 yTest = np.expm1(yTest)
                 accuracy.loc[:, 'yPred'] = yPred
                 accuracy.loc[:, 'yTest'] = yTest
@@ -5757,11 +5761,11 @@ class RandomForestRegressorXGBCombo:
 
             # Train Models
             self.model = trainModel(
-                model=XGBRFRegressor(device=self.device), x=x, y=y,
-                tag=tag, path=pathModel, saveModel=True)
+                model=XGBRFRegressor(device=self.device, tree_method="hist",),
+                x=x, y=y, tag=tag, path=pathModel, saveModel=True)
             self.modelH = trainModel(
-                model=XGBRFRegressor(device=self.device), x=xHigh, y=yHigh,
-                tag=tagHigh, path=pathModelH, saveModel=True)
+                model=XGBRFRegressor(device=self.device, tree_method="hist",),
+                x=xHigh, y=yHigh, tag=tagHigh, path=pathModelH, saveModel=True)
 
         def makePredictions(model, tag):
             # Predict substrate activity
@@ -5769,7 +5773,7 @@ class RandomForestRegressorXGBCombo:
                   f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
             start = time.time()
             activityPred = model.predict(dfPred.values)
-            activityPred = np.expm1(activityPred)  # Reverse log1p transform
+            activityPred = np.expm1(activityPred) # Reverse log1p transform
             end = time.time()
             runtime = (end - start) * 1000
             print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
@@ -5809,17 +5813,17 @@ class RandomForestRegressorXGBCombo:
                               f'{red}{round(activity, 3):,}{resetColor}')
                     print('\n')
 
-        self.model = loadModel(model=XGBRFRegressor(), tag=tag, path=pathModel)
-        self.modelH = loadModel(model=XGBRFRegressor(), tag=tagHigh, path=pathModelH)
+        self.model = self.loadModel(model=XGBRFRegressor(), tag=tag, path=pathModel)
+        self.modelH = self.loadModel(model=XGBRFRegressor(), tag=tagHigh, path=pathModelH)
         makePredictions(model=self.model, tag=tag)
         makePredictions(model=self.modelH, tag=tagHigh)
         print(f'Find a way to record multiple predictions.')
 
-    def loadModel(self, model, pathModel, tag):
+    def loadModel(self, model, path, tag):
         print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
-              f'     {greenDark}{pathModel}{resetColor}\n')
+              f'     {greenDark}{path}{resetColor}\n')
 
-        return model.load_model(pathModel)
+        return model.load_model(path)
 
 
 
