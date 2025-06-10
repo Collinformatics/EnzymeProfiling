@@ -5751,6 +5751,8 @@ class RandomForestRegressorXGBDualModels:
         import cupy
         from xgboost import XGBRegressor
 
+        trainModels = True
+
         self.device = device
         self.NTrees = NTrees
         self.predictions = {}
@@ -5789,7 +5791,6 @@ class RandomForestRegressorXGBDualModels:
 
 
         # # Get Model: Random Forest Regressor
-        trainModels = True
         # if os.path.exists(pathModel) and os.path.exists(pathModelH):
         if not trainModels:
             self.model = self.loadModel(pathModel=pathModel, tag=tag)
@@ -5840,7 +5841,8 @@ class RandomForestRegressorXGBDualModels:
                 R2 = r2_score(yPred, yTest)
 
                 if printData:
-                    print(f'-------------------- Training Model --------------------\n'
+                    print(f'================================ Training Model '
+                          f'================================\n'
                           f'Combination: {red}{iteration}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
@@ -5993,8 +5995,7 @@ class RandomForestRegressorXGBDualModels:
 
 
     @staticmethod
-    def printBestParams(dataTag, iteration, MAE, MSE, R2, params,
-                        accuracy, path):
+    def printBestParams(dataTag, iteration, MAE, MSE, R2, params, accuracy, path):
         print(f'--------------------------------------------------------\n'
               f'--------------- New Best Hyperparameters ---------------\n'
               f'--------------------------------------------------------\n')
