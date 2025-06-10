@@ -6,9 +6,9 @@ from Bio.Seq import Seq
 from Bio import BiopythonWarning
 import esm
 import gzip
+from itertools import combinations, product
 import joblib
 import math
-from itertools import combinations, product
 import logomaker
 import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
@@ -5704,9 +5704,18 @@ class RandomForestRegressorXGBCombo:
             from sklearn.model_selection import train_test_split
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-            def trainModel(model, xTrain, xTest, yTrain, yTest, params,
-                           tag, path, saveModel=True):
-                # Train the model
+            # Split datasets
+            xTraining, xTesting, yTraining, yTesting = train_test_split(
+                x, y, test_size=testSize, random_state=19)
+            xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
+                xHigh, yHigh, test_size=testSize, random_state=19)
+
+            # Generate parameter combinations
+            paramCombinations = list(product(*paramGrid.values()))
+            paramNames = list(paramGrid.keys())
+
+
+            def trainModel(model, xTrain, xTest, yTrain, yTest, params, tag):
                 print(f'Training Model: {purple}{tag}{resetColor}\n'
                       f'Parameters: {greenLight}{params}{resetColor}\n'
                       f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
@@ -5714,13 +5723,10 @@ class RandomForestRegressorXGBCombo:
                       f'     Train: {red}{xTrain.shape}{resetColor}\n'
                       f'     Test: {red}{xTest.shape}{resetColor}\n')
                 start = time.time()
-                # model.fit(xTrain, yTrain)
                 model.fit(xTrain, yTrain)
                 end = time.time()
                 runtime = (end - start) / 60
                 print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
-                print(f'Best Hyperparameters: '
-                      f'{greenLight}{model.best_params_}{resetColor}')
 
                 # Evaluate the model
                 print(f'Evaluate Model Accuracy:')
@@ -5741,69 +5747,58 @@ class RandomForestRegressorXGBCombo:
                 print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
                       f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
                       f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
-                      f'     R2: {red}{round(R2, 3)}{resetColor}\n')
-                if saveModel and not os.path.exists(path):
-                    print(f'Saving Trained ESM Model:\n'
-                          f'     {greenDark}{path}{resetColor}\n')
-                    joblib.dump(modelCV.best_estimator_, path)
-                print()
+                      f'     R2: {red}{round(R2, 3)}{resetColor}\n\n')
 
                 return model, MSE
 
-            # Split datasets
-            xTraining, xTesting, yTraining, yTesting = train_test_split(
-                x, y, test_size=testSize, random_state=19)
-            xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
-                xHigh, yHigh, test_size=testSize, random_state=19)
 
-
-            import itertools
-            # Generate parameter combinations
-            paramCombinations = list(itertools.product(*paramGrid.values()))
-            paramNames = list(paramGrid.keys())
-
+            # Train Model
             self.bestParams = None
-            bestScore = float('inf')
-            results = []
-
-            for combo in paramCombinations:
+            bestMSE = float('inf')
+            bestMSEHigh = float('inf')
+            results = {}
+            for iteration, combo in enumerate(paramCombinations):
                 params = dict(zip(paramNames, combo))
 
-                # Train Models
+                # Train Model
                 model, MSE = trainModel(
                     model=XGBRegressor(device=self.device,
                                        tree_method="hist",
                                        random_state=42),
                     xTrain=xTraining, yTrain=yTraining, xTest=xTesting,
-                    yTest=yTesting, params=params, tag=tag, path=pathModel,
-                    saveModel=True)
-                print(f"Params: {params}, MSE: {score:.4f}, Time: {runtime:.2f}s")
+                    yTest=yTesting, params=params, tag=tag)
 
+                # Inspect results
+                results[tag] = {str(iteration): (MSE, params)}
+                if MSE < bestMSE:
+                    print(f'New Best Hyperparameters: {purple}{tag}{resetColor}'
+                          f'{greenLight}{model.best_params_}{resetColor}\n\n'
+                          f'Saving Trained Model:\n'
+                          f'     {greenDark}{pathModel}{resetColor}\n')
+                    bestMSE = MSE
+                    self.model = model
+                    self.modelHyperparams = params
+                    joblib.dump(self.model, pathModel)
 
-
-                results.append((score, params))
+                # Train Model
                 self.modelH, MSE = trainModel(
                     model=XGBRegressor(device=self.device,
                                        tree_method="hist",
                                        random_state=42),
                     xTrain=xTrainingH, yTrain=yTrainingH, xTest=xTestingH,
-                    yTest=yTestingH, params=params, tag=tagHigh, path=pathModelH,
-                    saveModel=True)
+                    yTest=yTestingH, params=params, tag=tagHigh)
 
-                if MSE < bestScore:
-
-                    bestScore = score
-                    bestParams = params
-
-            print("\nBest Parameters:")
-            print(self.bestParams)
-
-            # Train Models
-            self.model = trainModel(
-                model=XGBRegressor(device=self.device,
-                                   tree_method="hist",
-                                   random_state=42),
-                x=xTrain, y=yTrain, tag=tag, path=pathModel, saveModel=True)
+                # Inspect results
+                results[tagHigh] = {str(iteration): (MSE, params)}
+                if MSE < bestMSEHigh:
+                    print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}'
+                          f'{greenLight}{model.best_params_}{resetColor}\n\n'
+                          f'Saving Trained Model:\n'
+                          f'     {greenDark}{pathModel}{resetColor}\n')
+                    bestMSEHigh = MSE
+                    self.modelH = model
+                    self.modelHHyperparams = params
+                    joblib.dump(self.modelH, pathModel)
 
 
 
