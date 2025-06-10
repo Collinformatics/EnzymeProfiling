@@ -5264,15 +5264,15 @@ class RandomForestRegressorXGB:
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
 
-        from xgboost import DMatrix, XGBRFRegressor
+        from xgboost import XGBRFRegressor
 
         self.device = device
         self.NTrees = NTrees
         self.predictions = {}
         subsPred = list(dfPred.index)
 
-        dfTrain = DMatrix(dfTrain)
-        dfPred = DMatrix(dfPred)
+        # dfTrain = DMatrix(dfTrain)
+        # dfPred = DMatrix(dfPred)
 
 
         # Get Model: Gradient Boosting
@@ -5515,13 +5515,11 @@ class RandomForestRegressorCombo:
         subsPred = list(dfPred.index)
 
         # Parameters: High value dataset
-        cutoff = 0.2  # 0.8 = Top 20
-        pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
+        cutoff = 0.8  # 0.8 = Top 20
         tag = 'All Substrates'
-        tagHigh = 'Top 20 Substrates'
-        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
-              f'Model: {purple}{modelTag}{resetColor}\n\n'
-              f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
+        tagHigh = f'Top {int(round((100 * (1 - cutoff)), 0))} Substrates'
+        pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
+        print(f'Combine predictions with {pink}{tagHigh}{resetColor}\n')
 
         # # Get Model: Random Forest Regressor
         if os.path.exists(pathModel):
@@ -5665,7 +5663,8 @@ class RandomForestRegressorXGBCombo:
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
 
-        from xgboost import DMatrix, XGBRegressor
+        import cupy
+        from xgboost import XGBRegressor
 
         self.device = device
         self.NTrees = NTrees
@@ -5680,17 +5679,18 @@ class RandomForestRegressorXGBCombo:
             'colsample_bytree': [0.8, 1.0]
         }
         self.predictions = {}
+        cupy.cuda.Device(self.device.split(':')[1]).use()
 
         # Process dataframe
         x = dfTrain.drop(columns='activity').values
         y = np.log1p(dfTrain['activity'].values)
 
         # Parameters: High value dataset
-        cutoff = 0.2  # 0.8 = Top 20
+        cutoff = 0.8  # 0.8 = Top 20
         tag = 'All Substrates'
-        tagHigh = f'Top {int(100 * (1 - cutoff))} Substrates'
+        tagHigh = f'Top {int(round((100 * (1 - cutoff)), 0))} Substrates'
         pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
-        print(f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
+        print(f'Combine predictions with {pink}{tagHigh}{resetColor}\n')
 
         # Process dataframe
         threshold = dfTrain['activity'].quantile(cutoff) # Get High-value subset
@@ -5710,18 +5710,26 @@ class RandomForestRegressorXGBCombo:
             xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
                 xHigh, yHigh, test_size=testSize, random_state=19)
 
+            # Put data on the training device
+            xTraining, yTraining = cupy.array(xTraining), cupy.array(yTraining)
+            xTesting, yTesting = cupy.array(xTesting), cupy.array(yTesting)
+            xTrainingH, yTrainingH = cupy.array(xTrainingH), cupy.array(yTrainingH)
+            xTestingH, yTestingH = cupy.array(xTestingH), cupy.array(yTestingH)
+
             # Generate parameter combinations
             paramCombinations = list(product(*paramGrid.values()))
             paramNames = list(paramGrid.keys())
 
 
+
             def trainModel(model, xTrain, xTest, yTrain, yTest, params, tag):
+                print('-------------------- Training Model --------------------')
                 print(f'Training Model: {purple}{tag}{resetColor}\n'
                       f'Parameters: {greenLight}{params}{resetColor}\n'
                       f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
                       f'{pink}:{blue}{round((testSize) * 100, 0)}{resetColor}\n'
                       f'     Train: {red}{xTrain.shape}{resetColor}\n'
-                      f'     Test: {red}{xTest.shape}{resetColor}\n')
+                      f'     Test: {red}{xTest.shape}{resetColor}')
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
@@ -5729,9 +5737,8 @@ class RandomForestRegressorXGBCombo:
                 print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
 
                 # Evaluate the model
-                print(f'Evaluate Model Accuracy:')
-                # yPred = model.predict(xTest)
                 yPred = model.predict(xTest)
+                yTest = yTest.get()
                 accuracy = pd.DataFrame({
                     'yPred_log': yPred,
                     'yTest_log': yTest,
@@ -5754,7 +5761,8 @@ class RandomForestRegressorXGBCombo:
             # Train Model
             self.bestParams = None
             bestMSE = float('inf')
-            bestMSEHigh = float('inf')
+            bestMSEHigh = bestMSE
+            evalMetric='rmse'
             results = {}
             for iteration, combo in enumerate(paramCombinations):
                 params = dict(zip(paramNames, combo))
@@ -5762,6 +5770,7 @@ class RandomForestRegressorXGBCombo:
                 # Train Model
                 model, MSE, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
+                                       eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42),
                     xTrain=xTraining, yTrain=yTraining, xTest=xTesting,
@@ -5770,21 +5779,24 @@ class RandomForestRegressorXGBCombo:
                 # Inspect results
                 results[tag] = {str(iteration): (MSE, params)}
                 if MSE < bestMSE:
-                    print(f'New Best Hyperparameters: {purple}{tag}{resetColor}'
-                          f'{greenLight}{params}{resetColor}\n\n'
+                    print(f'New Best Hyperparameters: {purple}{tag}{resetColor}\n'
+                          f'Params: {greenLight}{params}{resetColor}\n'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
                           f'     {greenDark}{pathModel}{resetColor}\n')
                     bestMSE = MSE
                     self.model = model
                     self.modelHyperparams = params
+                    sys.exit()
                     joblib.dump(self.model, pathModel)
 
 
                 # Train Model
                 self.modelH, MSE, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
+                                       eval_metric=evalMetric,
                                        tree_method="hist",
+                                       predictor='gpu_predictor',
                                        random_state=42),
                     xTrain=xTrainingH, yTrain=yTrainingH, xTest=xTestingH,
                     yTest=yTestingH, params=params, tag=tagHigh)
@@ -5792,14 +5804,15 @@ class RandomForestRegressorXGBCombo:
                 # Inspect results
                 results[tagHigh] = {str(iteration): (MSE, params)}
                 if MSE < bestMSEHigh:
-                    print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}'
-                          f'{greenLight}{params}{resetColor}\n\n'
+                    print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}\n'
+                          f'Params: {greenLight}{params}{resetColor}\n'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
-                          f'     {greenDark}{pathModel}{resetColor}\n')
+                          f'     {greenDark}{pathModel}{resetColor}\n\n')
                     bestMSEHigh = MSE
                     self.modelH = model
                     self.modelHHyperparams = params
+                    sys.exit()
                     joblib.dump(self.modelH, pathModelH)
 
 
@@ -5936,12 +5949,14 @@ class PredictActivity:
         # ubj: Binary JSON file
 
         # Generate: Embeddings
+        self.embeddingsSubsTrain = None
+        self.embeddingsSubsPred = pd.DataFrame()
         if not os.path.exists(pathModelScikit) or not os.path.exists(pathModelXGBoost):
             self.embeddingsSubsTrain = self.ESM(
                 substrates=self.subsTrain, embeddings=self.tagEmbeddingsTrain,
                 trainingSet=True)
-        self.embeddingsSubsPred = self.ESM(
-            substrates=self.subsPred, embeddings=self.tagEmbeddingsPred)
+        # self.embeddingsSubsPred = self.ESM(
+        #     substrates=self.subsPred, embeddings=self.tagEmbeddingsPred)
 
 
         # # Predict: Substrate activity
@@ -5984,7 +5999,7 @@ class PredictActivity:
                 printNumber=self.printNumber)
             self.predictions['XGBoost: Random Forest Regressor'] = (
                 randomForestRegressorXGB.predictions)
-
+        sys.exit()
 
 
     def getDevice(self):
