@@ -5747,9 +5747,13 @@ class RandomForestRegressorXGBDualModels:
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
+        useGPU = False
 
-        import cupy
         from xgboost import XGBRegressor
+        if 'cuda' in device:
+            import cupy
+            useGPU = True
+            cupy.cuda.Device(self.device.split(':')[1]).use()
 
         trainModels = True
 
@@ -5769,7 +5773,7 @@ class RandomForestRegressorXGBDualModels:
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
         # 'max_depth': range(2, 6, 1),
         self.predictions = {}
-        cupy.cuda.Device(self.device.split(':')[1]).use()
+
 
         # Process dataframe
         x = dfTrain.drop(columns='activity').values
@@ -5806,10 +5810,12 @@ class RandomForestRegressorXGBDualModels:
                 xHigh, yHigh, test_size=testSize, random_state=19)
 
             # Put data on the training device
-            xTraining, yTraining = cupy.array(xTraining), cupy.array(yTraining)
-            xTesting, yTesting = cupy.array(xTesting), cupy.array(yTesting)
-            xTrainingH, yTrainingH = cupy.array(xTrainingH), cupy.array(yTrainingH)
-            xTestingH, yTestingH = cupy.array(xTestingH), cupy.array(yTestingH)
+            if useGPU:
+
+                xTraining, yTraining = cupy.array(xTraining), cupy.array(yTraining)
+                xTesting, yTesting = cupy.array(xTesting), cupy.array(yTesting)
+                xTrainingH, yTrainingH = cupy.array(xTrainingH), cupy.array(yTrainingH)
+                xTestingH, yTestingH = cupy.array(xTestingH), cupy.array(yTestingH)
 
             # Generate parameter combinations
             paramCombos = list(product(*paramGrid.values()))
@@ -5827,7 +5833,8 @@ class RandomForestRegressorXGBDualModels:
 
                 # Evaluate the model
                 yPred = model.predict(xTest)
-                yTest = yTest.get()
+                if useGPU:
+                    yTest = yTest.get()
                 accuracy = pd.DataFrame({
                     'yPred_log': yPred,
                     'yTest_log': yTest,
@@ -5996,9 +6003,10 @@ class RandomForestRegressorXGBDualModels:
 
     @staticmethod
     def printBestParams(dataTag, iteration, MAE, MSE, R2, params, accuracy, path):
-        print(f'--------------------------------------------------------\n'
-              f'--------------- New Best Hyperparameters ---------------\n'
-              f'--------------------------------------------------------\n')
+        print('=========================================================================='
+              '=======\n=========================== New Best Hyperparameters ============'
+              '================\n========================================================'
+              '=========================')
         print(f'New Best Hyperparameters: {purple}{dataTag}{resetColor}\n'
               f'Combination: {red}{iteration}{resetColor}\n'
               f'MSE: {yellow}{round(MAE, 3):,}{resetColor}\n'
@@ -6008,9 +6016,10 @@ class RandomForestRegressorXGBDualModels:
               f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
               f'Saving Trained Model:\n'
               f'     {greenDark}{path}{resetColor}\n')
-        print(f'--------------------------------------------------------\n'
-              f'--------------------------------------------------------\n'
-              f'--------------------------------------------------------\n\n')
+        print('=========================================================================='
+              '=======\n================================================================='
+              '================\n========================================================'
+              '=========================\n\n')
 
 
     @staticmethod
