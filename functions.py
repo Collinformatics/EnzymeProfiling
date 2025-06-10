@@ -5511,9 +5511,7 @@ class RandomForestRegressorCombo:
         pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
         tag = 'All Substrates'
         tagHigh = 'Top 20 Substrates'
-        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
-              f'Model: {purple}{modelTag}{resetColor}\n'
-              f'Combine predictions with top {int(100*(1-cutoff))} substrates\n')
+        print(f'Combine predictions with top {int(100*(1-cutoff))} substrates\n')
 
         # # Get Model: Random Forrest Regressor
         if os.path.exists(pathModel):
@@ -5660,7 +5658,6 @@ class RandomForestRegressorXGBCombo:
         from sklearn.model_selection import GridSearchCV
         from xgboost import XGBRFRegressor
 
-
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
         self.device = device
@@ -5688,9 +5685,7 @@ class RandomForestRegressorXGBCombo:
         pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
         tag = 'All Substrates'
         tagHigh = 'Top 20 Substrates'
-        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
-              f'Model: {purple}{modelTag}{resetColor}\n'
-              f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
+        print(f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
 
         # # Get Model: Random Forrest Regressor
         if not os.path.exists(pathModel):
@@ -5708,7 +5703,7 @@ class RandomForestRegressorXGBCombo:
                     x, y, test_size=testSize, random_state=19)
 
                 modelCV = GridSearchCV(estimator=model, param_grid=self.paramGrid, cv=3,
-                                       scoring='neg_mean_squared_error', n_jobs=-1)
+                                       scoring='neg_mean_squared_error', n_jobs=1)
 
                 # Train the model
                 print(f'Training Model: {purple}{tag}{resetColor}\n'
