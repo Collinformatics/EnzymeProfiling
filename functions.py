@@ -5733,8 +5733,9 @@ class RandomForestRegressorXGBDualModels:
             grow_policy:
                 Controls how trees grow.
                 'depthwise' grows tree level by level, 'lossguide' grows by highest loss
-                reduction. lossguide' can lead to deeper trees with fewer leaves—good
-                with large datasets.
+                reduction.
+                lossguide' can lead to deeper trees with fewer leaves—good with large
+                datasets.
 
             importance_type:
                 Method for computing feature importances: 'weight', 'gain', 'cover', etc.
@@ -5838,21 +5839,28 @@ class RandomForestRegressorXGBDualModels:
                 R2 = r2_score(yPred, yTest)
 
                 if printData:
+                    print(f'-------------------- Training Model --------------------\n'
+                          f'Combination: {red}{iteration}{resetColor} / '
+                          f'{red}{totalParamCombos}{resetColor} '
+                          f'({red}{percentComplete} %{resetColor})\n'
+                          f'Parameters: {greenLight}{params}{resetColor}\n')
                     print(f'Training Data: {purple}{tag}{resetColor}\n'
                           f'Splitting Training Set: '
                           f'{blue}{round((1 - testSize) * 100, 0)}{pink}:{blue}'
                           f'{round(testSize * 100, 0)}{resetColor}\n'
                           f'     Train: {blue}{xTrain.shape}{resetColor}\n'
                           f'     Test: {blue}{xTest.shape}{resetColor}\n')
-                    print(f'Time Training Model: {red}{round(runtime, 3):,} min'
-                          f'{resetColor}\n'
-                          f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
-                          f'{resetColor}\n')
                     print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
                           f'Best MSE: {yellow}{round(bestScore, 3):,}{resetColor}\n'
                           f'     MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
                           f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n'
-                          f'      R2: {yellow}{round(R2, 3):,}{resetColor}\n\n')
+                          f'      R2: {yellow}{round(R2, 3):,}{resetColor}\n')
+                    print(f'Time Training Model: {red}{round(runtime, 3):,} min'
+                          f'{resetColor}\n'
+                          f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
+                          f'{resetColor}\n')
+                    print(f'--------------------------------------------------------\n\n')
+
 
                 return model, MSE, accuracy
 
@@ -5866,17 +5874,9 @@ class RandomForestRegressorXGBDualModels:
             startTraining = time.time()
             totalParamCombos = len(paramCombos)
             for iteration, paramCombo in enumerate(paramCombos):
-
                 params = dict(zip(paramNames, paramCombo))
                 percentComplete = round((iteration / totalParamCombos) * 100, 3)
-
                 printData = (iteration % 10 == 0)
-                if printData:
-                    print(f'-------------------- Training Model --------------------\n'
-                          f'Combination: {red}{iteration}{resetColor} / '
-                          f'{red}{totalParamCombos}{resetColor} '
-                          f'({red}{percentComplete} %{resetColor})\n'
-                          f'Parameters: {greenLight}{params}{resetColor}\n')
 
 
                 # Train Model
@@ -5892,12 +5892,19 @@ class RandomForestRegressorXGBDualModels:
                 # Inspect results
                 results[tag] = {str(iteration): (MSE, params)}
                 if MSE < bestMSE:
+                    print(f'--------------------------------------------------------\n'
+                          f'--------------- New Best Hyperparameters ---------------\n'
+                          f'--------------------------------------------------------\n')
                     print(f'New Best Hyperparameters: {purple}{tag}{resetColor}\n'
                           f'Combination: {red}{iteration}{resetColor}\n'
+                          f'Best MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
                           f'Params: {greenLight}{model.get_params()}{resetColor}\n'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
-                          f'     {greenDark}{pathModel}{resetColor}\n\n')
+                          f'     {greenDark}{pathModel}{resetColor}\n')
+                    print(f'--------------------------------------------------------\n'
+                          f'--------------------------------------------------------\n'
+                          f'--------------------------------------------------------\n\n')
                     bestMSE = MSE
                     self.model = model
                     self.modelHyperparams = params
@@ -5917,12 +5924,18 @@ class RandomForestRegressorXGBDualModels:
                 # Inspect results
                 results[tagHigh] = {str(iteration): (MSE, params)}
                 if MSE < bestMSEHigh:
+                    print(f'--------------------------------------------------------\n'
+                          f'--------------- New Best Hyperparameters ---------------\n'
+                          f'--------------------------------------------------------\n')
                     print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}\n'
                           f'Combination: {red}{iteration}{resetColor}\n'
                           f'Params: {greenLight}{params}{resetColor}\n'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
-                          f'     {greenDark}{pathModel}{resetColor}\n\n')
+                          f'     {greenDark}{pathModel}{resetColor}\n')
+                    print(f'--------------------------------------------------------\n'
+                          f'--------------------------------------------------------\n'
+                          f'--------------------------------------------------------\n\n')
                     bestMSEHigh = MSE
                     self.modelH = modelH
                     self.modelHHyperparams = params
