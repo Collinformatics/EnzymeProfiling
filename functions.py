@@ -5902,21 +5902,9 @@ class RandomForestRegressorXGBDualModels:
                 if MAE < bestMAE:
                     bestMAE = MAE
                 if MSE < bestMSE:
-                    print(f'--------------------------------------------------------\n'
-                          f'--------------- New Best Hyperparameters ---------------\n'
-                          f'--------------------------------------------------------\n')
-                    print(f'New Best Hyperparameters: {purple}{tag}{resetColor}\n'
-                          f'Combination: {red}{iteration}{resetColor}\n'
-                          f'MSE: {yellow}{round(MAE, 3):,}{resetColor}\n'
-                          f'MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
-                          f'R2: {yellow}{round(R2, 3):,}{resetColor}\n'
-                          f'Params: {greenLight}{params}{resetColor}{resetColor}\n'
-                          f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
-                          f'Saving Trained Model:\n'
-                          f'     {greenDark}{pathModel}{resetColor}\n')
-                    print(f'--------------------------------------------------------\n'
-                          f'--------------------------------------------------------\n'
-                          f'--------------------------------------------------------\n\n')
+                    self.printBestParams(
+                        dataTag=tag, iteration=iteration, MAE=MAE, MSE=MSE, R2=R2,
+                        params=params, accuracy=accuracy, path=pathModel)
                     bestMSE = MSE
                     self.model = model
                     self.bestParams = params
@@ -5941,26 +5929,13 @@ class RandomForestRegressorXGBDualModels:
                 if MAE < bestMAEHigh:
                     bestMAEHigh = MAE
                 if MSE < bestMSEHigh:
-                    print(f'--------------------------------------------------------\n'
-                          f'--------------- New Best Hyperparameters ---------------\n'
-                          f'--------------------------------------------------------\n')
-                    print(f'New Best Hyperparameters: {purple}{tagHigh}{resetColor}\n'
-                          f'Combination: {red}{iteration}{resetColor}\n'
-                          f'MSE: {yellow}{round(MAE, 3):,}{resetColor}\n'
-                          f'MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
-                          f'R2: {yellow}{round(R2, 3):,}{resetColor}\n'
-                          f'Params: {greenLight}{params}{resetColor}{resetColor}'
-                          f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
-                          f'Saving Trained Model:\n'
-                          f'     {greenDark}{pathModel}{resetColor}\n')
-                    print(f'--------------------------------------------------------\n'
-                          f'--------------------------------------------------------\n'
-                          f'--------------------------------------------------------\n\n')
+                    self.printBestParams(
+                        dataTag=tagHigh, iteration=iteration, MAE=MAE, MSE=MSE, R2=R2,
+                        params=params, accuracy=accuracy, path=pathModelH)
                     bestMSEHigh = MSE
                     self.modelH = modelH
                     self.bestParamsHigh = params
                     joblib.dump(self.modelH, pathModelH)
-
 
         def makePredictions(model, tag):
             # Predict substrate activity
@@ -6014,8 +5989,31 @@ class RandomForestRegressorXGBDualModels:
         sys.exit()
         makePredictions(model=self.model, tag=tag)
         makePredictions(model=self.modelH, tag=tagHigh)
-        
-    def loadModel(self, pathModel, tag):
+
+
+
+    @staticmethod
+    def printBestParams(dataTag, iteration, MAE, MSE, R2, params,
+                        accuracy, path):
+        print(f'--------------------------------------------------------\n'
+              f'--------------- New Best Hyperparameters ---------------\n'
+              f'--------------------------------------------------------\n')
+        print(f'New Best Hyperparameters: {purple}{dataTag}{resetColor}\n'
+              f'Combination: {red}{iteration}{resetColor}\n'
+              f'MSE: {yellow}{round(MAE, 3):,}{resetColor}\n'
+              f'MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
+              f'R2: {yellow}{round(R2, 3):,}{resetColor}\n'
+              f'Params: {greenLight}{params}{resetColor}{resetColor}'
+              f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
+              f'Saving Trained Model:\n'
+              f'     {greenDark}{path}{resetColor}\n')
+        print(f'--------------------------------------------------------\n'
+              f'--------------------------------------------------------\n'
+              f'--------------------------------------------------------\n\n')
+
+
+    @staticmethod
+    def loadModel(pathModel, tag):
         print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
               f'     {greenDark}{pathModel}{resetColor}\n')
         model = joblib.load(pathModel)
