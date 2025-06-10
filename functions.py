@@ -5910,7 +5910,7 @@ class RandomForestRegressorXGBDualModels:
                           f'MSE: {yellow}{round(MAE, 3):,}{resetColor}\n'
                           f'MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
                           f'R2: {yellow}{round(R2, 3):,}{resetColor}\n'
-                          f'Params: {greenLight}{params}{resetColor}{resetColor}'
+                          f'Params: {greenLight}{params}{resetColor}{resetColor}\n'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
                           f'     {greenDark}{pathModel}{resetColor}\n')
