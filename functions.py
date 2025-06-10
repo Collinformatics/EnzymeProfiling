@@ -3046,7 +3046,10 @@ class NGS:
         if predActivity:
             print(f'Predicted Activity: {pink}Top {predType} Sequences{resetColor}')
             print(f'Model: {purple}{predModel}{resetColor}')
-            for substrate, value in motifEnrichment.items():
+            for substrate, values in motifEnrichment.items():
+                print(f'Value: {type(values)}')
+                for key, value in values.items():
+                    print(f'     {key}: {value}')
                 value = float(value)
                 print(f'     {pink}{substrate}{resetColor}: {red}{round(value, 3):,}'
                       f'{resetColor}')
@@ -5488,20 +5491,26 @@ class RandomForestRegressor:
 
 
 
+
+
+
 class RandomForestRegressorCombo:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
+        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
+              f'Model: {purple}{modelTag}{resetColor}\n')
+
         from sklearn.ensemble import RandomForestRegressor
         from sklearn.model_selection import GridSearchCV
 
         self.device = device
         self.paramGrid = {
-            'n_estimators': [100, 200, 300],
+            'n_estimators': [100],
             'max_depth': [5, 10, 15],
-            'min_samples_split': [2, 5, 10],
-            'min_samples_leaf': [1, 2, 4]
+            'min_samples_split': [5],
+            'min_samples_leaf': [2, 4]
         }
         self.predictions = {}
         subsPred = list(dfPred.index)
@@ -5511,12 +5520,14 @@ class RandomForestRegressorCombo:
         pathModelH = pathModel.replace('Random Forrest', 'Random Forrest - High Values')
         tag = 'All Substrates'
         tagHigh = 'Top 20 Substrates'
-        print(f'Combine predictions with top {int(100*(1-cutoff))} substrates\n')
+        print(f'Module: {purple}Scikit-Learn{resetColor}\n'
+              f'Model: {purple}{modelTag}{resetColor}\n\n'
+              f'Combine predictions with top {int(100*(1-cutoff))} substrates\n')
 
         # # Get Model: Random Forrest Regressor
         if os.path.exists(pathModel):
-            tag = 'All Substrates'
-            self.loadModel(pathModel=pathModel, tag=tag)
+            self.model = self.loadModel(pathModel=pathModel, tag=tag)
+            self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
         else:
             from sklearn.model_selection import train_test_split
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -5644,9 +5655,8 @@ class RandomForestRegressorCombo:
     def loadModel(self, pathModel, tag):
         print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
               f'     {greenDark}{pathModel}{resetColor}\n')
-        model = joblib.load(pathModel)
 
-        return model
+        return joblib.load(pathModel)
 
 
 
