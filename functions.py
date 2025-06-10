@@ -5663,78 +5663,82 @@ class RandomForestRegressorXGBDualModels:
                 You can use it instead of max_depth if you care more about model
                 complexity in terms of decision regions than tree height.
 
-        max_depth:
-            Limits the depth of individual trees.
-            Helps prevent overfitting; lower values create simpler trees.
-            Easier to interpret than max_leaves.
+            max_depth:
+                Limits the depth of individual trees.
+                Helps prevent overfitting; lower values create simpler trees.
+                Easier to interpret than max_leaves.
 
-        learning_rate (aka eta):
-            Controls how much each tree contributes to the overall model.
-            Lower values improve generalization but require more boosting rounds.
-            Often paired with early stopping.
+            learning_rate (aka eta):
+                Controls how much each tree contributes to the overall model.
+                Lower values improve generalization but require more boosting rounds.
+                Often paired with early stopping.
 
-        n_estimators:
-            Number of boosting rounds (trees).
-            More trees improve performance but increase computation time and risk of overfitting.
-            Use early stopping to avoid unnecessary rounds.
+            n_estimators:
+                Number of boosting rounds (trees).
+                More trees improve performance but increase computation time and risk
+                of overfitting.
+                Use early stopping to avoid unnecessary rounds.
 
-        subsample:
-            Fraction of training data randomly sampled for each tree.
-            Helps prevent overfitting; values between 0.5 and 0.9 are common.
-            Lower values add randomness and improve generalization.
+            subsample:
+                Fraction of training data randomly sampled for each tree.
+                Helps prevent overfitting; values between 0.5 and 0.9 are common.
+                Lower values add randomness and improve generalization.
 
-        colsample_bytree:
-            Fraction of features randomly sampled for each tree.
-            Like subsample, adds diversity and reduces overfitting.
-            Especially helpful for high-dimensional data.
+            colsample_bytree:
+                Fraction of features randomly sampled for each tree.
+                Like subsample, adds diversity and reduces overfitting.
+                Especially helpful for high-dimensional data.
 
-        colsample_bylevel:
-            Fraction of features randomly sampled for each tree level (depth).
-            More granular version of colsample_bytree; rarely used alone but can improve regularization.
+            colsample_bylevel:
+                Fraction of features randomly sampled for each tree level (depth).
+                More granular version of colsample_bytree; rarely used alone but can
+                improve regularization.
 
-        colsample_bynode:
-            Fraction of features used per tree split.
-            Very fine-grained feature sampling—can work well in large feature spaces.
+            colsample_bynode:
+                Fraction of features used per tree split.
+                Very fine-grained feature sampling—can work well in large feature spaces.
 
-        gamma (aka min_split_loss):
-            Minimum loss reduction required to make a split.
-            Higher values make trees more conservative (fewer splits).
-            Great for reducing overfitting.
+            gamma (aka min_split_loss):
+                Minimum loss reduction required to make a split.
+                Higher values make trees more conservative (fewer splits).
+                Great for reducing overfitting.
 
-        reg_alpha:
-            L1 regularization term on weights (like Lasso).
-            Encourages sparsity in leaf weights—can help with feature selection.
+            reg_alpha:
+                L1 regularization term on weights (like Lasso).
+                Encourages sparsity in leaf weights—can help with feature selection.
 
-        reg_lambda:
-            L2 regularization term on weights (like Ridge).
-            Helps with multicollinearity and prevents weights from growing too large.
+            reg_lambda:
+                L2 regularization term on weights (like Ridge).
+                Helps with multicollinearity and prevents weights from growing too large.
 
-        min_child_weight:
-            Minimum sum of instance weights (hessian) needed in a child.
-            Larger values prevent splitting nodes with few samples—controls overfitting.
+            min_child_weight:
+                Minimum sum of instance weights (hessian) needed in a child.
+                Larger values prevent splitting nodes with few samples—controls
+                overfitting.
 
-        scale_pos_weight:
-            Balances positive/negative classes, useful in imbalanced classification.
-            Not needed for regression but key for skewed class data.
+            scale_pos_weight:
+                Balances positive/negative classes, useful in imbalanced classification.
+                Not needed for regression but key for skewed class data.
 
-        tree_method:
-            Algorithm used to train trees.
-            'auto', 'exact', 'approx', 'hist', or 'gpu_hist'.
-            'hist' and 'gpu_hist' are faster and scalable to large datasets.
+            tree_method:
+                Algorithm used to train trees.
+                'auto', 'exact', 'approx', 'hist', or 'gpu_hist'.
+                'hist' and 'gpu_hist' are faster and scalable to large datasets.
 
-        predictor:
-            Device prediction strategy.
-            'auto', 'cpu_predictor', or 'gpu_predictor'.
-            'gpu_predictor' is faster for inference on compatible hardware.
+            predictor:
+                Device prediction strategy.
+                'auto', 'cpu_predictor', or 'gpu_predictor'.
+                'gpu_predictor' is faster for inference on compatible hardware.
 
-        grow_policy:
-            Controls how trees grow.
-            'depthwise' grows tree level by level, 'lossguide' grows by highest loss reduction.
-            'lossguide' can lead to deeper trees with fewer leaves—good with large datasets.
+            grow_policy:
+                Controls how trees grow.
+                'depthwise' grows tree level by level, 'lossguide' grows by highest loss
+                reduction. lossguide' can lead to deeper trees with fewer leaves—good
+                with large datasets.
 
-        importance_type:
-            Method for computing feature importances: 'weight', 'gain', 'cover', etc.
-            Doesn't affect training but useful for model interpretation.
+            importance_type:
+                Method for computing feature importances: 'weight', 'gain', 'cover', etc.
+                Doesn't affect training but useful for model interpretation.
 
     """
 
@@ -5755,12 +5759,13 @@ class RandomForestRegressorXGBDualModels:
         self.device = device
         paramGrid = {
             'n_estimators': range(100, 250, 50),
-            'max_depth': range(2, 10, 1),
+            'max_leaves': range(2, 10, 1),
             'learning_rate': [0.01, 0.1],
             'subsample': [0.8, 1.0],
             'colsample_bytree': [0.8, 1.0]
         }
-        # 'max_leaves' = range(2, 10, 1), # N terminal nodes
+        # 'max_leaves': range(2, 10, 1), # N terminal nodes
+        # 'max_depth': range(2, 6, 1),
         self.predictions = {}
         cupy.cuda.Device(self.device.split(':')[1]).use()
 
@@ -5810,7 +5815,7 @@ class RandomForestRegressorXGBDualModels:
 
 
 
-            def trainModel(model, xTrain, xTest, yTrain, yTest, tag):
+            def trainModel(model, xTrain, xTest, yTrain, yTest, tag, bestScore):
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
@@ -5844,9 +5849,10 @@ class RandomForestRegressorXGBDualModels:
                           f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
                           f'{resetColor}\n')
                     print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
-                          f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n'
+                          f'Best MSE: {yellow}{round(bestScore, 3):,}{resetColor}\n'
                           f'     MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
-                          f'     R2: {yellow}{round(R2, 3):,}{resetColor}\n\n')
+                          f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n'
+                          f'      R2: {yellow}{round(R2, 3):,}{resetColor}\n\n')
 
                 return model, MSE, accuracy
 
@@ -5881,7 +5887,7 @@ class RandomForestRegressorXGBDualModels:
                                        random_state=42,
                                        **params),
                     xTrain=xTraining, yTrain=yTraining, xTest=xTesting,
-                    yTest=yTesting, tag=tag)
+                    yTest=yTesting, tag=tag, bestScore=bestMSE)
 
                 # Inspect results
                 results[tag] = {str(iteration): (MSE, params)}
@@ -5906,7 +5912,7 @@ class RandomForestRegressorXGBDualModels:
                                        random_state=42,
                                        **params),
                     xTrain=xTrainingH, yTrain=yTrainingH, xTest=xTestingH,
-                    yTest=yTestingH, tag=tagHigh)
+                    yTest=yTestingH, tag=tagHigh, bestScore=bestMSE)
 
                 # Inspect results
                 results[tagHigh] = {str(iteration): (MSE, params)}
