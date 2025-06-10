@@ -5665,15 +5665,14 @@ class RandomForestRegressorXGBCombo:
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
 
-        from sklearn.model_selection import GridSearchCV
-        from xgboost import DMatrix, XGBRFRegressor
+        from xgboost import DMatrix, XGBRegressor
 
         self.device = device
         self.NTrees = NTrees
         self.predictions = {}
         subsPred = list(dfPred.index)
         self.device = device
-        self.paramGrid = {
+        paramGrid = {
             'n_estimators': range(100, 250, 50),
             'max_depth': range (2, 10, 1),
             'learning_rate': [0.01, 0.1],
@@ -5684,22 +5683,20 @@ class RandomForestRegressorXGBCombo:
 
         # Process dataframe
         x = dfTrain.drop(columns='activity').values
-        x = DMatrix(x)
         y = np.log1p(dfTrain['activity'].values)
-        # dfTrain = DMatrix(dfTrain)
-        # dfPred = DMatrix(dfPred)
 
         # Parameters: High value dataset
         cutoff = 0.2  # 0.8 = Top 20
-        pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
         tag = 'All Substrates'
-        tagHigh = 'Top 20 Substrates'
+        tagHigh = f'Top {int(100 * (1 - cutoff))} Substrates'
+        pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
         print(f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
+
+        # Process dataframe
         threshold = dfTrain['activity'].quantile(cutoff) # Get High-value subset
         dfHigh = dfTrain[dfTrain['activity'] > threshold]
         xHigh = dfHigh.drop(columns='activity').values
         yHigh = np.log1p(dfHigh['activity'].values)
-        xHigh = DMatrix(xHigh)
 
 
         # # Get Model: Random Forest Regressor
@@ -5707,32 +5704,28 @@ class RandomForestRegressorXGBCombo:
             from sklearn.model_selection import train_test_split
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-            def trainModel(model, x, y, tag, path, saveModel=True):
-                xTrain, xTest, yTrain, yTest = train_test_split(
-                    x, y, test_size=testSize, random_state=19)
-
-                modelCV = GridSearchCV(estimator=model, param_grid=self.paramGrid, cv=3,
-                                       scoring='neg_mean_squared_error', n_jobs=4)
-
+            def trainModel(model, xTrain, xTest, yTrain, yTest, params,
+                           tag, path, saveModel=True):
                 # Train the model
                 print(f'Training Model: {purple}{tag}{resetColor}\n'
+                      f'Parameters: {greenLight}{params}{resetColor}\n'
                       f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
                       f'{pink}:{blue}{round((testSize) * 100, 0)}{resetColor}\n'
                       f'     Train: {red}{xTrain.shape}{resetColor}\n'
                       f'     Test: {red}{xTest.shape}{resetColor}\n')
                 start = time.time()
                 # model.fit(xTrain, yTrain)
-                modelCV.fit(xTrain, yTrain)
+                model.fit(xTrain, yTrain)
                 end = time.time()
                 runtime = (end - start) / 60
                 print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
                 print(f'Best Hyperparameters: '
-                      f'{greenLight}{modelCV.best_params_}{resetColor}')
+                      f'{greenLight}{model.best_params_}{resetColor}')
 
                 # Evaluate the model
                 print(f'Evaluate Model Accuracy:')
                 # yPred = model.predict(xTest)
-                yPred = modelCV.predict(xTest)
+                yPred = model.predict(xTest)
                 accuracy = pd.DataFrame({
                     'yPred_log': yPred,
                     'yTest_log': yTest,
@@ -5755,21 +5748,67 @@ class RandomForestRegressorXGBCombo:
                     joblib.dump(modelCV.best_estimator_, path)
                 print()
 
-                return modelCV.best_estimator_
+                return model, MSE
+
+            # Split datasets
+            xTraining, xTesting, yTraining, yTesting = train_test_split(
+                x, y, test_size=testSize, random_state=19)
+            xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
+                xHigh, yHigh, test_size=testSize, random_state=19)
+
+
+            import itertools
+            # Generate parameter combinations
+            paramCombinations = list(itertools.product(*paramGrid.values()))
+            paramNames = list(paramGrid.keys())
+
+            self.bestParams = None
+            bestScore = float('inf')
+            results = []
+
+            for combo in paramCombinations:
+                params = dict(zip(paramNames, combo))
+
+                # Train Models
+                model, MSE = trainModel(
+                    model=XGBRegressor(device=self.device,
+                                       tree_method="hist",
+                                       random_state=42),
+                    xTrain=xTraining, yTrain=yTraining, xTest=xTesting,
+                    yTest=yTesting, params=params, tag=tag, path=pathModel,
+                    saveModel=True)
+                print(f"Params: {params}, MSE: {score:.4f}, Time: {runtime:.2f}s")
+
+
+
+                results.append((score, params))
+                self.modelH, MSE = trainModel(
+                    model=XGBRegressor(device=self.device,
+                                       tree_method="hist",
+                                       random_state=42),
+                    xTrain=xTrainingH, yTrain=yTrainingH, xTest=xTestingH,
+                    yTest=yTestingH, params=params, tag=tagHigh, path=pathModelH,
+                    saveModel=True)
+
+                if MSE < bestScore:
+
+                    bestScore = score
+                    bestParams = params
+
+            print("\nBest Parameters:")
+            print(self.bestParams)
 
             # Train Models
             self.model = trainModel(
-                model=XGBRFRegressor(device=self.device,
-                                     tree_method="hist",
-                                     random_state=42),
-                x=x, y=y, tag=tag, path=pathModel, saveModel=True)
-            self.modelH = trainModel(
-                model=XGBRFRegressor(device=self.device,
-                                     tree_method="hist",
-                                     random_state=42),
-                x=xHigh, y=yHigh, tag=tagHigh, path=pathModelH, saveModel=True)
+                model=XGBRegressor(device=self.device,
+                                   tree_method="hist",
+                                   random_state=42),
+                x=xTrain, y=yTrain, tag=tag, path=pathModel, saveModel=True)
 
-        def makePredictions(model, tag):
+
+
+
+        def makePredictions(model, xReal, yReal, yPreds, tag):
             # Predict substrate activity
             print(f'Predicting Substrate Activity: {purple}{tag}{resetColor}\n'
                   f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
@@ -5815,8 +5854,8 @@ class RandomForestRegressorXGBCombo:
                               f'{red}{round(activity, 3):,}{resetColor}')
                     print('\n')
 
-        self.model = self.loadModel(model=XGBRFRegressor(), tag=tag, path=pathModel)
-        self.modelH = self.loadModel(model=XGBRFRegressor(), tag=tagHigh, path=pathModelH)
+        self.model = self.loadModel(model=XGBRegressor(), tag=tag, path=pathModel)
+        self.modelH = self.loadModel(model=XGBRegressor(), tag=tagHigh, path=pathModelH)
         makePredictions(model=self.model, tag=tag)
         makePredictions(model=self.modelH, tag=tagHigh)
         print(f'Find a way to record multiple predictions.')
