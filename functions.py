@@ -5295,14 +5295,14 @@ class RandomForestRegressorXGB:
                   f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}{pink}:'
                   f'{blue}{round(testSize * 100, 0)}{resetColor}\n'
                 f'     Train: {blue}{xTrain.shape}{resetColor}\n'
-                f'     Test: {blue}{xTest.shape}{resetColor}')
+                f'     Test: {blue}{xTest.shape}{resetColor}\n')
             start = time.time()
             self.model = XGBRFRegressor(device=self.device, tree_method="hist",
                                         n_estimators=100, random_state=42)
             self.model.fit(xTrain, yTrain)
             end = time.time()
             runtime = (end - start) / 60
-            print(f'      Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
+            print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
             print(f'Evaluate Model Accuracy:')
             yPred = self.model.predict(xTest)
             MAE = mean_absolute_error(yPred, yTest)
@@ -5409,7 +5409,7 @@ class RandomForestRegressor:
                   f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}{pink}:'
                   f'{blue}{round((testSize) * 100, 0)}{resetColor}\n'
                   f'     Train: {blue}{xTrain.shape}{resetColor}\n'
-                  f'     Test: {blue}{xTest.shape}{resetColor}')
+                  f'     Test: {blue}{xTest.shape}{resetColor}\n')
             start = time.time()
             self.model = RandomForestRegressor(n_estimators=self.NTrees, random_state=42)
             self.model.fit(xTrain, yTrain)
@@ -5701,7 +5701,9 @@ class RandomForestRegressorXGBDualModels:
 
 
         # # Get Model: Random Forest Regressor
-        if os.path.exists(pathModel) and os.path.exists(pathModelH):
+        trainModels = True
+        # if os.path.exists(pathModel) and os.path.exists(pathModelH):
+        if not trainModels:
             self.model = self.loadModel(pathModel=pathModel, tag=tag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
         else:
@@ -5721,24 +5723,17 @@ class RandomForestRegressorXGBDualModels:
             xTestingH, yTestingH = cupy.array(xTestingH), cupy.array(yTestingH)
 
             # Generate parameter combinations
-            paramCombinations = list(product(*paramGrid.values()))
+            paramCombos = list(product(*paramGrid.values()))
             paramNames = list(paramGrid.keys())
 
 
 
             def trainModel(model, xTrain, xTest, yTrain, yTest, params, tag):
-                print('-------------------- Training Model --------------------')
-                print(f'Training Model: {purple}{tag}{resetColor}\n'
-                      f'Parameters: {greenLight}{params}{resetColor}\n'
-                      f'Splitting Training Set: {blue}{round((1 - testSize) * 100, 0)}'
-                      f'{pink}:{blue}{round(testSize * 100, 0)}{resetColor}\n'
-                      f'     Train: {blue}{xTrain.shape}{resetColor}\n'
-                      f'     Test: {blue}{xTest.shape}{resetColor}')
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
                 runtime = (end - start) / 60
-                print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
+                runtimeTotal = (end - startTraining) / 60
 
                 # Evaluate the model
                 yPred = model.predict(xTest)
@@ -5754,10 +5749,25 @@ class RandomForestRegressorXGBDualModels:
                 MAE = mean_absolute_error(yPred, yTest)
                 MSE = mean_squared_error(yPred, yTest)
                 R2 = r2_score(yPred, yTest)
-                print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
-                      f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
-                      f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
-                      f'     R2: {red}{round(R2, 3)}{resetColor}\n')
+
+                if printData:
+                    print(f'Combination: {red}{iteration}{resetColor} / '
+                          f'{red}{totalParamCombos}{resetColor} '
+                          f'({red}{percentComplete} %{resetColor})\n'
+                          f'Training Data: {purple}{tag}{resetColor}\n'
+                          f'Parameters: {greenLight}{params}{resetColor}\n'
+                          f'Splitting Training Set: '
+                          f'{blue}{round((1 - testSize) * 100, 0)}{pink}:{blue}'
+                          f'{round(testSize * 100, 0)}{resetColor}\n'
+                          f'     Train: {blue}{xTrain.shape}{resetColor}\n'
+                          f'     Test: {blue}{xTest.shape}{resetColor}\n')
+                    print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n'
+                          f'Total Runtime: {red}{round(runtimeTotal, 3):,} min'
+                          f'{resetColor}\n')
+                    print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
+                          f'     MAE: {yellow}{round(MAE, 3)}{resetColor}\n'
+                          f'     MSE: {yellow}{round(MSE, 3)}{resetColor}\n'
+                          f'     R2: {yellow}{round(R2, 3)}{resetColor}\n\n')
 
                 return model, MSE, accuracy
 
@@ -5768,8 +5778,16 @@ class RandomForestRegressorXGBDualModels:
             bestMSEHigh = bestMSE
             evalMetric='rmse'
             results = {}
-            for iteration, DualModels in enumerate(paramCombinations):
+            startTraining = time.time()
+            totalParamCombos = len(paramCombos)
+            for iteration, DualModels in enumerate(paramCombos):
+
                 params = dict(zip(paramNames, DualModels))
+                percentComplete = round((iteration / totalParamCombos) * 100, 3)
+
+                printData = (iteration % 5 == 0)
+                if printData:
+                    print('-------------------- Training Model --------------------')
 
                 # Train Model
                 model, MSE, accuracy = trainModel(
@@ -5787,12 +5805,11 @@ class RandomForestRegressorXGBDualModels:
                           f'Params: {greenLight}{params}{resetColor}\n'
                           f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
                           f'Saving Trained Model:\n'
-                          f'     {greenDark}{pathModel}{resetColor}\n')
+                          f'     {greenDark}{pathModel}{resetColor}\n\n')
                     bestMSE = MSE
                     self.model = model
                     self.modelHyperparams = params
                     joblib.dump(self.model, pathModel)
-                print()
 
 
                 # Train Model
