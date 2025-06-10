@@ -5936,7 +5936,7 @@ class PredictActivity:
             randomForestRegressorXGBCombo = RandomForestRegressorXGBCombo(
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
-                pathModel=pathModelXGBoost, modelTag=modelTagScikit,
+                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
                 testSize=self.testSize,
                 NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
             self.predictions['XGBoost: Random Forest Regressor'] = (
@@ -5946,7 +5946,7 @@ class PredictActivity:
             randomForestRegressorXGB = RandomForestRegressorXGB(
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
-                pathModel=pathModelXGBoost, modelTag=modelTagScikit, testSize=self.testSize,
+                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost, testSize=self.testSize,
                 NTrees=self.NTrees, device=self.device, printNumber=self.printNumber)
             self.predictions['XGBoost: Random Forest Regressor'] = (
                 randomForestRegressorXGB.predictions)
