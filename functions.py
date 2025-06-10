@@ -5388,7 +5388,7 @@ class RandomForestRegressor:
         subsPred = list(dfPred.index)
 
 
-        # # Get Model: Random Forrest Regressor
+        # # Get Model: Random Forest Regressor
         if os.path.exists(pathModel):
             self.loadModel(model=RandomForestRegressor(), pathModel=pathModel)
         else:
@@ -5523,7 +5523,7 @@ class RandomForestRegressorCombo:
               f'Model: {purple}{modelTag}{resetColor}\n\n'
               f'Combine predictions with top {int(100 * (1 - cutoff))} substrates\n')
 
-        # # Get Model: Random Forrest Regressor
+        # # Get Model: Random Forest Regressor
         if os.path.exists(pathModel):
             self.model = self.loadModel(pathModel=pathModel, tag=tag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
@@ -5703,7 +5703,7 @@ class RandomForestRegressorXGBCombo:
         xHigh = DMatrix(xHigh)
         yHigh = DMatrix(yHigh)
 
-        # # Get Model: Random Forrest Regressor
+        # # Get Model: Random Forest Regressor
         if not os.path.exists(pathModel):
             from sklearn.model_selection import train_test_split
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -5890,9 +5890,9 @@ class PredictActivity:
 
 
         # Define: Model paths
-        modelTag = (f'Random Forrest - Test Size {self.testSize} - '
+        modelTag = (f'Random Forest - Test Size {self.testSize} - '
                     f'{self.tagEmbeddingsTrain}')
-        # modelTag = (f'Random Forrest - Test Size {self.testSize} - '
+        # modelTag = (f'Random Forest - Test Size {self.testSize} - '
         #             f'N Trees {self.NTrees} - {self.tagEmbeddingsTrain}')
         modelTagScikit = modelTag.replace('Test Size',
                                           f'Scikit - Test Size')
