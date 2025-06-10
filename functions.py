@@ -5524,7 +5524,6 @@ class RandomForestRegressorCombo:
 
         # # Get Model: Random Forest Regressor
         if os.path.exists(pathModel) and os.path.exists(pathModelH):
-            print('load')
             self.model = self.loadModel(pathModel=pathModel, tag=tag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
         else:
@@ -5687,6 +5686,12 @@ class RandomForestRegressorXGBCombo:
         x = dfTrain.drop(columns='activity').values
         y = np.log1p(dfTrain['activity'].values)
 
+        # Process dataframe
+        threshold = dfTrain['activity'].quantile(cutoff)  # Get High-value subset
+        dfHigh = dfTrain[dfTrain['activity'] > threshold]
+        xHigh = dfHigh.drop(columns='activity').values
+        yHigh = np.log1p(dfHigh['activity'].values)
+
         # Parameters: High value dataset
         cutoff = 0.8  # 0.8 = Top 20
         tag = 'All Substrates'
@@ -5694,15 +5699,12 @@ class RandomForestRegressorXGBCombo:
         pathModelH = pathModel.replace('Test Size', 'High Values - Test Size')
         print(f'Combine predictions with {pink}{tagHigh}{resetColor}\n')
 
-        # Process dataframe
-        threshold = dfTrain['activity'].quantile(cutoff) # Get High-value subset
-        dfHigh = dfTrain[dfTrain['activity'] > threshold]
-        xHigh = dfHigh.drop(columns='activity').values
-        yHigh = np.log1p(dfHigh['activity'].values)
-
 
         # # Get Model: Random Forest Regressor
-        if not os.path.exists(pathModel):
+        if os.path.exists(pathModel) and os.path.exists(pathModelH):
+            self.model = self.loadModel(pathModel=pathModel, tag=tag)
+            self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
+        else:
             from sklearn.model_selection import train_test_split
             from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
