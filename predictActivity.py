@@ -26,11 +26,12 @@ inExcludedPosition = [8]
 inMinimumSubstrateCount = 5000
 
 # Input 4: Machine Learning Model
-inModelTypes = ['', '', '', '']
+inModelTypes = ['Scikit-Learn: Random Forest Regressor',
+                'XGBoost: Random Forest Regressor']
+inModelType = inModelTypes[1]
 inLayersESM = [5,10,15,20]
 inBatchSize = 4096 # Batch size for ESM
 inMinES = 0
-inModelType = inModelTypes[0]
 inSubsPred = {
     'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
 inGeneratedSubsFilter = { # Restrictions for generated substrates
