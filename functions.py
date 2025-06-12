@@ -5741,28 +5741,28 @@ class RandomForestRegressorXGBDualModels:
 
     """
 
-    def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
-                 testSize, NTrees, device, printNumber):
+    def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelAccuracy,
+                 modelTag, layersESM, testSize, NTrees, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
         print(f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
-        useGPU = False
 
-        from xgboost import XGBRegressor
-        if 'cuda' in device:
-            import cupy
-            useGPU = True
-            cupy.cuda.Device(device.split(':')[1]).use()
+        from sklearn.model_selection import train_test_split
 
-        trainModels = True
 
         self.device = device
         self.NTrees = NTrees
         self.predictions = {}
         subsPred = list(dfPred.index)
         self.device = device
-        paramGrid = {
+
+        self.predictions = {}
+        self.modelAccuracy = modelAccuracy
+        self.layersESM = layersESM
+
+        # Params: Grid search
+        self.paramGrid = {
             'colsample_bytree': np.arange(0.6, 1.0, 0.2),
             'learning_rate': [0.01, 0.05, 0.1],
             'max_leaves': range(2, 10, 1),
@@ -5772,8 +5772,6 @@ class RandomForestRegressorXGBDualModels:
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
         # 'max_depth': range(2, 6, 1),
-        self.predictions = {}
-
 
         # Process dataframe
         x = dfTrain.drop(columns='activity').values
@@ -5794,8 +5792,37 @@ class RandomForestRegressorXGBDualModels:
         yHigh = np.log1p(dfHigh['activity'].values)
 
 
+        # Split datasets
+        xTraining, xTesting, yTraining, yTesting = train_test_split(
+            x, y, test_size=testSize, random_state=19)
+        xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
+            xHigh, yHigh, test_size=testSize, random_state=19)
+
+        # Put data on the training device
+        if 'cuda' in self.device:
+            import cupy
+            cupy.cuda.Device(self.device.split(':')[1]).use()
+
+            xTraining, yTraining = cupy.array(xTraining), cupy.array(yTraining)
+            xTesting, yTesting = cupy.array(xTesting), cupy.array(yTesting)
+            xTrainingH, yTrainingH = cupy.array(xTrainingH), cupy.array(yTrainingH)
+            xTestingH, yTestingH = cupy.array(xTestingH), cupy.array(yTestingH)
+
+
+
+    def trainModel(self):
+        print('================================== Train Model '
+              '==================================')
+
+        from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+        from xgboost import XGBRegressor
+
+        layerTag = f'Layer {self.layerESM}'
+
+
         # # Get Model: Random Forest Regressor
         # if os.path.exists(pathModel) and os.path.exists(pathModelH):
+        trainModels = True
         if not trainModels:
             self.model = self.loadModel(pathModel=pathModel, tag=tag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
@@ -5810,7 +5837,11 @@ class RandomForestRegressorXGBDualModels:
                 xHigh, yHigh, test_size=testSize, random_state=19)
 
             # Put data on the training device
-            if useGPU:
+            if 'cuda' in self.device:
+                import cupy
+                self.useGPU = True
+                cupy.cuda.Device(self.device.split(':')[1]).use()
+
                 xTraining, yTraining = cupy.array(xTraining), cupy.array(yTraining)
                 xTesting, yTesting = cupy.array(xTesting), cupy.array(yTesting)
                 xTrainingH, yTrainingH = cupy.array(xTrainingH), cupy.array(yTrainingH)
@@ -5845,6 +5876,9 @@ class RandomForestRegressorXGBDualModels:
                 MAE = mean_absolute_error(yPred, yTest)
                 MSE = mean_squared_error(yPred, yTest)
                 R2 = r2_score(yPred, yTest)
+                self.modelAccuracy.loc['MAE', layerTag] = MAE
+                self.modelAccuracy.loc['MSE', layerTag] = MSE
+                self.modelAccuracy.loc['R²', layerTag] = R2
 
                 if printData:
                     print(f'================================ Training Model '
@@ -5875,6 +5909,7 @@ class RandomForestRegressorXGBDualModels:
 
 
             # Train Models
+            self.bestLayer = None
             self.bestParams = None
             self.bestParamsHigh = None
             bestMSE = float('inf')
@@ -6034,8 +6069,8 @@ class RandomForestRegressorXGBDualModels:
 
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsPred,
-                 subsPredChosen, tagChosenSubs, minSubCount, minES, batchSize,
-                 labelsXAxis, printNumber):
+                 subsPredChosen, tagChosenSubs, minSubCount, minES,
+                 modelAccuracy, layerESM, batchSize, labelsXAxis, printNumber):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
@@ -6058,6 +6093,8 @@ class PredictActivity:
         self.predictions = {}
 
         # Parameters: Model
+        self.modelAccuracy = modelAccuracy
+        self.layerESM = layerESM
         self.batchSize = batchSize
         self.testSize = 0.2
         self.NTrees = 100
@@ -6069,6 +6106,11 @@ class PredictActivity:
         self.subsPred = subsPred
         self.subsPredN = len(subsPred)
 
+
+    def trainModel(self, ):
+        print(f'Model Accuracy:\n'
+              f'{red}{self.modelAccuracy}{resetColor}\n\n')
+
         # Parameters: ESM
         modelPrams = 2
         if modelPrams == 0: # Choose: ESM PLM model
@@ -6078,12 +6120,13 @@ class PredictActivity:
         else:
             self.sizeESM = '650M Params'
         self.tagEmbeddingsTrain = (
-            f'Embeddings - ESM {self.sizeESM} - {self.enzymeName} - {self.datasetTag} - '
-            f'MinCounts {self.minSubCount} - N {self.subsTrainN} - '
-            f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
+            f'Embeddings - ESM {self.sizeESM} Layer {self.layerESM} - '
+            f'{self.enzymeName} - {self.datasetTag} - MinCounts {self.minSubCount} - '
+            f'N {self.subsTrainN} - {len(self.labelsXAxis)} AA - Batch {self.batchSize}')
         self.tagEmbeddingsPred = (
-            f'Embeddings - ESM {self.sizeESM} - {self.enzymeName} - Predictions - '
-            f'Min ES {self.minES} - MinCounts {self.minSubCount} - N {self.subsPredN} - '
+            f'Embeddings - ESM {self.sizeESM} Layer {self.layerESM} - '
+            f'{self.enzymeName} - Predictions - Min ES {self.minES} - '
+            f'MinCounts {self.minSubCount} - N {self.subsPredN} - '
             f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
         if self.tagChosenSubs != '':
             self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
@@ -6109,11 +6152,17 @@ class PredictActivity:
         self.embeddingsSubsPred = pd.DataFrame()
         if not os.path.exists(pathModelScikit) or not os.path.exists(pathModelXGBoost):
             self.embeddingsSubsTrain = self.ESM(
-                substrates=self.subsTrain, embeddings=self.tagEmbeddingsTrain,
-                trainingSet=True)
+                substrates=self.subsTrain, layerESM=layerESM,
+                tagEmbeddings=self.tagEmbeddingsTrain, trainingSet=True)
         # self.embeddingsSubsPred = self.ESM(
-        #     substrates=self.subsPred, embeddings=self.tagEmbeddingsPred)
+        #     substrates=self.subsPred, layerESM=layerESM,
+        #     tagEmbeddings=self.tagEmbeddingsPred)
 
+        # End function
+        if self.embeddingsSubsTrain is None:
+            print(f'{orange}ESM output{resetColor} is None\n'
+                  f'ESM layer {red}{self.layerESM}{resetColor} cannot be extracted\n\n')
+            sys.exit()
 
         # # Predict: Substrate activity
         useModel = 2
@@ -6140,9 +6189,11 @@ class PredictActivity:
             randomForestRegressorXGBDualModels = RandomForestRegressorXGBDualModels(
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
-                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
+                pathModel=pathModelXGBoost, modelAccuracy=self.modelAccuracy,
+                modelTag=modelTagXGBoost, layerESM=self.layerESM,
                 testSize=self.testSize, NTrees=self.NTrees, device=self.device,
                 printNumber=self.printNumber)
+            self.modelAccuracy = randomForestRegressorXGBDualModels.modelAccuracy
             self.predictions['XGBoost: Random Forest Regressor'] = (
                 randomForestRegressorXGBDualModels.predictions)
         else:
@@ -6177,7 +6228,7 @@ class PredictActivity:
 
 
 
-    def ESM(self, substrates, embeddings, trainingSet=False):
+    def ESM(self, substrates, layerESM, tagEmbeddings, trainingSet=False):
         print('=========================== Generate Embeddings: ESM '
               '============================')
         # Choose: ESM PLM model
@@ -6193,11 +6244,11 @@ class PredictActivity:
         predictions = True
         if trainingSet:
             predictions = False
-        print(f'Dataset: {purple}{embeddings}{resetColor}\n'
+        print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
 
         # Load: ESM Embeddings
-        pathEmbeddings = os.path.join(self.pathEmbeddings, f'{embeddings}.csv')
+        pathEmbeddings = os.path.join(self.pathEmbeddings, f'{tagEmbeddings}.csv')
         if os.path.exists(pathEmbeddings):
             print(f'\nLoading: ESM Embeddings\n'
                   f'     {greenDark}{pathEmbeddings}{resetColor}\n')
@@ -6238,19 +6289,24 @@ class PredictActivity:
 
 
         # Step 2: Load the ESM model and batch converter
+        layersESMMax = 0
         if sizeESM == '15B Params':
             model, alphabet = esm.pretrained.esm2_t48_15B_UR50D()
-            numLayersESM = 48
+            layersESMMax = 48
         elif sizeESM == '3B Params':
             model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
-            numLayersESM = 36
+            layersESMMax = 36
         else:
             model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
-            numLayersESM = 33
+            layersESMMax = 33
             # esm2_t36_3B_UR50D has 36 layers
             # esm2_t33_650M_UR50D has 33 layers
             # esm2_t12_35M_UR50D has 12 layers
         model = model.to(self.device)
+
+        # End function
+        if layerESM > layersESMMax:
+            return None
 
         # Get: batch tensor
         batchConverter = alphabet.get_batch_converter()
@@ -6293,8 +6349,8 @@ class PredictActivity:
             for i in range(0, len(batchTokens), self.batchSize):
                 start = time.time()
                 batch = batchTokens[i:i + self.batchSize].to(self.device)
-                result = model(batch, repr_layers=[numLayersESM], return_contacts=False)
-                tokenReps = result["representations"][numLayersESM]
+                result = model(batch, repr_layers=[layerESM], return_contacts=False)
+                tokenReps = result["representations"][layerESM]
                 seqEmbed = tokenReps[:, 0, :].cpu().numpy()
                 allEmbeddings.append(seqEmbed)
                 end = time.time()
@@ -6327,7 +6383,7 @@ class PredictActivity:
 
 
         # Step 4: Extract per-sequence Embeddings
-        tokenReps = result["representations"][numLayersESM]  # (N, seq_len, hidden_dim)
+        tokenReps = result["representations"][layerESM]  # (N, seq_len, hidden_dim)
         sequenceEmbeddings = tokenReps[:, 0, :]  # [CLS] token embedding: (N, hidden_dim)
 
         # Convert to numpy and store substrate activity proxy

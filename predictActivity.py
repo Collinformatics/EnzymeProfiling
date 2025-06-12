@@ -23,11 +23,16 @@ inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 1000
-inSubsPred = {
-    'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
+inMinimumSubstrateCount = 5000
+
+# Input 4: Machine Learning Model
+inModelTypes = ['', '', '', '']
+inLayersESM = [5,10,15,20]
 inBatchSize = 4096 # Batch size for ESM
 inMinES = 0
+inModelType = inModelTypes[0]
+inSubsPred = {
+    'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
 inGeneratedSubsFilter = { # Restrictions for generated substrates
     'R3': ['L'],
     'R4': ['Q']
@@ -265,14 +270,23 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
     df=probMotif, eMap=ngs.eMap, minES=inMinES, dataType='AA Probabilities',
     subsReq=inSubsPred, filter=inGeneratedSubsFilter)
 
+modelAccuracy = pd.DataFrame(0.0, index=['MAE', 'MSE', 'R²'], columns=[''])
+bestLayer = None
 # Predict activity
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
     subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
-    tagChosenSubs=tagPredSubs, minSubCount=inMinimumSubstrateCount, minES=inMinES,
-    batchSize=inBatchSize, labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
+    tagChosenSubs=tagPredSubs, minSubCount=inMinimumSubstrateCount, layerESM=layer,
+    minES=inMinES, modelAccuracy=modelAccuracy, batchSize=inBatchSize,
+    labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
+for layer in inLayersESM:
+    predictions.trainModel(modelType=inModelType)
+    print(f'Prediction Accuracies:\n'
+          f'{red}{predictions.modelAccuracy}{resetColor}\n\n')
+sys.exit()
 
 # Evaluate: Predictions
 ngs.processSubstrates(
     subsInit=None, subsFinal=None, motifs=predictions.predictions,
     subLabel=inMotifPositions, predActivity=True)
+
