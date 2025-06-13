@@ -5603,7 +5603,7 @@ class RandomForestRegressorXGB:
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
-                runtime = (end - start) / 60
+                runtime = (end - start)
                 runtimeTotal = (end - startTraining) / 60
 
                 # Evaluate the model
@@ -5667,7 +5667,7 @@ class RandomForestRegressorXGB:
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
                               f'{yellow}{values}{resetColor}\n')
-                    print(f'Time Training Model: {red}{round(runtime, 3):,} min'
+                    print(f'Time Training Model: {red}{round(runtime, 3):,} s'
                           f'{resetColor}\n'
                           f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
                           f'{resetColor}')
