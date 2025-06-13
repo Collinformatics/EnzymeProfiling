@@ -273,20 +273,14 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
     subsReq=inSubsPred, filter=inGeneratedSubsFilter)
 
 
-bestLayer = None
 # Predict activity
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
     subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
     tagChosenSubs=tagPredSubs, minSubCount=inMinimumSubstrateCount,
-    layersESM=inLayersESM, minES=inMinES, testSize=inTestSize, batchSize=inBatchSize,
-    labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
-
-predictions.trainModel(modelType=inModelType)
-print(f'Prediction Accuracies: {purple}{inModelType}{resetColor}')
-for dataset, value in predictions.modelAccuracy.items():
-      print(f'Dataset: {pink}{dataset}\n{cyan}{value}{resetColor}\n\n')
-
+    layersESM=inLayersESM, minES=inMinES, modelType=inModelType, testSize=inTestSize,
+    batchSize=inBatchSize, labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
+predictions.trainModel()
 
 # # Evaluate: Predictions
 # ngs.processSubstrates(

@@ -5606,9 +5606,7 @@ class RandomForestRegressorXGB:
                 self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
 
                 if printData:
-                    print(f'================================ Training Model '
-                          f'================================\n'
-                          f'Combination: {red}{iteration}{resetColor} / '
+                    print(f'Combination: {red}{iteration}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
                           f'Parameters: {greenLight}{params}{resetColor}\n')
@@ -5717,6 +5715,7 @@ class RandomForestRegressorXGB:
             self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
 
+
     def makePredictions(model, tag):
         # Predict substrate activity
         print(f'Predicting Substrate Activity: {purple}{tag}{resetColor}\n'
@@ -5763,6 +5762,7 @@ class RandomForestRegressorXGB:
                           f'{red}{round(activity, 3):,}{resetColor}')
                 print('\n')
 
+
     def predictSubstrateAffinity(self, pathModel, pathModelHigh):
         print(f'Find a way to record multiple predictions.')
 
@@ -5807,7 +5807,7 @@ class RandomForestRegressorXGB:
 
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsPred,
-                 subsPredChosen, tagChosenSubs, minSubCount, minES,
+                 subsPredChosen, tagChosenSubs, minSubCount, minES, modelType,
                  layersESM, testSize, batchSize, labelsXAxis, printNumber, modelSize=2):
         # Parameters: Files
         self.pathFolder = folderPath
@@ -5856,17 +5856,18 @@ class PredictActivity:
         else:
             self.sizeESM = '650M Params'
 
+        self.modelType = modelType
 
-    def trainModel(self, modelType):
+
+    def trainModel(self):
         for layerESM in self.layersESM:
-
             self.tagEmbeddingsTrain = (
-                f'Embeddings - ESM {self.sizeESM} Layer {layerESM} - '
+                f'Embeddings - ESM {self.sizeESM} {layerESM} Layers - '
                 f'{self.enzymeName} - {self.datasetTag} - '
                 f'MinCounts {self.minSubCount} - N {self.subsTrainN} - '
                 f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
             self.tagEmbeddingsPred = (
-                f'Embeddings - ESM {self.sizeESM} Layer {layerESM} - '
+                f'Embeddings - ESM {self.sizeESM} {layerESM} Layers - '
                 f'{self.enzymeName} - Predictions - Min ES {self.minES} - '
                 f'MinCounts {self.minSubCount} - N {self.subsPredN} - '
                 f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
@@ -5908,7 +5909,7 @@ class PredictActivity:
                 sys.exit()
 
             # Select a model to train
-            if modelType == 'Scikit-Learn: Random Forest Regressor':
+            if self.modelType == 'Scikit-Learn: Random Forest Regressor':
                 # Model: Scikit-Learn Random Forest Regressor
                 RandomForestRegressor = RandomForestRegressor(
                     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
@@ -5917,8 +5918,8 @@ class PredictActivity:
                     testSize=self.testingSetSize, NTrees=self.NTrees, device=self.device,
                     printNumber=self.printNumber)
                 self.modelAccuracy = randomForestRegressorXGB.modelAccuracy
-                self.predictions[modelType] = RandomForestRegressor.predictions
-            elif modelType == 'XGBoost: Random Forest Regressor':
+                self.predictions[self.modelType] = RandomForestRegressor.predictions
+            elif self.modelType == 'XGBoost: Random Forest Regressor':
                 # Model: XGBoost Random Forest
                 randomForestRegressorXGB = RandomForestRegressorXGB(
                     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
@@ -5928,13 +5929,15 @@ class PredictActivity:
                     device=self.device)
 
                 # Record predictions
-                self.predictions[modelType] = randomForestRegressorXGB.predictions
+                self.predictions[self.modelType] = randomForestRegressorXGB.predictions
                 for dataset, values, in randomForestRegressorXGB.modelAccuracy.items():
                     self.modelAccuracy[dataset].loc[:, values.columns] = values
             else:
-                print(f'{orange}ERROR: There is no use for the modelType '
-                      f'{cyan}{modelType}{resetColor}\n\n')
+                print(f'{orange}ERROR: There is no use for the model type '
+                      f'{cyan}{self.modelType}{resetColor}\n\n')
                 sys.exit(1)
+
+        self.predictionAccuracies()
 
 
 
@@ -6134,3 +6137,12 @@ class PredictActivity:
         subEmbeddings.to_csv(pathEmbeddings)
 
         return subEmbeddings
+
+
+
+    def predictionAccuracies(self):
+        print('============================= Prediction Accuracies '
+              '=============================')
+        print(f'ML Model: {purple}{self.modelType}{resetColor}')
+        for dataset, value in self.modelAccuracy.items():
+            print(f'Dataset: {pink}{dataset}\n{greenLight}{value}{resetColor}\n\n')
