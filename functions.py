@@ -5519,19 +5519,19 @@ class RandomForestRegressorXGB:
         self.modelAccuracyBest = self.modelAccuracy
 
         # Params: Grid search
-        # self.paramGrid = {
-        #     'colsample_bytree': np.arange(0.6, 1.0, 0.2),
-        #     'learning_rate': [0.01, 0.05, 0.1],
-        #     'max_leaves': range(2, 10, 1),
-        #     'min_child_weight': range(1, 5, 1),
-        #     'n_estimators': range(100, 500, 100),
-        #     'subsample': np.arange(0.5, 1.0, 0.1)
-        # }
         self.paramGrid = {
-            'learning_rate': [0.01],
-            'n_estimators': [100],
-            'subsample': [0.5]
+            'colsample_bytree': np.arange(0.6, 1.0, 0.2),
+            'learning_rate': [0.01, 0.05, 0.1],
+            'max_leaves': range(2, 10, 1),
+            'min_child_weight': range(1, 5, 1),
+            'n_estimators': range(100, 200, 100),
+            'subsample': np.arange(0.5, 1.0, 0.1)
         }
+        # self.paramGrid = {
+        #     'learning_rate': [0.01],
+        #     'n_estimators': [100],
+        #     'subsample': [0.5]
+        # }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
         # 'max_depth': range(2, 6, 1),
 
