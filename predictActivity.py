@@ -24,13 +24,13 @@ inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 5000
+inMinimumSubstrateCount = 1000
 
 # Input 4: Machine Learning
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [1,7,17] # , 15, 20, 25
+inLayersESM = [5, 10, 15, 17, 20, 25, 30] # , 15, 20, 25
 inTestSize = 0.2
 inBatchSize = 4096 # Batch size for ESM
 inMinES = 0

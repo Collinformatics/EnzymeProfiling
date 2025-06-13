@@ -5532,7 +5532,7 @@ class RandomForestRegressorXGB:
             'learning_rate': [0.01, 0.05, 0.1],
             'max_leaves': range(2, 10, 1),
             'min_child_weight': range(1, 5, 1),
-            'n_estimators': range(100, 200, 100),
+            'n_estimators': range(100, 500, 100),
             'subsample': np.arange(0.5, 1.0, 0.1)
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
@@ -5634,6 +5634,9 @@ class RandomForestRegressorXGB:
                         (accuracy.loc[indexEvalMetric, self.layerESMTag] <
                          self.modelAccuracy[tag].loc[indexEvalMetric, self.layerESMTag])):
                     saveModel = True
+                    # newColumn = self.layerESMTag not in self.modelAccuracy[tag].columns
+                    # print("{newColumn}")
+                    # sys.exit()
                     self.bestParams[tag] = {self.layerESMTag: params}
                     self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
                     self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
@@ -5641,6 +5644,7 @@ class RandomForestRegressorXGB:
                     self.modelAccuracy[tag] = self.modelAccuracy[tag].sort_index(axis=1)
 
                     # Sort the columns
+                    # if newColumn:
                     sortedColumns = (
                         sorted(self.modelAccuracy[tag].columns, key=getLayerNumber))
                     self.modelAccuracy[tag] = self.modelAccuracy[tag][sortedColumns]
@@ -5663,8 +5667,8 @@ class RandomForestRegressorXGB:
                     print(f'Combination: {red}{iteration}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
-                          f'ESM Layer: {greenLight}{self.layerESM}{resetColor}\n'
-                          f'Parameters: {greenLight}{params}{resetColor}\n')
+                          f'Parameters: {greenLight}{params}{resetColor}\n'
+                          f'ESM Layer: {greenLight}{self.layerESM}{resetColor}\n')
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
                               f'{yellow}{values}{resetColor}\n')
