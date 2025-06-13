@@ -5604,32 +5604,37 @@ class RandomForestRegressorXGB:
                 self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
                 self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
                 self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
-                print(f'Model Accuracy:\n{self.modelAccuracy[tag]}\n\n')
 
-                # if printData:
-                #     print(f'================================ Training Model '
-                #           f'================================\n'
-                #           f'Combination: {red}{iteration}{resetColor} / '
-                #           f'{red}{totalParamCombos}{resetColor} '
-                #           f'({red}{percentComplete} %{resetColor})\n'
-                #           f'Parameters: {greenLight}{params}{resetColor}\n')
-                #     print(f'Training Data: {purple}{tag}{resetColor}\n'
-                #           f'Splitting Training Set: '
-                #           f'{blue}{round((1 - testSize) * 100, 0)}{pink}:{blue}'
-                #           f'{round(testSize * 100, 0)}{resetColor}\n'
-                #           f'     Train: {blue}{xTrain.shape}{resetColor}\n'
-                #           f'     Test: {blue}{xTest.shape}{resetColor}\n')
-                #     print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
-                #           f'Best MAE: {yellow}{round(bestScoreMAE, 3):,}{resetColor}\n'
-                #           f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n\n'
-                #           f'Best MSE: {yellow}{round(bestScoreMSE, 3):,}{resetColor}\n'
-                #           f'     MSE: {yellow}{round(MSE, 3):,}{resetColor}\n\n'
-                #           f'Best R2: {yellow}{round(bestScoreR2, 3):,}{resetColor}\n'
-                #           f'     R2: {yellow}{round(R2, 3):,}{resetColor}\n')
-                #     print(f'Time Training Model: {red}{round(runtime, 3):,} min'
-                #           f'{resetColor}\n'
-                #           f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
-                #           f'{resetColor}\n\n')
+                if printData:
+                    print(f'================================ Training Model '
+                          f'================================\n'
+                          f'Combination: {red}{iteration}{resetColor} / '
+                          f'{red}{totalParamCombos}{resetColor} '
+                          f'({red}{percentComplete} %{resetColor})\n'
+                          f'Parameters: {greenLight}{params}{resetColor}\n')
+                    print(f'Training Data: {purple}{tag}{resetColor}\n'
+                          f'Splitting Training Set: '
+                          f'{blue}{round((1 - testSize) * 100, 0)}{pink}:{blue}'
+                          f'{round(testSize * 100, 0)}{resetColor}\n'
+                          f'     Train: {blue}{xTrain.shape}{resetColor}\n'
+                          f'     Test: {blue}{xTest.shape}{resetColor}\n')
+                    # print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
+                    #       f'Best MAE: {yellow}{round(bestScoreMAE, 3):,}{resetColor}\n'
+                    #       f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n\n'
+                    #       f'Best MSE: {yellow}{round(bestScoreMSE, 3):,}{resetColor}\n'
+                    #       f'     MSE: {yellow}{round(MSE, 3):,}{resetColor}\n\n'
+                    #       f'Best R2: {yellow}{round(bestScoreR2, 3):,}{resetColor}\n'
+                    #       f'     R2: {yellow}{round(R2, 3):,}{resetColor}\n')
+                    for dataset, values in self.modelAccuracy.items():
+                        print(f'Model Accuracy: {pink}{dataset}\n'
+                              f'{yellow}{values}{resetColor}\n\n'
+                              f'Most Accurate Model:\n'
+                              f'{yellow}{self.modelAccuracyBest[dataset]}'
+                              f'{resetColor}\n\n')
+                    print(f'Time Training Model: {red}{round(runtime, 3):,} min'
+                          f'{resetColor}\n'
+                          f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
+                          f'{resetColor}\n\n')
 
                 return model, MAE, MSE, R2, accuracy
 
@@ -5676,9 +5681,6 @@ class RandomForestRegressorXGB:
                     self.modelAccuracyBest[tag] = pd.DataFrame([MAE, MSE, R2],
                                                                index=['MAE', 'MSE', 'R²'],
                                                                columns=[self.layerESMTag])
-
-                    print(f'Current Accuracy: {tag}\n{self.modelAccuracyBest[tag]}\n')
-
                     joblib.dump(self.model, pathModel)
 
                 # Train Model
@@ -5706,24 +5708,11 @@ class RandomForestRegressorXGB:
                         params=params, accuracy=accuracy, path=pathModelH)
                     bestMSE[tag] = MSE
                     self.modelH = modelH
-                    self.modelAccuracy[tag] = modelAccuracy
+                    self.bestParams[tag] = {self.layerESMTag: params}
                     self.modelAccuracyBest[tag] = pd.DataFrame([MAE, MSE, R2],
                                                                index=['MAE','MSE','R²'],
                                                                columns=[self.layerESMTag])
-
-                    print(f'Current Accuracy: {tag}\n{self.modelAccuracyBest[tag]}\n')
-
-
-                    self.bestParams[tag] = {self.layerESMTag: params}
-
-
-                    sys.exit()
                     joblib.dump(self.modelH, pathModelH)
-
-
-                # Display model accuracy
-                for dataset, data in self.modelAccuracy.items():
-                    print(f'Model Accuracy: {pink}{dataset}{resetColor}\n{data}\n\n')
         else:
             self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
@@ -5937,12 +5926,11 @@ class PredictActivity:
                     datasetTag=self.datasetTag, datasetTagHigh=self.datasetTagHigh,
                     layerESM=layerESM, testSize=self.testingSetSize, NTrees=self.NTrees,
                     device=self.device)
+
+                # Record predictions
                 self.predictions[modelType] = randomForestRegressorXGB.predictions
-                self.modelAccuracy[self.datasetTag] = (
-                    {f'ESM Layer {layerESM}': randomForestRegressorXGB.modelAccuracy})
-                print(f'Get Accuracy: Layer {self.modelAccuracy[self.datasetTag]}\n'
-                      f'{randomForestRegressorXGB.modelAccuracy}\n\n')
-                sys.exit()
+                for dataset, values, in randomForestRegressorXGB.modelAccuracy.items():
+                    self.modelAccuracy[dataset].loc[:, values.columns] = values
             else:
                 print(f'{orange}ERROR: There is no use for the modelType '
                       f'{cyan}{modelType}{resetColor}\n\n')

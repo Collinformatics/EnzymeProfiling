@@ -283,8 +283,9 @@ predictions = PredictActivity(
     labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
 
 predictions.trainModel(modelType=inModelType)
-print(f'Prediction Accuracies:\n'
-      f'{red}{predictions.modelAccuracy}{resetColor}')
+print(f'Prediction Accuracies: {purple}{inModelType}{resetColor}')
+for dataset, value in predictions.modelAccuracy.items():
+      print(f'Dataset: {pink}{dataset}\n{cyan}{value}{resetColor}\n\n')
 
 
 # # Evaluate: Predictions
