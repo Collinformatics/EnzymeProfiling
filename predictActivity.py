@@ -271,19 +271,19 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
     df=probMotif, eMap=ngs.eMap, minES=inMinES, dataType='AA Probabilities',
     subsReq=inSubsPred, filter=inGeneratedSubsFilter)
 
-modelAccuracy = pd.DataFrame(0.0, index=['MAE', 'MSE', 'R²'], columns=[''])
+
 bestLayer = None
 # Predict activity
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
     subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
-    tagChosenSubs=tagPredSubs, minSubCount=inMinimumSubstrateCount, layerESM=layer,
-    minES=inMinES, modelAccuracy=modelAccuracy, batchSize=inBatchSize,
+    tagChosenSubs=tagPredSubs, minSubCount=inMinimumSubstrateCount,
+    layersESM=inLayersESM, minES=inMinES, batchSize=inBatchSize,
     labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
-for layer in inLayersESM:
-    predictions.trainModel(modelType=inModelType)
-    print(f'Prediction Accuracies:\n'
-          f'{red}{predictions.modelAccuracy}{resetColor}\n\n')
+
+predictions.trainModel(modelType=inModelType)
+print(f'Prediction Accuracies:\n'
+      f'{red}{predictions.modelAccuracy}{resetColor}\n\n')
 sys.exit()
 
 # Evaluate: Predictions

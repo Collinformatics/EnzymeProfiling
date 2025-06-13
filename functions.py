@@ -5298,6 +5298,7 @@ class RandomForestRegressor:
             xHigh = dfHigh.drop(columns='activity').values
             yHigh = np.log1p(dfHigh['activity'].values)
 
+
             def trainModel(model, x, y, tag, path, saveModel=True):
                 xTrain, xTest, yTrain, yTest = train_test_split(
                     x, y, test_size=testSize, random_state=19)
@@ -5356,6 +5357,7 @@ class RandomForestRegressor:
             self.modelH = trainModel(model=RandomForestRegressor(), x=xHigh, y=yHigh,
                                      tag=tagHigh, path=pathModelH, saveModel=True)
 
+
         def makePredictions(model, tag):
             # Predict substrate activity
             print(f'Predicting Substrate Activity: {purple}{tag}{resetColor}\n'
@@ -5405,6 +5407,7 @@ class RandomForestRegressor:
         makePredictions(model=self.model, tag=tag)
         makePredictions(model=self.modelH, tag=tagHigh)
         print(f'Find a way to record multiple predictions.')
+
 
     def loadModel(self, pathModel, tag):
         print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
@@ -5498,8 +5501,8 @@ class RandomForestRegressorXGB:
 
     """
 
-    def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelAccuracy,
-                 modelTag, layersESM, testSize, NTrees, device, printNumber):
+    def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
+                 layerESM, testSize, NTrees, device, printNumber):
         print('================================== Train Model '
               '==================================')
         print(f'ML Algorithm: {purple}Random Forest Regressor{resetColor}\n'
@@ -5517,8 +5520,9 @@ class RandomForestRegressorXGB:
         self.device = device
 
         self.predictions = {}
-        self.modelAccuracy = modelAccuracy
-        self.layersESM = layersESM
+        self.modelAccuracy = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
+        self.modelAccuracyH = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
+        self.layerESM = layerESM
 
         # Params: Grid search
         self.paramGrid = {
@@ -5600,8 +5604,8 @@ class RandomForestRegressorXGB:
                 xTestingH, yTestingH = cupy.array(xTestingH), cupy.array(yTestingH)
 
             # Generate parameter combinations
-            paramCombos = list(product(*paramGrid.values()))
-            paramNames = list(paramGrid.keys())
+            paramCombos = list(product(*self.paramGrid.values()))
+            paramNames = list(self.paramGrid.keys())
 
 
 
@@ -5661,15 +5665,11 @@ class RandomForestRegressorXGB:
 
 
             # Train Models
-            self.bestLayer = None
-            self.bestParams = None
-            self.bestParamsHigh = None
-            bestMSE = float('inf')
-            bestMSEHigh = bestMSE
-            bestMAE = bestMSE
-            bestMAEHigh = bestMSE
-            bestR2 = float('-inf')
-            bestR2High = bestR2
+            self.bestLayer = {tag: None, tagHigh: None}
+            self.bestParams = {tag: None, tagHigh: None}
+            bestMSE = {tag: float('inf'), tagHigh: float('inf')}
+            bestMAE = {tag: float('inf'), tagHigh: float('inf')}
+            bestR2 = {tag: float('-inf'), tagHigh: float('-inf')}
             evalMetric='rmse'
             results = {}
             startTraining = time.time()
@@ -5821,8 +5821,8 @@ class RandomForestRegressorXGB:
 
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsPred,
-                 subsPredChosen, tagChosenSubs, minSubCount, minES,modelAccuracy,
-                 layerESM, batchSize, labelsXAxis, printNumber):
+                 subsPredChosen, tagChosenSubs, minSubCount, minES,
+                 layersESM, batchSize, labelsXAxis, printNumber, modelSize=2):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
@@ -5845,8 +5845,8 @@ class PredictActivity:
         self.predictions = {}
 
         # Parameters: Model
-        self.modelAccuracy = modelAccuracy
-        self.layerESM = layerESM
+        self.modelAccuracy = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
+        self.layersESM = layersESM
         self.batchSize = batchSize
         self.testingSetSize = 0.2
         self.NTrees = 100
@@ -5858,90 +5858,91 @@ class PredictActivity:
         self.subsPred = subsPred
         self.subsPredN = len(subsPred)
 
-
-    def trainModel(self, modelType, modelSize=2):
-        print()
-        print(f'Model Accuracy:\n'
-              f'{red}{self.modelAccuracy}{resetColor}\n\n')
-
         # Parameters: ESM
-        if modelSize == 0: # Choose: ESM PLM model
+        if modelSize == 0:  # Choose: ESM PLM model
             self.sizeESM = '15B Params'
         elif modelSize == 1:
             self.sizeESM = '3B Params'
         else:
             self.sizeESM = '650M Params'
-        self.tagEmbeddingsTrain = (
-            f'Embeddings - ESM {self.sizeESM} Layer {self.layerESM} - '
-            f'{self.enzymeName} - {self.datasetTag} - MinCounts {self.minSubCount} - '
-            f'N {self.subsTrainN} - {len(self.labelsXAxis)} AA - Batch {self.batchSize}')
-        self.tagEmbeddingsPred = (
-            f'Embeddings - ESM {self.sizeESM} Layer {self.layerESM} - '
-            f'{self.enzymeName} - Predictions - Min ES {self.minES} - '
-            f'MinCounts {self.minSubCount} - N {self.subsPredN} - '
-            f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
-        if self.tagChosenSubs != '':
-            self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
-                f'MinCounts {self.minSubCount}',
-                f'MinCounts {self.minSubCount} - Added {self.tagChosenSubs}')
 
 
-        # Define: Model paths
-        modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
-                    f'{self.tagEmbeddingsTrain}')
-        # modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
-        #             f'N Trees {self.NTrees} - {self.tagEmbeddingsTrain}')
-        modelTagScikit = modelTag.replace('Test Size',
-                                          f'Scikit - Test Size')
-        modelTagXGBoost = modelTag.replace('Test Size',
-                                           f'XGBoost - Test Size')
-        pathModelScikit = os.path.join(self.pathModels, f'{modelTagScikit}.ubj')
-        pathModelXGBoost = os.path.join(self.pathModels, f'{modelTagXGBoost}.ubj')
-        # ubj: Binary JSON file
+    def trainModel(self, modelType):
+        for layerESM in self.layersESM:
 
-        # Generate: Embeddings
-        self.embeddingsSubsTrain = None
-        self.embeddingsSubsPred = pd.DataFrame()
-        if not os.path.exists(pathModelScikit) or not os.path.exists(pathModelXGBoost):
-            self.embeddingsSubsTrain = self.ESM(
-                substrates=self.subsTrain, layerESM=layerESM,
-                tagEmbeddings=self.tagEmbeddingsTrain, trainingSet=True)
-        # self.embeddingsSubsPred = self.ESM(
-        #     substrates=self.subsPred, layerESM=layerESM,
-        #     tagEmbeddings=self.tagEmbeddingsPred)
+            self.tagEmbeddingsTrain = (
+                f'Embeddings - ESM {self.sizeESM} Layer {layerESM} - '
+                f'{self.enzymeName} - {self.datasetTag} - '
+                f'MinCounts {self.minSubCount} - N {self.subsTrainN} - '
+                f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
+            self.tagEmbeddingsPred = (
+                f'Embeddings - ESM {self.sizeESM} Layer {layerESM} - '
+                f'{self.enzymeName} - Predictions - Min ES {self.minES} - '
+                f'MinCounts {self.minSubCount} - N {self.subsPredN} - '
+                f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
+            if self.tagChosenSubs != '':
+                self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
+                    f'MinCounts {self.minSubCount}',
+                    f'MinCounts {self.minSubCount} - Added {self.tagChosenSubs}')
 
-        # End function
-        if self.embeddingsSubsTrain is None:
-            print(f'{orange}ESM output{resetColor} is None\n'
-                  f'ESM layer {red}{self.layerESM}{resetColor} cannot be extracted\n\n')
-            sys.exit()
 
-        # Select a model to train
-        if modelType == 'Scikit-Learn: Random Forest Regressor':
-            # Model: Scikit-Learn Random Forest Regressor
-            RandomForestRegressor = RandomForestRegressor(
-                dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-                subsPredChosen=self.subsPredChosen, minES=self.minES,
-                pathModel=pathModelScikit, modelTag=modelTagScikit,
-                testSize=self.testingSetSize, NTrees=self.NTrees,
-                device=self.device, printNumber=self.printNumber)
-            self.modelAccuracy = randomForestRegressorXGB.modelAccuracy
-            self.predictions[modelType] = RandomForestRegressor.predictions
-        elif modelType == 'XGBoost: Random Forest Regressor':
-            # Model: XGBoost Random Forest
-            randomForestRegressorXGB = RandomForestRegressorXGB(
-                dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-                subsPredChosen=self.subsPredChosen, minES=self.minES,
-                pathModel=pathModelXGBoost, modelAccuracy=self.modelAccuracy,
-                modelTag=modelTagXGBoost, layerESM=self.layerESM,
-                testSize=self.testingSetSize, NTrees=self.NTrees, device=self.device,
-                printNumber=self.printNumber)
+            # Define: Model paths
+            modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
+                        f'{self.tagEmbeddingsTrain}')
+            # modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
+            #             f'N Trees {self.NTrees} - {self.tagEmbeddingsTrain}')
+            modelTagScikit = modelTag.replace('Test Size',
+                                              f'Scikit - Test Size')
+            modelTagXGBoost = modelTag.replace('Test Size',
+                                               f'XGBoost - Test Size')
+            pathModelScikit = os.path.join(self.pathModels, f'{modelTagScikit}.ubj')
+            pathModelXGBoost = os.path.join(self.pathModels, f'{modelTagXGBoost}.ubj')
+            # ubj: Binary JSON file
 
-            self.predictions[modelType] = randomForestRegressorXGB.predictions
-        else:
-            print(f'{orange}ERROR: There is no use for the modelType {cyan}{modelType}'
-                  f'{resetColor}\n\n')
-            sys.exit(1)
+            # Generate: Embeddings
+            self.embeddingsSubsTrain = None
+            self.embeddingsSubsPred = pd.DataFrame()
+            if (not os.path.exists(pathModelScikit) or
+                    not os.path.exists(pathModelXGBoost)):
+                self.embeddingsSubsTrain = self.ESM(
+                    substrates=self.subsTrain, layerESM=layerESM,
+                    tagEmbeddings=self.tagEmbeddingsTrain, trainingSet=True)
+            # self.embeddingsSubsPred = self.ESM(
+            #     substrates=self.subsPred, layerESM=layerESM,
+            #     tagEmbeddings=self.tagEmbeddingsPred)
+
+            # End function
+            if self.embeddingsSubsTrain is None:
+                print(f'{orange}ESM output{resetColor} is None\n'
+                      f'ESM layer {red}{layerESM}{resetColor} cannot be extracted\n\n')
+                sys.exit()
+
+            # Select a model to train
+            if modelType == 'Scikit-Learn: Random Forest Regressor':
+                # Model: Scikit-Learn Random Forest Regressor
+                RandomForestRegressor = RandomForestRegressor(
+                    dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+                    subsPredChosen=self.subsPredChosen, minES=self.minES,
+                    pathModel=pathModelScikit, modelTag=modelTagScikit, layerESM=layerESM,
+                    testSize=self.testingSetSize, NTrees=self.NTrees, device=self.device,
+                    printNumber=self.printNumber)
+                self.modelAccuracy = randomForestRegressorXGB.modelAccuracy
+                self.predictions[modelType] = RandomForestRegressor.predictions
+            elif modelType == 'XGBoost: Random Forest Regressor':
+                # Model: XGBoost Random Forest
+                randomForestRegressorXGB = RandomForestRegressorXGB(
+                    dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+                    subsPredChosen=self.subsPredChosen, minES=self.minES,
+                    pathModel=pathModelXGBoost, modelAccuracy=self.modelAccuracy,
+                    modelTag=modelTagXGBoost, layerESM=layerESM,
+                    testSize=self.testingSetSize, NTrees=self.NTrees, device=self.device,
+                    printNumber=self.printNumber)
+
+                self.predictions[modelType] = randomForestRegressorXGB.predictions
+            else:
+                print(f'{orange}ERROR: There is no use for the modelType {cyan}{modelType}'
+                      f'{resetColor}\n\n')
+                sys.exit(1)
 
 
 
