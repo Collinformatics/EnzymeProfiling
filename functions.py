@@ -5511,10 +5511,12 @@ class RandomForestRegressorXGB:
         self.device = device
         self.subsPred = list(dfPred.index)
         self.predictions = {}
-        self.modelAccuracy = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
-        self.modelAccuracyH = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
         self.layerESM = layerESM
         self.layerESMTag = f'ESM Layer {self.layerESM}'
+        accuracyDF = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
+        self.modelAccuracy = {datasetTag: accuracyDF,
+                              datasetTagHigh: accuracyDF}
+        self.modelAccuracyBest = self.modelAccuracy
 
         # Params: Grid search
         # self.paramGrid = {
@@ -5599,11 +5601,10 @@ class RandomForestRegressorXGB:
                 MAE = mean_absolute_error(yPred, yTest)
                 MSE = mean_squared_error(yPred, yTest)
                 R2 = r2_score(yPred, yTest)
-                self.modelAccuracy.loc['MAE', self.layerESMTag] = MAE
-                self.modelAccuracy.loc['MSE', self.layerESMTag] = MSE
-                self.modelAccuracy.loc['R²', self.layerESMTag] = R2
-                print(f'ESM Layer: {self.layerESMTag}\n'
-                      f'{yellow}{self.modelAccuracy}{resetColor}\n\n')
+                self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
+                self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
+                self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
+                print(f'Model Accuracy:\n{self.modelAccuracy[tag]}\n\n')
 
                 # if printData:
                 #     print(f'================================ Training Model '
@@ -5633,7 +5634,6 @@ class RandomForestRegressorXGB:
                 return model, MAE, MSE, R2, accuracy
 
             # Train Models
-            self.bestLayer = {datasetTag: {}, datasetTagHigh: {}}
             self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
             bestMSE = {datasetTag: float('inf'), datasetTagHigh: float('inf')}
             bestMAE = {datasetTag: float('inf'), datasetTagHigh: float('inf')}
@@ -5673,6 +5673,12 @@ class RandomForestRegressorXGB:
                     bestMSE[tag] = MSE
                     self.model = model
                     self.bestParams[tag] = {self.layerESMTag: params}
+                    self.modelAccuracyBest[tag] = pd.DataFrame([MAE, MSE, R2],
+                                                               index=['MAE', 'MSE', 'R²'],
+                                                               columns=[self.layerESMTag])
+
+                    print(f'Current Accuracy: {tag}\n{self.modelAccuracyBest[tag]}\n')
+
                     joblib.dump(self.model, pathModel)
 
                 # Train Model
@@ -5700,13 +5706,24 @@ class RandomForestRegressorXGB:
                         params=params, accuracy=accuracy, path=pathModelH)
                     bestMSE[tag] = MSE
                     self.modelH = modelH
+                    self.modelAccuracy[tag] = modelAccuracy
+                    self.modelAccuracyBest[tag] = pd.DataFrame([MAE, MSE, R2],
+                                                               index=['MAE','MSE','R²'],
+                                                               columns=[self.layerESMTag])
+
+                    print(f'Current Accuracy: {tag}\n{self.modelAccuracyBest[tag]}\n')
+
+
                     self.bestParams[tag] = {self.layerESMTag: params}
+
+
+                    sys.exit()
                     joblib.dump(self.modelH, pathModelH)
 
-                print()
 
-
-                sys.exit()
+                # Display model accuracy
+                for dataset, data in self.modelAccuracy.items():
+                    print(f'Model Accuracy: {pink}{dataset}{resetColor}\n{data}\n\n')
         else:
             self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
