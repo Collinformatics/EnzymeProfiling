@@ -5675,7 +5675,9 @@ class RandomForestRegressorXGB:
                     print(f'Time Training This Model: {red}{round(runtime, 3):,} s'
                           f'{resetColor}\n'
                           f'Time Training All Models: {red}{round(runtimeTotal, 3):,} min'
-                          f'{resetColor}')
+                          f'{resetColor}\n'
+                          f'Training Rate: {red}{round(iteration / runtimeTotal, 3):,} '
+                          f'combinations / min{resetColor}')
                     print(f'========================================'
                           f'========================================\n')
 

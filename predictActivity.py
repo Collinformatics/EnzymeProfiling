@@ -30,7 +30,7 @@ inMinimumSubstrateCount = 1000
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [5, 10, 15, 17, 20, 25, 30] # , 15, 20, 25
+inLayersESM = [30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inBatchSize = 4096 # Batch size for ESM
 inMinES = 0
