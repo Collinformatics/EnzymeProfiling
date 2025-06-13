@@ -72,7 +72,7 @@ resetColor = '\033[0m'
 
 
 # =================================== Define Functions ===================================
-def filePaths(enzyme):
+def getFileNames(enzyme):
     if enzyme.lower() == 'eln' or enzyme.lower() == 'hne':
         enzyme = 'ELN'
         inFileNamesInitialSort = ['ELN-I_S1_L001', 'ELN-I_S1_L002']
@@ -1720,6 +1720,7 @@ class NGS:
 
     def getDatasetTag(self, combinedMotifs=False):
         if combinedMotifs:
+            self.enzymeName
             if len(self.fixedPos) == 1:
                 self.datasetTag = f'Reading Frame {self.fixedAA[0]}@R{self.fixedPos[0]}'
             else:
@@ -5498,8 +5499,13 @@ class RandomForestRegressorXGB:
 
     """
 
-    def __init__(self, dfTrain, dfPred, pathModel, modelTag, datasetTag, datasetTagHigh,
-                 layerESM, testSize, NTrees, device, trainModel=True):
+    def __init__(self, dfTrain, dfPred, pathModel, modelAccuracy, modelTag,
+                 datasetTag, datasetTagHigh, layerESM, testSize, device,
+                 trainModel=True, evalMetric='rmse'):
+        """
+        :param evalMetric: options include 'rmse' and 'mae'
+        """
+
         print('================================== Train Model '
               '==================================')
         print(f'ML Algorithm: {purple}Random Forest Regressor{resetColor}\n'
@@ -5513,10 +5519,8 @@ class RandomForestRegressorXGB:
         self.predictions = {}
         self.layerESM = layerESM
         self.layerESMTag = f'ESM Layer {self.layerESM}'
-        accuracyDF = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
-        self.modelAccuracy = {datasetTag: accuracyDF,
-                              datasetTagHigh: accuracyDF}
-        self.modelAccuracyBest = self.modelAccuracy
+        self.modelAccuracy = modelAccuracy
+        self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
 
         # Params: Grid search
         self.paramGrid = {
@@ -5578,8 +5582,7 @@ class RandomForestRegressorXGB:
             paramNames = list(self.paramGrid.keys())
 
 
-            def trainModel(model, xTrain, xTest, yTrain, yTest, tag,
-                           bestScoreMAE, bestScoreMSE, bestScoreR2):
+            def trainModel(model, pathModel, xTrain, xTest, yTrain, yTest, tag):
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
@@ -5590,20 +5593,38 @@ class RandomForestRegressorXGB:
                 yPred = model.predict(xTest)
                 if 'cuda' in self.device:
                     yTest = yTest.get()
-                accuracy = pd.DataFrame({
+                accuracyAllVals = pd.DataFrame({
                     'yPred_log': yPred,
                     'yTest_log': yTest,
                 })
                 yPred = np.expm1(yPred)  # Reverse log1p transform
                 yTest = np.expm1(yTest)
-                accuracy.loc[:, 'yPred'] = yPred
-                accuracy.loc[:, 'yTest'] = yTest
+                accuracyAllVals.loc[:, 'yPred'] = yPred
+                accuracyAllVals.loc[:, 'yTest'] = yTest
                 MAE = mean_absolute_error(yPred, yTest)
                 MSE = mean_squared_error(yPred, yTest)
                 R2 = r2_score(yPred, yTest)
-                self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
-                self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
-                self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
+                accuracy = pd.DataFrame()
+                accuracy.loc['MAE', self.layerESMTag] = MAE
+                accuracy.loc['MSE', self.layerESMTag] = MSE
+                accuracy.loc['R²', self.layerESMTag] = R2
+
+                # Inspect results
+                if (self.layerESMTag not in self.modelAccuracy[tag].columns or
+                        (accuracy.loc[indexEvalMetric, self.layerESMTag] <
+                         self.modelAccuracy[tag].loc[indexEvalMetric, self.layerESMTag])):
+                    self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
+                    self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
+                    self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
+                    self.model = model
+                    self.bestParams[tag] = {self.layerESMTag: params}
+                    self.printBestParams(
+                        dataTag=tag, iteration=iteration, MAE=MAE, MSE=MSE, R2=R2,
+                        params=params, accuracy=accuracy, path=pathModel)
+                    joblib.dump(self.model, pathModel)
+                print(f'Eval: {indexEvalMetric}\n'
+                      f'{red}{self.modelAccuracy[tag].loc[
+                          indexEvalMetric, self.layerESMTag]}{resetColor}\n\n')
 
                 if printData:
                     print(f'Combination: {red}{iteration}{resetColor} / '
@@ -5616,33 +5637,27 @@ class RandomForestRegressorXGB:
                           f'{round(testSize * 100, 0)}{resetColor}\n'
                           f'     Train: {blue}{xTrain.shape}{resetColor}\n'
                           f'     Test: {blue}{xTest.shape}{resetColor}\n')
-                    # print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
-                    #       f'Best MAE: {yellow}{round(bestScoreMAE, 3):,}{resetColor}\n'
-                    #       f'     MAE: {yellow}{round(MAE, 3):,}{resetColor}\n\n'
-                    #       f'Best MSE: {yellow}{round(bestScoreMSE, 3):,}{resetColor}\n'
-                    #       f'     MSE: {yellow}{round(MSE, 3):,}{resetColor}\n\n'
-                    #       f'Best R2: {yellow}{round(bestScoreR2, 3):,}{resetColor}\n'
-                    #       f'     R2: {yellow}{round(R2, 3):,}{resetColor}\n')
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
-                              f'{yellow}{values}{resetColor}\n\n'
-                              f'Most Accurate Model:\n'
-                              f'{yellow}{self.modelAccuracyBest[dataset]}'
-                              f'{resetColor}\n\n')
+                              f'{yellow}{values}{resetColor}\n\n')
                     print(f'Time Training Model: {red}{round(runtime, 3):,} min'
                           f'{resetColor}\n'
                           f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
                           f'{resetColor}\n\n')
 
-                return model, MAE, MSE, R2, accuracy
+                return model, accuracy
+
+            # Evaluation metric
+            if evalMetric == 'rmse':
+                indexEvalMetric = 'MSE'
+            elif evalMetric == 'mae':
+                indexEvalMetric = 'MAE'
+            else:
+                print(f'{orange}ERROR: There is no use for the evaluation metric '
+                      f'{cyan}{evalMetric}\n\n')
+                sys.exit(1)
 
             # Train Models
-            self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
-            bestMSE = {datasetTag: float('inf'), datasetTagHigh: float('inf')}
-            bestMAE = {datasetTag: float('inf'), datasetTagHigh: float('inf')}
-            bestR2 = {datasetTag: float('-inf'), datasetTagHigh: float('-inf')}
-            evalMetric = 'rmse'
-            results = {}
             startTraining = time.time()
             totalParamCombos = len(paramCombos)
             for iteration, paramCombo in enumerate(paramCombos):
@@ -5652,66 +5667,25 @@ class RandomForestRegressorXGB:
 
                 # Train Model
                 tag = datasetTag
-                model, MAE, MSE, R2, accuracy = trainModel(
+                model, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
                                        **params),
-                    xTrain=xTraining, yTrain=yTraining,
-                    xTest=xTesting, yTest=yTesting,
-                    tag=tag, bestScoreMAE=bestMAE[tag],
-                    bestScoreMSE=bestMSE[tag], bestScoreR2=bestR2[tag])
-
-                # Inspect results
-                results[tag] = {str(iteration): (MSE, params)}
-                if R2 > bestR2[tag]:
-                    bestR2[tag] = R2
-                if MAE < bestMAE[tag]:
-                    bestMAE[tag] = MAE
-                if MSE < bestMSE[tag]:
-                    self.printBestParams(
-                        dataTag=tag, iteration=iteration, MAE=MAE, MSE=MSE, R2=R2,
-                        params=params, accuracy=accuracy, path=pathModel)
-                    bestMSE[tag] = MSE
-                    self.model = model
-                    self.bestParams[tag] = {self.layerESMTag: params}
-                    self.modelAccuracyBest[tag] = pd.DataFrame([MAE, MSE, R2],
-                                                               index=['MAE', 'MSE', 'R²'],
-                                                               columns=[self.layerESMTag])
-                    joblib.dump(self.model, pathModel)
-
+                    pathModel=pathModel, xTrain=xTraining, yTrain=yTraining,
+                    xTest=xTesting, yTest=yTesting, tag=tag)
 
                 # Train Model
                 tag = datasetTagHigh
-                modelH, MAE, MSE, R2, accuracy = trainModel(
+                modelH, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
                                        **params),
-                    xTrain=xTrainingH, yTrain=yTrainingH,
-                    xTest=xTestingH, yTest=yTestingH,
-                    tag=tag, bestScoreMAE=bestMAE[tag],
-                    bestScoreMSE=bestMSE[tag],bestScoreR2=bestR2[tag])
-
-                # Inspect results
-                results[tag] = {str(iteration): (MSE, params)}
-                if R2 > bestR2[tag]:
-                    bestR2[tag] = R2
-                if MAE < bestMAE[tag]:
-                    bestMAE[tag] = MAE
-                if MSE < bestMSE[tag]:
-                    self.printBestParams(
-                        dataTag=tag, iteration=iteration, MAE=MAE, MSE=MSE, R2=R2,
-                        params=params, accuracy=accuracy, path=pathModelH)
-                    bestMSE[tag] = MSE
-                    self.modelH = modelH
-                    self.bestParams[tag] = {self.layerESMTag: params}
-                    self.modelAccuracyBest[tag] = pd.DataFrame([MAE, MSE, R2],
-                                                               index=['MAE','MSE','R²'],
-                                                               columns=[self.layerESMTag])
-                    joblib.dump(self.modelH, pathModelH)
+                    pathModel=pathModelH, xTrain=xTrainingH, yTrain=yTrainingH,
+                    xTest=xTestingH, yTest=yTestingH, tag=tag)
         else:
             self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
@@ -5837,6 +5811,11 @@ class PredictActivity:
         self.accuracyDF = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
         self.modelAccuracy = {self.subsetTag: self.accuracyDF,
                               self.subsetTagHigh: self.accuracyDF}
+        self.pathModelAccuracy = os.path.join(
+            self.pathModels, f'Model Accuracy - {modelType} - {enzymeName} - '
+                             f'{datasetTag} - MinCounts {minSubCount}')
+        self.pathModelAccuracy = self.pathModelAccuracy.replace(':', '')
+        self.loadModelAccuracies(tags=[self.subsetTag, self.subsetTagHigh])
         self.layersESM = layersESM
         self.batchSize = batchSize
         self.testingSetSize = testSize
@@ -5858,6 +5837,30 @@ class PredictActivity:
             self.sizeESM = '650M Params'
 
         self.modelType = modelType
+
+        # Display Initial Accuracies
+        for tag, values in self.modelAccuracy.items():
+            print(f'Tag: {tag}\n'
+                  f'{values}\n\n')
+
+
+    def loadModelAccuracies(self, tags):
+        for tag in tags:
+            path = self.pathModelAccuracy.replace('MinCounts',
+                                                  f'{tag} - MinCounts')
+            print(f'Loading Accuracy Values: {pink}{tag}{resetColor}')
+            print(f'Path:\n     {path}\n\n')
+            if os.path.exists(path):
+                print('=========================== Loading Model Accuracies '
+                      '============================')
+                print(f'Loading File:\n'
+                      f'     {greenDark}{path}{resetColor}\n')
+                values = pd.read_csv(path, index_col=0)
+                self.modelAccuracy[tag] = values
+                print(f'Loaded Values: {pink}{tag}{resetColor}\n'
+                      f'{self.modelAccuracy[tag]}\n\n')
+        sys.exit()
+
 
 
     def trainModel(self):
@@ -5910,7 +5913,7 @@ class PredictActivity:
                 sys.exit()
 
             # Select a model to train
-            if self.modelType == 'Scikit-Learn: Random Forest Regressor':
+            if self.modelType == 'Random Forest Regressor: Scikit-Learn':
                 # Model: Scikit-Learn Random Forest Regressor
                 RandomForestRegressor = RandomForestRegressor(
                     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
@@ -5920,14 +5923,14 @@ class PredictActivity:
                     printNumber=self.printNumber)
                 self.modelAccuracy = randomForestRegressorXGB.modelAccuracy
                 self.predictions[self.modelType] = RandomForestRegressor.predictions
-            elif self.modelType == 'XGBoost: Random Forest Regressor':
+            elif self.modelType == 'Random Forest Regressor: XGBoost':
                 # Model: XGBoost Random Forest
                 randomForestRegressorXGB = RandomForestRegressorXGB(
                     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-                    pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
+                    pathModel=pathModelXGBoost, modelAccuracy=self.modelAccuracy,
+                    modelTag=modelTagXGBoost,
                     datasetTag=self.subsetTag, datasetTagHigh=self.subsetTagHigh,
-                    layerESM=layerESM, testSize=self.testingSetSize, NTrees=self.NTrees,
-                    device=self.device)
+                    layerESM=layerESM, testSize=self.testingSetSize, device=self.device)
 
                 # Record predictions
                 self.predictions[self.modelType] = randomForestRegressorXGB.predictions
@@ -6146,5 +6149,11 @@ class PredictActivity:
               '=============================')
         print(f'ML Model: {purple}{self.modelType}{resetColor}\n'
               f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
-        for dataset, value in self.modelAccuracy.items():
-            print(f'Accuracies: {pink}{dataset}\n{greenLight}{value}{resetColor}\n\n')
+        for dataset, values in self.modelAccuracy.items():
+            pathSave = self.pathModelAccuracy.replace('MinCounts',
+                                                      f'{dataset} - MinCounts')
+            print(f'Accuracies: {pink}{dataset}\n{greenLight}{values}{resetColor}\n\n')
+            print(f'Saving Model Accuracies:\n'
+                  f'     {pathSave}\n\n')
+            values.to_csv(pathSave)
+

@@ -1,4 +1,4 @@
-from functions import filePaths, NGS, PredictActivity
+from functions import getFileNames, NGS, PredictActivity
 import pandas as pd
 import sys
 
@@ -17,6 +17,7 @@ inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
+inUseFilteredReadingFrame = True
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
@@ -26,10 +27,10 @@ inExcludedPosition = [8]
 inMinimumSubstrateCount = 5000
 
 # Input 4: Machine Learning
-inModelTypes = ['Scikit-Learn: Random Forest Regressor',
-                'XGBoost: Random Forest Regressor']
+inModelTypes = ['Random Forest Regressor: Scikit-Learn',
+                'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [5, 10, 15, 20, 25]
+inLayersESM = [5, 10] # , 15, 20, 25
 inTestSize = 0.2
 inBatchSize = 4096 # Batch size for ESM
 inMinES = 0
@@ -111,7 +112,7 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 # Load: Dataset labels
-enzymeName, filesInitial, filesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
+enzymeName, filesInitial, filesFinal, labelAAPos = getFileNames(enzyme=inEnzymeName)
 motifLen = len(inMotifPositions)
 motifFramePos = [inIndexNTerminus, inIndexNTerminus + motifLen]
 
@@ -212,9 +213,6 @@ class GradBoostingRegressorXGB:
 
 
 # ====================================== Load data =======================================
-# Set param
-combinedMotifs = True
-
 # Load: Counts
 countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
 
@@ -225,8 +223,19 @@ probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitia
 # Load: Substrates
 substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
+
 # Get dataset tag
-ngs.getDatasetTag(combinedMotifs=combinedMotifs)
+ngs.getDatasetTag(combinedMotifs=inUseFilteredReadingFrame)
+print(f'Tag: {purple}{ngs.datasetTag}{resetColor}')
+
+paths = ngs.getFilePath(datasetTag=ngs.datasetTag, motifPath=inUseFilteredReadingFrame)
+if inUseFilteredReadingFrame:
+    pathSubstrates, pathSubstrateCounts, _ = paths
+else:
+    pathSubstrates, pathSubstrateCounts = paths
+print(f'Path:\n'
+      f'     {greenDark}{pathSubstrates}{resetColor}\n\n')
+
 
 # Load: Filtered reading frame
 motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
@@ -249,16 +258,16 @@ probMotif = ngs.calculateProbabilities(counts=motifCountsFinal, N=motifsCountsTo
                                        fileType='Final Sort')
 
 # Calculate: Positional entropy
-ngs.calculateEntropy(probability=probMotif, combinedMotifs=combinedMotifs)
+ngs.calculateEntropy(probability=probMotif, combinedMotifs=inUseFilteredReadingFrame)
 
 # Calculate: AA Enrichment
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
-                        combinedMotifs=combinedMotifs)
+                        combinedMotifs=inUseFilteredReadingFrame)
 
 # Evaluate: Sequences
 subsTrain = ngs.processSubstrates(
     subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
-    subLabel=inMotifPositions, combinedMotifs=combinedMotifs)
+    subLabel=inMotifPositions, combinedMotifs=inUseFilteredReadingFrame)
 
 
 # # Predicting Substrate Activity
