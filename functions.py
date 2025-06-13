@@ -5274,16 +5274,16 @@ class RandomForestRegressor:
 
         # Parameters: High value dataset
         self.cutoff = 0.8  # 0.8 = Top 20
-        tag = 'All Substrates'
-        selc.modelTagHigh = f'Top {int(round((100 * (1 - self.cutoff)), 0))} Substrates'
+        self.modelTag = 'All Substrates'
+        self.modelTagHigh = f'Top {int(round((100 * (1 - self.cutoff)), 0))} Substrates'
         pathModelH = pathModel.replace('Test Size',
                                        f'High Values - Test Size {self.testSize}')
-        print(f'Combine predictions with {pink}{selc.modelTagHigh}{resetColor}\n')
+        print(f'Combine predictions with {pink}{self.modelTagHigh}{resetColor}\n')
 
         # # Get Model: Random Forest Regressor
         if os.path.exists(pathModel) and os.path.exists(pathModelH):
             self.model = self.loadModel(pathModel=pathModel, tag=self.modelTag)
-            self.modelH = self.loadModel(pathModel=pathModelH, tag=selc.modelTagHigh)
+            self.modelH = self.loadModel(pathModel=pathModelH, tag=self.modelTagHigh)
         else:
             # Process dataframe
             x = dfTrain.drop(columns='activity').values
@@ -5352,7 +5352,7 @@ class RandomForestRegressor:
             self.model = trainModel(model=RandomForestRegressor(), x=x, y=y,
                                     tag=self.modelTag, path=pathModel, saveModel=True)
             self.modelH = trainModel(model=RandomForestRegressor(), x=xHigh, y=yHigh,
-                                     tag=selc.modelTagHigh, path=pathModelH, saveModel=True)
+                                     tag=self.modelTagHigh, path=pathModelH, saveModel=True)
 
 
         def makePredictions(model, tag):
@@ -5402,7 +5402,7 @@ class RandomForestRegressor:
                     print('\n')
 
         makePredictions(model=self.model, tag=self.modelTag)
-        makePredictions(model=self.modelH, tag=selc.modelTagHigh)
+        makePredictions(model=self.modelH, tag=self.modelTagHigh)
         print(f'Find a way to record multiple predictions.')
 
 
@@ -5498,8 +5498,8 @@ class RandomForestRegressorXGB:
 
     """
 
-    def __init__(self, dfTrain, dfPred, pathModel, modelTag, layerESM, testSize,
-                 NTrees, device, trainModel=True):
+    def __init__(self, dfTrain, dfPred, pathModel, modelTag, datasetTag, datasetTagHigh,
+                 layerESM, testSize, NTrees, device, trainModel=True):
         print('================================== Train Model '
               '==================================')
         print(f'ML Algorithm: {purple}Random Forest Regressor{resetColor}\n'
@@ -5540,11 +5540,9 @@ class RandomForestRegressorXGB:
 
         # Parameters: High value dataset
         self.cutoff = 1 - testSize  # 0.8 = Top 20
-        tag = 'All Substrates'
-        selc.modelTagHigh = f'Top {int(round((100 * (1 - self.cutoff)), 0))} Substrates'
-        pathModelH = pathModel.replace('Embeddings',
-                                       f'High Values - Embeddings')
-        print(f'Combine predictions with {pink}{selc.modelTagHigh}{resetColor}\n')
+        pathModelH = pathModel.replace('Embeddings', f'High Values - Embeddings')
+        print(f'Combine predictions {pink}{datasetTag}{resetColor} with '
+              f'{pink}{datasetTagHigh}{resetColor}\n')
 
         # Process dataframe
         threshold = dfTrain['activity'].quantile(self.cutoff)  # Get High-value subset
@@ -5576,6 +5574,7 @@ class RandomForestRegressorXGB:
             # Generate parameter combinations
             paramCombos = list(product(*self.paramGrid.values()))
             paramNames = list(self.paramGrid.keys())
+
 
             def trainModel(model, xTrain, xTest, yTrain, yTest, tag,
                            bestScoreMAE, bestScoreMSE, bestScoreR2):
@@ -5634,11 +5633,11 @@ class RandomForestRegressorXGB:
                 return model, MAE, MSE, R2, accuracy
 
             # Train Models
-            self.bestLayer = {tag: None, self.modelTagHigh: None}
-            self.bestParams = {tag: None, self.modelTagHigh: None}
-            bestMSE = {tag: float('inf'), self.modelTagHigh: float('inf')}
-            bestMAE = {tag: float('inf'), self.modelTagHigh: float('inf')}
-            bestR2 = {tag: float('-inf'), self.modelTagHigh: float('-inf')}
+            self.bestLayer = {datasetTag: {}, datasetTagHigh: {}}
+            self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
+            bestMSE = {datasetTag: float('inf'), datasetTagHigh: float('inf')}
+            bestMAE = {datasetTag: float('inf'), datasetTagHigh: float('inf')}
+            bestR2 = {datasetTag: float('-inf'), datasetTagHigh: float('-inf')}
             evalMetric = 'rmse'
             results = {}
             startTraining = time.time()
@@ -5649,14 +5648,16 @@ class RandomForestRegressorXGB:
                 printData = (iteration % 10 == 0)
 
                 # Train Model
+                tag = datasetTag
                 model, MAE, MSE, R2, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
                                        **params),
-                    xTrain=xTraining, yTrain=yTraining, xTest=xTesting,
-                    yTest=yTesting, tag=self.modelTag, bestScoreMAE=bestMAE[tag],
+                    xTrain=xTraining, yTrain=yTraining,
+                    xTest=xTesting, yTest=yTesting,
+                    tag=tag, bestScoreMAE=bestMAE[tag],
                     bestScoreMSE=bestMSE[tag], bestScoreR2=bestR2[tag])
 
                 # Inspect results
@@ -5667,43 +5668,48 @@ class RandomForestRegressorXGB:
                     bestMAE[tag] = MAE
                 if MSE < bestMSE[tag]:
                     self.printBestParams(
-                        dataTag=self.modelTag, iteration=iteration, MAE=MAE, MSE=MSE, R2=R2,
+                        dataTag=tag, iteration=iteration, MAE=MAE, MSE=MSE, R2=R2,
                         params=params, accuracy=accuracy, path=pathModel)
                     bestMSE[tag] = MSE
                     self.model = model
-                    self.bestParams[tag] = {self.layerESM: params}
+                    self.bestParams[tag] = {self.layerESMTag: params}
                     joblib.dump(self.model, pathModel)
 
                 # Train Model
+                tag = datasetTagHigh
                 modelH, MAE, MSE, R2, accuracy = trainModel(
                     model=XGBRegressor(device=self.device,
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
                                        **params),
-                    xTrain=xTrainingH, yTrain=yTrainingH, xTest=xTestingH,
-                    yTest=yTestingH, tag=self.modelTagHigh, bestScoreMAE=bestMAE[tag],
-                    bestScoreMSE=bestMSE[tag], bestScoreR2=bestR2[tag])
+                    xTrain=xTrainingH, yTrain=yTrainingH,
+                    xTest=xTestingH, yTest=yTestingH,
+                    tag=tag, bestScoreMAE=bestMAE[tag],
+                    bestScoreMSE=bestMSE[tag],bestScoreR2=bestR2[tag])
 
                 # Inspect results
-                results[self.modelTagHigh] = {str(iteration): (MSE, params)}
+                results[tag] = {str(iteration): (MSE, params)}
                 if R2 > bestR2[tag]:
                     bestR2[tag] = R2
                 if MAE < bestMAE[tag]:
                     bestMAE[tag] = MAE
                 if MSE < bestMSE[tag]:
                     self.printBestParams(
-                        dataTag=self.modelTagHigh, iteration=iteration, MAE=MAE, MSE=MSE, R2=R2,
+                        dataTag=tag, iteration=iteration, MAE=MAE, MSE=MSE, R2=R2,
                         params=params, accuracy=accuracy, path=pathModelH)
                     bestMSE[tag] = MSE
                     self.modelH = modelH
                     self.bestParams[tag] = {self.layerESMTag: params}
-                    print(f'New best params: {greenLight}{self.bestParams[tag]}'
-                          f'{resetColor}\n\n')
                     joblib.dump(self.modelH, pathModelH)
+
+                print()
+
+
+                sys.exit()
         else:
-            self.model = self.loadModel(pathModel=pathModel, tag=self.modelTag)
-            self.modelH = self.loadModel(pathModel=pathModelH, tag=self.modelTagHigh)
+            self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
+            self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
 
     def makePredictions(model, tag):
         # Predict substrate activity
@@ -5819,9 +5825,11 @@ class PredictActivity:
         self.predictions = {}
 
         # Parameters: Model
-        self.modelTag, self.modelTagHigh = 'All Substrates', 'Top'
+        self.datasetTag = 'All Substrates'
+        self.datasetTagHigh = f'Top {int(round((100 * testSize), 0))} Substrates'
         self.accuracyDF = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
-        self.modelAccuracy = {'All Substrates': self.accuracyDF, }
+        self.modelAccuracy = {self.datasetTag: self.accuracyDF,
+                              self.datasetTagHigh: self.accuracyDF}
         self.layersESM = layersESM
         self.batchSize = batchSize
         self.testingSetSize = testSize
@@ -5909,13 +5917,18 @@ class PredictActivity:
                 randomForestRegressorXGB = RandomForestRegressorXGB(
                     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                     pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
-                    layerESM=layerESM, testSize=self.testingSetSize,
-                    NTrees=self.NTrees, device=self.device)
+                    datasetTag=self.datasetTag, datasetTagHigh=self.datasetTagHigh,
+                    layerESM=layerESM, testSize=self.testingSetSize, NTrees=self.NTrees,
+                    device=self.device)
                 self.predictions[modelType] = randomForestRegressorXGB.predictions
-                self.modelAccuracy = randomForestRegressorXGB.modelAccuracy
+                self.modelAccuracy[self.datasetTag] = (
+                    {f'ESM Layer {layerESM}': randomForestRegressorXGB.modelAccuracy})
+                print(f'Get Accuracy: Layer {self.modelAccuracy[self.datasetTag]}\n'
+                      f'{randomForestRegressorXGB.modelAccuracy}\n\n')
+                sys.exit()
             else:
-                print(f'{orange}ERROR: There is no use for the modelType {cyan}{modelType}'
-                      f'{resetColor}\n\n')
+                print(f'{orange}ERROR: There is no use for the modelType '
+                      f'{cyan}{modelType}{resetColor}\n\n')
                 sys.exit(1)
 
 
