@@ -5278,7 +5278,7 @@ class RandomForestRegressor:
         self.modelTagHigh = f'Top {int(round((100 * (1 - self.cutoff)), 0))} Substrates'
         pathModelH = pathModel.replace('Test Size',
                                        f'High Values - Test Size {self.testSize}')
-        print(f'Combine predictions with {pink}{self.modelTagHigh}{resetColor}\n')
+
 
         # # Get Model: Random Forest Regressor
         if os.path.exists(pathModel) and os.path.exists(pathModelH):
@@ -5784,7 +5784,7 @@ class RandomForestRegressorXGB:
               f'MSE: {yellow}{round(MAE, 3):,}{resetColor}\n'
               f'MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
               f'R2: {yellow}{round(R2, 3):,}{resetColor}\n'
-              f'Params: {greenLight}{params}{resetColor}{resetColor}'
+              f'Params: {greenLight}{params}{resetColor}{resetColor}\n'
               f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
               f'Saving Trained Model:\n'
               f'     {greenDark}{path}{resetColor}\n')
