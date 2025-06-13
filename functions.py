@@ -5572,6 +5572,19 @@ class RandomForestRegressorXGB:
             xTrainingH, yTrainingH = cupy.array(xTrainingH), cupy.array(yTrainingH)
             xTestingH, yTestingH = cupy.array(xTestingH), cupy.array(yTestingH)
 
+        print(f'Training Data: {purple}{datasetTag}{resetColor}\n'
+              f'Splitting Training Set: '
+              f'{blue}{round((1 - testSize) * 100, 0)}{pink}:{blue}'
+              f'{round(testSize * 100, 0)}{resetColor}\n'
+              f'     Train: {blue}{xTraining.shape}{resetColor}\n'
+              f'     Test: {blue}{xTesting.shape}{resetColor}\n')
+        print(f'Training Data: {purple}{datasetTagHigh}{resetColor}\n'
+              f'Splitting Training Set: '
+              f'{blue}{round((1 - testSize) * 100, 0)}{pink}:{blue}'
+              f'{round(testSize * 100, 0)}{resetColor}\n'
+              f'     Train: {blue}{xTrainingH.shape}{resetColor}\n'
+              f'     Test: {blue}{xTestingH.shape}{resetColor}\n\n')
+
 
         # # Train Or Load Model: Random Forest Regressor
         if (trainModel or
@@ -5644,12 +5657,6 @@ class RandomForestRegressorXGB:
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
                           f'Parameters: {greenLight}{params}{resetColor}\n')
-                    print(f'Training Data: {purple}{tag}{resetColor}\n'
-                          f'Splitting Training Set: '
-                          f'{blue}{round((1 - testSize) * 100, 0)}{pink}:{blue}'
-                          f'{round(testSize * 100, 0)}{resetColor}\n'
-                          f'     Train: {blue}{xTrain.shape}{resetColor}\n'
-                          f'     Test: {blue}{xTest.shape}{resetColor}\n')
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
                               f'{yellow}{values}{resetColor}\n\n')
