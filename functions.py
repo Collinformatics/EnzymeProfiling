@@ -5663,6 +5663,7 @@ class RandomForestRegressorXGB:
                     print(f'Combination: {red}{iteration}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
+                          f'ESM Layer: {greenLight}{self.layerESM}{resetColor}\n'
                           f'Parameters: {greenLight}{params}{resetColor}\n')
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
