@@ -5667,9 +5667,9 @@ class RandomForestRegressorXGB:
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
                               f'{yellow}{values}{resetColor}\n')
-                    print(f'Time Training Model: {red}{round(runtime, 3):,} s'
+                    print(f'Time Training This Model: {red}{round(runtime, 3):,} s'
                           f'{resetColor}\n'
-                          f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
+                          f'Time Training All Models: {red}{round(runtimeTotal, 3):,} min'
                           f'{resetColor}')
                     print(f'========================================'
                           f'========================================\n')
