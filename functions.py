@@ -5634,8 +5634,6 @@ class RandomForestRegressorXGB:
                         (accuracy.loc[indexEvalMetric, self.layerESMTag] <
                          self.modelAccuracy[tag].loc[indexEvalMetric, self.layerESMTag])):
                     saveModel = True
-                    print(f'{cyan}New Best Model{resetColor}: '
-                          f'{yellow}{self.layerESMTag}{resetColor}')
                     self.bestParams[tag] = {self.layerESMTag: params}
                     self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
                     self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
@@ -5646,24 +5644,35 @@ class RandomForestRegressorXGB:
                     sortedColumns = (
                         sorted(self.modelAccuracy[tag].columns, key=getLayerNumber))
                     self.modelAccuracy[tag] = self.modelAccuracy[tag][sortedColumns]
-                    print(f'{red}{round(self.modelAccuracy[tag], 3)}{resetColor}\n\n')
+
+                    # print(f'{yellow}New Best Model{resetColor}: '
+                    #       f'{pink}{self.layerESMTag}{resetColor}\n'
+                    #       f'Combination: {red}{iteration}{resetColor} / '
+                    #       f'{red}{totalParamCombos}{resetColor} '
+                    #       f'({red}{percentComplete} %{resetColor})\n'
+                    #       f'Training Subset: {pink}{tag}\n
+                    #       '{red}{round(self.modelAccuracy[tag], 3)}{resetColor}\n')
 
                     # Save the data
                     self.modelAccuracy[tag].to_csv(modelAccuracyPaths[tag])
                     joblib.dump(model, modelPaths[tag])
 
                 if printData and lastIteration:
+                    print(f'============================== Training Progress '
+                          f'===============================')
                     print(f'Combination: {red}{iteration}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
                           f'Parameters: {greenLight}{params}{resetColor}\n')
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
-                              f'{yellow}{values}{resetColor}\n\n')
+                              f'{yellow}{values}{resetColor}\n')
                     print(f'Time Training Model: {red}{round(runtime, 3):,} min'
                           f'{resetColor}\n'
                           f'Total Training Time: {red}{round(runtimeTotal, 3):,} min'
-                          f'{resetColor}\n\n')
+                          f'{resetColor}')
+                    print(f'========================================'
+                          f'========================================\n')
 
                 return model, saveModel
 
@@ -5683,7 +5692,7 @@ class RandomForestRegressorXGB:
             for iteration, paramCombo in enumerate(paramCombos):
                 params = dict(zip(paramNames, paramCombo))
                 percentComplete = round((iteration / totalParamCombos) * 100, 3)
-                printData = (iteration % 10 == 0)
+                printData = (iteration % 25 == 0)
 
                 # Train Model
                 tag = datasetTag
