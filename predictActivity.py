@@ -25,11 +25,12 @@ inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 5000
 
-# Input 4: Machine Learning Model
+# Input 4: Machine Learning
 inModelTypes = ['Scikit-Learn: Random Forest Regressor',
                 'XGBoost: Random Forest Regressor']
 inModelType = inModelTypes[1]
 inLayersESM = [5,10,15,20]
+inTestSize = 0.2
 inBatchSize = 4096 # Batch size for ESM
 inMinES = 0
 inSubsPred = {
@@ -278,7 +279,7 @@ predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
     subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
     tagChosenSubs=tagPredSubs, minSubCount=inMinimumSubstrateCount,
-    layersESM=inLayersESM, minES=inMinES, batchSize=inBatchSize,
+    layersESM=inLayersESM, minES=inMinES, testSize=inTestSize, batchSize=inBatchSize,
     labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
 
 predictions.trainModel(modelType=inModelType)

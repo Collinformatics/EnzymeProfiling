@@ -1,5 +1,4 @@
 # PURPOSE: This script contains the functions that you will need to process your NGS data
-from operator import index
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -13,7 +12,6 @@ import logomaker
 import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
-from matplotlib.pyplot import ylabel
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import RectangleSelector
 from sklearn.decomposition import PCA
@@ -24,6 +22,8 @@ import pandas as pd
 import pickle as pk
 import random
 import seaborn as sns
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import train_test_split
 import sys
 import threading
 import time
@@ -5273,9 +5273,9 @@ class RandomForestRegressor:
         subsPred = list(dfPred.index)
 
         # Parameters: High value dataset
-        cutoff = 0.8  # 0.8 = Top 20
+        self.cutoff = 0.8  # 0.8 = Top 20
         tag = 'All Substrates'
-        tagHigh = f'Top {int(round((100 * (1 - cutoff)), 0))} Substrates'
+        tagHigh = f'Top {int(round((100 * (1 - self.cutoff)), 0))} Substrates'
         pathModelH = pathModel.replace('Test Size',
                                        f'High Values - Test Size {self.testSize}')
         print(f'Combine predictions with {pink}{tagHigh}{resetColor}\n')
@@ -5285,15 +5285,12 @@ class RandomForestRegressor:
             self.model = self.loadModel(pathModel=pathModel, tag=tag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
         else:
-            from sklearn.model_selection import train_test_split
-            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-
             # Process dataframe
             x = dfTrain.drop(columns='activity').values
             y = np.log1p(dfTrain['activity'].values)
 
             # Get High-value subset
-            threshold = dfTrain['activity'].quantile(cutoff)
+            threshold = dfTrain['activity'].quantile(self.cutoff)
             dfHigh = dfTrain[dfTrain['activity'] > threshold]
             xHigh = dfHigh.drop(columns='activity').values
             yHigh = np.log1p(dfHigh['activity'].values)
@@ -5510,7 +5507,6 @@ class RandomForestRegressorXGB:
               f'Model: {purple}{modelTag}{resetColor}\n')
 
         from sklearn.model_selection import train_test_split
-        from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
         from xgboost import XGBRegressor
 
         self.device = device
@@ -5525,13 +5521,18 @@ class RandomForestRegressorXGB:
         self.layerESM = layerESM
 
         # Params: Grid search
+        # self.paramGrid = {
+        #     'colsample_bytree': np.arange(0.6, 1.0, 0.2),
+        #     'learning_rate': [0.01, 0.05, 0.1],
+        #     'max_leaves': range(2, 10, 1),
+        #     'min_child_weight': range(1, 5, 1),
+        #     'n_estimators': range(100, 500, 100),
+        #     'subsample': np.arange(0.5, 1.0, 0.1)
+        # }
         self.paramGrid = {
-            'colsample_bytree': np.arange(0.6, 1.0, 0.2),
-            'learning_rate': [0.01, 0.05, 0.1],
-            'max_leaves': range(2, 10, 1),
-            'min_child_weight': range(1, 5, 1),
-            'n_estimators': range(100, 500, 100),
-            'subsample': np.arange(0.5, 1.0, 0.1)
+            'learning_rate': [0.01],
+            'n_estimators': [100],
+            'subsample': [0.5]
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
         # 'max_depth': range(2, 6, 1),
@@ -5541,15 +5542,15 @@ class RandomForestRegressorXGB:
         y = np.log1p(dfTrain['activity'].values)
 
         # Parameters: High value dataset
-        cutoff = 0.8  # 0.8 = Top 20
+        self.cutoff = 1 - testSize  # 0.8 = Top 20
         tag = 'All Substrates'
-        tagHigh = f'Top {int(round((100 * (1 - cutoff)), 0))} Substrates'
+        tagHigh = f'Top {int(round((100 * (1 - self.cutoff)), 0))} Substrates'
         pathModelH = pathModel.replace('Embeddings',
                                        f'High Values - Embeddings')
         print(f'Combine predictions with {pink}{tagHigh}{resetColor}\n')
 
         # Process dataframe
-        threshold = dfTrain['activity'].quantile(cutoff)  # Get High-value subset
+        threshold = dfTrain['activity'].quantile(self.cutoff)  # Get High-value subset
         dfHigh = dfTrain[dfTrain['activity'] > threshold]
         xHigh = dfHigh.drop(columns='activity').values
         yHigh = np.log1p(dfHigh['activity'].values)
@@ -5571,8 +5572,6 @@ class RandomForestRegressorXGB:
             xTrainingH, yTrainingH = cupy.array(xTrainingH), cupy.array(yTrainingH)
             xTestingH, yTestingH = cupy.array(xTestingH), cupy.array(yTestingH)
 
-
-
         layerTag = f'Layer {self.layerESM}'
 
 
@@ -5583,9 +5582,6 @@ class RandomForestRegressorXGB:
             self.model = self.loadModel(pathModel=pathModel, tag=tag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=tagHigh)
         else:
-            from sklearn.model_selection import train_test_split
-            from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-
             # Split datasets
             xTraining, xTesting, yTraining, yTesting = train_test_split(
                 x, y, test_size=testSize, random_state=19)
@@ -5822,7 +5818,7 @@ class RandomForestRegressorXGB:
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsPred,
                  subsPredChosen, tagChosenSubs, minSubCount, minES,
-                 layersESM, batchSize, labelsXAxis, printNumber, modelSize=2):
+                 layersESM, testSize, batchSize, labelsXAxis, printNumber, modelSize=2):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
@@ -5845,10 +5841,12 @@ class PredictActivity:
         self.predictions = {}
 
         # Parameters: Model
-        self.modelAccuracy = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
+        self.modelTag, self.modelTagHigh = 'All Substrates', 'Top'
+        self.accuracyDF = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
+        self.modelAccuracy = {'All Substrates'}
         self.layersESM = layersESM
         self.batchSize = batchSize
-        self.testingSetSize = 0.2
+        self.testingSetSize = testSize
         self.NTrees = 100
         self.device = self.getDevice()
         self.embeddingsNameESM = ''
@@ -5933,12 +5931,11 @@ class PredictActivity:
                 randomForestRegressorXGB = RandomForestRegressorXGB(
                     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                     subsPredChosen=self.subsPredChosen, minES=self.minES,
-                    pathModel=pathModelXGBoost, modelAccuracy=self.modelAccuracy,
-                    modelTag=modelTagXGBoost, layerESM=layerESM,
-                    testSize=self.testingSetSize, NTrees=self.NTrees, device=self.device,
-                    printNumber=self.printNumber)
-
+                    pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
+                    layerESM=layerESM, testSize=self.testingSetSize, NTrees=self.NTrees,
+                    device=self.device, printNumber=self.printNumber)
                 self.predictions[modelType] = randomForestRegressorXGB.predictions
+                self.modelAccuracy = randomForestRegressorXGB.modelAccuracy
             else:
                 print(f'{orange}ERROR: There is no use for the modelType {cyan}{modelType}'
                       f'{resetColor}\n\n')
