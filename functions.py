@@ -6147,4 +6147,4 @@ class PredictActivity:
         print(f'ML Model: {purple}{self.modelType}{resetColor}\n'
               f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
         for dataset, value in self.modelAccuracy.items():
-            print(f'Subset: {pink}{dataset}\n{greenLight}{value}{resetColor}\n\n')
+            print(f'Accuracies: {pink}{dataset}\n{greenLight}{value}{resetColor}\n\n')
