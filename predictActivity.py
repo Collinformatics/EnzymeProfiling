@@ -284,11 +284,11 @@ predictions = PredictActivity(
 
 predictions.trainModel(modelType=inModelType)
 print(f'Prediction Accuracies:\n'
-      f'{red}{predictions.modelAccuracy}{resetColor}\n\n')
-sys.exit()
+      f'{red}{predictions.modelAccuracy}{resetColor}')
 
-# Evaluate: Predictions
-ngs.processSubstrates(
-    subsInit=None, subsFinal=None, motifs=predictions.predictions,
-    subLabel=inMotifPositions, predActivity=True)
+
+# # Evaluate: Predictions
+# ngs.processSubstrates(
+#     subsInit=None, subsFinal=None, motifs=predictions.predictions,
+#     subLabel=inMotifPositions, predActivity=True)
 
