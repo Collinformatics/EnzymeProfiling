@@ -29,7 +29,7 @@ inMinimumSubstrateCount = 5000
 inModelTypes = ['Scikit-Learn: Random Forest Regressor',
                 'XGBoost: Random Forest Regressor']
 inModelType = inModelTypes[1]
-inLayersESM = [1, 3, 5, 10, 15, 20, 25]
+inLayersESM = [1, 3, 5] # , 10, 15, 20, 25
 inTestSize = 0.2
 inBatchSize = 4096 # Batch size for ESM
 inMinES = 0
@@ -40,7 +40,7 @@ inGeneratedSubsFilter = { # Restrictions for generated substrates
     'R4': ['Q']
 }
 
-# Input 4: Figures
+# Input 5: Figures
 inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = False
@@ -64,14 +64,14 @@ inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
 inShowSampleSize = True  # Include the sample size in your figures
 
-# Input 5: Processing The data
+# Input 6: Processing The data
 inPrintNumber = 10
 
-# Input 6: Plot Heatmap
+# Input 7: Plot Heatmap
 inShowEnrichmentScores = True
 inShowEnrichmentAsSquares = False
 
-# Input 7: Plot Sequence Motif
+# Input 8: Plot Sequence Motif
 inNormLetters = False  # Normalize fixed letter heights
 inPlotWeblogoMotif = False
 inShowWeblogoYTicks = True
@@ -79,18 +79,13 @@ inAddHorizontalLines = False
 inPlotNegativeWeblogoMotif = False
 inBigLettersOnTop = False
 
-# Input 8: Motif Enrichment
+# Input 9: Motif Enrichment
 inPlotNBars = 50
 
-# Input 9: Word Cloud
+# Input 10: Word Cloud
 inLimitWords = True
 inTotalWords = inPlotNBars
 
-# Input 10: PCA
-inNumberOfPCs = 2
-inTotalSubsPCA = int(5 * 10 ** 4)
-inIncludeSubCountsESM = True
-inPlotEntropyPCAPopulations = False
 
 
 
@@ -137,8 +132,8 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotFigPCA=inPlotPCA,
-          numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=False,
-          saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
+          numPCs=None, NSubsPCA=None, plotSuffixTree=False, saveFigures=inSaveFigures,
+          setFigureTimer=inSetFigureTimer)
 
 
 

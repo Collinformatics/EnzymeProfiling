@@ -5527,11 +5527,11 @@ class RandomForestRegressorXGB:
             'n_estimators': range(100, 200, 100),
             'subsample': np.arange(0.5, 1.0, 0.1)
         }
-        # self.paramGrid = {
-        #     'learning_rate': [0.01],
-        #     'n_estimators': [100],
-        #     'subsample': [0.5]
-        # }
+        self.paramGrid = {
+            'learning_rate': [0.01],
+            'n_estimators': [100],
+            'subsample': [0.5]
+        }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
         # 'max_depth': range(2, 6, 1),
 
@@ -5680,6 +5680,7 @@ class RandomForestRegressorXGB:
                                                                index=['MAE', 'MSE', 'R²'],
                                                                columns=[self.layerESMTag])
                     joblib.dump(self.model, pathModel)
+
 
                 # Train Model
                 tag = datasetTagHigh
@@ -5831,11 +5832,11 @@ class PredictActivity:
         self.predictions = {}
 
         # Parameters: Model
-        self.datasetTag = 'All Substrates'
-        self.datasetTagHigh = f'Top {int(round((100 * testSize), 0))} Substrates'
+        self.subsetTag = 'All Substrates'
+        self.subsetTagHigh = f'Top {int(round((100 * testSize), 0))} Substrates'
         self.accuracyDF = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
-        self.modelAccuracy = {self.datasetTag: self.accuracyDF,
-                              self.datasetTagHigh: self.accuracyDF}
+        self.modelAccuracy = {self.subsetTag: self.accuracyDF,
+                              self.subsetTagHigh: self.accuracyDF}
         self.layersESM = layersESM
         self.batchSize = batchSize
         self.testingSetSize = testSize
@@ -5924,7 +5925,7 @@ class PredictActivity:
                 randomForestRegressorXGB = RandomForestRegressorXGB(
                     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                     pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
-                    datasetTag=self.datasetTag, datasetTagHigh=self.datasetTagHigh,
+                    datasetTag=self.subsetTag, datasetTagHigh=self.subsetTagHigh,
                     layerESM=layerESM, testSize=self.testingSetSize, NTrees=self.NTrees,
                     device=self.device)
 
@@ -6143,6 +6144,7 @@ class PredictActivity:
     def predictionAccuracies(self):
         print('============================= Prediction Accuracies '
               '=============================')
-        print(f'ML Model: {purple}{self.modelType}{resetColor}')
+        print(f'ML Model: {purple}{self.modelType}{resetColor}\n'
+              f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
         for dataset, value in self.modelAccuracy.items():
-            print(f'Dataset: {pink}{dataset}\n{greenLight}{value}{resetColor}\n\n')
+            print(f'Subset: {pink}{dataset}\n{greenLight}{value}{resetColor}\n\n')
