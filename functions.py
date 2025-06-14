@@ -1375,9 +1375,10 @@ class NGS:
 
 
 
-    def recordSampleSize(self, NInitial, NFinal):
+    def recordSampleSize(self, NInitial, NFinal, NFinalUnique):
         print('============================== Current Sample Size '
               '==============================')
+        self.nSubsFinalUniqueSeqs = NFinalUnique
         if isinstance(NInitial, int) and isinstance(NFinal, int):
             # Update: Sample size
             self.nSubsInitial = NInitial
@@ -1719,7 +1720,6 @@ class NGS:
 
     def getDatasetTag(self, combinedMotifs=False):
         if combinedMotifs:
-            self.enzymeName
             if len(self.fixedPos) == 1:
                 self.datasetTag = f'Reading Frame {self.fixedAA[0]}@R{self.fixedPos[0]}'
             else:
@@ -1746,8 +1746,8 @@ class NGS:
                     for index, removedAA in enumerate(self.excludeAA):
                         if index == 0:
                             fixResidueList.append(
-                                f'Excl-{removedAA}@R{self.excludePosition[index]}'.replace(
-                                    ' ', ''))
+                                f'Exclude_{removedAA}@R'
+                                f'{self.excludePosition[index]}'.replace(' ', ''))
                         else:
                             fixResidueList.append(
                                 f'{removedAA}@R{self.excludePosition[index]}'.replace(
@@ -1757,25 +1757,23 @@ class NGS:
                     for index in range(len(self.fixedAA)):
                         if index == 0:
                             fixResidueList.append(
-                                f'Fixed-{self.fixedAA[index]}@R'
+                                f'Fixed_{self.fixedAA[index]}@R'
                                 f'{self.fixedPos[index]}'.replace(' ', ''))
                         else:
                             fixResidueList.append(
-                                f'{self.fixedAA[index]}@R'
+                                f' {self.fixedAA[index]}@R'
                                 f'{self.fixedPos[index]}'.replace(' ', ''))
-    
                     self.datasetTag = '_'.join(fixResidueList)
-                    self.datasetTag = self.datasetTag.replace("_Fixed",
-                                                                ' Fixed')
                 else:
                     # Fix residues
                     for index in range(len(self.fixedAA)):
                         fixResidueList.append(
-                            f'{self.fixedAA[index]}@R'
+                            f' {self.fixedAA[index]}@R'
                             f'{self.fixedPos[index]}'.replace(' ', ''))
     
-                    self.datasetTag = '_'.join(fixResidueList)
-    
+                    self.datasetTag = ' '.join(fixResidueList)
+                    self.datasetTag = self.datasetTag.replace("_", ' ')
+
                 # Condense the string
                 if "'" in self.datasetTag:
                     self.datasetTag = self.datasetTag.replace("'", '')
@@ -1786,7 +1784,8 @@ class NGS:
                     if removeTag in self.datasetTag:
                         # This should be reserved for simplifying dataset tags
                         self.datasetTag = self.datasetTag.replace(removeTag, '')
-                        self.datasetTag = f'Excl-Y{self.datasetTag}'
+                        self.datasetTag = f'Exclude Y{self.datasetTag}'
+                self.datasetTag = self.datasetTag.replace('_', ' ')
             else:
                 self.datasetTag = 'Unfiltered'
     
@@ -2124,7 +2123,8 @@ class NGS:
         if self.motifFilter:
             print(f'Figure Number: '
                   f'{magenta}{self.saveFigureIteration}{resetColor}')
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Unique Substrates: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}\n\n'
               f'{scores}\n\n')
 
 
@@ -2244,6 +2244,8 @@ class NGS:
         if self.motifFilter:
             print(f'Figure Number: '
                   f'{magenta}{self.saveFigureIteration}{resetColor}')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Unique Substrates: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}\n')
         print(f'Residue heights:\n'
               f'{self.heights}\n')
 
@@ -4266,6 +4268,9 @@ class NGS:
                          releasedCounts=False):
         print('============================== Calculate: Entropy '
               '===============================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Unique Sequences: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}\n')
+
         self.entropy = pd.DataFrame(0.0, index=probability.columns, columns=['ΔS'])
         self.entropyMax = np.log2(len(probability.index))
         for indexColumn in probability.columns:
@@ -4300,7 +4305,8 @@ class NGS:
             title = title.replace(self.datasetTag, f'Combined {self.datasetTag}')
         if releasedCounts:
             title = title.replace(self.datasetTag, f'Released {self.datasetTag}')
-
+        # if self.excludeAA:
+        #     title = title.replace(" Fixed", ', Fixed')
 
         # Figure parameters
         yMax = self.entropyMax + 0.2
@@ -5442,7 +5448,6 @@ class RandomForestRegressorXGB:
         self.layerESMTag = f'ESM Layer {self.layerESM}'
         self.modelAccuracy = modelAccuracy
         self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
-        self.runtimes = []
 
         # Params: Grid search
         self.paramGrid = {
@@ -5665,9 +5670,7 @@ class RandomForestRegressorXGB:
                 if printData and lastModel:
                     runtime = round((end - start), 3)
                     runtimeTotal = round((end - startTraining) / 60, 3)
-                    self.runtimes.append(runtime)
-                    runtimeAvg = sum(self.runtimes) / len(self.runtimes)
-                    rate = round(combination / runtimeAvg, 3)
+                    rate = round(combination / runtimeTotal, 3)
                     if rate == 0:
                         timeRemaining = float('inf')
                     else:
@@ -6024,7 +6027,8 @@ class PredictActivity:
         if trainingSet:
             predictions = False
         print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
-              f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
+              f'Total unique substrates: {red}{len(substrates):,}{resetColor}\n'
+              f'ESM Layer: {yellow}{self.layersESM}{resetColor}')
 
         # Load: ESM Embeddings
         pathEmbeddings = os.path.join(self.pathEmbeddings, f'{tagEmbeddings}.csv')
@@ -6136,13 +6140,14 @@ class PredictActivity:
                 runtime = end - start
                 runtimeTotal = (end - startInit) / 60
                 percentCompletion = round((i / batchTotal)* 100, 1)
-                print(f'ESM Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
-                      f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
-                      f'     Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
-                      f'     Runtime: {red}{round(runtime, 3):,} s'
-                      f'{resetColor}\n'
-                      f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
-                      f'{resetColor}\n')
+                if i % 10 == 0:
+                    print(f'ESM Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
+                          f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
+                          f'     Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
+                          f'     Runtime: {red}{round(runtime, 3):,} s'
+                          f'{resetColor}\n'
+                          f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
+                          f'{resetColor}\n')
                 if trainingSet:
                     allValues.extend(values[i:i + self.batchSize])
 

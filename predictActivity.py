@@ -2,6 +2,24 @@ from functions import getFileNames, NGS, PredictActivity
 import pandas as pd
 import sys
 
+# | Layer     | Properties                                                                   |
+# | --------- | ------------------------------------------------------------------------ |
+# | **6–8**   | Early layers start forming **secondary structure** and local motifs.     |
+# | **12–16** | Middle layers capture **functional signals** (useful for contact         |
+#             | prediction and mutational effect predictions). Often sweet spot.         |
+# | **24–30** | Higher layers have stronger **semantic representation**, helpful for     |
+#             | **homology or global fold-related features**.                            |
+# | **33–36** | Final layers often focus on **language model objectives**                |
+#             | (less task-specific); can be noisy for regression/classification.        |
+#             | Sometimes still useful.                                                  |
+
+
+# Averaging:
+#       Mean of layers 26–34: empirically shown to be strong for predictive tasks.
+#       embedding = torch.stack([layer26, ..., layer34]).mean(0)
+#
+#           meanEmbedding = torch.stack(hidden_states[26:35]).mean(dim=0)
+
 
 
 # ===================================== User Inputs ======================================
@@ -18,21 +36,21 @@ inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inModelSize = 1
-inUseFilteredReadingFrame = True
-inUseEnrichmentFactor = True
+inUseFilteredReadingFrame = False
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
-inExcludeResidues = False
+inExcludeResidues = True
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
+inUseEnrichmentFactor = True
 
 # Input 4: Machine Learning
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [36, 30, 25, 20, 15, 10, 5]
+inLayersESM = [16, 14, 12, 8, 6] # [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
@@ -160,15 +178,28 @@ print(f'Tag: {purple}{ngs.datasetTag}{resetColor}')
 paths = ngs.getFilePath(datasetTag=ngs.datasetTag, motifPath=inUseFilteredReadingFrame)
 if inUseFilteredReadingFrame:
     pathSubstrates, pathSubstrateCounts, _ = paths
+
+    # Load: Filtered reading frame
+    motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
+        motifLabel=inMotifPositions, motifIndex=motifFramePos)
 else:
     pathSubstrates, pathSubstrateCounts = paths
+
+    # Load: Substrates
+    motifs, motifsCountsTotal = ngs.loadSubstratesFiltered()
+
+index = 0
+for motif, count in motifs.items():
+    print(motif, count)
+    index += 1
+    if index == 10:
+        break
+
 print(f'Path:\n'
       f'     {greenDark}{pathSubstrates}{resetColor}\n\n')
+sys.exit()
 
 
-# Load: Filtered reading frame
-motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
-    motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
 
 
@@ -201,8 +232,6 @@ if inUseEnrichmentFactor:
 else:
     subsTrain = motifs
 
-# Set option
-pd.set_option('display.max_rows', 10)
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
@@ -210,6 +239,8 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
     df=probMotif, eMap=ngs.eMap, minES=inMinES, dataType='AA Probabilities',
     subsReq=inSubsPred, filter=inGeneratedSubsFilter)
 
+# Set option
+pd.set_option('display.max_rows', 10)
 
 # Predict activity
 predictions = PredictActivity(
