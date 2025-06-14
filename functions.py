@@ -6032,7 +6032,7 @@ class PredictActivity:
             predictions = False
         print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}\n'
-              f'ESM Layer: {yellow}{self.layersESM}{resetColor}')
+              f'ESM Layers: {yellow}{self.layersESM}{resetColor}')
 
         # Load: ESM Embeddings
         pathEmbeddings = os.path.join(self.pathEmbeddings, f'{tagEmbeddings}.csv')
@@ -6131,7 +6131,7 @@ class PredictActivity:
         allEmbeddings = []
         allValues = []
         startInit = time.time()
-        print(f'Generating ESM Embeddings: Layer {yellow}{self.layersESM}{resetColor}')
+        print(f'Generating ESM Embeddings: Layer {yellow}{layerESM}{resetColor}')
         with torch.no_grad():
             for i in range(0, len(batchTokens), self.batchSize):
                 start = time.time()
