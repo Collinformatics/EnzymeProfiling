@@ -1507,7 +1507,9 @@ class NGS:
                     if residue in codonCounts.index:
                         codonCounts.loc[residue, 'Counts'] += 1
                     break
-        codonProbability = pd.DataFrame(index=self.letters, columns=['Probability'], data=0)
+        codonProbability = pd.DataFrame(index=self.letters,
+                                        columns=['Probability'],
+                                        data=0)
         codonProbability['Probability'] = codonCounts['Counts'] / len(codons)
 
         print('Amino Acid Probabilities:')
