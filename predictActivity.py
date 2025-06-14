@@ -18,6 +18,7 @@ inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inUseFilteredReadingFrame = True
+inUseEnrichmentFactor = False
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
@@ -264,10 +265,13 @@ ngs.calculateEntropy(probability=probMotif, combinedMotifs=inUseFilteredReadingF
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
                         combinedMotifs=inUseFilteredReadingFrame)
 
-# Evaluate: Sequences
-subsTrain = ngs.processSubstrates(
-    subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
-    subLabel=inMotifPositions, combinedMotifs=inUseFilteredReadingFrame)
+if inUseEnrichmentFactor:
+    # Evaluate: Sequences
+    subsTrain = ngs.processSubstrates(
+        subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
+        subLabel=inMotifPositions, combinedMotifs=inUseFilteredReadingFrame)
+else:
+    subsTrain = motifs
 
 
 # # Predicting Substrate Activity
@@ -281,9 +285,10 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
     subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
-    tagChosenSubs=tagPredSubs, minSubCount=inMinimumSubstrateCount,
-    layersESM=inLayersESM, minES=inMinES, modelType=inModelType, testSize=inTestSize,
-    batchSize=inBatchSize, labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
+    useEF=useEnrichmentRatio, tagChosenSubs=tagPredSubs,
+    minSubCount=inMinimumSubstrateCount, layersESM=inLayersESM, minES=inMinES,
+    modelType=inModelType, testSize=inTestSize, batchSize=inBatchSize,
+    labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
 predictions.trainModel()
 
 # # Evaluate: Predictions

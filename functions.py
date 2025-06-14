@@ -3088,6 +3088,8 @@ class NGS:
                     limitNBars=True, predActivity=predActivity, predModel=predModel,
                     predType=predType)
 
+        if getCounts:
+            motifs
         return motifEnrichment
 
 
@@ -5681,8 +5683,9 @@ class RandomForestRegressorXGB:
                     print('========================================='
                           '=========================================\n')
                     print('                       ===================================\n')
-
                 return model, saveModel
+
+
 
             # Evaluation metric
             if evalMetric == 'rmse':
@@ -5825,7 +5828,7 @@ class RandomForestRegressorXGB:
 
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsPred,
-                 subsPredChosen, tagChosenSubs, minSubCount, minES, modelType,
+                 subsPredChosen, useEF, tagChosenSubs, minSubCount, minES, modelType,
                  layersESM, testSize, batchSize, labelsXAxis, printNumber, modelSize=2):
         # Parameters: Files
         self.pathFolder = folderPath
@@ -5849,6 +5852,7 @@ class PredictActivity:
         self.predictions = {}
 
         # Parameters: Model
+        self.modelType = modelType
         self.subsetTag = 'All Substrates'
         self.subsetTagHigh = f'Top {int(round((100 * testSize), 0))} Substrates'
         accuracyDF = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
@@ -5870,6 +5874,13 @@ class PredictActivity:
             self.pathModels, f'Model Accuracy - {modelType} - {enzymeName} - '
                              f'{datasetTag} - MinCounts {minSubCount}')
         pathModelAccuracy = pathModelAccuracy.replace(':', '')
+        if useEF:
+            pathModelAccuracy = pathModelAccuracy.replace(
+                'MinCounts', 'Scores EF - MinCounts')
+        else:
+            pathModelAccuracy = pathModelAccuracy.replace(
+                'MinCounts', 'Scores Counts - MinCounts')
+
         self.pathModelAccuracy = {
             self.subsetTag: pathModelAccuracy.replace(
                 'MinCounts', f'{self.subsetTag} - MinCounts'),
@@ -5886,12 +5897,6 @@ class PredictActivity:
         else:
             self.sizeESM = '650M Params'
 
-        self.modelType = modelType
-
-        # Display Initial Accuracies
-        for tag, values in self.modelAccuracy.items():
-            print(f'Tag: {tag}\n'
-                  f'{values}\n\n')
 
 
     def loadModelAccuracies(self):
