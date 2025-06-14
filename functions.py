@@ -5442,6 +5442,7 @@ class RandomForestRegressorXGB:
         self.layerESMTag = f'ESM Layer {self.layerESM}'
         self.modelAccuracy = modelAccuracy
         self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
+        self.runtimes = []
 
         # Params: Grid search
         self.paramGrid = {
@@ -5664,7 +5665,9 @@ class RandomForestRegressorXGB:
                 if printData and lastModel:
                     runtime = round((end - start), 3)
                     runtimeTotal = round((end - startTraining) / 60, 3)
-                    rate = round(combination / runtimeTotal, 3)
+                    self.runtimes.append(runtime)
+                    runtimeAvg = sum(self.runtimes) / len(self.runtimes)
+                    rate = round(combination / runtimeAvg, 3)
                     if rate == 0:
                         timeRemaining = float('inf')
                     else:
