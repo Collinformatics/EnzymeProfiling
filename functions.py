@@ -5706,8 +5706,6 @@ class RandomForestRegressorXGB:
 
                     # Sort the columns
                     if self.sortedColumns == [] or newColumn:
-                        print(f'Adding New Layer: {self.layerESMTag}\n'
-                              f'      New Column: {newColumn}')
                         self.sortedColumns = (
                             sorted(self.modelAccuracy[tag].columns, key=getLayerNumber))
                     self.modelAccuracy[tag] = self.modelAccuracy[tag][self.sortedColumns]
