@@ -1444,11 +1444,9 @@ class NGS:
         # Calculate: Residue Probability
         for position in countsCombinedMotifs.columns:
             prob.loc[:, position] = (countsCombinedMotifs.loc[:, position] /
-                                   columnSums.loc[position, 'Sum'])
-        pd.set_option('display.float_format', '{:,.5f}'.format)
+                                     columnSums.loc[position, 'Sum'])
         print(f'Dataset: {purple}{self.datasetTag}\n'
               f'{green}{prob}{resetColor}\n\n')
-        pd.set_option('display.float_format', '{:,.3f}'.format)
 
         return prob
 
@@ -5717,6 +5715,7 @@ class RandomForestRegressorXGB:
                     joblib.dump(model, modelPaths[tag])
 
                 if printData and lastModel:
+                    sigfig = 4
                     runtime = round((end - start), 3)
                     runtimeTotal = round((end - startTraining) / 60, 3)
                     rate = round(combination / runtimeTotal, 3)

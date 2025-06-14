@@ -78,7 +78,7 @@ inUseEnrichmentFactor = True
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [36, 10, 14, 12, 8, 5] # [36, 30, 25, 20, 15, 10, 5]
+inLayersESM = [30, 25, 14, 12, 8, 5] # [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
@@ -143,7 +143,7 @@ inTotalWords = inPlotNBars
 # Print options
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
-pd.set_option('display.float_format', '{:,.3f}'.format)
+
 
 # Colors:
 white = '\033[38;2;255;255;255m'
