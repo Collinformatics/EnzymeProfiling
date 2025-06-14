@@ -5662,8 +5662,8 @@ class RandomForestRegressorXGB:
                     joblib.dump(model, modelPaths[tag])
 
                 if printData and lastIteration:
-                    print(f'============================== Training Progress '
-                          f'===============================')
+                    print('============================== Training Progress '
+                          '===============================')
                     print(f'Combination: {red}{iteration}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
@@ -5678,8 +5678,9 @@ class RandomForestRegressorXGB:
                           f'{resetColor}\n'
                           f'Training Rate: {red}{round(iteration / runtimeTotal, 3):,} '
                           f'combinations / min{resetColor}')
-                    print(f'========================================'
-                          f'========================================\n')
+                    print('========================================='
+                          '=========================================\n')
+                    print('                       ===================================\n')
 
                 return model, saveModel
 
