@@ -5614,7 +5614,7 @@ class RandomForestRegressorXGB:
 
             def trainModel(model, xTrain, xTest, yTrain, yTest, tag, lastModel=False):
                 if printData and lastModel:
-                    print('========================================='
+                    print('========================================'
                           '=========================================\n')
                     print('                       ===================================\n')
                     print('=============================== Training Progress '
