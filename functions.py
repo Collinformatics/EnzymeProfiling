@@ -5706,7 +5706,7 @@ class RandomForestRegressorXGB:
 
                     # Sort the columns
                     if self.sortedColumns == [] or newColumn:
-                        print(f'Adding New Layer: {self.layerESMTag}'
+                        print(f'Adding New Layer: {self.layerESMTag}\n'
                               f'      New Column: {newColumn}')
                         self.sortedColumns = (
                             sorted(self.modelAccuracy[tag].columns, key=getLayerNumber))
@@ -5806,6 +5806,9 @@ class RandomForestRegressorXGB:
             self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
 
     def makePredictions(model, tag):
+        # Expand prediction values
+        predictedValueScaler = self.maxValue
+
         # Predict substrate activity
         print(f'Predicting Substrate Activity: {purple}{tag}{resetColor}\n'
               f'     Total Substrates: {red}{len(dfPred.index):,}{resetColor}')
@@ -6002,6 +6005,11 @@ class PredictActivity:
             # self.embeddingsSubsPred = self.ESM(
             #     substrates=self.subsPred, layerESM=layerESM,
             #     tagEmbeddings=self.tagEmbeddingsPred)
+
+            # Note: Rank ESM matrix by normalized substrate scores
+            #       Make sure that the model is training on very good substrates
+            print(f'\n{yellow}Idea: Make sure that the model is training on very good'
+                  f' substrates{resetColor}\n')
 
             # End function
             if self.embeddingsSubsTrain is None:

@@ -63,7 +63,7 @@ inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
-inModelSize = 1 # 0 = 15B Params, 1 = 3B Params, 2 = 650M Params
+inModelSize = 1
 inUseFilteredReadingFrame = False
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
@@ -78,7 +78,7 @@ inUseEnrichmentFactor = True
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [16, 14, 12, 8, 5] # [36, 30, 25, 20, 15, 10, 5]
+inLayersESM = [36, 10, 14, 12, 8, 5] # [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
@@ -243,12 +243,13 @@ ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
 
 if inUseEnrichmentFactor:
     # Evaluate: Sequences
-    subsTrain = ngs.processSubstrates(
+    motifs = ngs.processSubstrates(
         subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
         subLabel=inMotifPositions, plotEF=inUseEnrichmentFactor,
         combinedMotifs=inUseFilteredReadingFrame)
-else:
-    subsTrain = motifs
+
+# Normalize substrate scores
+subsTrain = ngs.normalizeValues(substrates=motifs, datasetTag=ngs.datasetTag)
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
