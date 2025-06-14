@@ -63,7 +63,7 @@ inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
-inModelSize = 1
+inModelSize = 1 # 0 = 15B Params, 1 = 3B Params, 2 = 650M Params
 inUseFilteredReadingFrame = False
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
