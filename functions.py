@@ -5598,11 +5598,6 @@ class RandomForestRegressorXGB:
               f'{round(testSize * 100, 0)}{resetColor}\n'
               f'     Train: {yellow}{xTrainingH.shape}{resetColor}\n'
               f'     Test: {yellow}{xTestingH.shape}{resetColor}\n\n')
-        print('========================================='
-              '=========================================\n')
-        print('                       ===================================\n')
-        print('=============================== Training Progress '
-              '===============================')
 
         # # Train Or Load Model: Random Forest Regressor
         if (trainModel or
@@ -5619,6 +5614,11 @@ class RandomForestRegressorXGB:
 
             def trainModel(model, xTrain, xTest, yTrain, yTest, tag, lastModel=False):
                 if printData and lastModel:
+                    print('========================================='
+                          '=========================================\n')
+                    print('                       ===================================\n')
+                    print('=============================== Training Progress '
+                          '===============================')
                     print(f'Combination: {red}{combination}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
@@ -5697,11 +5697,6 @@ class RandomForestRegressorXGB:
                           f'{red}{rate:,} combinations / min{resetColor}\n'
                           f'Remaining Runtime: '
                           f'{red}{timeRemaining:,} min{resetColor}')
-                    print('========================================='
-                          '=========================================\n')
-                    print('                       ===================================\n')
-                    print('=============================== Training Progress '
-                          '===============================')
 
                 return model, saveModel
 

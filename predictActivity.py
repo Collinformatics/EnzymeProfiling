@@ -2,16 +2,44 @@ from functions import getFileNames, NGS, PredictActivity
 import pandas as pd
 import sys
 
-# | Layer     | Properties                                                                   |
+
+# Evolutionary Scale Modeling (ESM)
+# | **Layer** | **Properties**                                                           |
 # | --------- | ------------------------------------------------------------------------ |
 # | **6–8**   | Early layers start forming **secondary structure** and local motifs.     |
+# |           |                                                                          |
 # | **12–16** | Middle layers capture **functional signals** (useful for contact         |
-#             | prediction and mutational effect predictions). Often sweet spot.         |
+# |           | prediction and mutational effect predictions). Often sweet spot.         |
+# |           |                                                                          |
 # | **24–30** | Higher layers have stronger **semantic representation**, helpful for     |
-#             | **homology or global fold-related features**.                            |
+# |           | **homology or global fold-related features**.                            |
+# |           |                                                                          |
 # | **33–36** | Final layers often focus on **language model objectives**                |
 #             | (less task-specific); can be noisy for regression/classification.        |
 #             | Sometimes still useful.                                                  |
+# |           |                                                                          |
+
+# | **Layer** | **Characteristic**                  | **Useful For**                     |
+# | --------- | ----------------------------------- | ---------------------------------- |
+# | **0**     | Raw AA encoding, no context         | Baseline control,                  |
+# |           |                                     | uninformative alone                |
+# |           |                                     |                                    |
+# | **1–5**   | Captures local amino acid motifs    | **Disorder**, **short motifs**,    |
+# |           |                                     | **early SS features**              |
+# |           |                                     |                                    |
+# | **6–12**  | Builds regional context             | **Solvent accessibility**,         |
+# |           |                                     | **loop dynamics**                  |
+# |           |                                     |                                    |
+# | **13–20** | Intermediate structure and function | **Activity prediction**,           |
+#             |                                     | **region-specific scoring**        |
+# |           |                                     |                                    |
+# | **21–30** | Transition into semantic/           | **Binding site predictions**,      |
+# |           | structural representations          | **fold matching**                  |
+# |           |                                     |                                    |
+# | **31–36** | High-level semantic and global      | **Function annotation**,           |
+# |           | fold recognition                    | **homolog detection**,             |
+# |           |                                     | **global fold classification**     |
+# |           |                                     |                                    |
 
 
 # Averaging:
@@ -50,7 +78,7 @@ inUseEnrichmentFactor = True
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [16, 14, 12, 8, 6] # [36, 30, 25, 20, 15, 10, 5]
+inLayersESM = [16, 14, 12, 8, 5] # [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
@@ -80,7 +108,7 @@ if inPlotOnlyWords:
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
-# inPlotWordCloud = False # <--------------------
+inPlotWordCloud = False # <--------------------
 
 inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
