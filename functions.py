@@ -5447,8 +5447,8 @@ class RandomForestRegressorXGB:
         self.paramGrid = {
             'colsample_bytree': np.arange(0.6, 1.0, 0.2),
             'learning_rate': [0.1],
-            'max_leaves': range(10, 100, 10),
-            'min_child_weight': range(1, 5, 1),
+            'max_leaves': range(10, 60, 10),
+            'min_child_weight': range(1, 3, 1),
             'n_estimators': range(250, 1250, 250),
             'subsample': np.arange(0.5, 1.0, 0.1)
         }
@@ -5572,16 +5572,16 @@ class RandomForestRegressorXGB:
 
         print(f'Training Data: {purple}{datasetTag}{resetColor}\n'
               f'Splitting Training Set: '
-              f'{blue}{round((1 - testSize) * 100, 0)}{pink}:{blue}'
+              f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
               f'{round(testSize * 100, 0)}{resetColor}\n'
-              f'     Train: {blue}{xTraining.shape}{resetColor}\n'
-              f'     Test: {blue}{xTesting.shape}{resetColor}\n')
+              f'     Train: {yellow}{xTraining.shape}{resetColor}\n'
+              f'     Test: {yellow}{xTesting.shape}{resetColor}\n')
         print(f'Training Data: {purple}{datasetTagHigh}{resetColor}\n'
               f'Splitting Training Set: '
-              f'{blue}{round((1 - testSize) * 100, 0)}{pink}:{blue}'
+              f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
               f'{round(testSize * 100, 0)}{resetColor}\n'
-              f'     Train: {blue}{xTrainingH.shape}{resetColor}\n'
-              f'     Test: {blue}{xTestingH.shape}{resetColor}\n\n')
+              f'     Train: {yellow}{xTrainingH.shape}{resetColor}\n'
+              f'     Test: {yellow}{xTestingH.shape}{resetColor}\n\n')
         print('========================================='
               '=========================================\n')
         print('                       ===================================\n')
@@ -5607,7 +5607,7 @@ class RandomForestRegressorXGB:
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
                           f'Parameters: {greenLight}{params}{resetColor}\n'
-                          f'ESM Layer: {greenLight}{self.layerESM}{resetColor}\n')
+                          f'ESM Layer: {yellow}{self.layerESM}{resetColor}\n')
 
                 # Train the model
                 start = time.time()
@@ -5662,21 +5662,25 @@ class RandomForestRegressorXGB:
                     joblib.dump(model, modelPaths[tag])
 
                 if printData and lastModel:
-                    runtime = (end - start)
-                    runtimeTotal = (end - startTraining) / 60
+                    runtime = round((end - start), 3)
+                    runtimeTotal = round((end - startTraining) / 60, 3)
                     rate = round(combination / runtimeTotal, 3)
-                    timeRemaining = round((totalParamCombos - combination) / rate, 3)
+                    if rate == 0:
+                        timeRemaining = float('inf')
+                    else:
+                        timeRemaining = round((totalParamCombos - combination) / rate, 3)
 
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
-                              f'{yellow}{values}{resetColor}\n')
-                    print(f'Time Training This Model: {red}{round(runtime, 3):,} s'
-                          f'{resetColor}\n'
-                          f'Time Training All Models: {red}{round(runtimeTotal, 3):,} min'
-                          f'{resetColor}\n'
-                          f'Training Rate: {red}{round(rate, 3):,} '
-                          f'combinations / min{resetColor}\n'
-                          f'Estimated Reamining Runtime: {red}{timeRemaining:,} min{resetColor}')
+                              f'{blue}{values}{resetColor}\n')
+                    print(f'Time Training This Model: '
+                          f'{red}{runtime:,} s{resetColor}\n'
+                          f'Time Training All Models: '
+                          f'{red}{runtimeTotal:,} min{resetColor}\n'
+                          f'Training Rate: '
+                          f'{red}{rate:,} combinations / min{resetColor}\n'
+                          f'Remaining Runtime: '
+                          f'{red}{timeRemaining:,} min{resetColor}')
                     print('========================================='
                           '=========================================\n')
                     print('                       ===================================\n')
@@ -5734,10 +5738,23 @@ class RandomForestRegressorXGB:
                     tag=tag, lastModel=True)
                 if keepModel:
                     self.modelH = modelH
+            end = time.time()
+            runtimeTotal = round((end - startTraining) / 60, 3)
+            rate = round(totalParamCombos / runtimeTotal, 3)
+            print(f'Training Completed')
+            for tag, params in self.bestParams.items():
+                print(f'Subset: {pink}{tag}{resetColor}\n'
+                      f'     Best Parameters: {greenLight}{params}{resetColor}\n'
+                      f'     Accuracy:\n{blue}{self.modelAccuracy[tag]}{resetColor}\n')
+            print(f'Training Rate: '
+                  f'{red}{rate:,} combinations / min{resetColor}\n'
+                  f'Total Training Time: '
+                  f'{red}{runtimeTotal:,} min{resetColor}')
+            print('========================================='
+                  '=========================================\n\n')
         else:
             self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
-
 
     def makePredictions(model, tag):
         # Predict substrate activity
@@ -5890,7 +5907,7 @@ class PredictActivity:
                 values = pd.read_csv(path, index_col=0)
                 self.modelAccuracy[tag] = values
                 print(f'Loaded Values: {pink}{tag}{resetColor}\n'
-                      f'{self.modelAccuracy[tag]}\n\n')
+                      f'{blue}{self.modelAccuracy[tag]}{resetColor}\n\n')
 
 
 

@@ -35,8 +35,8 @@ inModelType = inModelTypes[1]
 inLayersESM = [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
-inESMBatchSize = inESMBatchSizes[5] # 4096 # Batch size for ESM
-inMinES = 0
+inESMBatchSize = inESMBatchSizes[5]
+inMinES = 0 # Minimum ES for randomized substrates
 inSubsPred = {
     'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
 inGeneratedSubsFilter = { # Restrictions for generated substrates
