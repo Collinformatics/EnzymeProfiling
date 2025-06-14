@@ -49,7 +49,6 @@ defaultResidues = (('Alanine', 'Ala', 'A'), ('Arginine', 'Arg', 'R'),
 
 # ===================================== Set Options ======================================
 pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', 10)
 pd.set_option('display.width', 1000)
 pd.set_option('display.float_format', '{:,.5f}'.format)
 
@@ -5421,7 +5420,42 @@ class RandomForestRegressor:
 
 
 class RandomForestRegressorXGB:
-    """
+    def __init__(self, dfTrain, dfPred, pathModel, modelTag, modelAccuracy,
+                 modelAccuracyPaths, datasetTag, datasetTagHigh, layerESM, testSize,
+                 device, trainModel=True, evalMetric='rmse'):
+        """
+        :param evalMetric: options include 'rmse' and 'mae'
+        """
+
+        print('================================== Train Model '
+              '==================================')
+        print(f'ML Algorithm: {purple}Random Forest Regressor{resetColor}\n'
+              f'Module: {purple}XGBoost{resetColor}\n'
+              f'Model: {purple}{modelTag}{resetColor}\n')
+
+        from xgboost import XGBRegressor
+
+        self.device = device
+        self.subsPred = list(dfPred.index)
+        self.predictions = {}
+        self.layerESM = layerESM
+        self.layerESMTag = f'ESM Layer {self.layerESM}'
+        self.modelAccuracy = modelAccuracy
+        self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
+
+        # Params: Grid search
+        self.paramGrid = {
+            'colsample_bytree': np.arange(0.6, 1.0, 0.2),
+            'learning_rate': [0.1],
+            'max_leaves': range(10, 100, 10),
+            'min_child_weight': range(1, 5, 1),
+            'n_estimators': range(250, 1250, 250),
+            'subsample': np.arange(0.5, 1.0, 0.1)
+        }
+        # 'max_leaves': range(2, 10, 1), # N terminal nodes
+        # 'max_depth': range(2, 6, 1),
+
+        """
         Params Grid:
             max_leaves:
                 You can use it instead of max_depth if you care more about model
@@ -5501,43 +5535,7 @@ class RandomForestRegressorXGB:
             importance_type:
                 Method for computing feature importances: 'weight', 'gain', 'cover', etc.
                 Doesn't affect training but useful for model interpretation.
-    """
-
-    def __init__(self, dfTrain, dfPred, pathModel, modelTag, modelAccuracy,
-                 modelAccuracyPaths, datasetTag, datasetTagHigh, layerESM, testSize,
-                 device, trainModel=True, evalMetric='rmse'):
         """
-        :param evalMetric: options include 'rmse' and 'mae'
-        """
-
-        print('================================== Train Model '
-              '==================================')
-        print(f'ML Algorithm: {purple}Random Forest Regressor{resetColor}\n'
-              f'Module: {purple}XGBoost{resetColor}\n'
-              f'Model: {purple}{modelTag}{resetColor}\n')
-
-        from xgboost import XGBRegressor
-
-        self.device = device
-        self.subsPred = list(dfPred.index)
-        self.predictions = {}
-        self.layerESM = layerESM
-        self.layerESMTag = f'ESM Layer {self.layerESM}'
-        self.modelAccuracy = modelAccuracy
-        self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
-
-        # Params: Grid search
-        self.paramGrid = {
-            'colsample_bytree': np.arange(0.6, 1.0, 0.2),
-            'learning_rate': [0.01, 0.05, 0.1],
-            'max_leaves': range(10, 100, 10),
-            'min_child_weight': range(1, 5, 1),
-            'n_estimators': range(250, 1250, 250),
-            'subsample': np.arange(0.5, 1.0, 0.1)
-        }
-        # 'max_leaves': range(2, 10, 1), # N terminal nodes
-        # 'max_depth': range(2, 6, 1),
-
 
         # Process dataframe
         x = dfTrain.drop(columns='activity').values
@@ -5603,9 +5601,9 @@ class RandomForestRegressorXGB:
                 return int(col.replace("ESM Layer ", ""))
 
 
-            def trainModel(model, xTrain, xTest, yTrain, yTest, tag, lastIteration=False):
-                if printData and lastIteration:
-                    print(f'Combination: {red}{iteration}{resetColor} / '
+            def trainModel(model, xTrain, xTest, yTrain, yTest, tag, lastModel=False):
+                if printData and lastModel:
+                    print(f'Combination: {red}{combination}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
                           f'Parameters: {greenLight}{params}{resetColor}\n'
@@ -5615,8 +5613,6 @@ class RandomForestRegressorXGB:
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
-                runtime = (end - start)
-                runtimeTotal = (end - startTraining) / 60
 
                 # Evaluate the model
                 yPred = model.predict(xTest)
@@ -5665,7 +5661,12 @@ class RandomForestRegressorXGB:
                     self.modelAccuracy[tag].to_csv(modelAccuracyPaths[tag])
                     joblib.dump(model, modelPaths[tag])
 
-                if printData and lastIteration:
+                if printData and lastModel:
+                    runtime = (end - start)
+                    runtimeTotal = (end - startTraining) / 60
+                    rate = round(combination / runtimeTotal, 3)
+                    timeRemaining = round((totalParamCombos - combination) / rate, 3)
+
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
                               f'{yellow}{values}{resetColor}\n')
@@ -5673,8 +5674,9 @@ class RandomForestRegressorXGB:
                           f'{resetColor}\n'
                           f'Time Training All Models: {red}{round(runtimeTotal, 3):,} min'
                           f'{resetColor}\n'
-                          f'Training Rate: {red}{round(iteration / runtimeTotal, 3):,} '
-                          f'combinations / min{resetColor}')
+                          f'Training Rate: {red}{round(rate, 3):,} '
+                          f'combinations / min{resetColor}\n'
+                          f'Estimated Reamining Runtime: {red}{timeRemaining:,} min{resetColor}')
                     print('========================================='
                           '=========================================\n')
                     print('                       ===================================\n')
@@ -5698,10 +5700,10 @@ class RandomForestRegressorXGB:
             # Train Models
             startTraining = time.time()
             totalParamCombos = len(paramCombos)
-            for iteration, paramCombo in enumerate(paramCombos):
+            for combination, paramCombo in enumerate(paramCombos):
                 params = dict(zip(paramNames, paramCombo))
-                percentComplete = round((iteration / totalParamCombos) * 100, 3)
-                printData = (iteration % 25 == 0)
+                percentComplete = round((combination / totalParamCombos) * 100, 3)
+                printData = (combination % 25 == 0)
 
                 # Train Model
                 tag = datasetTag
@@ -5729,7 +5731,7 @@ class RandomForestRegressorXGB:
                                        **params),
                     xTrain=xTrainingH, yTrain=yTrainingH,
                     xTest=xTestingH, yTest=yTestingH,
-                    tag=tag, lastIteration=True)
+                    tag=tag, lastModel=True)
                 if keepModel:
                     self.modelH = modelH
         else:

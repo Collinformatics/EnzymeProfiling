@@ -26,7 +26,7 @@ inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 1000
+inMinimumSubstrateCount = 10
 
 # Input 4: Machine Learning
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
@@ -35,7 +35,7 @@ inModelType = inModelTypes[1]
 inLayersESM = [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
-inESMBatchSize = inESMBatchSizes[0] # 4096 # Batch size for ESM
+inESMBatchSize = inESMBatchSizes[5] # 4096 # Batch size for ESM
 inMinES = 0
 inSubsPred = {
     'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
@@ -201,6 +201,8 @@ if inUseEnrichmentFactor:
 else:
     subsTrain = motifs
 
+# Set option
+pd.set_option('display.max_rows', 10)
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
