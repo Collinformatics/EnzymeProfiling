@@ -285,7 +285,7 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
     subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
-    useEF=useEnrichmentRatio, tagChosenSubs=tagPredSubs,
+    useEF=inUseEnrichmentFactor, tagChosenSubs=tagPredSubs,
     minSubCount=inMinimumSubstrateCount, layersESM=inLayersESM, minES=inMinES,
     modelType=inModelType, testSize=inTestSize, batchSize=inBatchSize,
     labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
