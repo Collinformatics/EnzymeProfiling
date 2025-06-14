@@ -5532,7 +5532,7 @@ class RandomForestRegressorXGB:
             'learning_rate': [0.01, 0.05, 0.1],
             'max_leaves': range(2, 10, 1),
             'min_child_weight': range(1, 5, 1),
-            'n_estimators': [100] + list(range(250, 1001, 250)),
+            'n_estimators': [100] + list(range(250, 1250, 250)),
             'subsample': np.arange(0.5, 1.0, 0.1)
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
