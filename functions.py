@@ -6233,7 +6233,11 @@ class PredictActivity:
 
         # Process Embeddings
         subEmbeddings = pd.DataFrame(data, index=batchSubs, columns=columns)
+        pd.set_option('display.max_columns', 10)
+        pd.set_option('display.max_rows', 10)
         print(f'Substrate Embeddings:\n{subEmbeddings}\n\n')
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.max_rows', None)
         print(f'Substrate Embeddings shape: '
               f'{pink}{sequenceEmbeddings.shape}{resetColor}\n\n')
         print(f'Embeddings saved at:\n'
