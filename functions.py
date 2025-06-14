@@ -1979,6 +1979,11 @@ class NGS:
     def getMotif(self, substrates):
         print('================================= Extract Motif '
               '=================================')
+        if self.motifIndex is None:
+            print(f'The mofit index is {cyan}{self.motifIndex}{resetColor}\n'
+                  f'NGS.getMotif(substrates) will return the full length substrate '
+                  f'sequences\n\n')
+            return substrates
         motifs = {}
         indexStart = min(self.motifIndex)
         indexEnd = max(self.motifIndex) + 1
@@ -2566,7 +2571,7 @@ class NGS:
 
 
 
-    def processSubstrates(self, subsInit, subsFinal, motifs, subLabel,
+    def processSubstrates(self, subsInit, subsFinal, motifs, subLabel, plotEF,
                           combinedMotifs=False, predActivity=False, predModel=False):
         if predActivity:
             # Calculate: Motif enrichment
@@ -2591,7 +2596,8 @@ class NGS:
 
         # Plot: Work cloud
         if self.plotFigWords:
-            self.plotWordCloud(substrates=motifES, combinedMotifs=combinedMotifs)
+            self.plotWordCloud(
+                substrates=motifES, combinedMotifs=combinedMotifs, plotEF=plotEF)
 
 
         predMotif = False
@@ -2977,7 +2983,7 @@ class NGS:
 
             # Sort input sequences
             subsFinal = dict(sorted(subsFinal.items(),
-                                          key=lambda x: x[1], reverse=True))
+                                    key=lambda x: x[1], reverse=True))
 
             # Print: Substrates
             iteration = 0
@@ -4269,7 +4275,7 @@ class NGS:
         print('============================== Calculate: Entropy '
               '===============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f'Unique Sequences: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}\n')
+              f'Unique Substrates: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}\n')
 
         self.entropy = pd.DataFrame(0.0, index=probability.columns, columns=['ΔS'])
         self.entropyMax = np.log2(len(probability.index))
@@ -4775,8 +4781,8 @@ class NGS:
 
 
 
-    def plotWordCloud(self, substrates, clusterNumPCA=None, combinedMotifs=False,
-                      predActivity=False, predModel=False):
+    def plotWordCloud(self, substrates, plotEF, clusterNumPCA=None,
+                      combinedMotifs=False, predActivity=False, predModel=False):
         print('=============================== Plot: Word Cloud '
               '================================')
         if clusterNumPCA is not None:
@@ -4875,6 +4881,10 @@ class NGS:
                     self.datasetTag,
                     f'{self.datasetTag} - Predictions - {predModel}')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+            if plotEF:
+                saveLocation = saveLocation.replace('Words', 'Words - EF')
+            else:
+                saveLocation = saveLocation.replace('Words', 'Words - Counts')
 
             # Save figure
             if os.path.exists(saveLocation):

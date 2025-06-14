@@ -3,7 +3,7 @@
 # IMPORTANT: Process all of your data with extractSubstrates before using this script
 
 
-from functions import filePaths, NGS
+from functions import getFileNames, NGS
 import os
 import sys
 
@@ -11,24 +11,24 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'MMP7'
-inPathFolder = f'/path/{inEnzymeName}'
+inEnzymeName = 'Mpro2'
+inPathFolder = f'{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
-inPlotOnlyWords = False
+inPlotOnlyWords = True
 inFixResidues = True
-inFixedResidue = ['L']
-inFixedPosition = [6]
-inExcludeResidues = False
+inFixedResidue = ['Q']
+inFixedPosition = [4]
+inExcludeResidues = True
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inMinDeltaS = 0.6
 inPrintFixedSubs = True
 inShowSampleSize = True
-inEvaluateSubstrateEnrichment = False
+inUseEnrichmentFactor = True
 
 # Input 3: Making Figures
 inPlotEntropy = True
@@ -51,7 +51,7 @@ inPlotAADistribution = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotPositionalProbDist = False # For understanding shannon entropy
 
-# Input 4: Inspecting The Data
+# Input 4: Inspecting The data
 inPrintNumber = 10
 
 # Input 6: Plot Heatmap
@@ -114,7 +114,7 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 # Load: Dataset labels
-enzymeName, filesInitial, filesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
+enzymeName, filesInitial, filesFinal, labelAAPos = getFileNames(enzyme=inEnzymeName)
 
 
 
@@ -136,7 +136,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
 
 
 
-# ====================================== Load Data =======================================
+# ====================================== Load data =======================================
 # Get dataset tag
 fixedSubSeq = ngs.getDatasetTag()
 
@@ -187,7 +187,7 @@ else:
 
 
 
-# ================================== Evaluate The Data ===================================
+# ================================== Evaluate The data ===================================
 if inFixResidues:
     if loadFilteredSubs:
         # Fix AA
@@ -211,7 +211,8 @@ ngs.saveData(substrates=substratesFinal, counts=countsFinal)
 
 
 # Display current sample size
-ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalTotal)
+ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalTotal,
+                     NFinalUnique=len(substratesFinal.keys()))
 
 # Calculate: RF
 probFinal = ngs.calculateProbabilities(counts=countsFinal, N=countsFinalTotal,
@@ -226,12 +227,18 @@ enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial, probFinal=pr
 if inPlotWordCloud or inPlotPCA:
     finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
 
+    if inUseEnrichmentFactor:
+        print(f'Write this code:')
+        finalSubsMotif = ngs.processSubstrates(
+            subsInit=substratesInitial, subsFinal=substratesFinal,
+            motifs=finalSubsMotif, subLabel=labelAAPos)
+
     # Plot: Work cloud
     if inPlotWordCloud:
         if inFixResidues:
-            ngs.plotWordCloud(substrates=finalSubsMotif, indexSet=None)
+            ngs.plotWordCloud(substrates=finalSubsMotif, plotEF=inUseEnrichmentFactor)
         else:
-            ngs.plotWordCloud(substrates=substratesFinal, indexSet=None)
+            ngs.plotWordCloud(substrates=substratesFinal, plotEF=inUseEnrichmentFactor)
 
     # Plot: PCA
     if inPlotPCA:

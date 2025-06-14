@@ -80,7 +80,7 @@ if inPlotOnlyWords:
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
-inPlotWordCloud = False # <--------------------
+# inPlotWordCloud = False # <--------------------
 
 inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
@@ -187,25 +187,14 @@ else:
 
     # Load: Substrates
     motifs, motifsCountsTotal = ngs.loadSubstratesFiltered()
-
-index = 0
-for motif, count in motifs.items():
-    print(motif, count)
-    index += 1
-    if index == 10:
-        break
-
-print(f'Path:\n'
-      f'     {greenDark}{pathSubstrates}{resetColor}\n\n')
-sys.exit()
-
-
+    substratesFiltered = motifs
 
 
 
 # ===================================== Run The Code =====================================
 # Display current sample size
-ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
+ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal,
+                     NFinalUnique=len(motifs.keys()))
 
 
 # # Evaluate: Motif Sequences
@@ -228,10 +217,10 @@ if inUseEnrichmentFactor:
     # Evaluate: Sequences
     subsTrain = ngs.processSubstrates(
         subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
-        subLabel=inMotifPositions, combinedMotifs=inUseFilteredReadingFrame)
+        subLabel=inMotifPositions, plotEF=inUseEnrichmentFactor,
+        combinedMotifs=inUseFilteredReadingFrame)
 else:
     subsTrain = motifs
-
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
