@@ -5662,7 +5662,7 @@ class RandomForestRegressorXGB:
                     joblib.dump(model, modelPaths[tag])
 
                 if printData and lastIteration:
-                    print('============================== Training Progress '
+                    print('=============================== Training Progress '
                           '===============================')
                     print(f'Combination: {red}{iteration}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
