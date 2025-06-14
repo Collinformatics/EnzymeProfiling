@@ -6131,7 +6131,7 @@ class PredictActivity:
         allEmbeddings = []
         allValues = []
         startInit = time.time()
-        print('Generating ESM Embeddings:')
+        print(f'Generating ESM Embeddings: Layer {yellow}{self.layersESM}{resetColor}')
         with torch.no_grad():
             for i in range(0, len(batchTokens), self.batchSize):
                 start = time.time()
