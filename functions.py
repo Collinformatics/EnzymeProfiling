@@ -178,6 +178,7 @@ class NGS:
         self.selectedDatapoints = []
         self.rectangles = []
         self.initialize = True
+        self.maxValue = 0
         
         # Parameters: DNA Processing
         self.expressDNA = expressDNA # Only set as True when processing DNA seqs
@@ -5263,6 +5264,41 @@ class NGS:
         print('\n')
 
         return genSubstrates, addedAAsTag
+    
+    
+    def normalizeValues(self, substrates, datasetTag):
+        print(f'=============================== Normalize Values '
+              f'===============================')
+        print(f'Dataset: {datasetTag}')
+        self.maxValue = max(substrates.values())
+        print(f'Max Value: {red}{self.maxValue}{resetColor}\n')
+
+        # Inspect datatype
+        useIntegers = False
+        for value in substrates.values():
+            if isinstance(value, int):
+                useIntegers = True
+                break
+
+        # Normalize the values
+        substratesNormValues = {}
+        for substrate, value in substrates.items():
+            substratesNormValues[substrate] = (value / self.maxValue)
+        print(f'Normalized Values:')
+        if useIntegers:
+            for iteration, (substrate, value) in enumerate(substratesNormValues.items()):
+                print(f'     {pink}{substrate}, {red}{value:,}{resetColor}')
+                if iteration >= self.printNumber:
+                    break
+        else:
+            for iteration, (substrate, value) in enumerate(substratesNormValues.items()):
+                print(f'     {pink}{substrate}, {red}{round(value, 3):,}{resetColor}')
+                if iteration >= self.printNumber:
+                    break
+        print('\n')
+
+        return substratesNormValues
+        
 
 
 
@@ -5458,6 +5494,7 @@ class RandomForestRegressorXGB:
         self.layerESMTag = f'ESM Layer {self.layerESM}'
         self.modelAccuracy = modelAccuracy
         self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
+        self.sortedColumns = []
 
         # Params: Grid search
         self.paramGrid = {
@@ -5658,8 +5695,8 @@ class RandomForestRegressorXGB:
                         (accuracy.loc[indexEvalMetric, self.layerESMTag] <
                          self.modelAccuracy[tag].loc[indexEvalMetric, self.layerESMTag])):
                     saveModel = True
-                    # newColumn = self.layerESMTag not in self.modelAccuracy[tag].columns
-                    # print("{newColumn}")
+                    newColumn = self.layerESMTag not in self.modelAccuracy[tag].columns
+
                     # sys.exit()
                     self.bestParams[tag] = {self.layerESMTag: params}
                     self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
@@ -5668,10 +5705,12 @@ class RandomForestRegressorXGB:
                     self.modelAccuracy[tag] = self.modelAccuracy[tag].sort_index(axis=1)
 
                     # Sort the columns
-                    # if newColumn:
-                    sortedColumns = (
-                        sorted(self.modelAccuracy[tag].columns, key=getLayerNumber))
-                    self.modelAccuracy[tag] = self.modelAccuracy[tag][sortedColumns]
+                    if self.sortedColumns == [] or newColumn:
+                        print(f'Adding New Layer: {self.layerESMTag}'
+                              f'      New Column: {newColumn}')
+                        self.sortedColumns = (
+                            sorted(self.modelAccuracy[tag].columns, key=getLayerNumber))
+                    self.modelAccuracy[tag] = self.modelAccuracy[tag][self.sortedColumns]
 
                     # Save the data
                     self.modelAccuracy[tag].to_csv(modelAccuracyPaths[tag])
