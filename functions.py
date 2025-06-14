@@ -5685,7 +5685,6 @@ class RandomForestRegressorXGB:
                         timeRemaining = float('inf')
                     else:
                         timeRemaining = round((totalParamCombos - combination) / rate, 3)
-
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
                               f'{blue}{values}{resetColor}\n')
