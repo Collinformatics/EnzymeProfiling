@@ -17,8 +17,9 @@ inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
+inModelSize = 1
 inUseFilteredReadingFrame = True
-inUseEnrichmentFactor = False
+inUseEnrichmentFactor = True
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
@@ -31,9 +32,10 @@ inMinimumSubstrateCount = 1000
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [25, 20, 15, 10, 5]
+inLayersESM = [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
-inBatchSize = 4096 # Batch size for ESM
+inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
+inESMBatchSize = inESMBatchSizes[0] # 4096 # Batch size for ESM
 inMinES = 0
 inSubsPred = {
     'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
@@ -213,8 +215,8 @@ predictions = PredictActivity(
     subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
     useEF=inUseEnrichmentFactor, tagChosenSubs=tagPredSubs,
     minSubCount=inMinimumSubstrateCount, layersESM=inLayersESM, minES=inMinES,
-    modelType=inModelType, testSize=inTestSize, batchSize=inBatchSize,
-    labelsXAxis=inMotifPositions, printNumber=inPrintNumber)
+    modelType=inModelType, testSize=inTestSize, batchSize=inESMBatchSize,
+    labelsXAxis=inMotifPositions, printNumber=inPrintNumber, modelSize=inModelSize)
 predictions.trainModel()
 
 # # Evaluate: Predictions

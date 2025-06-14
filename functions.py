@@ -5530,9 +5530,9 @@ class RandomForestRegressorXGB:
         self.paramGrid = {
             'colsample_bytree': np.arange(0.6, 1.0, 0.2),
             'learning_rate': [0.01, 0.05, 0.1],
-            'max_leaves': range(2, 10, 1),
+            'max_leaves': range(10, 100, 10),
             'min_child_weight': range(1, 5, 1),
-            'n_estimators': [100] + list(range(250, 1250, 250)),
+            'n_estimators': range(250, 1250, 250),
             'subsample': np.arange(0.5, 1.0, 0.1)
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
@@ -5547,7 +5547,7 @@ class RandomForestRegressorXGB:
         self.cutoff = 1 - testSize  # 0.8 = Top 20
         pathModelH = pathModel.replace('Embeddings', f'High Values - Embeddings')
         print(f'Combine predictions {pink}{datasetTag}{resetColor} with '
-              f'{pink}{datasetTagHigh}{resetColor}\n')
+              f'{pink}{datasetTagHigh}{resetColor}?\n')
         modelPaths = {datasetTag: pathModel, datasetTagHigh: pathModelH}
 
         # Process dataframe
@@ -5584,7 +5584,11 @@ class RandomForestRegressorXGB:
               f'{round(testSize * 100, 0)}{resetColor}\n'
               f'     Train: {blue}{xTrainingH.shape}{resetColor}\n'
               f'     Test: {blue}{xTestingH.shape}{resetColor}\n\n')
-
+        print('========================================='
+              '=========================================\n')
+        print('                       ===================================\n')
+        print('=============================== Training Progress '
+              '===============================')
 
         # # Train Or Load Model: Random Forest Regressor
         if (trainModel or
@@ -5600,6 +5604,14 @@ class RandomForestRegressorXGB:
 
 
             def trainModel(model, xTrain, xTest, yTrain, yTest, tag, lastIteration=False):
+                if printData and lastIteration:
+                    print(f'Combination: {red}{iteration}{resetColor} / '
+                          f'{red}{totalParamCombos}{resetColor} '
+                          f'({red}{percentComplete} %{resetColor})\n'
+                          f'Parameters: {greenLight}{params}{resetColor}\n'
+                          f'ESM Layer: {greenLight}{self.layerESM}{resetColor}\n')
+
+                # Train the model
                 start = time.time()
                 model.fit(xTrain, yTrain)
                 end = time.time()
@@ -5649,26 +5661,11 @@ class RandomForestRegressorXGB:
                         sorted(self.modelAccuracy[tag].columns, key=getLayerNumber))
                     self.modelAccuracy[tag] = self.modelAccuracy[tag][sortedColumns]
 
-                    # print(f'{yellow}New Best Model{resetColor}: '
-                    #       f'{pink}{self.layerESMTag}{resetColor}\n'
-                    #       f'Combination: {red}{iteration}{resetColor} / '
-                    #       f'{red}{totalParamCombos}{resetColor} '
-                    #       f'({red}{percentComplete} %{resetColor})\n'
-                    #       f'Training Subset: {pink}{tag}\n
-                    #       '{red}{round(self.modelAccuracy[tag], 3)}{resetColor}\n')
-
                     # Save the data
                     self.modelAccuracy[tag].to_csv(modelAccuracyPaths[tag])
                     joblib.dump(model, modelPaths[tag])
 
                 if printData and lastIteration:
-                    print('=============================== Training Progress '
-                          '===============================')
-                    print(f'Combination: {red}{iteration}{resetColor} / '
-                          f'{red}{totalParamCombos}{resetColor} '
-                          f'({red}{percentComplete} %{resetColor})\n'
-                          f'Parameters: {greenLight}{params}{resetColor}\n'
-                          f'ESM Layer: {greenLight}{self.layerESM}{resetColor}\n')
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Model Accuracy: {pink}{dataset}\n'
                               f'{yellow}{values}{resetColor}\n')
@@ -5681,6 +5678,9 @@ class RandomForestRegressorXGB:
                     print('========================================='
                           '=========================================\n')
                     print('                       ===================================\n')
+                    print('=============================== Training Progress '
+                          '===============================')
+
                 return model, saveModel
 
 
@@ -5710,6 +5710,7 @@ class RandomForestRegressorXGB:
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
+                                       max_bin=64,
                                        **params),
                     xTrain=xTraining, yTrain=yTraining,
                     xTest=xTesting, yTest=yTesting,
@@ -5724,6 +5725,7 @@ class RandomForestRegressorXGB:
                                        eval_metric=evalMetric,
                                        tree_method="hist",
                                        random_state=42,
+                                       max_bin=64,
                                        **params),
                     xTrain=xTrainingH, yTrain=yTrainingH,
                     xTest=xTestingH, yTest=yTestingH,
@@ -5793,27 +5795,6 @@ class RandomForestRegressorXGB:
 
 
     @staticmethod
-    def printBestParams(dataTag, iteration, MAE, MSE, R2, params, accuracy, path):
-        print('=========================================================================='
-              '=======\n=========================== New Best Hyperparameters ============'
-              '================\n========================================================'
-              '=========================')
-        print(f'New Best Hyperparameters: {purple}{dataTag}{resetColor}\n'
-              f'Combination: {red}{iteration}{resetColor}\n'
-              f'MSE: {yellow}{round(MAE, 3):,}{resetColor}\n'
-              f'MSE: {yellow}{round(MSE, 3):,}{resetColor}\n'
-              f'R2: {yellow}{round(R2, 3):,}{resetColor}\n'
-              f'Params: {greenLight}{params}{resetColor}{resetColor}\n'
-              f'Accuracy:\n{greenLight}{accuracy}{resetColor}\n\n'
-              f'Saving Trained Model:\n'
-              f'     {greenDark}{path}{resetColor}\n')
-        print('=========================================================================='
-              '=======\n================================================================='
-              '================\n========================================================'
-              '=========================\n\n')
-
-
-    @staticmethod
     def loadModel(pathModel, tag):
         print(f'Loading Trained ESM Model: {purple}{tag}{resetColor}\n'
               f'     {greenDark}{pathModel}{resetColor}\n')
@@ -5867,10 +5848,18 @@ class PredictActivity:
         self.subsPred = subsPred
         self.subsPredN = len(subsPred)
 
+        # Parameters: ESM
+        if modelSize == 0:  # Choose: ESM PLM model
+            self.sizeESM = '15B Params'
+        elif modelSize == 1:
+            self.sizeESM = '3B Params'
+        else:
+            self.sizeESM = '650M Params'
+
         # Parameters: Save Paths
         pathModelAccuracy = os.path.join(
-            self.pathModels, f'Model Accuracy - {modelType} - {enzymeName} - '
-                             f'{datasetTag} - MinCounts {minSubCount}')
+            self.pathModels, f'Model Accuracy - {modelType} - ESM {self.sizeESM} - '
+                             f'{enzymeName} - {datasetTag} - MinCounts {minSubCount}')
         pathModelAccuracy = pathModelAccuracy.replace(':', '')
         if useEF:
             pathModelAccuracy = pathModelAccuracy.replace(
@@ -5886,14 +5875,6 @@ class PredictActivity:
                 'MinCounts', f'{self.subsetTagHigh} - MinCounts')
         }
         self.loadModelAccuracies()
-
-        # Parameters: ESM
-        if modelSize == 0:  # Choose: ESM PLM model
-            self.sizeESM = '15B Params'
-        elif modelSize == 1:
-            self.sizeESM = '3B Params'
-        else:
-            self.sizeESM = '650M Params'
 
 
 
@@ -5915,14 +5896,14 @@ class PredictActivity:
         for layerESM in self.layersESM:
             self.tagEmbeddingsTrain = (
                 f'Embeddings - ESM {self.sizeESM} {layerESM} Layers - '
-                f'{self.enzymeName} - {self.datasetTag} - '
-                f'MinCounts {self.minSubCount} - N {self.subsTrainN} - '
-                f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
+                f'Batch {self.batchSize} - {self.enzymeName} - '
+                f'{self.datasetTag} - MinCounts {self.minSubCount} - '
+                f'N {self.subsTrainN} - {len(self.labelsXAxis)} AA')
             self.tagEmbeddingsPred = (
                 f'Embeddings - ESM {self.sizeESM} {layerESM} Layers - '
-                f'{self.enzymeName} - Predictions - Min ES {self.minES} - '
-                f'MinCounts {self.minSubCount} - N {self.subsPredN} - '
-                f'{len(self.labelsXAxis)} AA - Batch {self.batchSize}')
+                f'Batch {self.batchSize} - {self.enzymeName} - '
+                f'Predictions - Min ES {self.minES} - MinCounts {self.minSubCount} - '
+                f'N {self.subsPredN} - {len(self.labelsXAxis)} AA')
             if self.tagChosenSubs != '':
                 self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
                     f'MinCounts {self.minSubCount}',
@@ -6016,15 +5997,6 @@ class PredictActivity:
     def ESM(self, substrates, layerESM, tagEmbeddings, trainingSet=False):
         print('=========================== Generate Embeddings: ESM '
               '============================')
-        # Choose: ESM PLM model
-        modelPrams = 2
-        if modelPrams == 0:
-            sizeESM = '15B Params'
-        elif modelPrams == 1:
-            sizeESM = '3B Params'
-        else:
-            sizeESM = '650M Params'
-
         # Inspect: Data type
         predictions = True
         if trainingSet:
@@ -6075,10 +6047,10 @@ class PredictActivity:
 
         # Step 2: Load the ESM model and batch converter
         layersESMMax = 0
-        if sizeESM == '15B Params':
+        if self.sizeESM == '15B Params':
             model, alphabet = esm.pretrained.esm2_t48_15B_UR50D()
             layersESMMax = 48
-        elif sizeESM == '3B Params':
+        elif self.sizeESM == '3B Params':
             model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
             layersESMMax = 36
         else:
