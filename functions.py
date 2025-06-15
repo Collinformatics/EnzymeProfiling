@@ -5839,7 +5839,7 @@ class RandomForestRegressorXGB:
                   '=========================================\n\n')
 
             # Plot scatter of yTest, yPred
-            plotTestingPredictions()
+            self.plotTestingPredictions()
         else:
             self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
@@ -5850,7 +5850,7 @@ class RandomForestRegressorXGB:
         for dataset, predictions in self.predictionAccuracy.items():
             print(f'Best Prediction Values: {pink}{dataset}{resetColor}\n'
                   f'{predictions}\n')
-
+        print()
 
 
 
