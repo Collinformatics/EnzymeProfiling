@@ -5743,9 +5743,9 @@ class RandomForestRegressorXGB:
                     else:
                         timeRemaining = round((totalParamCombos - combination) / rate, 3)
                     for dataset, values in self.modelAccuracy.items():
+                        print(f'Params: {greenLight}{self.bestParams[tag]}{resetColor}')
                         print(f'Best Model Accuracy: {pink}{dataset}\n'
                               f'{blue}{values}{resetColor}\n')
-                        print(f'Params: {greenLight}{self.bestParams[tag]}{resetColor}')
                     print(f'Time Training This Model: '
                           f'{red}{runtime:,} s{resetColor}\n'
                           f'Time Training All Models: '
@@ -5854,7 +5854,7 @@ class RandomForestRegressorXGB:
 
 
 
-    def makePredictions(model, tag):
+    def makePredictions(self, model, tag):
         # Expand prediction values
         predictedValueScaler = self.maxValue
 
