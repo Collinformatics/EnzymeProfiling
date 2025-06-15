@@ -74,7 +74,7 @@ inLimitWords = True
 inTotalWords = 50
 
 # Input 9: Bar Graphs
-inNSequences = 30
+inNSequences = 50
 
 # Input 10: PCA
 inPCAMotif = True

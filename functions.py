@@ -5472,7 +5472,7 @@ class RandomForestRegressor:
 
 
 class RandomForestRegressorXGB:
-    def __init__(self, dfTrain, dfPred, maxValue, selectSubsTopPercent, pathModel,
+    def __init__(self, dfTrain, dfPred, maxValue, tagExperiment, selectSubsTopPercent, pathModel,
                  modelTag, modelAccuracy, modelAccuracyPaths, datasetTag, datasetTagHigh,
                  layerESM, testSize, device, trainModel=True, evalMetric='rmse'):
         """
@@ -5488,6 +5488,7 @@ class RandomForestRegressorXGB:
         from xgboost import XGBRegressor
 
         self.device = device
+        self.tagExperiment = tagExperiment
         self.maxValue = maxValue
         self.selectSubsTopPercent = selectSubsTopPercent
         self.subsPred = list(dfPred.index)
@@ -5498,6 +5499,17 @@ class RandomForestRegressorXGB:
         self.predictionAccuracy = {}
         self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
         self.sortedColumns = []
+
+        # Parameters: Figures
+        self.figSize = (9.5, 8)
+        self.figSizeMini = (self.figSize[0], 6)
+        self.residueLabelType = 2 # 0 = full AA name, 1 = 3-letter code, 2 = 1 letter
+        self.labelSizeTitle = 18
+        self.labelSizeAxis = 16
+        self.labelSizeTicks = 13
+        self.lineThickness = 1.5
+        self.tickLength = 4
+        self.figureResolution = 300
 
         # Params: Grid search
         self.paramGrid = {
@@ -5734,7 +5746,8 @@ class RandomForestRegressorXGB:
                     print(f'Max Activity Score: {red}Max {self.maxValue:,}{resetColor}')
                     for dataset, predictions in self.predictionAccuracy.items():
                         print(f'Prediction Values ({red}{combination}{resetColor}): '
-                              f'{pink}{dataset}{resetColor}\n{predictions}\n')
+                              f'{pink}{dataset}{resetColor}\n'
+                              f'{greenDark}{predictions}{resetColor}\n')
 
                     runtime = round((end - start), 3)
                     runtimeTotal = round((end - startTraining) / 60, 3)
@@ -5744,9 +5757,9 @@ class RandomForestRegressorXGB:
                     else:
                         timeRemaining = round((totalParamCombos - combination) / rate, 3)
                     for dataset, values in self.modelAccuracy.items():
-                        print(f'Params: {greenLight}{self.bestParams[tag]}{resetColor}')
-                        print(f'Best Model Accuracy: {pink}{dataset}\n'
-                              f'{blue}{values}{resetColor}\n')
+                        print(f'Best Model Accuracy: {pink}{dataset}{resetColor}\n'
+                              f'     Parameters: {greenLight}{self.bestParams[tag]}')
+                        print(f'{blue}{values}{resetColor}\n')
                     print(f'Time Training This Model: '
                           f'{red}{runtime:,} s{resetColor}\n'
                           f'Time Training All Models: '
@@ -5781,6 +5794,9 @@ class RandomForestRegressorXGB:
             totalParamCombos = len(paramCombos)
             for combination, paramCombo in enumerate(paramCombos):
                 params = dict(zip(paramNames, paramCombo))
+                # if combination == 1:
+                #     self.bestParams = {datasetTag: params, datasetTagHigh: params}
+
                 percentComplete = round((combination / totalParamCombos) * 100, 3)
                 printData = (combination % 25 == 0)
 
@@ -5839,7 +5855,7 @@ class RandomForestRegressorXGB:
             print('========================================'
                   '=========================================\n\n')
 
-            # Plot scatter of yTest, yPred
+            # Plot the results from the best model
             self.plotTestingPredictions()
         else:
             self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
@@ -5847,11 +5863,50 @@ class RandomForestRegressorXGB:
 
 
     def plotTestingPredictions(self):
-        print(f'{orange}Write the code for {cyan}plotTestingPredictions(){resetColor}\n')
-        for dataset, predictions in self.predictionAccuracy.items():
-            print(f'Best Prediction Values: {pink}{dataset}{resetColor}\n'
-                  f'{predictions}\n')
-        print()
+        for tag, predictions in self.modelAccuracy.items():
+            x = predictions.loc[:, 'yTest']
+            y = predictions.loc[:, 'yPred']
+
+            # Evaluate data
+            maxValue = max(max(x), max(y))
+            magnitude = math.floor(math.log10(maxValue))
+            unit = 10 ** (magnitude - 1)
+            maxValue = math.ceil(maxValue / unit) * unit
+            axisLimits = [0, maxValue]
+
+
+            # Plot the data
+            fig, ax = plt.subplots(figsize=self.figSize)
+            plt.scatter(x, y, alpha=0.7, color='#BF5700', edgecolors='#F8971F', s=50)
+            plt.plot(axisLimits, axisLimits, color='#101010', lw=2)
+            plt.xlabel('True Activity', fontsize=self.labelSizeAxis)
+            plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
+            plt.title(f'Randon Forest Regressor Accuracy\n{tag}',
+                      fontsize=self.labelSizeTitle, fontweight='bold')
+            plt.subplots_adjust(top=0.852, bottom=0.075, left=0.117, right=1)
+            ax.set_xlim(0, maxValue)
+            ax.set_ylim(0, maxValue)
+            plt.tight_layout()
+            plt.grid(True)
+            fig.canvas.mpl_connect('key_press_event', pressKey)
+            plt.show()
+
+
+            # Define: Save location
+            figLabel = f'{self.tagExperiment}.png'
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                print(f'{yellow}WARNING{resetColor}: '
+                      f'{yellow}The figure already exists at the path\n'
+                      f'     {saveLocation}\n\n'
+                      f'We will not overwrite the figure{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
+
 
 
 
@@ -6007,24 +6062,28 @@ class PredictActivity:
                 'MinCounts', 'Scores Counts - MinCounts')
 
         # Parameters: Save Paths Model Accuracy
-        pathModelAccuracy = os.path.join(
-            self.pathModels, f'Model Accuracy - {modelType} - ESM {self.sizeESM} - '
-                             f'{enzymeName} - {datasetTag} - MinCounts {minSubCount}')
-        pathModelAccuracy = pathModelAccuracy.replace(':', '')
+        self.tagExperiment = (f'Model Accuracy - {modelType} - ESM {self.sizeESM} - '
+                              f'{enzymeName} - {datasetTag} - MinCounts {minSubCount}')
+        self.tagExperiment = self.tagExperiment.replace(':', '')
         if self.useEF:
-            pathModelAccuracy = pathModelAccuracy.replace(
+            self.tagExperiment = self.tagExperiment.replace(
                 'MinCounts', 'Scores EF - MinCounts')
         else:
-            pathModelAccuracy = pathModelAccuracy.replace(
+            self.tagExperiment = self.tagExperiment.replace(
                 'MinCounts', 'Scores Counts - MinCounts')
-        self.pathModelAccuracy = {
-            self.subsetTag: pathModelAccuracy.replace(
+        self.tagExperiment = {
+            self.subsetTag: self.tagExperiment.replace(
                 'MinCounts', f'{self.subsetTag} - MinCounts'),
-            self.subsetTagHigh: pathModelAccuracy.replace(
+            self.subsetTagHigh: self.tagExperiment.replace(
                 'MinCounts', f'{self.subsetTagHigh} - MinCounts')
         }
+        self.pathModelAccuracy = {
+            self.subsetTag: os.path.join(self.pathModels,
+                                         self.tagExperiment[self.subsetTag]),
+            self.subsetTagHigh: os.path.join(self.pathModels,
+                                             self.tagExperiment[self.subsetTagHigh]),
+        }
         self.loadModelAccuracies()
-
 
     def loadModelAccuracies(self):
         for tag, path in self.pathModelAccuracy.items():
@@ -6094,8 +6153,9 @@ class PredictActivity:
                 randomForestRegressorXGB = RandomForestRegressorXGB(
                     dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                     selectSubsTopPercent=self.topSubsPercent,
-                    maxValue=self.maxTrainingScore, pathModel=pathModelXGBoost,
-                    modelTag=modelTagXGBoost, modelAccuracy=self.modelAccuracy,
+                    tagExperiment=self.tagExperiment, maxValue=self.maxTrainingScore,
+                    pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
+                    modelAccuracy=self.modelAccuracy,
                     modelAccuracyPaths=self.pathModelAccuracy, datasetTag=self.subsetTag,
                     datasetTagHigh=self.subsetTagHigh,  layerESM=layerESM,
                     testSize=self.testingSetSize, device=self.device)

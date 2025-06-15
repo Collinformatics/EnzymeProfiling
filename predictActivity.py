@@ -81,7 +81,7 @@ inUseEnrichmentFactor = True
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [20, 15, 10, 5] # [36, 30, 25, 20, 15, 10, 5]
+inLayersESM = [15, 10, 5] # [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
