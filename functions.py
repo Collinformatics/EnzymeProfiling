@@ -3080,7 +3080,7 @@ class NGS:
     
 
         # Plot: Motif enrichment
-        if predActivity:
+        if predActivity and self.plotFigMotifEnrich:
             self.plotMotifEnrichment(
                 motifs=motifEnrichment, combinedMotifs=combinedMotifs,
                 limitNBars=True, predActivity=predActivity, predModel=predModel,
@@ -5730,10 +5730,10 @@ class RandomForestRegressorXGB:
                     joblib.dump(model, modelPaths[tag])
 
                 if printData and lastModel:
-                    print(f'Max Activity Score: {red}Max {self.maxValue:,}{resetColor}\n')
+                    print(f'Max Activity Score: {red}Max {self.maxValue:,}{resetColor}')
                     for dataset, predictions in self.predictionAccuracy.items():
-                        print(f'Prediction Values: {pink}{dataset}{resetColor}\n'
-                              f'{predictions}\n')
+                        print(f'Prediction Values ({red}{combination}{resetColor}): '
+                              f'{pink}{dataset}{resetColor}\n{predictions}\n')
 
                     runtime = round((end - start), 3)
                     runtimeTotal = round((end - startTraining) / 60, 3)
@@ -5743,7 +5743,7 @@ class RandomForestRegressorXGB:
                     else:
                         timeRemaining = round((totalParamCombos - combination) / rate, 3)
                     for dataset, values in self.modelAccuracy.items():
-                        print(f'Model Accuracy: {pink}{dataset}\n'
+                        print(f'Best Model Accuracy: {pink}{dataset}\n'
                               f'{blue}{values}{resetColor}\n')
                     print(f'Time Training This Model: '
                           f'{red}{runtime:,} s{resetColor}\n'
@@ -5956,7 +5956,6 @@ class PredictActivity:
         self.batchSize = batchSize
         self.testingSetSize = testSize
         self.device = self.getDevice()
-
 
         # Parameters: ESM
         if modelSize == 0:  # Choose: ESM PLM model
