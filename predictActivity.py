@@ -49,6 +49,8 @@ import sys
 #           meanEmbedding = torch.stack(hidden_states[26:35]).mean(dim=0)
 
 
+# Try: Q@R5 Fixed S@R1
+
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
@@ -65,6 +67,7 @@ inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 # Input 3: Computational Parameters
 inModelSize = 1 # 0 = 15B Params, 1 = 3B Params, 2 = 650M Params
 inUseFilteredReadingFrame = False
+inSelectTopSubstrates = 10 # 10 = Top 10 % of activity scores
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
@@ -78,7 +81,7 @@ inUseEnrichmentFactor = True
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [30, 25, 14, 12, 8, 5] # [36, 30, 25, 20, 15, 10, 5]
+inLayersESM = [25, 20, 15, 10, 5] # [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
@@ -135,7 +138,6 @@ inPlotNBars = 50
 # Input 10: Word Cloud
 inLimitWords = True
 inTotalWords = inPlotNBars
-
 
 
 
@@ -263,7 +265,8 @@ pd.set_option('display.max_rows', 10)
 # Predict activity
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
-    subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
+    subsTrain=subsTrain, topSubsPercent=inSelectTopSubstrates,
+    maxTrainingScore=ngs.maxValue, subsPred=substratesPred, subsPredChosen=inSubsPred,
     useEF=inUseEnrichmentFactor, tagChosenSubs=tagPredSubs,
     minSubCount=inMinimumSubstrateCount, layersESM=inLayersESM, minES=inMinES,
     modelType=inModelType, testSize=inTestSize, batchSize=inESMBatchSize,
