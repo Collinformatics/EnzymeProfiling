@@ -5745,6 +5745,7 @@ class RandomForestRegressorXGB:
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Best Model Accuracy: {pink}{dataset}\n'
                               f'{blue}{values}{resetColor}\n')
+                        print(f'Params: {greenLight}{self.bestParams[tag]}{resetColor}')
                     print(f'Time Training This Model: '
                           f'{red}{runtime:,} s{resetColor}\n'
                           f'Time Training All Models: '
@@ -5836,9 +5837,22 @@ class RandomForestRegressorXGB:
             print('                       ===================================\n')
             print('========================================='
                   '=========================================\n\n')
+
+            # Plot scatter of yTest, yPred
+            plotTestingPredictions()
         else:
             self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
+
+
+    def plotTestingPredictions(self):
+        print(f'{orange}Write the code for {cyan}plotTestingPredictions()\n')
+        for dataset, predictions in self.predictionAccuracy.items():
+            print(f'Best Prediction Values: {pink}{dataset}{resetColor}\n'
+                  f'{predictions}\n')
+
+
+
 
     def makePredictions(model, tag):
         # Expand prediction values
