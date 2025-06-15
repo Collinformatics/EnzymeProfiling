@@ -5758,7 +5758,7 @@ class RandomForestRegressorXGB:
                         timeRemaining = round((totalParamCombos - combination) / rate, 3)
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Best Model Accuracy: {pink}{dataset}{resetColor}\n'
-                              f'     Parameters: {greenLight}{self.bestParams[tag]}')
+                              f'Parameters: {greenLight}{self.bestParams[tag]}')
                         print(f'{blue}{values}{resetColor}\n')
                     print(f'Time Training This Model: '
                           f'{red}{runtime:,} s{resetColor}\n'
@@ -6084,6 +6084,8 @@ class PredictActivity:
                                              self.tagExperiment[self.subsetTagHigh]),
         }
         self.loadModelAccuracies()
+
+
 
     def loadModelAccuracies(self):
         for tag, path in self.pathModelAccuracy.items():
