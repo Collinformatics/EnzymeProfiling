@@ -2751,7 +2751,7 @@ class NGS:
             if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 title = title.replace(self.datasetTag,
                                       f'Combined {self.datasetTag}')
-        if limitNBars and predType.lower() != 'chosen':
+        if limitNBars and not isinstance(predType, bool) and predType.lower() != 'chosen':
             title = title.replace(f'{NSubs:,}', f'Top {plotNSubs:,}')
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.ylabel(yLabel, fontsize=self.labelSizeAxis)

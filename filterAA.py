@@ -20,15 +20,15 @@ inSetFigureTimer = False
 inPlotOnlyWords = True
 inFixResidues = True
 inFixedResidue = ['Q']
-inFixedPosition = [4]
-inExcludeResidues = False
+inFixedPosition = [5]
+inExcludeResidues = True
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inMinDeltaS = 0.6
 inPrintFixedSubs = True
 inShowSampleSize = True
-inUseEnrichmentFactor = True
+inUseEnrichmentFactor = False
 
 # Input 3: Making Figures
 inPlotEntropy = True
@@ -36,12 +36,16 @@ inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = False
 inPlotLogo = True
 inPlotWeblogo = True
+inPlotMotifEnrichment = True
+inPlotMotifEnrichmentNBars = True
+inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
     inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
+    inPlotWordCloud = True
 inPlotWordCloud = True
 inPlotBarGraphs = False
 inPlotPCA = False
@@ -128,7 +132,9 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
           filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
           plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
-          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo, 
+          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
+          plotFigMotifEnrich=inPlotMotifEnrichment,
+          plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud,  wordLimit=inLimitWords, wordsTotal=inTotalWords, 
           plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotFigPCA=inPlotPCA,
           numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
@@ -147,10 +153,15 @@ countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initi
 probInitial = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
                                          fileType='Initial Sort')
 
+# substratesInitial = None
 loadFilteredSubs = False
 filePathFixedCountsFinal, filePathFixedSubsFinal = None, None
+substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 countsFinal, countsFinalTotal = None, None
 if inFixResidues:
+    if inUseEnrichmentFactor:
+        substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
+
     filePathFixedSubsFinal, filePathFixedCountsFinal = (
         ngs.getFilePath(datasetTag=fixedSubSeq))
 
@@ -178,9 +189,9 @@ if inFixResidues:
         # Load: Substrates
         substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
 else:
-    # Load: Substrates
-    (substratesInitial, totalSubsInitial,
-     substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs()
+    # # Load: Substrates
+    # (substratesInitial, totalSubsInitial,
+    #  substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs(loadInitial=True)
 
     # Load: Counts
     countsFinal, countsFinalTotal = ngs.loadCounts(fileType='Final Sort', filter=False)
@@ -224,21 +235,26 @@ entropy = ngs.calculateEntropy(probability=probFinal)
 # Calculate: Enrichment scores
 enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinal)
 
-if inPlotWordCloud or inPlotPCA:
+
+# Evaluate: Sequences
+motifs = ngs.processSubstrates(
+    subsInit=substratesInitial, subsFinal=substratesFinal, motifs=substratesFinal,
+    subLabel=labelAAPos, plotEF=inUseEnrichmentFactor)
+
+if inPlotPCA:
     finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
 
     if inUseEnrichmentFactor:
-        print(f'Write this code:')
-        finalSubsMotif = ngs.processSubstrates(
-            subsInit=substratesInitial, subsFinal=substratesFinal,
-            motifs=finalSubsMotif, subLabel=labelAAPos)
+        if substratesInitial is None:
+            print(f'{red}Write code to load in the initial substrates{resetColor}\n')
+            sys.exit()
 
-    # Plot: Work cloud
-    if inPlotWordCloud:
-        if inFixResidues:
-            ngs.plotWordCloud(substrates=finalSubsMotif, plotEF=inUseEnrichmentFactor)
-        else:
-            ngs.plotWordCloud(substrates=substratesFinal, plotEF=inUseEnrichmentFactor)
+    # # Plot: Work cloud
+    # if inPlotWordCloud:
+    #     if inFixResidues:
+    #         ngs.plotWordCloud(substrates=finalSubsMotif, plotEF=inUseEnrichmentFactor)
+    #     else:
+    #         ngs.plotWordCloud(substrates=substratesFinal, plotEF=inUseEnrichmentFactor)
 
     # Plot: PCA
     if inPlotPCA:
