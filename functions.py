@@ -5613,6 +5613,7 @@ class RandomForestRegressorXGB:
         xHigh = dfHigh.drop(columns='activity').values
         yHigh = np.log1p(dfHigh['activity'].values)
         pd.set_option('display.max_columns', 10)
+        pd.set_option('display.max_rows', 10)
         print(f'ESM Embeddings: {pink}{datasetTag}{resetColor}\n'
               f'{dfTrain}\n\n\n'
               f'ESM Embeddings: {pink}{datasetTagHigh}{resetColor}\n{dfHigh}\n\n')
@@ -5835,7 +5836,7 @@ class RandomForestRegressorXGB:
             print('========================================'
                   '=========================================\n')
             print('                       ===================================\n')
-            print('========================================='
+            print('========================================'
                   '=========================================\n\n')
 
             # Plot scatter of yTest, yPred
@@ -5846,7 +5847,7 @@ class RandomForestRegressorXGB:
 
 
     def plotTestingPredictions(self):
-        print(f'{orange}Write the code for {cyan}plotTestingPredictions()\n')
+        print(f'{orange}Write the code for {cyan}plotTestingPredictions(){resetColor}\n')
         for dataset, predictions in self.predictionAccuracy.items():
             print(f'Best Prediction Values: {pink}{dataset}{resetColor}\n'
                   f'{predictions}\n')
