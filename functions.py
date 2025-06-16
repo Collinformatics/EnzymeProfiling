@@ -5473,7 +5473,7 @@ class RandomForestRegressor:
 
 
 """
-Params Grid: RandomForestRegressorXGB
+Params Grid: Random ForestRegressor - XGB
     max_leaves:
         You can use it instead of max_depth if you care more about model
         complexity in terms of decision regions than tree height.
@@ -5613,31 +5613,42 @@ class RandomForestRegressorXGB:
         x = dfTrain.drop(columns='activity').values
         y = np.log1p(dfTrain['activity'].values)
 
-        # Parameters: High value dataset
+        # Parameters: Slitting the dataset
         self.selectSubsQuantile = (100 - self.selectSubsTopPercent) / 100
-        pathModelH = pathModel.replace('Embeddings', f'High Values - Embeddings')
+        pathModelH = pathModel.replace('Embeddings', f'{datasetTagHigh} - Embeddings')
+        pathModelH = pathModelH.replace(' %', '')
+        pathModelH = pathModelH.replace('Activity Scores', '')
+        pathModel = pathModel.replace('Embeddings', f'{datasetTag} - Embeddings')
+        pathModel = pathModel.replace(' %', '')
+        pathModel = pathModel.replace('Activity Scores', '')
+        modelPaths = {datasetTag: pathModel, datasetTagHigh: pathModelH}
         print(f'Combine predictions {pink}{datasetTag}{resetColor} with '
               f'{pink}{datasetTagHigh}{resetColor}?\n')
-        modelPaths = {datasetTag: pathModel, datasetTagHigh: pathModelH}
 
-        # Get: Highly active subset
+        # Get: Subsets
         threshold = dfTrain['activity'].quantile(self.selectSubsQuantile)
-        print(f'Selecting Top {red}{self.selectSubsTopPercent} %'
-              f'{resetColor} of Substrates\n')
         dfHigh = dfTrain[dfTrain['activity'] > threshold]
         xHigh = dfHigh.drop(columns='activity').values
         yHigh = np.log1p(dfHigh['activity'].values)
+        dfLow = dfTrain[dfTrain['activity'] <= threshold]
+        xLow = dfLow.drop(columns='activity').values
+        yLow = np.log1p(dfLow['activity'].values)
         pd.set_option('display.max_columns', 10)
         pd.set_option('display.max_rows', 10)
-        print(f'ESM Embeddings: {pink}{datasetTag}{resetColor}\n'
-              f'{dfTrain}\n\n\n'
-              f'ESM Embeddings: {pink}{datasetTagHigh}{resetColor}\n{dfHigh}\n\n')
+        print(f'Selecting Top {red}{self.selectSubsTopPercent} %'
+              f'{resetColor} of Substrates'
+              f'Sorted ESM Embeddings: {pink}{datasetTagHigh}{resetColor}\n'
+              f'{dfHigh.sort_values(by='activity', ascending=False)}\n\n\n'
+              f'Sorted ESM Embeddings: {pink}{datasetTag}{resetColor}\n'
+              f'{dfLow.sort_values(by='activity', ascending=False)}\n\n')
         pd.set_option('display.max_columns', None)
 
 
         # Split datasets
+        # xTraining, xTesting, yTraining, yTesting = train_test_split(
+        #     x, y, test_size=testSize, random_state=19)
         xTraining, xTesting, yTraining, yTesting = train_test_split(
-            x, y, test_size=testSize, random_state=19)
+            xLow, yLow, test_size=testSize, random_state=19)
         xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
             xHigh, yHigh, test_size=testSize, random_state=19)
 
@@ -5686,7 +5697,7 @@ class RandomForestRegressorXGB:
                     print(f'Combination: {red}{combination}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
-                          f'Parameters: {greenLight}{params}{resetColor}\n'
+                          f'Hyperparameters: {greenLight}{params}{resetColor}\n'
                           f'ESM Layer: {yellow}{self.layerESM}{resetColor}\n')
 
                 # Train the model
@@ -5763,14 +5774,14 @@ class RandomForestRegressorXGB:
                         timeRemaining = round((totalParamCombos - combination) / rate, 3)
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Best Model Accuracy: {pink}{dataset}{resetColor}\n'
-                              f'Parameters: {greenLight}{self.bestParams[tag]}')
+                              f'Hyperparameters: {greenLight}{self.bestParams[tag]}')
                         print(f'{blue}{values}{resetColor}\n')
                     print(f'Time Training This Model: '
                           f'{red}{runtime:,} s{resetColor}\n'
-                          f'Time Training All Models: '
-                          f'{red}{runtimeTotal:,} min{resetColor}\n'
                           f'Training Rate: '
                           f'{red}{rate:,} combinations / min{resetColor}\n'
+                          f'Time Training All Models: '
+                          f'{red}{runtimeTotal:,} min{resetColor}\n'
                           f'Remaining Runtime: '
                           f'{red}{timeRemaining:,} min{resetColor}')
                     # self.plotTestingPredictions()
@@ -5849,8 +5860,8 @@ class RandomForestRegressorXGB:
             print(f'Training Completed\n')
             for tag, params in self.bestParams.items():
                 print(f'Subset: {pink}{tag}{resetColor}\n'
-                      f'     Best Parameters: {greenLight}{params}{resetColor}\n'
-                      f'     Accuracy:\n{blue}{self.modelAccuracy[tag]}{resetColor}\n')
+                      f'Best Hyperparameters: {greenLight}{params}{resetColor}\n'
+                      f'Accuracy:\n{blue}{self.modelAccuracy[tag]}{resetColor}\n')
             print(f'Training Rate: '
                   f'{red}{rate:,} combinations / min{resetColor}\n'
                   f'Total Training Time: '
@@ -6045,7 +6056,7 @@ class PredictActivity:
 
         # Parameters: Model
         self.modelType = modelType
-        self.subsetTag = 'All Substrates'
+        self.subsetTag = f'Bottom {100 - self.topSubsPercent} % Activity Scores'
         self.subsetTagHigh = f'Top {self.topSubsPercent} % Activity Scores'
         accuracyDF = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
         self.modelAccuracy = {self.subsetTag: accuracyDF.copy(),
