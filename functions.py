@@ -5749,7 +5749,7 @@ class RandomForestRegressorXGB:
                 if printData and lastModel:
                     print(f'Max Activity Score: {red}Max {self.maxValue:,}{resetColor}')
                     for dataset, predictions in self.predictionAccuracy.items():
-                        print(f'Prediction Values For Combination '
+                        print(f'Prediction Values For Parameter Combination '
                               f'{red}{combination}{resetColor}: '
                               f'{pink}{dataset}{resetColor}\n'
                               f'{greenDark}{predictions}{resetColor}\n\n')
