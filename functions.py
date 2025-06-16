@@ -5472,6 +5472,87 @@ class RandomForestRegressor:
 
 
 
+"""
+Params Grid: RandomForestRegressorXGB
+    max_leaves:
+        You can use it instead of max_depth if you care more about model
+        complexity in terms of decision regions than tree height.
+
+    max_depth:
+        Limits the depth of individual trees.
+        Helps prevent overfitting; lower values create simpler trees.
+        Easier to interpret than max_leaves.
+
+    learning_rate (aka eta):
+        Controls how much each tree contributes to the overall model.
+        Lower values improve generalization but require more boosting rounds.
+        Often paired with early stopping.
+
+    n_estimators:
+        Number of boosting rounds (trees).
+        More trees improve performance but increase computation time and risk
+        of overfitting.
+        Use early stopping to avoid unnecessary rounds.
+
+    subsample:
+        Fraction of training data randomly sampled for each tree.
+        Helps prevent overfitting; values between 0.5 and 0.9 are common.
+        Lower values add randomness and improve generalization.
+
+    colsample_bytree:
+        Fraction of features randomly sampled for each tree.
+        Like subsample, adds diversity and reduces overfitting.
+        Especially helpful for high-dimensional data.
+
+    colsample_bylevel:
+        Fraction of features randomly sampled for each tree level (depth).
+        More granular version of colsample_bytree; rarely used alone but can
+        improve regularization.
+        improve regularization.
+
+    colsample_bynode:
+        Fraction of features used per tree split.
+        Very fine-grained feature sampling—can work well in large feature spaces.
+
+    gamma (aka min_split_loss):
+        Minimum loss reduction required to make a split.
+        Higher values make trees more conservative (fewer splits).
+        Great for reducing overfitting.
+
+    reg_alpha:
+        L1 regularization term on weights (like Lasso).
+        Encourages sparsity in leaf weights—can help with feature selection.
+
+    reg_lambda:
+        L2 regularization term on weights (like Ridge).
+        Helps with multicollinearity and prevents weights from growing too large.
+
+    min_child_weight:
+        Minimum sum of instance weights (hessian) needed in a child.
+        Larger values prevent splitting nodes with few samples—controls
+        overfitting.
+
+    tree_method:
+        Algorithm used to train trees.
+        'auto', 'exact', 'approx', 'hist', or 'gpu_hist'.
+        'hist' and 'gpu_hist' are faster and scalable to large datasets.
+
+    predictor:
+        Device prediction strategy.
+        'auto', 'cpu_predictor', or 'gpu_predictor'.
+        'gpu_predictor' is faster for inference on compatible hardware.
+
+    grow_policy:
+        Controls how trees grow.
+        'depthwise' grows tree level by level, 'lossguide' grows by highest loss
+        reduction.
+        lossguide' can lead to deeper trees with fewer leaves—good with large
+        datasets.
+
+    importance_type:
+        Method for computing feature importances: 'weight', 'gain', 'cover', etc.
+        Doesn't affect training but useful for model interpretation.
+"""
 class RandomForestRegressorXGB:
     def __init__(self, dfTrain, dfPred, maxValue, tagExperiment, selectSubsTopPercent,
                  pathModel, modelTag, modelAccuracy, modelAccuracyPaths, pathFigures,
@@ -5525,88 +5606,6 @@ class RandomForestRegressorXGB:
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
         # 'max_depth': range(2, 6, 1),
-
-        """
-        Params Grid:
-            max_leaves:
-                You can use it instead of max_depth if you care more about model
-                complexity in terms of decision regions than tree height.
-
-            max_depth:
-                Limits the depth of individual trees.
-                Helps prevent overfitting; lower values create simpler trees.
-                Easier to interpret than max_leaves.
-
-            learning_rate (aka eta):
-                Controls how much each tree contributes to the overall model.
-                Lower values improve generalization but require more boosting rounds.
-                Often paired with early stopping.
-
-            n_estimators:
-                Number of boosting rounds (trees).
-                More trees improve performance but increase computation time and risk
-                of overfitting.
-                Use early stopping to avoid unnecessary rounds.
-
-            subsample:
-                Fraction of training data randomly sampled for each tree.
-                Helps prevent overfitting; values between 0.5 and 0.9 are common.
-                Lower values add randomness and improve generalization.
-
-            colsample_bytree:
-                Fraction of features randomly sampled for each tree.
-                Like subsample, adds diversity and reduces overfitting.
-                Especially helpful for high-dimensional data.
-
-            colsample_bylevel:
-                Fraction of features randomly sampled for each tree level (depth).
-                More granular version of colsample_bytree; rarely used alone but can
-                improve regularization.
-                improve regularization.
-
-            colsample_bynode:
-                Fraction of features used per tree split.
-                Very fine-grained feature sampling—can work well in large feature spaces.
-
-            gamma (aka min_split_loss):
-                Minimum loss reduction required to make a split.
-                Higher values make trees more conservative (fewer splits).
-                Great for reducing overfitting.
-
-            reg_alpha:
-                L1 regularization term on weights (like Lasso).
-                Encourages sparsity in leaf weights—can help with feature selection.
-
-            reg_lambda:
-                L2 regularization term on weights (like Ridge).
-                Helps with multicollinearity and prevents weights from growing too large.
-
-            min_child_weight:
-                Minimum sum of instance weights (hessian) needed in a child.
-                Larger values prevent splitting nodes with few samples—controls
-                overfitting.
-
-            tree_method:
-                Algorithm used to train trees.
-                'auto', 'exact', 'approx', 'hist', or 'gpu_hist'.
-                'hist' and 'gpu_hist' are faster and scalable to large datasets.
-
-            predictor:
-                Device prediction strategy.
-                'auto', 'cpu_predictor', or 'gpu_predictor'.
-                'gpu_predictor' is faster for inference on compatible hardware.
-
-            grow_policy:
-                Controls how trees grow.
-                'depthwise' grows tree level by level, 'lossguide' grows by highest loss
-                reduction.
-                lossguide' can lead to deeper trees with fewer leaves—good with large
-                datasets.
-
-            importance_type:
-                Method for computing feature importances: 'weight', 'gain', 'cover', etc.
-                Doesn't affect training but useful for model interpretation.
-        """
 
 
         # Process dataframe
@@ -5665,6 +5664,9 @@ class RandomForestRegressorXGB:
               f'     Train: {yellow}{xTrainingH.shape}{resetColor}\n'
               f'     Test: {yellow}{xTestingH.shape}{resetColor}\n\n')
 
+        def getLayerNumber(col):
+            return int(col.replace("ESM Layer ", ""))
+
         # # Train Or Load Model: Random Forest Regressor
         if (trainModel or
                 not os.path.exists(pathModel) and
@@ -5672,11 +5674,6 @@ class RandomForestRegressorXGB:
             # Generate parameter combinations
             paramCombos = list(product(*self.paramGrid.values()))
             paramNames = list(self.paramGrid.keys())
-
-
-            def getLayerNumber(col):
-                return int(col.replace("ESM Layer ", ""))
-
 
             def trainModel(model, xTrain, xTest, yTrain, yTest, tag, lastModel=False):
                 if printData and lastModel:
@@ -5772,6 +5769,7 @@ class RandomForestRegressorXGB:
                           f'{red}{rate:,} combinations / min{resetColor}\n'
                           f'Remaining Runtime: '
                           f'{red}{timeRemaining:,} min{resetColor}')
+                    self.plotTestingPredictions()
 
                     # plt.hist(yTest, bins=50)
                     # plt.title("Test Substrate Score Distribution")
@@ -6319,12 +6317,19 @@ class PredictActivity:
                 runtimeTotal = (end - startInit) / 60
                 percentCompletion = round((i / batchTotal)* 100, 1)
                 if i % 10 == 0:
+                    rate = round(i / runtimeTotal, 3)
+                    if rate == 0:
+                        timeRemaining = float('inf')
+                    else:
+                        timeRemaining = round((batchTotal - i) / rate, 3)
                     print(f'ESM Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
                           f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
                           f'     Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
                           f'     Runtime: {red}{round(runtime, 3):,} s'
                           f'{resetColor}\n'
                           f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
+                          f'{resetColor}\n'
+                          f'     Remaining Runtime: {red}{timeRemaining:,} min'
                           f'{resetColor}\n')
                 if trainingSet:
                     allValues.extend(values[i:i + self.batchSize])
