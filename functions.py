@@ -1,4 +1,5 @@
 # PURPOSE: This script contains the functions that you will need to process your NGS data
+from encodings.punycode import selective_len
 
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -5472,9 +5473,10 @@ class RandomForestRegressor:
 
 
 class RandomForestRegressorXGB:
-    def __init__(self, dfTrain, dfPred, maxValue, tagExperiment, selectSubsTopPercent, pathModel,
-                 modelTag, modelAccuracy, modelAccuracyPaths, datasetTag, datasetTagHigh,
-                 layerESM, testSize, device, trainModel=True, evalMetric='rmse'):
+    def __init__(self, dfTrain, dfPred, maxValue, tagExperiment, selectSubsTopPercent,
+                 pathModel, modelTag, modelAccuracy, modelAccuracyPaths, pathFigures,
+                 datasetTag, datasetTagHigh, layerESM, testSize, device, trainModel=True,
+                 evalMetric='rmse'):
         """
         :param evalMetric: options include 'rmse' and 'mae'
         """
@@ -5501,6 +5503,7 @@ class RandomForestRegressorXGB:
         self.sortedColumns = []
 
         # Parameters: Figures
+        self.pathFigures = pathFigures
         self.figSize = (9.5, 8)
         self.figSizeMini = (self.figSize[0], 6)
         self.residueLabelType = 2 # 0 = full AA name, 1 = 3-letter code, 2 = 1 letter
@@ -5745,9 +5748,10 @@ class RandomForestRegressorXGB:
                 if printData and lastModel:
                     print(f'Max Activity Score: {red}Max {self.maxValue:,}{resetColor}')
                     for dataset, predictions in self.predictionAccuracy.items():
-                        print(f'Prediction Values ({red}{combination}{resetColor}): '
+                        print(f'Prediction Values For Combination '
+                              f'{red}{combination}{resetColor}: '
                               f'{pink}{dataset}{resetColor}\n'
-                              f'{greenDark}{predictions}{resetColor}\n')
+                              f'{greenDark}{predictions}{resetColor}\n\n')
 
                     runtime = round((end - start), 3)
                     runtimeTotal = round((end - startTraining) / 60, 3)
@@ -5881,7 +5885,8 @@ class RandomForestRegressorXGB:
             plt.plot(axisLimits, axisLimits, color='#101010', lw=2)
             plt.xlabel('True Activity', fontsize=self.labelSizeAxis)
             plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
-            plt.title(f'Randon Forest Regressor Accuracy\n{tag}',
+            plt.title(f'Randon Forest Regressor Accuracy\n'
+                      f'{self.layerESMTag}\n{tag}',
                       fontsize=self.labelSizeTitle, fontweight='bold')
             plt.subplots_adjust(top=0.852, bottom=0.075, left=0.117, right=1)
             ax.set_xlim(0, maxValue)
@@ -5894,7 +5899,7 @@ class RandomForestRegressorXGB:
 
             # Define: Save location
             figLabel = f'{self.tagExperiment}.png'
-            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+            saveLocation = os.path.join(self.pathFigures, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
@@ -5991,7 +5996,7 @@ class PredictActivity:
         self.pathData = os.path.join(self.pathFolder, 'Data')
         self.pathEmbeddings = os.path.join(self.pathFolder, 'Embeddings')
         self.pathModels = os.path.join(self.pathFolder, 'Models')
-        self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
+        self.pathFigures = os.path.join(self.pathFolder, 'Figures')
         os.makedirs(self.pathData, exist_ok=True)
         os.makedirs(self.pathEmbeddings, exist_ok=True)
         os.makedirs(self.pathModels, exist_ok=True)
@@ -6158,7 +6163,8 @@ class PredictActivity:
                     tagExperiment=self.tagExperiment, maxValue=self.maxTrainingScore,
                     pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
                     modelAccuracy=self.modelAccuracy,
-                    modelAccuracyPaths=self.pathModelAccuracy, datasetTag=self.subsetTag,
+                    modelAccuracyPaths=self.pathModelAccuracy,
+                    pathFigures=self.pathFigures, datasetTag=self.subsetTag,
                     datasetTagHigh=self.subsetTagHigh,  layerESM=layerESM,
                     testSize=self.testingSetSize, device=self.device)
 
