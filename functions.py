@@ -5580,6 +5580,7 @@ class RandomForestRegressorXGB:
         self.layerESMTag = f'ESM Layer {self.layerESM}'
         self.modelAccuracy = modelAccuracy
         self.predictionAccuracy = {}
+        self.modelBestPredictions = {}
         self.bestParams = {datasetTag: {}, datasetTagHigh: {}}
         self.sortedColumns = []
 
@@ -5725,12 +5726,15 @@ class RandomForestRegressorXGB:
                     saveModel = True
                     newColumn = self.layerESMTag not in self.modelAccuracy[tag].columns
 
-                    # sys.exit()
+                    # Record: Model performance
                     self.bestParams[tag] = {self.layerESMTag: params}
                     self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
                     self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
                     self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
                     self.modelAccuracy[tag] = self.modelAccuracy[tag].sort_index(axis=1)
+
+                    # Record: Best predictions
+                    self.modelBestPredictions[tag] = self.predictionAccuracy[tag]
 
                     # Sort the columns
                     if self.sortedColumns == [] or newColumn:
@@ -5858,16 +5862,21 @@ class RandomForestRegressorXGB:
                   '=========================================\n\n')
 
             # Plot the results from the best model
-            self.plotTestingPredictions()
+            self.plotTestingPredictions(finalSet=True)
         else:
             self.model = self.loadModel(pathModel=pathModel, tag=datasetTag)
             self.modelH = self.loadModel(pathModel=pathModelH, tag=datasetTag)
 
 
-    def plotTestingPredictions(self):
+    def plotTestingPredictions(self, finalSet=False):
         print(f'============================= Prediction Accuracy '
               f'==============================')
-        for tag, predictions in self.predictionAccuracy.items():
+        if finalSet:
+            data = self.modelBestPredictions
+        else:
+            data = self.predictionAccuracy
+
+        for tag, predictions in data.items():
             print(f'Subset: {pink}{tag}{resetColor}\n{predictions}\n\n')
             x = predictions.loc[:, 'yTest']
             y = predictions.loc[:, 'yPred']
