@@ -5904,7 +5904,7 @@ class RandomForestRegressorXGB:
             # Plot the data
             fig, ax = plt.subplots(figsize=self.figSize)
             plt.scatter(x, y, alpha=0.7, color='#BF5700', edgecolors='#F8971F', s=50)
-            plt.plot(axisLimits, axisLimits, color='#101010', lw=2)
+            plt.plot(axisLimits, axisLimits, color='#101010', lw=self.lineThickness)
             plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
             plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
             plt.title(f'{tag}\nRandon Forest Regressor Accuracy\n'
