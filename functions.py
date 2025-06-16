@@ -5921,6 +5921,7 @@ class RandomForestRegressorXGB:
 
             # Define: Save location
             figLabel = self.tagExperiment[tag] + '.png'
+            figLabel = figLabel.replace('Params', f'Params Layer {self.layerESM}')
             saveLocation = os.path.join(self.pathFigures, figLabel)
 
             # Save figure
