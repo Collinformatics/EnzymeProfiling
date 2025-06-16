@@ -5769,7 +5769,7 @@ class RandomForestRegressorXGB:
                           f'{red}{rate:,} combinations / min{resetColor}\n'
                           f'Remaining Runtime: '
                           f'{red}{timeRemaining:,} min{resetColor}')
-                    self.plotTestingPredictions()
+                    # self.plotTestingPredictions()
 
                     # plt.hist(yTest, bins=50)
                     # plt.title("Test Substrate Score Distribution")
@@ -5865,7 +5865,10 @@ class RandomForestRegressorXGB:
 
 
     def plotTestingPredictions(self):
-        for tag, predictions in self.modelAccuracy.items():
+        print(f'============================= Prediction Accuracy '
+              f'==============================')
+        for tag, predictions in self.predictionAccuracy.items():
+            print(f'Subset: {pink}{tag}{resetColor}\n{predictions}\n\n')
             x = predictions.loc[:, 'yTest']
             y = predictions.loc[:, 'yPred']
 
@@ -5874,6 +5877,7 @@ class RandomForestRegressorXGB:
             magnitude = math.floor(math.log10(maxValue))
             unit = 10 ** (magnitude - 1)
             maxValue = math.ceil(maxValue / unit) * unit
+            maxValue += unit
             axisLimits = [0, maxValue]
 
 
@@ -5881,22 +5885,33 @@ class RandomForestRegressorXGB:
             fig, ax = plt.subplots(figsize=self.figSize)
             plt.scatter(x, y, alpha=0.7, color='#BF5700', edgecolors='#F8971F', s=50)
             plt.plot(axisLimits, axisLimits, color='#101010', lw=2)
-            plt.xlabel('True Activity', fontsize=self.labelSizeAxis)
+            plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
             plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
-            plt.title(f'Randon Forest Regressor Accuracy\n'
-                      f'{self.layerESMTag}\n{tag}',
+            plt.title(f'{tag}\nRandon Forest Regressor Accuracy\n'
+                      f'{self.layerESMTag}',
                       fontsize=self.labelSizeTitle, fontweight='bold')
-            plt.subplots_adjust(top=0.852, bottom=0.075, left=0.117, right=1)
+            plt.subplots_adjust(top=0.852, bottom=0.075, left=0.162, right=0.935)
+
+            # Set axies
             ax.set_xlim(0, maxValue)
             ax.set_ylim(0, maxValue)
-            plt.tight_layout()
+
+            # Set tick parameters
+            ax.tick_params(axis='both', which='major', length=self.tickLength,
+                           labelsize=self.labelSizeTicks, width=self.lineThickness)
+
+            # Set the thickness of the figure border
+            for _, spine in ax.spines.items():
+                spine.set_visible(True)
+                spine.set_linewidth(self.lineThickness)
+
             plt.grid(True)
             fig.canvas.mpl_connect('key_press_event', pressKey)
             plt.show()
 
 
             # Define: Save location
-            figLabel = f'{self.tagExperiment}.png'
+            figLabel = self.tagExperiment[tag] + '.png'
             saveLocation = os.path.join(self.pathFigures, figLabel)
 
             # Save figure
@@ -6346,6 +6361,8 @@ class PredictActivity:
               f'     Runtime: {red}{round(runtime, 3):,} s'
               f'{resetColor}\n'
               f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
+              f'{resetColor}\n'
+              f'     Remaining Runtime: {red}{0:,} min'
               f'{resetColor}\n')
 
 
