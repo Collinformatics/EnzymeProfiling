@@ -5770,6 +5770,8 @@ class RandomForestRegressorXGB:
 
                     # Record: Model performance
                     self.bestParams[tag] = {self.layerESMTag: params.copy()}
+                    print(f'New Best Params: {pink}{tag}\n'
+                          f'{yellow}{self.bestParams[tag]}{resetColor}\n')
                     self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
                     self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
                     self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
@@ -5803,7 +5805,7 @@ class RandomForestRegressorXGB:
                         timeRemaining = round((totalParamCombos - combination) / rate, 3)
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Best Model Accuracy: {pink}{dataset}{resetColor}\n'
-                              f'Hyperparameters: {greenLight}{self.bestParams[tag]}')
+                              f'Hyperparameters: {greenLight}{self.bestParams[dataset]}')
                         print(f'{blue}{values}{resetColor}\n')
                     print(f'Time Training This Model: '
                           f'{red}{runtime:,} s{resetColor}\n'
