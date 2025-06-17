@@ -1,4 +1,5 @@
-from functions import getFileNames, NGS, PredictActivity
+from functions import getFileNames, NGS
+from functionsML import PredictActivity
 import pandas as pd
 import sys
 
@@ -68,7 +69,7 @@ inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 inModelSize = 1 # 0 = 15B Params, 1 = 3B Params, 2 = 650M Params
 inUseFilteredReadingFrame = False
 inSelectSubstratesTop = 5 # 10 = Top 10 quantile of activity scores
-inSelectSubstratesBottom = 35 # 10 = Top 10 quantile of activity scores
+inSelectSubstratesBottom = 50 # 10 = Top 10 quantile of activity scores
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
