@@ -5770,8 +5770,6 @@ class RandomForestRegressorXGB:
 
                     # Record: Model performance
                     self.bestParams[tag] = {self.layerESMTag: params.copy()}
-                    print(f'New Best Params: {pink}{tag}\n'
-                          f'{yellow}{self.bestParams[tag]}{resetColor}\n')
                     self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
                     self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
                     self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
