@@ -5603,9 +5603,9 @@ class RandomForestRegressorXGB:
         self.paramGrid = {
             'colsample_bytree': np.arange(0.6, 1.0, 0.2),
             'learning_rate': [0.1],
-            'max_leaves': range(10, 70, 10),
+            'max_leaves': range(10, 80, 20),
             'min_child_weight': range(1, 3, 1),
-            'n_estimators': range(1000, 2250, 250),
+            'n_estimators': range(1000, 2500, 500),
             'subsample': np.arange(0.5, 1.0, 0.1)
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
@@ -5769,7 +5769,7 @@ class RandomForestRegressorXGB:
                     newColumn = self.layerESMTag not in self.modelAccuracy[tag].columns
 
                     # Record: Model performance
-                    self.bestParams[tag] = {self.layerESMTag: params}
+                    self.bestParams[tag] = {self.layerESMTag: params.copy()}
                     self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
                     self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
                     self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
@@ -5807,16 +5807,15 @@ class RandomForestRegressorXGB:
                         print(f'{blue}{values}{resetColor}\n')
                     print(f'Time Training This Model: '
                           f'{red}{runtime:,} s{resetColor}\n'
+                          f'Time Training All Models: '
+                          f'{red}{runtimeTotal:,} min{resetColor}\n'
                           f'Training Rate: '
                           f'{red}{rate:,} combinations / min{resetColor}\n'
-                          f'Time Training All Models: '
-                          f'{red}{runtimeTotal:,} min{resetColor}\n\n'
                           f'Training Progress: {red}{combination}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
                           f'Remaining Runtime: '
-                          f'{red}{timeRemaining:,} min{resetColor}\n')
-                    print(f'Parameter Combination: {red}{combination}{resetColor}\n')
+                          f'{red}{timeRemaining:,} min{resetColor}')
                     # self.plotTestingPredictions()
 
                     # plt.hist(yTest, bins=50)
