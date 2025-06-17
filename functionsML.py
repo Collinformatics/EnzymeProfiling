@@ -55,7 +55,20 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 
-# ================================= Define Al
+
+# =================================== Define Functions ===================================
+def pressKey(event):
+    if event.key == 'escape':
+        plt.close()
+    elif event.key == 'e':
+        sys.exit()
+    elif event.key == 'r':
+        python = sys.executable # Doesnt seem to work on windows?
+        os.execl(python, python, *sys.argv)
+
+
+
+# ================================= Define ML Algorithms =================================
 class RandomForestRegressor:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
                  modelTagHigh, testSize, NTrees, device, printNumber):
@@ -362,14 +375,14 @@ class RandomForestRegressorXGB:
         # }
         self.paramGrid = {
             'colsample_bytree': np.arange(0.6, 1.0, 0.2),
-            'learning_rate': [0.05, 0.01],
-            'max_leaves': range(100, 300, 50),
+            'learning_rate': [0.05, 0.1],
+            'max_leaves': range(100, 450, 50),
             'min_child_weight': [1],
-            'n_estimators': [4000], # 3500
+            'n_estimators': [4000, 4500, 5000], # 3500
             'subsample': np.arange(0.6, 1.2, 0.2)
         }
-        # 'max_leaves': range(2, 10, 1), # N terminal nodes
-        # 'max_depth': range(2, 6, 1),
+        # 'max_leaves': range(2, 10, 1) # N terminal nodes
+        # 'max_depth': range(2, 6, 1)
 
 
         # Process dataframe
@@ -498,8 +511,13 @@ class RandomForestRegressorXGB:
 
                 # Train the model
                 start = time.time()
-                model.fit(xTrain, yTrain,eval_set=[(xTest, yTest)],
-                          verbose=False) # sample_weight=yTrain,
+                if tagData == datasetTagHigh:
+                    model.fit(xTrain, yTrain, eval_set=[(xTest, yTest)],
+                              early_stopping_rounds=50, verbose=False,
+                              sample_weight=yTrain)
+                else:
+                    model.fit(xTrain, yTrain,eval_set=[(xTest, yTest)],
+                              early_stopping_rounds=50, verbose=False)
                 end = time.time()
 
                 # Evaluate the model
@@ -509,8 +527,8 @@ class RandomForestRegressorXGB:
                 yPredNorm = np.expm1(yPred) # Reverse log1p transform
                 yTestNorm = np.expm1(yTest)
                 self.predictionAccuracy[tagData] = pd.DataFrame({
-                    'yTest_Norm': yTestNorm,
-                    'yPred_Norm': yPredNorm
+                    'yTest Norm': yTestNorm,
+                    'yPred Norm': yPredNorm
                 })
                 yPred = yPredNorm * self.maxValue
                 yTest = yTestNorm * self.maxValue
@@ -569,7 +587,8 @@ class RandomForestRegressorXGB:
                     else:
                         timeRemaining = round((totalParamCombos - combination) / rate, 3)
                     for dataset, values in self.modelAccuracy.items():
-                        print(f'Best Model Accuracy: {pink}{dataset}{resetColor}\n'
+                        print(f'Prediction Accuracy For Subset: {pink}{dataset}'
+                              f'{resetColor}\n'
                               f'Hyperparameters: {greenLight}{self.bestParams[dataset]}')
                         print(f'{blue}{values}{resetColor}\n')
                     print(f'Time Training This Model: '
@@ -609,6 +628,7 @@ class RandomForestRegressorXGB:
 
 
             # Train Models
+            nJobs = -1
             startTraining = time.time()
             totalParamCombos = len(paramCombos)
             for combination, paramCombo in enumerate(paramCombos):
@@ -619,12 +639,9 @@ class RandomForestRegressorXGB:
                 # Train Model
                 tag = datasetTagHigh
                 model, keepModel = trainModel(
-                    model=XGBRegressor(device=self.device,
-                                       eval_metric=evalMetric,
-                                       tree_method="hist",
-                                       random_state=42,
-                                       max_bin=64,
-                                       **params),
+                    model=XGBRegressor(
+                        device=self.device, n_jobs=nJobs, eval_metric=evalMetric,
+                        tree_method="hist", random_state=42, max_bin=64, **params),
                     xTrain=xTrainingH, yTrain=yTrainingH,
                     xTest=xTestingH, yTest=yTestingH,
                     tagData=tag)
@@ -634,12 +651,9 @@ class RandomForestRegressorXGB:
                 # Train Model
                 tag = datasetTagMid
                 model, keepModel = trainModel(
-                    model=XGBRegressor(device=self.device,
-                                       eval_metric=evalMetric,
-                                       tree_method="hist",
-                                       random_state=42,
-                                       max_bin=64,
-                                       **params),
+                    model=XGBRegressor(
+                        device=self.device, n_jobs=nJobs, eval_metric=evalMetric,
+                        tree_method="hist", random_state=42, max_bin=64, **params),
                     xTrain=xTrainingM, yTrain=yTrainingM,
                     xTest=xTestingM, yTest=yTestingM,
                     tagData=tag)
@@ -649,12 +663,9 @@ class RandomForestRegressorXGB:
                 # Train Model
                 tag = datasetTagLow
                 model, keepModel = trainModel(
-                    model=XGBRegressor(device=self.device,
-                                       eval_metric=evalMetric,
-                                       tree_method="hist",
-                                       random_state=42,
-                                       max_bin=64,
-                                       **params),
+                    model=XGBRegressor(
+                        device=self.device, n_jobs=nJobs, eval_metric=evalMetric,
+                        tree_method="hist", random_state=42, max_bin=64, **params),
                     xTrain=xTrainingL, yTrain=yTrainingL,
                     xTest=xTestingL, yTest=yTestingL,
                     tagData=tag, lastModel=True)
