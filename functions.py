@@ -5602,10 +5602,10 @@ class RandomForestRegressorXGB:
         # Params: Grid search
         self.paramGrid = {
             'colsample_bytree': np.arange(0.6, 1.0, 0.2),
-            'learning_rate': [0.1],
-            'max_leaves': range(10, 80, 20),
+            'learning_rate': [0.05, 0.01],
+            'max_leaves': range(100, 250, 50),
             'min_child_weight': range(1, 3, 1),
-            'n_estimators': range(1000, 2500, 500),
+            'n_estimators': range(3500, 5500, 500),
             'subsample': np.arange(0.5, 1.0, 0.1)
         }
         # 'max_leaves': range(2, 10, 1), # N terminal nodes
@@ -5622,6 +5622,8 @@ class RandomForestRegressorXGB:
         print(f'Selection Quantiles:\n'
               f'     1: {red}{self.activityQuantile1}{resetColor}\n'
               f'     2: {red}{self.activityQuantile2}{resetColor}\n')
+
+        # Parameters: Saving the model
         pathModelH = pathModel.replace('Embeddings', f'{datasetTagHigh} - Embeddings')
         pathModelH = pathModelH.replace(' %', '')
         # pathModelH = pathModelH.replace('Activity Scores: ', '')
@@ -5720,7 +5722,8 @@ class RandomForestRegressorXGB:
             paramCombos = list(product(*self.paramGrid.values()))
             paramNames = list(self.paramGrid.keys())
 
-            def trainModel(model, xTrain, xTest, yTrain, yTest, tag, lastModel=False):
+            def trainModel(model, xTrain, xTest, yTrain, yTest, tagData,
+                           lastModel=False):
                 if printData and lastModel:
                     print('========================================'
                           '=========================================\n')
@@ -5735,7 +5738,8 @@ class RandomForestRegressorXGB:
 
                 # Train the model
                 start = time.time()
-                model.fit(xTrain, yTrain, sample_weight=yTrain)
+                model.fit(xTrain, yTrain, sample_weight=yTrain,
+                          eval_set=[(xTest, yTest)], early_stopping_rounds=50)
                 end = time.time()
 
                 # Evaluate the model
@@ -5744,14 +5748,14 @@ class RandomForestRegressorXGB:
                     yTest = yTest.get()
                 yPredNorm = np.expm1(yPred) # Reverse log1p transform
                 yTestNorm = np.expm1(yTest)
-                self.predictionAccuracy[tag] = pd.DataFrame({
+                self.predictionAccuracy[tagData] = pd.DataFrame({
                     'yTest_Norm': yTestNorm,
                     'yPred_Norm': yPredNorm
                 })
                 yPred = yPredNorm * self.maxValue
                 yTest = yTestNorm * self.maxValue
-                self.predictionAccuracy[tag].loc[:, 'yTest'] = yTest
-                self.predictionAccuracy[tag].loc[:, 'yPred'] = yPred
+                self.predictionAccuracy[tagData].loc[:, 'yTest'] = yTest
+                self.predictionAccuracy[tagData].loc[:, 'yPred'] = yPred
                 MAE = mean_absolute_error(yPred, yTest)
                 MSE = mean_squared_error(yPred, yTest)
                 R2 = r2_score(yPred, yTest)
@@ -5762,31 +5766,34 @@ class RandomForestRegressorXGB:
 
                 # Inspect results
                 saveModel = False
-                if (self.layerESMTag not in self.modelAccuracy[tag].columns or
+                if (self.layerESMTag not in self.modelAccuracy[tagData].columns or
                         (accuracy.loc[indexEvalMetric, self.layerESMTag] <
-                         self.modelAccuracy[tag].loc[indexEvalMetric, self.layerESMTag])):
+                         self.modelAccuracy[tagData].loc[
+                             indexEvalMetric, self.layerESMTag])):
                     saveModel = True
-                    newColumn = self.layerESMTag not in self.modelAccuracy[tag].columns
+                    newColumn = self.layerESMTag not in self.modelAccuracy[tagData].columns
 
                     # Record: Model performance
-                    self.bestParams[tag] = {self.layerESMTag: params.copy()}
-                    self.modelAccuracy[tag].loc['MAE', self.layerESMTag] = MAE
-                    self.modelAccuracy[tag].loc['MSE', self.layerESMTag] = MSE
-                    self.modelAccuracy[tag].loc['R²', self.layerESMTag] = R2
-                    self.modelAccuracy[tag] = self.modelAccuracy[tag].sort_index(axis=1)
+                    self.bestParams[tagData] = {self.layerESMTag: params.copy()}
+                    self.modelAccuracy[tagData].loc['MAE', self.layerESMTag] = MAE
+                    self.modelAccuracy[tagData].loc['MSE', self.layerESMTag] = MSE
+                    self.modelAccuracy[tagData].loc['R²', self.layerESMTag] = R2
+                    self.modelAccuracy[tagData] = (
+                        self.modelAccuracy[tagData].sort_index(axis=1))
 
                     # Record: Best predictions
-                    self.modelBestPredictions[tag] = self.predictionAccuracy[tag]
+                    self.modelBestPredictions[tagData] = self.predictionAccuracy[tagData]
 
                     # Sort the columns
                     if self.sortedColumns == [] or newColumn:
                         self.sortedColumns = (
-                            sorted(self.modelAccuracy[tag].columns, key=getLayerNumber))
-                    self.modelAccuracy[tag] = self.modelAccuracy[tag][self.sortedColumns]
+                            sorted(self.modelAccuracy[tagData].columns,
+                                   key=getLayerNumber))
+                    self.modelAccuracy[tagData] = self.modelAccuracy[tagData][self.sortedColumns]
 
                     # Save the data
-                    self.modelAccuracy[tag].to_csv(modelAccuracyPaths[tag])
-                    joblib.dump(model, modelPaths[tag])
+                    self.modelAccuracy[tagData].to_csv(modelAccuracyPaths[tagData])
+                    joblib.dump(model, modelPaths[tagData])
 
                 if printData and lastModel:
                     print(f'Max Activity Score: {red}Max {self.maxValue:,}{resetColor}')
@@ -5860,7 +5867,7 @@ class RandomForestRegressorXGB:
                                        **params),
                     xTrain=xTrainingH, yTrain=yTrainingH,
                     xTest=xTestingH, yTest=yTestingH,
-                    tag=tag)
+                    tagData=tag)
                 if keepModel:
                     self.modelH = model
 
@@ -5875,7 +5882,7 @@ class RandomForestRegressorXGB:
                                        **params),
                     xTrain=xTrainingM, yTrain=yTrainingM,
                     xTest=xTestingM, yTest=yTestingM,
-                    tag=tag)
+                    tagData=tag)
                 if keepModel:
                         self.modelM = model
 
@@ -5890,7 +5897,7 @@ class RandomForestRegressorXGB:
                                        **params),
                     xTrain=xTrainingL, yTrain=yTrainingL,
                     xTest=xTestingL, yTest=yTestingL,
-                    tag=tag, lastModel=True)
+                    tagData=tag, lastModel=True)
                 if keepModel:
                     self.modelL = model
 
@@ -5909,9 +5916,7 @@ class RandomForestRegressorXGB:
                 print(f'Subset: {pink}{tag}{resetColor}\n'
                       f'Best Hyperparameters: {greenLight}{params}{resetColor}\n'
                       f'Accuracy:\n{blue}{self.modelAccuracy[tag]}{resetColor}\n')
-            print(f'Training Rate: '
-                  f'{red}{rate:,} combinations / min{resetColor}\n'
-                  f'Total Training Time: '
+            print(f'Total Training Time: '
                   f'{red}{runtimeTotal:,} min{resetColor}')
             print('========================================'
                   '=========================================\n')
