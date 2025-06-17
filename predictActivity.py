@@ -67,7 +67,8 @@ inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 # Input 3: Computational Parameters
 inModelSize = 1 # 0 = 15B Params, 1 = 3B Params, 2 = 650M Params
 inUseFilteredReadingFrame = False
-inSelectTopSubstrates = 10 # 10 = Top 10 % of activity scores
+inSelectSubstratesTop = 5 # 10 = Top 10 quantile of activity scores
+inSelectSubstratesBottom = 35 # 10 = Top 10 quantile of activity scores
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
@@ -81,13 +82,14 @@ inUseEnrichmentFactor = True
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [15, 10, 5] # [36, 30, 25, 20, 15, 10, 5]
+inLayersESM = [15]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
 inMinES = 0 # Minimum ES for randomized substrates
 inSubsPred = {
-    'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
+    'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']
+}
 inGeneratedSubsFilter = { # Restrictions for generated substrates
     'R3': ['L'],
     'R4': ['Q']
@@ -265,7 +267,8 @@ pd.set_option('display.max_rows', 10)
 # Predict activity
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
-    subsTrain=subsTrain, topSubsPercent=inSelectTopSubstrates,
+    subsTrain=subsTrain, subsPercentSelectTop=inSelectSubstratesTop,
+    subsPercentSelectBottom=inSelectSubstratesBottom,
     maxTrainingScore=ngs.maxValue, subsPred=substratesPred, subsPredChosen=inSubsPred,
     useEF=inUseEnrichmentFactor, tagChosenSubs=tagPredSubs,
     minSubCount=inMinimumSubstrateCount, layersESM=inLayersESM, minES=inMinES,
