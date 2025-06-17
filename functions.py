@@ -5727,7 +5727,7 @@ class RandomForestRegressorXGB:
                     print('                       ===================================\n')
                     print('=============================== Training Progress '
                           '===============================')
-                    print(f'Combination: {red}{combination}{resetColor} / '
+                    print(f'Training Progress: {red}{combination}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
                           f'Hyperparameters: {greenLight}{params}{resetColor}\n'
@@ -5810,7 +5810,10 @@ class RandomForestRegressorXGB:
                           f'Training Rate: '
                           f'{red}{rate:,} combinations / min{resetColor}\n'
                           f'Time Training All Models: '
-                          f'{red}{runtimeTotal:,} min{resetColor}\n'
+                          f'{red}{runtimeTotal:,} min{resetColor}\n\n'
+                          f'Training Progress: {red}{combination}{resetColor} / '
+                          f'{red}{totalParamCombos}{resetColor} '
+                          f'({red}{percentComplete} %{resetColor})\n'
                           f'Remaining Runtime: '
                           f'{red}{timeRemaining:,} min{resetColor}\n')
                     print(f'Parameter Combination: {red}{combination}{resetColor}\n')
