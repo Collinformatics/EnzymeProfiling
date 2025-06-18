@@ -378,7 +378,7 @@ class RandomForestRegressorXGB:
             'learning_rate': [0.05, 0.1],
             'max_leaves': range(100, 450, 50),
             'min_child_weight': [1],
-            'n_estimators': [1500, 2000], # 3500
+            'n_estimators': [1500, 2000, 2500], # 3500
             'subsample': np.arange(0.6, 1.2, 0.2)
         }
         # 'max_leaves': range(2, 10, 1) # N terminal nodes
@@ -731,6 +731,7 @@ class RandomForestRegressorXGB:
             maxValue = math.ceil(maxValue / unit) * unit
             maxValue += unit
             axisLimits = [0, maxValue]
+            R2 = self.modelAccuracy[tag].loc['R²', self.layerESMTag]
 
 
             # Plot the data
@@ -739,7 +740,8 @@ class RandomForestRegressorXGB:
             plt.plot(axisLimits, axisLimits, color='#101010', lw=self.lineThickness)
             plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
             plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
-            plt.title(f'{tag}\nRandon Forest Regressor Accuracy\n'
+            plt.title(f'{tag}\nR² = {R2}\n'
+                      f'Randon Forest Regressor Accuracy\n'
                       f'{self.layerESMTag}',
                       fontsize=self.labelSizeTitle, fontweight='bold')
             plt.subplots_adjust(top=0.852, bottom=0.075, left=0.162, right=0.935)
@@ -764,7 +766,6 @@ class RandomForestRegressorXGB:
 
             # Define: Save location
             figLabel = self.tagExperiment[tag] + '.png'
-            figLabel = figLabel.replace('Params', f'Params Layer {self.layersESM}')
             saveLocation = os.path.join(self.pathFigures, figLabel)
 
             # Save figure
@@ -1202,7 +1203,7 @@ class PredictActivity:
             batchTotal = len(batchTokens)
 
             for index, layerESM in enumerate(layersESM):
-                print(f'Generating ESM Embedding: {yellow}Layer {layerESM}{resetColor}')
+                print(f'Generating New ESM Embedding:')
                 startInit = time.time()
                 allValues = []
                 allEmbeddings = []
