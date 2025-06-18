@@ -12,6 +12,7 @@ import os
 import pandas as pd
 import platform
 import random
+import re
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import GridSearchCV, train_test_split
@@ -74,7 +75,7 @@ def pressKey(event):
 # ================================= Define ML Algorithms =================================
 class RandomForestRegressor:
     def __init__(self, dfTrain, dfPred, subsPredChosen, minES, pathModel, modelTag,
-                 modelTagHigh, testSize, NTrees, device, printNumber):
+                 modelTagHigh, testSize, device, printNumber):
         print('============================ Random Forest Regressor '
               '============================')
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
@@ -342,8 +343,9 @@ class RandomForestRegressorXGB:
         self.selectSubsBottomPercent = selectSubsBottomPercent
         self.subsPred = list(dfPred.index)
         self.predictions = {}
-        self.layerESM = layerESM
-        self.layerESMTag = f'ESM Layer {self.layerESM}'
+        self.layersESM = layerESM
+        self.layerESMTag = f'ESM Layer {self.layersESM}'
+        print(f'Tag: {purple}{self.layerESMTag}{resetColor}')
         self.modelAccuracy = modelAccuracy
         self.predictionAccuracy = {}
         self.modelBestPredictions = {}
@@ -376,7 +378,7 @@ class RandomForestRegressorXGB:
             'learning_rate': [0.05, 0.1],
             'max_leaves': range(100, 450, 50),
             'min_child_weight': [1],
-            'n_estimators': [4000], # 3500
+            'n_estimators': [1500, 2000], # 3500
             'subsample': np.arange(0.6, 1.2, 0.2)
         }
         # 'max_leaves': range(2, 10, 1) # N terminal nodes
@@ -484,7 +486,13 @@ class RandomForestRegressorXGB:
 
 
         def getLayerNumber(col):
-            return int(col.replace("ESM Layer ", ""))
+            # Extract the list of numbers inside the brackets
+            layers = col.partition('[')[2].rpartition(']')[0]
+            if layers:
+                layerList = layers.split(",")
+                return int(layerList[0].strip())  # First layer number
+            return float('inf')  # If not found, push to end
+
 
         # # Train Or Load Model: Random Forest Regressor
         if (trainModel or
@@ -506,17 +514,16 @@ class RandomForestRegressorXGB:
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
                           f'Hyperparameters: {greenLight}{params}{resetColor}\n'
-                          f'ESM Layer: {yellow}{self.layerESM}{resetColor}\n')
+                          f'ESM Layers: {yellow}{self.layersESM}{resetColor}\n')
 
                 # Train the model
                 start = time.time()
                 if tagData == datasetTagHigh:
                     model.fit(xTrain, yTrain, eval_set=[(xTest, yTest)],
-                              early_stopping_rounds=50, verbose=False,
-                              sample_weight=yTrain)
+                              verbose=False, sample_weight=yTrain)
                 else:
                     model.fit(xTrain, yTrain,eval_set=[(xTest, yTest)],
-                              early_stopping_rounds=50, verbose=False)
+                              verbose=False)
                 end = time.time()
 
                 # Evaluate the model
@@ -548,7 +555,8 @@ class RandomForestRegressorXGB:
                          self.modelAccuracy[tagData].loc[
                              indexEvalMetric, self.layerESMTag])):
                     saveModel = True
-                    newColumn = self.layerESMTag not in self.modelAccuracy[tagData].columns
+                    newColumn = (
+                            self.layerESMTag not in self.modelAccuracy[tagData].columns)
 
                     # Record: Model performance
                     self.bestParams[tagData] = {self.layerESMTag: params.copy()}
@@ -566,7 +574,8 @@ class RandomForestRegressorXGB:
                         self.sortedColumns = (
                             sorted(self.modelAccuracy[tagData].columns,
                                    key=getLayerNumber))
-                    self.modelAccuracy[tagData] = self.modelAccuracy[tagData][self.sortedColumns]
+                    self.modelAccuracy[tagData] = (
+                        self.modelAccuracy)[tagData][self.sortedColumns]
 
                     # Save the data
                     self.modelAccuracy[tagData].to_csv(modelAccuracyPaths[tagData])
@@ -755,7 +764,7 @@ class RandomForestRegressorXGB:
 
             # Define: Save location
             figLabel = self.tagExperiment[tag] + '.png'
-            figLabel = figLabel.replace('Params', f'Params Layer {self.layerESM}')
+            figLabel = figLabel.replace('Params', f'Params Layer {self.layersESM}')
             saveLocation = os.path.join(self.pathFigures, figLabel)
 
             # Save figure
@@ -1054,7 +1063,7 @@ class PredictActivity:
                 modelAccuracyPaths=self.pathModelAccuracy,
                 pathFigures=self.pathFigures, datasetTagHigh=self.subsetTagHigh,
                 datasetTagMid=self.subsetTagMid, datasetTagLow=self.subsetTagLow,
-                layerESM=layerESM, testSize=self.testingSetSize, device=self.device)
+                layerESM=self.layersESM, testSize=self.testingSetSize, device=self.device)
 
             # Record predictions
             self.predictions[self.modelType] = randomForestRegressorXGB.predictions
@@ -1092,6 +1101,9 @@ class PredictActivity:
               '=======================')
         missingLayersESM = []
 
+        pd.set_option('display.max_columns', 8)
+        pd.set_option('display.max_rows', 10)
+
         # Inspect: Data type
         predictions = True
         if trainingSet:
@@ -1099,7 +1111,7 @@ class PredictActivity:
         print(f'ESM Layers: {yellow}{self.layersESM}{resetColor}\n'
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
         print(f'Concatenating ESM Layers: {purple}{self.concatESM}{resetColor}\n')
-        sequenceEmbeddings = []
+
 
         # Define Functions
         def generateEmbeddingsESM(seqs, layersESM, savePaths):
@@ -1190,6 +1202,7 @@ class PredictActivity:
             batchTotal = len(batchTokens)
 
             for index, layerESM in enumerate(layersESM):
+                print(f'Generating ESM Embedding: {yellow}Layer {layerESM}{resetColor}')
                 startInit = time.time()
                 allValues = []
                 allEmbeddings = []
@@ -1214,7 +1227,7 @@ class PredictActivity:
                                 timeRemaining = float('inf')
                             else:
                                 timeRemaining = round((batchTotal - i) / rate, 3)
-                            print(f'ESM Progress (Layer {yellow}{layerESM}{resetColor}): '
+                            print(f'ESM Progress ({yellow}Layer {layerESM}{resetColor}): '
                                   f'{red}{i:,}{resetColor} / {red}{batchTotal:,}'
                                   f'{resetColor} '
                                   f'({red}{percentCompletion} %{resetColor})\n'
@@ -1236,7 +1249,7 @@ class PredictActivity:
                 runtime = end - start
                 runtimeTotal = (end - startInit) / 60
                 percentCompletion = round((batchTotal / batchTotal) * 100, 1)
-                print(f'ESM Progress (Layer {yellow}{layerESM}{resetColor}): '
+                print(f'ESM Progress ({yellow}Layer {layerESM}{resetColor}): '
                       f'{red}{batchTotal:,}{resetColor} / {red}{batchTotal:,}'
                       f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
                       f'     Runtime: {red}{round(runtime, 3):,} s'
@@ -1267,13 +1280,9 @@ class PredictActivity:
 
                 # Process Embeddings
                 subEmbeddings = pd.DataFrame(data, index=batchSubs, columns=columns)
-                pd.set_option('display.max_columns', 10)
-                pd.set_option('display.max_rows', 10)
                 print(f'Substrate Embeddings:\n{subEmbeddings}\n\n')
-                pd.set_option('display.max_columns', None)
-                pd.set_option('display.max_rows', None)
                 print(f'Substrate Embeddings shape: '
-                      f'{pink}{sequenceEmbeddings.shape}{resetColor}\n\n')
+                      f'{pink}{sequenceEmbeddings.shape}{resetColor}')
                 print(f'Embeddings saved at:\n'
                       f'     {greenDark}{pathEmbeddings}{resetColor}\n\n')
                 subEmbeddings.to_csv(pathEmbeddings)
@@ -1281,37 +1290,58 @@ class PredictActivity:
                 # plt.hist(subEmbeddings.loc[:, 'activity'], bins=100)
                 # plt.title("Activity Distribution")
                 # plt.show()
-
-            return subEmbeddings
+            del model, alphabet
 
 
         def loadESM():
             missingFiles = []
 
             # Load: ESM Embeddings
-            genEmbedding = False
+            genEmbeddings = False
             for index, pathEmbeddings in enumerate(filePaths):
                 if not os.path.exists(pathEmbeddings):
-                    genEmbedding = True
+                    genEmbeddings = True
                     layer = self.layersESM[index]
                     missingFiles.append(pathEmbeddings)
                     missingLayersESM.append(layer)
 
-            if genEmbedding:
+            if genEmbeddings:
                 generateEmbeddingsESM(seqs=substrates, layersESM=missingLayersESM,
                                       savePaths=missingFiles)
+                loadESM()
             else:
+                loadedEmbeddings = []
                 for index, pathEmbeddings in enumerate(filePaths):
-                    print(f'Loading: ESM Embeddings\n'
-                          f'     {greenDark}{pathEmbeddings}{resetColor}\n')
-                # subEmbeddings = pd.read_csv(pathEmbeddings, index_col=0)
-                # print(f'Substrate Embeddings shape: '
-                #       f'{pink}{subEmbeddings.shape}{resetColor}\n\n')
+                    loadedEmbeddings.append(pd.read_csv(pathEmbeddings, index_col=0))
+                for index, layerEmbeddings in enumerate(loadedEmbeddings):
+                    print(f'Loaded Embeddings: '
+                          f'{yellow}Layer {self.layersESM[index]}{resetColor}\n'
+                          f'{layerEmbeddings}\n\n')
 
-            sys.exit()
+            return loadedEmbeddings
 
         # Get: ESM data
-        subEmbeddings = loadESM()
+        loadedEmbeddings = loadESM()
+        if self.concatESM:
+            if trainingSet:
+                subEmbeddings = pd.concat(
+                    [df.drop(columns=['activity']) for df in loadedEmbeddings],
+                    axis=1 # concatenate columns
+                )
+                subEmbeddings['activity'] = loadedEmbeddings[0]['activity']
+            else:
+                subEmbeddings = pd.concat(
+                    [df for df in loadedEmbeddings],
+                    axis=1 # concatenate columns
+                )
+        else:
+            subEmbeddings = loadedEmbeddings[0]
+        print(f'Substrate Embeddings:\n'
+              f'{greenLight}{subEmbeddings}{resetColor}\n\n')
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.max_rows', None)
+
+        return subEmbeddings
 
 
 
