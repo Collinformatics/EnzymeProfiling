@@ -1186,14 +1186,13 @@ class PredictActivity:
                   f'{greenLight}{slicedTokens}{resetColor}\n')
 
 
-            batchTotal = len(batchTokens)
-            allEmbeddings = []
-            allValues = []
-            startInit = time.time()
-
-
             # Generate embeddings
+            batchTotal = len(batchTokens)
+
             for index, layerESM in enumerate(layersESM):
+                startInit = time.time()
+                allValues = []
+                allEmbeddings = []
                 pathEmbeddings = savePaths[index]
 
                 with torch.no_grad():
@@ -1258,12 +1257,12 @@ class PredictActivity:
                 embeddings = np.vstack(allEmbeddings)
                 if predictions:
                     data = np.hstack([embeddings])
-                    columns = [f'feat_L{layerESM}_{i}'
+                    columns = [f'L{layerESM}_feat_{i}'
                                for i in range(embeddings.shape[1])]
                 else:
                     values = np.array(allValues).reshape(-1, 1)
                     data = np.hstack([embeddings, values])
-                    columns = [f'feat_L{layerESM}_{i}'
+                    columns = [f'L{layerESM}_feat_{i}'
                                for i in range(embeddings.shape[1])] + ['activity']
 
                 # Process Embeddings
