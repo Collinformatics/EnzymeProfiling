@@ -68,8 +68,8 @@ inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 # Input 3: Computational Parameters
 inModelSize = 1 # 0 = 15B Params, 1 = 3B Params, 2 = 650M Params
 inUseFilteredReadingFrame = False
-inSelectSubstratesTop = 5 # 10 = Top 10 quantile of activity scores
-inSelectSubstratesBottom = 50 # 10 = Top 10 quantile of activity scores
+inSelectSubstratesTop = 10 # 10 = Top 10 quantile
+inSelectSubstratesBottom = 60 # 10 = Top 10 quantile
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
@@ -83,7 +83,8 @@ inUseEnrichmentFactor = True
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [15]
+inConcatenateLayersESM = True
+inLayersESM = [16, 14, 12]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
@@ -272,9 +273,10 @@ predictions = PredictActivity(
     subsPercentSelectBottom=inSelectSubstratesBottom,
     maxTrainingScore=ngs.maxValue, subsPred=substratesPred, subsPredChosen=inSubsPred,
     useEF=inUseEnrichmentFactor, tagChosenSubs=tagPredSubs,
-    minSubCount=inMinimumSubstrateCount, layersESM=inLayersESM, minES=inMinES,
-    modelType=inModelType, testSize=inTestSize, batchSize=inESMBatchSize,
-    labelsXAxis=inMotifPositions, printNumber=inPrintNumber, modelSize=inModelSize)
+    minSubCount=inMinimumSubstrateCount, concatESM=inConcatenateLayersESM,
+    layersESM=inLayersESM, minES=inMinES, modelType=inModelType, testSize=inTestSize,
+    batchSize=inESMBatchSize, labelsXAxis=inMotifPositions, printNumber=inPrintNumber,
+    modelSize=inModelSize)
 predictions.trainModel()
 
 # # Evaluate: Predictions

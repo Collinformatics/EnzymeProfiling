@@ -10,12 +10,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import platform
 import random
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV, train_test_split
 import sys
 import time
 import torch
+from xgboost import XGBRegressor
 
 
 
@@ -76,9 +79,6 @@ class RandomForestRegressor:
               '============================')
         print(f'Module: {purple}Scikit-Learn{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
-
-        from sklearn.ensemble import RandomForestRegressor
-        from sklearn.model_selection import GridSearchCV
 
         self.device = device
         self.paramGrid = {
@@ -335,8 +335,6 @@ class RandomForestRegressorXGB:
               f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
 
-        from xgboost import XGBRegressor
-
         self.device = device
         self.tagExperiment = tagExperiment
         self.maxValue = maxValue
@@ -378,7 +376,7 @@ class RandomForestRegressorXGB:
             'learning_rate': [0.05, 0.1],
             'max_leaves': range(100, 450, 50),
             'min_child_weight': [1],
-            'n_estimators': [4000, 4500, 5000], # 3500
+            'n_estimators': [4000], # 3500
             'subsample': np.arange(0.6, 1.2, 0.2)
         }
         # 'max_leaves': range(2, 10, 1) # N terminal nodes
@@ -483,6 +481,7 @@ class RandomForestRegressorXGB:
               f'     Train: {yellow}{xTrainingL.shape}{resetColor}\n'
               f'     Test: {yellow}{xTestingL.shape}{resetColor}\n')
         print(f'Unique Substrates: {red}{dfTrain.shape[0]:,}{resetColor}\n')
+
 
         def getLayerNumber(col):
             return int(col.replace("ESM Layer ", ""))
@@ -848,7 +847,7 @@ class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain,
                  subsPercentSelectTop, subsPercentSelectBottom,
                  maxTrainingScore, subsPred, subsPredChosen, useEF, tagChosenSubs,
-                 minSubCount, minES, modelType, layersESM, testSize, batchSize,
+                 minSubCount, minES, modelType, concatESM, layersESM, testSize, batchSize,
                  labelsXAxis, printNumber, modelSize=2):
         # Parameters: Files
         self.pathFolder = folderPath
@@ -891,7 +890,10 @@ class PredictActivity:
             self.subsetTagMid: accuracyDF.copy(),
             self.subsetTagLow: accuracyDF.copy(),
         }
+        self.concatESM = concatESM
         self.layersESM = layersESM
+        self.embeddingsPathTrain = []
+        self.embeddingsPathPred = []
         self.batchSize = batchSize
         self.testingSetSize = testSize
         self.device = self.getDevice()
@@ -904,35 +906,59 @@ class PredictActivity:
         else:
             self.sizeESM = '650M Params'
 
+
         # Parameters: Save Paths Embeddings
-        self.tagEmbeddingsTrain = (
-            f'Embeddings - ESM {self.sizeESM} Layers - '
+        self.embeddingsTrainTag = (
+            f'Embeddings - ESM {self.sizeESM} - '
             f'Batch {self.batchSize} - {self.enzymeName} - '
             f'{self.datasetTag} - MinCounts {self.minSubCount} - '
             f'N {self.subsTrainN} - {len(self.labelsXAxis)} AA')
-        self.tagEmbeddingsPred = (
-            f'Embeddings - ESM {self.sizeESM} Layers - '
+        self.embeddingsPredTag = (
+            f'Embeddings - ESM {self.sizeESM} - '
             f'Batch {self.batchSize} - {self.enzymeName} - '
             f'Predictions - Min ES {self.minES} - MinCounts {self.minSubCount} - '
             f'N {self.subsPredN} - {len(self.labelsXAxis)} AA')
+        if (self.concatESM
+                and isinstance(self.layersESM, list)
+                and len(self.layersESM) > 1):
+            for layer in self.layersESM:
+                filePath = f'{self.embeddingsTrainTag.replace(
+                    'ESM', f'ESM L{layer}')}.csv'
+                self.embeddingsPathTrain.append(
+                    os.path.join(self.pathEmbeddings, filePath))
+        else:
+            self.concatESM = False
+            if isinstance(self.layersESM, int):
+                self.layersESM = [self.layersESM]
+            filePath = f'{self.embeddingsTrainTag.replace(
+            'ESM', f'ESM L{self.layersESM[0]}')}.csv'
+            self.embeddingsPathTrain.append(
+                    os.path.join(self.pathEmbeddings, filePath))
+        for layer in self.layersESM:
+            filePath = f'{self.embeddingsPredTag.replace(
+                'ESM', f'ESM L{layer}')}.csv'
+            self.embeddingsPathPred.append(
+                    os.path.join(self.pathEmbeddings, filePath))
         if self.tagChosenSubs != '':
-            self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
+            self.embeddingsPredTag = self.embeddingsPredTag.replace(
                 f'MinCounts {self.minSubCount}',
                 f'MinCounts {self.minSubCount} - Added {self.tagChosenSubs}')
         if self.useEF:
-            self.tagEmbeddingsTrain = self.tagEmbeddingsTrain.replace(
+            self.embeddingsTrainTag = self.embeddingsTrainTag.replace(
                 'MinCounts', 'Scores EF - MinCounts')
-            self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
+            self.embeddingsPredTag = self.embeddingsPredTag.replace(
                 'MinCounts', 'Scores EF - MinCounts')
         else:
-            self.tagEmbeddingsTrain = self.tagEmbeddingsTrain.replace(
+            self.embeddingsTrainTag = self.embeddingsTrainTag.replace(
                 'MinCounts', 'Scores Counts - MinCounts')
-            self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
+            self.embeddingsPredTag = self.embeddingsPredTag.replace(
                 'MinCounts', 'Scores Counts - MinCounts')
 
+
         # Parameters: Save Paths Model Accuracy
-        self.tagExperiment = (f'Model Accuracy - {modelType} - ESM {self.sizeESM} - '
-                              f'{enzymeName} - {datasetTag} - MinCounts {minSubCount}')
+        self.tagExperiment = (f'Model Accuracy - {modelType} - ESM {self.sizeESM} '
+                              f' Layer {self.layersESM} - {enzymeName} - {datasetTag} - '
+                              f'MinCounts {minSubCount}')
         self.tagExperiment = self.tagExperiment.replace(':', '')
         if self.useEF:
             self.tagExperiment = self.tagExperiment.replace(
@@ -975,76 +1001,69 @@ class PredictActivity:
 
 
     def trainModel(self):
-        for layerESM in self.layersESM:
-            self.tagEmbeddingsTrain = self.tagEmbeddingsTrain.replace(
-                'Layers', f'{layerESM} Layers')
-            self.tagEmbeddingsPred = self.tagEmbeddingsPred.replace(
-                'Layers', f'{layerESM} Layers')
+        # Define: Model paths
+        modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
+                    f'{self.embeddingsTrainTag}')
+        # modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
+        #             f'N Trees {self.NTrees} - {self.embeddingsTrainTag}')
+        modelTagScikit = modelTag.replace('Test Size',
+                                          f'Scikit - Test Size')
+        modelTagXGBoost = modelTag.replace('Test Size',
+                                           f'XGBoost - Test Size')
+        pathModelScikit = os.path.join(self.pathModels, f'{modelTagScikit}.ubj')
+        pathModelXGBoost = os.path.join(self.pathModels, f'{modelTagXGBoost}.ubj')
+        # ubj: Binary JSON file
 
-            # Define: Model paths
-            modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
-                        f'{self.tagEmbeddingsTrain}')
-            # modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
-            #             f'N Trees {self.NTrees} - {self.tagEmbeddingsTrain}')
-            modelTagScikit = modelTag.replace('Test Size',
-                                              f'Scikit - Test Size')
-            modelTagXGBoost = modelTag.replace('Test Size',
-                                               f'XGBoost - Test Size')
-            pathModelScikit = os.path.join(self.pathModels, f'{modelTagScikit}.ubj')
-            pathModelXGBoost = os.path.join(self.pathModels, f'{modelTagXGBoost}.ubj')
-            # ubj: Binary JSON file
+        # Generate: Embeddings
+        self.embeddingsSubsTrain = None
+        self.embeddingsSubsPred = pd.DataFrame()
+        if (not os.path.exists(pathModelScikit) or
+                not os.path.exists(pathModelXGBoost)):
+            self.embeddingsSubsTrain = self.ESM(
+                substrates=self.subsTrain,  filePaths=self.embeddingsPathTrain,
+                trainingSet=True)
+        # self.embeddingsSubsPred = self.ESM(
+        #     substrates=self.subsPred, filePaths=self.embeddingsPathPred)
 
-            # Generate: Embeddings
-            self.embeddingsSubsTrain = None
-            self.embeddingsSubsPred = pd.DataFrame()
-            if (not os.path.exists(pathModelScikit) or
-                    not os.path.exists(pathModelXGBoost)):
-                self.embeddingsSubsTrain = self.ESM(
-                    substrates=self.subsTrain, layerESM=layerESM,
-                    tagEmbeddings=self.tagEmbeddingsTrain, trainingSet=True)
-            # self.embeddingsSubsPred = self.ESM(
-            #     substrates=self.subsPred, layerESM=layerESM,
-            #     tagEmbeddings=self.tagEmbeddingsPred)
+        # End function
+        if self.embeddingsSubsTrain is None:
+            print(f'{orange}ESM output{resetColor} is None\n'
+                  f'ESM layer {red}{layerESM}{resetColor} cannot be extracted\n\n')
+            sys.exit()
 
-            # End function
-            if self.embeddingsSubsTrain is None:
-                print(f'{orange}ESM output{resetColor} is None\n'
-                      f'ESM layer {red}{layerESM}{resetColor} cannot be extracted\n\n')
-                sys.exit()
+        # Select a model to train
+        if self.modelType == 'Random Forest Regressor: Scikit-Learn':
+            # Model: Scikit-Learn Random Forest Regressor
+            RandomForestRegressor = RandomForestRegressor(
+                dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+                subsPredChosen=self.subsPredChosen, minES=self.minES,
+                pathModel=pathModelScikit, modelTag=modelTagScikit, layerESM=layerESM,
+                testSize=self.testingSetSize, device=self.device,
+                printNumber=self.printNumber)
+            self.modelAccuracy = randomForestRegressorXGB.modelAccuracy
+            self.predictions[self.modelType] = RandomForestRegressor.predictions
+        elif self.modelType == 'Random Forest Regressor: XGBoost':
+            # Model: XGBoost Random Forest
+            randomForestRegressorXGB = RandomForestRegressorXGB(
+                dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
+                selectSubsTopPercent=self.subsPercentSelectTop,
+                selectSubsBottomPercent=self.subsPercentSelectBottom,
+                tagExperiment=self.tagExperiment, maxValue=self.maxTrainingScore,
+                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
+                modelAccuracy=self.modelAccuracy,
+                modelAccuracyPaths=self.pathModelAccuracy,
+                pathFigures=self.pathFigures, datasetTagHigh=self.subsetTagHigh,
+                datasetTagMid=self.subsetTagMid, datasetTagLow=self.subsetTagLow,
+                layerESM=layerESM, testSize=self.testingSetSize, device=self.device)
 
-            # Select a model to train
-            if self.modelType == 'Random Forest Regressor: Scikit-Learn':
-                # Model: Scikit-Learn Random Forest Regressor
-                RandomForestRegressor = RandomForestRegressor(
-                    dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-                    subsPredChosen=self.subsPredChosen, minES=self.minES,
-                    pathModel=pathModelScikit, modelTag=modelTagScikit, layerESM=layerESM,
-                    testSize=self.testingSetSize, device=self.device,
-                    printNumber=self.printNumber)
-                self.modelAccuracy = randomForestRegressorXGB.modelAccuracy
-                self.predictions[self.modelType] = RandomForestRegressor.predictions
-            elif self.modelType == 'Random Forest Regressor: XGBoost':
-                # Model: XGBoost Random Forest
-                randomForestRegressorXGB = RandomForestRegressorXGB(
-                    dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-                    selectSubsTopPercent=self.subsPercentSelectTop,
-                    selectSubsBottomPercent=self.subsPercentSelectBottom,
-                    tagExperiment=self.tagExperiment, maxValue=self.maxTrainingScore,
-                    pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
-                    modelAccuracy=self.modelAccuracy,
-                    modelAccuracyPaths=self.pathModelAccuracy,
-                    pathFigures=self.pathFigures, datasetTagHigh=self.subsetTagHigh,
-                    datasetTagMid=self.subsetTagMid, datasetTagLow=self.subsetTagLow,
-                    layerESM=layerESM, testSize=self.testingSetSize, device=self.device)
-
-                # Record predictions
-                self.predictions[self.modelType] = randomForestRegressorXGB.predictions
-                for dataset, values, in randomForestRegressorXGB.modelAccuracy.items():
-                    self.modelAccuracy[dataset].loc[:, values.columns] = values
-            else:
-                print(f'{orange}ERROR: There is no use for the model type '
-                      f'{cyan}{self.modelType}{resetColor}\n\n')
-                sys.exit(1)
+            # Record predictions
+            self.predictions[self.modelType] = randomForestRegressorXGB.predictions
+            for dataset, values, in randomForestRegressorXGB.modelAccuracy.items():
+                self.modelAccuracy[dataset].loc[:, values.columns] = values
+        else:
+            print(f'{orange}ERROR: There is no use for the model type '
+                  f'{cyan}{self.modelType}{resetColor}\n\n')
+            sys.exit(1)
 
         self.predictionAccuracies()
 
@@ -1060,7 +1079,6 @@ class PredictActivity:
                   f'Device Name:{magenta} {torch.cuda.get_device_name(device)}'
                   f'{resetColor}\n\n')
         else:
-            import platform
             device = 'cpu'
             print(f'Train with Device:{magenta} {device}{resetColor}\n'
                   f'Device Name:{magenta} {platform.processor()}{resetColor}\n\n')
@@ -1069,187 +1087,232 @@ class PredictActivity:
 
 
 
-    def ESM(self, substrates, layerESM, tagEmbeddings, trainingSet=False):
-        print('=========================== Generate Embeddings: ESM '
-              '============================')
+    def ESM(self, substrates, filePaths, trainingSet=False):
+        print('======================= Evolutionary Scale Modeling (ESM) '
+              '=======================')
+        missingLayersESM = []
+
         # Inspect: Data type
         predictions = True
         if trainingSet:
             predictions = False
-        print(f'Dataset: {purple}{tagEmbeddings}{resetColor}\n'
-              f'ESM Layers: {yellow}{self.layersESM}{resetColor}\n'
+        print(f'ESM Layers: {yellow}{self.layersESM}{resetColor}\n'
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
+        print(f'Concatenating ESM Layers: {purple}{self.concatESM}{resetColor}\n')
+        sequenceEmbeddings = []
 
-        # Load: ESM Embeddings
-        pathEmbeddings = os.path.join(self.pathEmbeddings, f'{tagEmbeddings}.csv')
-        if os.path.exists(pathEmbeddings):
-            print(f'\nLoading: ESM Embeddings\n'
-                  f'     {greenDark}{pathEmbeddings}{resetColor}\n')
-            subEmbeddings = pd.read_csv(pathEmbeddings, index_col=0)
-            print(f'Substrate Embeddings shape: '
-                  f'{pink}{subEmbeddings.shape}{resetColor}\n\n')
+        # Define Functions
+        def generateEmbeddingsESM(seqs, layersESM, savePaths):
+            print(f'Generating ESM Embeddings:')
+            for layerESM in layersESM:
+                print(f'     Layer: {yellow}{layerESM}{resetColor}')
+            print('')
+
+            # # Generate Embeddings
+            # # Step 1: Convert substrates to ESM model format and generate Embeddings
+            totalSubActivity = 0
+            subs = []
+            values = []
+            if trainingSet:
+                # Randomize substrates
+                items = list(seqs.items())
+                random.shuffle(items)
+                seqs = dict(items)
+
+                for index, (substrate, value) in enumerate(seqs.items()):
+                    totalSubActivity += value
+                    subs.append((f'Sub{index}', substrate))
+                    values.append(value)
+            else:
+                for index, substrate in enumerate(seqs):
+                    subs.append((f'Sub{index}', substrate))
+            if totalSubActivity != 0:
+                if isinstance(totalSubActivity, float):
+                    print(f'Total Values:{red} {round(totalSubActivity, 1):,}'
+                          f'{resetColor}')
+                else:
+                    print(f'Total Values:{red} {totalSubActivity:,}{resetColor}')
+            print()
+
+
+            # # Step 2: Load the ESM model and batch converter
+            if self.sizeESM == '15B Params':
+                model, alphabet = esm.pretrained.esm2_t48_15B_UR50D()
+                layersESMMax = 48
+            elif self.sizeESM == '3B Params':
+                model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
+                layersESMMax = 36
+            else:
+                model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
+                layersESMMax = 33
+                # esm2_t36_3B_UR50D has 36 layers
+                # esm2_t33_650M_UR50D has 33 layers
+                # esm2_t12_35M_UR50D has 12 layers
+            model = model.to(self.device)
+
+            # End function
+            if any(layer > layersESMMax for layer in layersESM):
+                return None
+
+
+            # Get: Batch tensor
+            batchConverter = alphabet.get_batch_converter()
+
+            # # Step 3: Convert substrates to ESM model format and generate Embeddings
+            try:
+                batchLabels, batchSubs, batchTokens = batchConverter(subs)
+                batchTokensCPU = batchTokens
+                batchTokens = batchTokens.to(self.device)
+
+            except Exception as exc:
+                print(f'{orange}ERROR: The ESM has failed to evaluate your substrates\n\n'
+                      f'Exception:\n{exc}\n\n'
+                      f'Suggestion:'
+                      f'     Try replacing: {cyan}esm.pretrained.esm2_t36_3B_UR50D()'
+                      f'{orange}\n'
+                      f'     With: {cyan}esm.pretrained.esm2_t33_650M_UR50D()'
+                      f'{resetColor}\n')
+                sys.exit(1)
+            print(f'Batch Tokens:{greenLight} {batchTokens.shape}{resetColor}\n'
+                  f'{greenLight}{batchTokens}{resetColor}\n')
+
+            # Record tokens
+            slicedTokens = pd.DataFrame(batchTokensCPU[:, 1:-1],
+                                        index=batchSubs,
+                                        columns=self.labelsXAxis)
+            if totalSubActivity != 0:
+                slicedTokens['Values'] = values
+            print(f'\nSliced Tokens:\n'
+                  f'{greenLight}{slicedTokens}{resetColor}\n')
+
+
+            batchTotal = len(batchTokens)
+            allEmbeddings = []
+            allValues = []
+            startInit = time.time()
+
+
+            # Generate embeddings
+            for index, layerESM in enumerate(layersESM):
+                pathEmbeddings = savePaths[index]
+
+                with torch.no_grad():
+                    for i in range(0, len(batchTokens), self.batchSize):
+                        start = time.time()
+                        batch = batchTokens[i:i + self.batchSize].to(self.device)
+                        result = model(batch, repr_layers=[layerESM],
+                                       return_contacts=False)
+                        tokenReps = result["representations"][layerESM]
+                        seqEmbed = tokenReps[:, 0, :].cpu().numpy()
+                        allEmbeddings.append(seqEmbed)
+                        end = time.time()
+                        runtime = end - start
+                        runtimeTotal = (end - startInit) / 60
+                        percentCompletion = round((i / batchTotal)* 100, 1)
+                        if i % 10 == 0:
+                            rate = round(i / runtimeTotal, 3)
+                            if rate == 0:
+                                timeRemaining = float('inf')
+                            else:
+                                timeRemaining = round((batchTotal - i) / rate, 3)
+                            print(f'ESM Progress (Layer {yellow}{layerESM}{resetColor}): '
+                                  f'{red}{i:,}{resetColor} / {red}{batchTotal:,}'
+                                  f'{resetColor} '
+                                  f'({red}{percentCompletion} %{resetColor})\n'
+                                  f'     Batch Shape: {greenLight}{batch.shape}'
+                                  f'{resetColor}\n'
+                                  f'     Runtime: {red}{round(runtime, 3):,} s'
+                                  f'{resetColor}\n'
+                                  f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
+                                  f'{resetColor}\n'
+                                  f'     Remaining Runtime: {red}{timeRemaining:,} min'
+                                  f'{resetColor}\n')
+                        if trainingSet:
+                            allValues.extend(values[i:i + self.batchSize])
+
+                        # Clear data to help free memory
+                        del tokenReps, batch
+                        torch.cuda.empty_cache()
+                end = time.time()
+                runtime = end - start
+                runtimeTotal = (end - startInit) / 60
+                percentCompletion = round((batchTotal / batchTotal) * 100, 1)
+                print(f'ESM Progress (Layer {yellow}{layerESM}{resetColor}): '
+                      f'{red}{batchTotal:,}{resetColor} / {red}{batchTotal:,}'
+                      f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
+                      f'     Runtime: {red}{round(runtime, 3):,} s'
+                      f'{resetColor}\n'
+                      f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
+                      f'{resetColor}\n'
+                      f'     Remaining Runtime: {red}{0:,} min'
+                      f'{resetColor}\n')
+
+
+                # # Step 4: Extract per-sequence embeddings
+                # (N, seq_len, hidden_dim)
+                tokenReps = result["representations"][layerESM]
+                # [CLS] token embedding: (N, hidden_dim)
+                sequenceEmbeddings = tokenReps[:, 0, :]
+
+                # Convert to numpy and store substrate activity proxy
+                embeddings = np.vstack(allEmbeddings)
+                if predictions:
+                    data = np.hstack([embeddings])
+                    columns = [f'feat_L{layerESM}_{i}'
+                               for i in range(embeddings.shape[1])]
+                else:
+                    values = np.array(allValues).reshape(-1, 1)
+                    data = np.hstack([embeddings, values])
+                    columns = [f'feat_L{layerESM}_{i}'
+                               for i in range(embeddings.shape[1])] + ['activity']
+
+                # Process Embeddings
+                subEmbeddings = pd.DataFrame(data, index=batchSubs, columns=columns)
+                pd.set_option('display.max_columns', 10)
+                pd.set_option('display.max_rows', 10)
+                print(f'Substrate Embeddings:\n{subEmbeddings}\n\n')
+                pd.set_option('display.max_columns', None)
+                pd.set_option('display.max_rows', None)
+                print(f'Substrate Embeddings shape: '
+                      f'{pink}{sequenceEmbeddings.shape}{resetColor}\n\n')
+                print(f'Embeddings saved at:\n'
+                      f'     {greenDark}{pathEmbeddings}{resetColor}\n\n')
+                subEmbeddings.to_csv(pathEmbeddings)
+
+                # plt.hist(subEmbeddings.loc[:, 'activity'], bins=100)
+                # plt.title("Activity Distribution")
+                # plt.show()
 
             return subEmbeddings
 
 
-        # # Generate Embeddings
-        # Step 1: Convert substrates to ESM model format and generate Embeddings
-        totalSubActivity = 0
-        subs = []
-        values = []
-        if trainingSet:
-            # Randomize substrates
-            items = list(substrates.items())
-            random.shuffle(items)
-            substrates = dict(items)
+        def loadESM():
+            missingFiles = []
 
-            for index, (substrate, value) in enumerate(substrates.items()):
-                totalSubActivity += value
-                subs.append((f'Sub{index}', substrate))
-                values.append(value)
-        else:
-            for index, substrate in enumerate(substrates):
-                subs.append((f'Sub{index}', substrate))
-        if totalSubActivity != 0:
-            if isinstance(totalSubActivity, float):
-                print(f'Total Values:{red} {round(totalSubActivity, 1):,}'
-                      f'{resetColor}')
+            # Load: ESM Embeddings
+            genEmbedding = False
+            for index, pathEmbeddings in enumerate(filePaths):
+                if not os.path.exists(pathEmbeddings):
+                    genEmbedding = True
+                    layer = self.layersESM[index]
+                    missingFiles.append(pathEmbeddings)
+                    missingLayersESM.append(layer)
+
+            if genEmbedding:
+                generateEmbeddingsESM(seqs=substrates, layersESM=missingLayersESM,
+                                      savePaths=missingFiles)
             else:
-                print(f'Total Values:{red} {totalSubActivity:,}{resetColor}')
-        print()
+                for index, pathEmbeddings in enumerate(filePaths):
+                    print(f'Loading: ESM Embeddings\n'
+                          f'     {greenDark}{pathEmbeddings}{resetColor}\n')
+                # subEmbeddings = pd.read_csv(pathEmbeddings, index_col=0)
+                # print(f'Substrate Embeddings shape: '
+                #       f'{pink}{subEmbeddings.shape}{resetColor}\n\n')
 
+            sys.exit()
 
-        # Step 2: Load the ESM model and batch converter
-        if self.sizeESM == '15B Params':
-            model, alphabet = esm.pretrained.esm2_t48_15B_UR50D()
-            layersESMMax = 48
-        elif self.sizeESM == '3B Params':
-            model, alphabet = esm.pretrained.esm2_t36_3B_UR50D()
-            layersESMMax = 36
-        else:
-            model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
-            layersESMMax = 33
-            # esm2_t36_3B_UR50D has 36 layers
-            # esm2_t33_650M_UR50D has 33 layers
-            # esm2_t12_35M_UR50D has 12 layers
-        model = model.to(self.device)
-
-        # End function
-        if layerESM > layersESMMax:
-            return None
-
-        # Get: batch tensor
-        batchConverter = alphabet.get_batch_converter()
-
-
-        # Step 3: Convert substrates to ESM model format and generate Embeddings
-        try:
-            batchLabels, batchSubs, batchTokens = batchConverter(subs)
-            batchTokensCPU = batchTokens
-            batchTokens = batchTokens.to(self.device)
-
-        except Exception as exc:
-            print(f'{orange}ERROR: The ESM has failed to evaluate your substrates\n\n'
-                  f'Exception:\n{exc}\n\n'
-                  f'Suggestion:'
-                  f'     Try replacing: {cyan}esm.pretrained.esm2_t36_3B_UR50D()'
-                  f'{orange}\n'
-                  f'     With: {cyan}esm.pretrained.esm2_t33_650M_UR50D()'
-                  f'{resetColor}\n')
-            sys.exit(1)
-        print(f'Batch Tokens:{greenLight} {batchTokens.shape}{resetColor}\n'
-              f'{greenLight}{batchTokens}{resetColor}\n')
-
-        # Record tokens
-        slicedTokens = pd.DataFrame(batchTokensCPU[:, 1:-1],
-                                    index=batchSubs,
-                                    columns=self.labelsXAxis)
-        if totalSubActivity != 0:
-            slicedTokens['Values'] = values
-        print(f'\nSliced Tokens:\n'
-              f'{greenLight}{slicedTokens}{resetColor}\n')
-
-        # Generate embeddings
-        batchTotal = len(batchTokens)
-        allEmbeddings = []
-        allValues = []
-        startInit = time.time()
-        print(f'Generating ESM Embeddings: Layer {yellow}{layerESM}{resetColor}')
-        with torch.no_grad():
-            for i in range(0, len(batchTokens), self.batchSize):
-                start = time.time()
-                batch = batchTokens[i:i + self.batchSize].to(self.device)
-                result = model(batch, repr_layers=[layerESM], return_contacts=False)
-                tokenReps = result["representations"][layerESM]
-                seqEmbed = tokenReps[:, 0, :].cpu().numpy()
-                allEmbeddings.append(seqEmbed)
-                end = time.time()
-                runtime = end - start
-                runtimeTotal = (end - startInit) / 60
-                percentCompletion = round((i / batchTotal)* 100, 1)
-                if i % 10 == 0:
-                    rate = round(i / runtimeTotal, 3)
-                    if rate == 0:
-                        timeRemaining = float('inf')
-                    else:
-                        timeRemaining = round((batchTotal - i) / rate, 3)
-                    print(f'ESM Progress: {red}{i:,}{resetColor} / {red}{batchTotal:,}'
-                          f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
-                          f'     Batch Shape: {greenLight}{batch.shape}{resetColor}\n'
-                          f'     Runtime: {red}{round(runtime, 3):,} s'
-                          f'{resetColor}\n'
-                          f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
-                          f'{resetColor}\n'
-                          f'     Remaining Runtime: {red}{timeRemaining:,} min'
-                          f'{resetColor}\n')
-                if trainingSet:
-                    allValues.extend(values[i:i + self.batchSize])
-
-                # Clear data to help free memory
-                del tokenReps, batch
-                torch.cuda.empty_cache()
-        end = time.time()
-        runtime = end - start
-        runtimeTotal = (end - startInit) / 60
-        percentCompletion = round((batchTotal / batchTotal) * 100, 1)
-        print(f'ESM Progress: {red}{batchTotal:,}{resetColor} / {red}{batchTotal:,}'
-              f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
-              f'     Runtime: {red}{round(runtime, 3):,} s'
-              f'{resetColor}\n'
-              f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
-              f'{resetColor}\n'
-              f'     Remaining Runtime: {red}{0:,} min'
-              f'{resetColor}\n')
-
-
-        # Step 4: Extract per-sequence Embeddings
-        tokenReps = result["representations"][layerESM]  # (N, seq_len, hidden_dim)
-        sequenceEmbeddings = tokenReps[:, 0, :]  # [CLS] token embedding: (N, hidden_dim)
-
-        # Convert to numpy and store substrate activity proxy
-        embeddings = np.vstack(allEmbeddings)
-        if predictions:
-            data = np.hstack([embeddings])
-            columns = [f'feat_{i}' for i in range(embeddings.shape[1])]
-        else:
-            values = np.array(allValues).reshape(-1, 1)
-            data = np.hstack([embeddings, values])
-            columns = [f'feat_{i}' for i in range(embeddings.shape[1])] + ['activity']
-
-        # Process Embeddings
-        subEmbeddings = pd.DataFrame(data, index=batchSubs, columns=columns)
-        pd.set_option('display.max_columns', 10)
-        pd.set_option('display.max_rows', 10)
-        print(f'Substrate Embeddings:\n{subEmbeddings}\n\n')
-        pd.set_option('display.max_columns', None)
-        pd.set_option('display.max_rows', None)
-        print(f'Substrate Embeddings shape: '
-              f'{pink}{sequenceEmbeddings.shape}{resetColor}\n\n')
-        print(f'Embeddings saved at:\n'
-              f'     {greenDark}{pathEmbeddings}{resetColor}\n\n')
-        subEmbeddings.to_csv(pathEmbeddings)
-
-        return subEmbeddings
+        # Get: ESM data
+        subEmbeddings = loadESM()
 
 
 

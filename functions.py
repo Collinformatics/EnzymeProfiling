@@ -5233,7 +5233,7 @@ class NGS:
                         if len(addedAAs) == 1:
                             label = f'{addedAAs[0]}@{pos}'
                         else:
-                            label = f'[{", ".join(addedAAs)}]@{pos}'
+                            label = f'[{",".join(addedAAs)}]@{pos}'
                         if index == len(df.columns) - 1:
                             addedAAsTag += f'{label}'
                         else:
