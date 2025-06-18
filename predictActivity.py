@@ -207,7 +207,6 @@ substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
 # Get dataset tag
 ngs.getDatasetTag(combinedMotifs=inUseFilteredReadingFrame)
-print(f'Tag: {purple}{ngs.datasetTag}{resetColor}')
 
 paths = ngs.getFilePath(datasetTag=ngs.datasetTag, motifPath=inUseFilteredReadingFrame)
 if inUseFilteredReadingFrame:
