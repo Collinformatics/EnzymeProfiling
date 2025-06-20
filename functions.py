@@ -201,7 +201,7 @@ class NGS:
         self.plotFigBars = plotFigBars
         self.NSubBars = NSubBars
         self.plotFigPCA = plotFigPCA
-        self.NPCs=numPCs
+        self.numPCs=numPCs
         self.NSubsPCA = NSubsPCA
         self.plotSuffixTree = plotSuffixTree
         self.datasetTag = None
@@ -3258,8 +3258,8 @@ class NGS:
 
 
     def ESM(self, substrates, subLabel, useSubCounts=True):
-        print('=========================== Convert To Numerical: ESM '
-              '===========================')
+        print('================== Convert Substrates To Numerical Values: ESM '
+              '==================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n'
               f'Collecting up to {red}{self.NSubsPCA:,}{resetColor} substrates\n'
               f'Total unique substrates: {red}{len(substrates):,}{resetColor}')
@@ -3332,6 +3332,7 @@ class NGS:
         print('====================================== PCA '
               '======================================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
+        print(f'Data:\n{data}\n\n')
 
         # Initialize lists for the clustered substrates
         self.selectedSubstrates = []
@@ -3340,13 +3341,14 @@ class NGS:
 
         # Define component labels
         pcaHeaders = []
-        for componentNumber in range(1, self.NPCs + 1):
+        for componentNumber in range(1, self.numPCs + 1):
             pcaHeaders.append(f'PC{componentNumber}')
         headerCombinations = list(combinations(pcaHeaders, 2))
 
         # # Cluster the datapoints
         # Step 1: Apply PCA on the standardized data
-        pca = PCA(n_components=self.NPCs) # Adjust the number of components as needed
+        print(f'NPC: {self.numPCs}\n\n')
+        pca = PCA(n_components=self.numPCs) # Adjust the number of components as needed
         scaler = StandardScaler()
         data = scaler.fit_transform(data)
         dataPCA = pca.fit_transform(data)
@@ -3354,7 +3356,7 @@ class NGS:
 
         # Step 2: Create a DataFrame for PCA results
         dataPCA = pd.DataFrame(dataPCA, columns=pcaHeaders, index=indices)
-        print(f'PCA data:{red} # of components = {self.NPCs}\n'
+        print(f'PCA data:{red} # of components = {self.numPCs}\n'
               f'{greenLight}{dataPCA}{resetColor}\n\n')
 
         # Step 3: Print explained variance ratio
@@ -5267,7 +5269,7 @@ class NGS:
               f'===============================')
         print(f'Dataset: {datasetTag}')
         self.maxValue = max(substrates.values())
-        print(f'Max Value: {red}{self.maxValue}{resetColor}\n')
+        print(f'Max Value: {red}{self.maxValue:,}{resetColor}\n')
 
         # Inspect datatype
         useIntegers = False
