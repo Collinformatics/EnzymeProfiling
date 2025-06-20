@@ -368,6 +368,8 @@ class RandomForestRegressorXGB:
 
         # Parameters: Misc
         self.roundVal = 3
+        self.printMaxColumns = 8
+        self.printMaxRows = 10
 
         # Params: Grid search
         self.paramGrid = {
@@ -426,8 +428,8 @@ class RandomForestRegressorXGB:
         yLow = np.log1p(dfLow['activity'].values)
 
 
-        pd.set_option('display.max_columns', 10)
-        pd.set_option('display.max_rows', 10)
+        pd.set_option('display.max_columns', self.printMaxColumns)
+        pd.set_option('display.max_rows', self.printMaxRows)
         print(f'Selecting Top {red}{self.selectSubsTopPercent} %'
               f'{resetColor} of Substrates')
         print(f'Sorted ESM Embeddings: {pink}{datasetTagHigh}{resetColor}\n'
@@ -910,6 +912,8 @@ class PredictActivity:
 
         # Parameters: Misc
         self.roundVal = 3
+        self.printMaxColumns = 8
+        self.printMaxRows = 10
 
         # Parameters: Model
         self.modelType = modelType
@@ -1123,10 +1127,9 @@ class PredictActivity:
     def ESM(self, substrates, filePaths, trainingSet=False):
         print('======================= Evolutionary Scale Modeling (ESM) '
               '=======================')
+        pd.set_option('display.max_columns', self.printMaxColumns)
+        pd.set_option('display.max_rows', self.printMaxRows)
         missingLayersESM = []
-
-        pd.set_option('display.max_columns', 8)
-        pd.set_option('display.max_rows', 10)
 
         # Inspect: Data type
         predictions = True
