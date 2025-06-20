@@ -1,4 +1,4 @@
-from functions import filePaths, NGS, magenta
+from functions import getFileNames, NGS, magenta
 import os
 import pandas as pd
 import pickle as pk
@@ -12,7 +12,7 @@ import sys
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inPathFolder = f'/path/{inEnzymeName}'
+inPathFolder = f'{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = True
@@ -28,7 +28,7 @@ inExcludedPosition = [8]
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
 inFixFullMotifSeq = False
-inMinimumSubstrateCount = 10
+inMinimumSubstrateCount = 1000
 inSetMinimumESFixAA = 0
 inSetMinimumESReleaseAA = -1
 inPrintFixedSubs = True
@@ -42,17 +42,15 @@ inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = True
 inPlotLogo = True
-
 inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = False
 inPlotLogo = False
-
 inPlotWeblogo = False
 inPlotUnscaledScatter = False
 inPlotScaledScatter = False
 
-# Input 4: Processing The Data
+# Input 4: Processing The data
 inPrintNumber = 10
 
 # Input 5: Plot Heatmap
@@ -128,7 +126,7 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 # Load: Dataset labels
-enzymeName, filesInitial, filesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
+enzymeName, filesInitial, filesFinal, labelAAPos = getFileNames(enzyme=inEnzymeName)
 
 
 
@@ -151,7 +149,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
 
 
 
-# ====================================== Load Data =======================================
+# ====================================== Load data =======================================
 # Load: Counts
 countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
 
@@ -181,7 +179,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
     fixedSubs = {}
     fixedSubsTotal = 0
 
-    # # Load Data
+    # # Load data
     # Define: File path
     filePathFixedSubs, filePathFixedCounts = (
         ngs.getFilePath(datasetTag=ngs.datasetTag))
@@ -194,11 +192,11 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
               f'     {greenDark}{filePathFixedSubs}\n'
               f'     {filePathFixedCounts}{resetColor}\n\n')
 
-        # Load Data: Fixed substrates
+        # Load data: Fixed substrates
         with open(filePathFixedSubs, 'rb') as file:
             fixedSubs = pk.load(file)
 
-        # Load Data: Fixed counts
+        # Load data: Fixed counts
         fixedCounts = pd.read_csv(filePathFixedCounts, index_col=0)
 
         # Calculate total counts
@@ -346,7 +344,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
 
         # Save the fixed substrate dataset
         if inSaveData and not inRefixMotif:
-            print('================================= Save The Data '
+            print('================================= Save The data '
                   '=================================')
             print(f'Fixed substrate data saved at:\n'
                   f'     {filePathFixedSubs}\n'
@@ -396,7 +394,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     initialFixedPos = labelAAPos[inFixedPosition[0] - 1]
 
     # Display current sample size
-    ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
+    ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal,
+                         NFinalUnique=len(substratesFinalFixed.keys()))
 
     # Calculate RF
     probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
@@ -487,9 +486,10 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             excludePosition=inExcludedPosition, sortType=sortType)
 
 
-        # # Process Data
+        # # Process data
         # Display current sample size
-        ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
+        ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal,
+                             NFinalUnique=len(substratesFinalFixed.keys()))
 
         # Calculate: RF
         probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
@@ -559,9 +559,10 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         # Record counts at released position
         countsReleased.loc[:, position] = countsFinalFixed.loc[:, position]
 
-        # # Process Data
+        # # Process data
         # Display current sample size
-        ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
+        ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal,
+                             NFinalUnique=len(substratesFinalFixed.keys()))
 
         # Calculate: RF
         probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
@@ -607,9 +608,10 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         # Update: Figure label
         ngs.saveFigureIteration += 1
 
-        # # Process Data
+        # # Process data
         # Display current sample size
-        ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
+        ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal,
+                             NFinalUnique=len(substratesFinalFixed.keys()))
 
         # Calculate: RF
         probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
@@ -696,11 +698,11 @@ if (os.path.exists(filePathFixedMotifSubs) and
         print(f'{yellow}Warning: The option that enables saving figures was '
               f'turned off{resetColor}\n\n')
 
-    # Load Data: Fixed substrates
+    # Load data: Fixed substrates
     with open(filePathFixedMotifSubs, 'rb') as file:
         substratesFinalFixed = pk.load(file)
 
-    # Load Data: Fixed counts
+    # Load data: Fixed counts
     countsFinalFixed = pd.read_csv(filePathFixedMotifCounts, index_col=0)
 
     # Calculate: Total counts
@@ -723,7 +725,8 @@ if (os.path.exists(filePathFixedMotifSubs) and
     print('\n')
 
     # Display current sample size
-    ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal)
+    ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal,
+                         NFinalUnique=len(substratesFinalFixed.keys()))
 
     # Calculate: RF
     probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,

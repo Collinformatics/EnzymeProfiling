@@ -67,14 +67,14 @@ inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inModelSize = 1 # 0 = 15B Params, 1 = 3B Params, 2 = 650M Params
-inUseFilteredReadingFrame = False
+inUseFilteredReadingFrame = True
 inFilterWithPCA = True
 inSelectSubstratesTop = 10 # 10 = Top 10 quantile
-inSelectSubstratesBottom = 60 # 10 = Top 10 quantile
+inSelectSubstratesBottom = 50 # 10 = Top 10 quantile
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
 inFixedPosition = [4]
-inExcludeResidues = True
+inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 1000
@@ -85,7 +85,7 @@ inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
 inConcatenateLayersESM = True
-inLayersESM = [30,20,16,14,12,6]
+inLayersESM = [36, 30, 25, 20, 14, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
@@ -117,7 +117,6 @@ if inPlotOnlyWords:
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
 inPlotWordCloud = False # <--------------------
-
 inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
 inShowSampleSize = True  # Include the sample size in your figures
@@ -183,9 +182,10 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           xAxisLabelsMotif=inMotifPositions, printNumber=inPrintNumber,
           showNValues=inShowSampleSize, bigAAonTop=inBigLettersOnTop, findMotif=False,
           folderPath=inPathFolder, filesInit=filesInitial, filesFinal=filesFinal,
-          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
-          plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
-          plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
+          useEF=inUseEnrichmentFactor, plotPosS=inPlotEntropy,
+          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
+          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
+          plotFigMotifEnrich=inPlotMotifEnrichment,
           plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotFigPCA=inPlotPCA,
@@ -247,15 +247,13 @@ ngs.calculateEntropy(probability=probMotif, combinedMotifs=inUseFilteredReadingF
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
                         combinedMotifs=inUseFilteredReadingFrame)
 
-if inUseEnrichmentFactor:
-    # Evaluate: Sequences
-    motifs = ngs.processSubstrates(
-        subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
-        subLabel=inMotifPositions, plotEF=inUseEnrichmentFactor,
-        combinedMotifs=inUseFilteredReadingFrame)
+# Evaluate: Sequences
+motifsTraining = ngs.processSubstrates(
+    subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
+    subLabel=inMotifPositions, combinedMotifs=inUseFilteredReadingFrame)
 
 # Normalize substrate scores
-subsTrain = ngs.normalizeValues(substrates=motifs, datasetTag=ngs.datasetTag)
+subsTrain = ngs.normalizeValues(substrates=motifsTraining, datasetTag=ngs.datasetTag)
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates

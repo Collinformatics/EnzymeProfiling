@@ -12,6 +12,7 @@ import logomaker
 import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.pyplot import ylabel
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import RectangleSelector
 from sklearn.decomposition import PCA
@@ -154,8 +155,8 @@ class NGS:
                  plotFigEMScaled, plotFigLogo, plotFigWebLogo, plotFigWords, wordLimit,
                  wordsTotal, plotFigBars, NSubBars, plotFigPCA, numPCs, NSubsPCA,
                  plotSuffixTree, saveFigures, setFigureTimer, expressDNA=False,
-                 xAxisLabelsMotif=None, motifFilter=False, plotFigMotifEnrich=False,
-                 plotFigMotifEnrichSelect=False):
+                 useEF=False, xAxisLabelsMotif=None, motifFilter=False,
+                 plotFigMotifEnrich=False, plotFigMotifEnrichSelect=False):
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.filterSubs = filterSubs
@@ -175,6 +176,7 @@ class NGS:
         self.rectangles = []
         self.initialize = True
         self.maxValue = 0
+        self.useEF = useEF
         
         # Parameters: DNA Processing
         self.expressDNA = expressDNA # Only set as True when processing DNA seqs
@@ -2568,7 +2570,7 @@ class NGS:
 
 
 
-    def processSubstrates(self, subsInit, subsFinal, motifs, subLabel, plotEF,
+    def processSubstrates(self, subsInit, subsFinal, motifs, subLabel,
                           combinedMotifs=False, predActivity=False, predModel=False):
         if predActivity:
             # Calculate: Motif enrichment
@@ -2594,7 +2596,7 @@ class NGS:
         # Plot: Work cloud
         if self.plotFigWords:
             self.plotWordCloud(
-                substrates=motifES, combinedMotifs=combinedMotifs, plotEF=plotEF)
+                substrates=motifES, combinedMotifs=combinedMotifs)
 
 
         predMotif = False
@@ -2640,7 +2642,6 @@ class NGS:
         # Suffix tree
         if self.plotSuffixTree:
             print(f'ADD: Suffix tree')
-            sys.exit()
 
         return motifES
 
@@ -2699,7 +2700,6 @@ class NGS:
         # # Calculate: Decay constant
         # k = ngs.decayRate(y=y)
 
-
         # Plot the data
         fig, ax = plt.subplots(figsize=self.figSize)
         if limitNBars:
@@ -2732,7 +2732,10 @@ class NGS:
                 bar.set_edgecolor(barColor)
 
         # Define: Figure title
-        yLabel = 'Enrichment Factor'
+        if self.useEF:
+            yLabel = 'Enrichment Factor'
+        else:
+            yLabel = 'Counts'
         if predActivity:
             title = (f'{self.enzymeName}\n{predModel}\n'
                          f'{NSubs:,} {predType} Sequences')
@@ -2775,17 +2778,23 @@ class NGS:
 
         # Save the figure
         if self.saveFigures:
+            if self.useEF:
+                scoreType = 'EF'
+            else:
+                scoreType = 'Counts'
+
             # Define: Save location
             if predActivity:
                 if predType.lower() == 'chosen':
                     figLabel = (f'{self.enzymeName} - Predicted Activity - '
                                 f'{self.datasetTag} - {predType} Subs - {predModel} - '
-                                f'{motifLen} AA - Plot N {plotNSubs}.png')
+                                f'{motifLen} AA - Plot N {plotNSubs} - '
+                                f'MinCounts {self.minSubCount}.png')
                 else:
                     figLabel = (f'{self.enzymeName} - Predicted Activity - '
                                 f'{self.datasetTag} - {predType} Subs - {predModel} - '
                                 f'{motifLen} AA - Select N {self.NSubBars} '
-                                f'Plot N {plotNSubs}.png')
+                                f'Plot N {plotNSubs} - MinCounts {self.minSubCount}.png')
             else:
                 if limitNBars:
                     figLabel = (f'{self.enzymeName} - Motif Enrichment - '
@@ -2803,7 +2812,7 @@ class NGS:
                     figLabel = figLabel.replace(
                         'Motif Enrichment',
                         f'Motif Enrichment - PCA {clusterNumPCA}')
-
+            figLabel = figLabel.replace('MinCounts', f'{scoreType} - MinCounts')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
@@ -3073,7 +3082,11 @@ class NGS:
                 if iteration >= self.printNumber:
                     break
             print('\n')
-    
+
+        # Select data
+        if not self.useEF:
+            # Use counts, not enrichment factor
+            motifEnrichment = motifs
 
         # Plot: Motif enrichment
         if predActivity and self.plotFigMotifEnrich:
@@ -4780,7 +4793,7 @@ class NGS:
 
 
 
-    def plotWordCloud(self, substrates, plotEF, clusterNumPCA=None,
+    def plotWordCloud(self, substrates, clusterNumPCA=None,
                       combinedMotifs=False, predActivity=False, predModel=False):
         print('=============================== Plot: Word Cloud '
               '================================')
@@ -4880,7 +4893,7 @@ class NGS:
                     self.datasetTag,
                     f'{self.datasetTag} - Predictions - {predModel}')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-            if plotEF:
+            if self.useEF:
                 saveLocation = saveLocation.replace('Words', 'Words - EF')
             else:
                 saveLocation = saveLocation.replace('Words', 'Words - Counts')

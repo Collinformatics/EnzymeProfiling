@@ -338,6 +338,7 @@ class RandomForestRegressorXGB:
         print(f'ML Algorithm: {purple}Random Forest Regressor{resetColor}\n'
               f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
+        print(f'Save PAth:\n{pathModel}\n')
 
         self.device = device
         self.tagExperiment = tagExperiment
@@ -408,6 +409,9 @@ class RandomForestRegressorXGB:
             datasetTagMid: pathModelM,
             datasetTagLow: pathModel
         }
+        print(f'Save PAth:\n{pathModelH}\n')
+        sys.exit()
+
 
         # Get Subset: High activity
         threshold1 = dfTrain['activity'].quantile(self.activityQuantile1)
@@ -643,8 +647,12 @@ class RandomForestRegressorXGB:
             startTraining = time.time()
             totalParamCombos = len(paramCombos)
             for combination, paramCombo in enumerate(paramCombos):
+                # if combination < 125:
+                #     print(f'Skipping combination: {combination}')
+                #     continue
                 params = dict(zip(paramNames, paramCombo))
-                percentComplete = round((combination / totalParamCombos) * 100, self.roundVal)
+                percentComplete = round((combination / totalParamCombos) * 100,
+                                        self.roundVal)
                 printData = (combination % 25 == 0)
 
                 # Train Model
@@ -943,28 +951,21 @@ class PredictActivity:
         else:
             self.sizeESM = '650M Params'
 
-
         # Parameters: Save Paths Embeddings
-        self.embeddingsTagTrain = (
-            f'Embeddings - ESM {self.sizeESM} - '
-            f'Batch {self.batchSize} - {self.enzymeName} - '
-            f'{self.datasetTag} - MinCounts {self.minSubCount} - '
-            f'N {self.subsTrainN} - {len(self.labelsXAxis)} AA - Scores')
-        self.embeddingsTagPred = (
-            f'Embeddings - ESM {self.sizeESM} - '
-            f'Batch {self.batchSize} - {self.enzymeName} - '
-            f'Predictions - Min ES {self.minES} - MinCounts {self.minSubCount} - '
-            f'N {self.subsPredN} - {len(self.labelsXAxis)} AA')
         if self.useEF:
-            self.embeddingsTagTrain = self.embeddingsTagTrain.replace(
-                'MinCounts', 'EF - MinCounts')
-            self.embeddingsTagPred = self.embeddingsTagPred.replace(
-                'MinCounts', 'EF - MinCounts')
+            scoreType = 'EF'
         else:
-            self.embeddingsTagTrain = self.embeddingsTagTrain.replace(
-                'MinCounts', 'Count - MinCounts')
-            self.embeddingsTagPred = self.embeddingsTagPred.replace(
-                'MinCounts', 'Count - MinCounts')
+            scoreType = 'Counts'
+        self.embeddingsTagTrain = (
+            f'Embeddings - ESM L{self.layersESM} {self.sizeESM} - Batch '
+            f'{self.batchSize} - {self.enzymeName} - {self.datasetTag} - {scoreType} - '
+            f'MinCounts {self.minSubCount} - N {self.subsTrainN} - '
+            f'{len(self.labelsXAxis)} AA')
+        self.embeddingsTagPred = (
+            f'Embeddings - ESM L{self.layersESM} {self.sizeESM} - Batch '
+            f'{self.batchSize} - {self.enzymeName} -  Predictions - '
+            f'Min ES {self.minES} - {scoreType} - MinCounts {self.minSubCount} - '
+            f'N {self.subsPredN} - {len(self.labelsXAxis)} AA')
         if (self.concatESM
                 and isinstance(self.layersESM, list)
                 and len(self.layersESM) > 1):
@@ -990,7 +991,6 @@ class PredictActivity:
             self.embeddingsTagPred = self.embeddingsTagPred.replace(
                 f'MinCounts {self.minSubCount}',
                 f'MinCounts {self.minSubCount} - Added {self.tagChosenSubs}')
-
 
         # Parameters: Save Paths Model Accuracy
         self.tagExperiment = (f'Model Accuracy - {modelType} - ESM {self.sizeESM} '
