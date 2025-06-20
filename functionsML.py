@@ -712,6 +712,7 @@ class RandomForestRegressorXGB:
             self.modelL = self.loadModel(pathModel=pathModel, tag=datasetTagLow)
 
 
+
     def plotTestingPredictions(self, finalSet=False):
         print(f'====================== Scatter Plot - Prediction Accuracy '
               f'======================')
@@ -741,10 +742,9 @@ class RandomForestRegressorXGB:
             plt.plot(axisLimits, axisLimits, color='#101010', lw=self.lineThickness)
             plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
             plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
-            plt.title(f'{tag}\nR² = {round(R2, 2)}\n'
-                      f'Randon Forest Regressor Accuracy\n'
-                      f'{self.layerESMTag}',
-                      fontsize=self.labelSizeTitle, fontweight='bold')
+            plt.title(f'{tag}\nR² = {round(R2, 2)}\nRandon Forest Regressor\n'
+                      f'{self.layerESMTag}', fontsize=self.labelSizeTitle,
+                      fontweight='bold')
             plt.subplots_adjust(top=0.852, bottom=0.075, left=0.162, right=0.935)
 
             # Set axes
@@ -767,7 +767,7 @@ class RandomForestRegressorXGB:
 
             # Define: Save location
             figLabel = self.tagExperiment[tag] + '.png'
-            saveLocation = os.path.join(self.pathFigures, figLabel)
+            saveLocation = os.path.join(self.pathFiguresTraining, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
@@ -866,9 +866,12 @@ class PredictActivity:
         self.pathEmbeddings = os.path.join(self.pathFolder, 'Embeddings')
         self.pathModels = os.path.join(self.pathFolder, 'Models')
         self.pathFigures = os.path.join(self.pathFolder, 'Figures')
+        self.pathFiguresTraining = os.path.join(self.pathFolder, 'FiguresModelTraining')
         os.makedirs(self.pathData, exist_ok=True)
         os.makedirs(self.pathEmbeddings, exist_ok=True)
         os.makedirs(self.pathModels, exist_ok=True)
+        os.makedirs(self.pathFigures, exist_ok=True)
+        os.makedirs(self.pathFiguresTraining, exist_ok=True)
 
         # Parameters: Dataset
         self.enzymeName = enzymeName
@@ -992,10 +995,10 @@ class PredictActivity:
         self.tagExperiment = self.tagExperiment.replace(':', '')
         if self.useEF:
             self.tagExperiment = self.tagExperiment.replace(
-                'MinCounts', 'Scores EF - MinCounts')
+                'MinCounts', 'EF - MinCounts')
         else:
             self.tagExperiment = self.tagExperiment.replace(
-                'MinCounts', 'Scores Counts - MinCounts')
+                'MinCounts', 'Counts - MinCounts')
         self.tagExperiment = {
             self.subsetTagHigh: self.tagExperiment.replace(
                 'MinCounts', f'{self.subsetTagHigh} - MinCounts'),
@@ -1547,22 +1550,24 @@ class PredictActivity:
             figLabel = \
                 (f'{self.enzymeName} - PCA - ESM {self.sizeESM} {self.layersESMTag} - '
                  f'{self.datasetTag} - {N} - MinCounts {self.minSubCount}.png')
-            if combinedMotifs and len(self.motifIndexExtracted) > 1:
-                figLabel = figLabel.replace(self.datasetTag,
-                                            f'Combined {self.datasetTag}')
-            saveLocation = os.path.join(self.pathFigures, figLabel)
+            if self.useEF:
+                figLabel = figLabel.replace('MinCounts', 'EF - MinCounts')
+            else:
+                figLabel = figLabel.replace('MinCounts', 'Count - MinCounts')
+            saveLocation = os.path.join(self.pathFiguresTraining, figLabel)
 
             # Save figure
             if os.path.exists(saveLocation):
                 figExists = True
                 figLabel = figLabel.replace('PCA', f'PCA 1')
-                saveLocation = os.path.join(self.pathFigures, figLabel)
+                saveLocation = os.path.join(self.pathFiguresTraining, figLabel)
                 if os.path.exists(saveLocation):
                     while figExists:
                         for index in range(2, 501):
                             figLabel = figLabel.replace(f'PCA {index - 1}',
                                                         f'PCA {index}')
-                            saveLocation = os.path.join(self.pathFigures, figLabel)
+                            saveLocation = os.path.join(self.pathFiguresTraining,
+                                                        figLabel)
                             if not os.path.exists(saveLocation):
                                 figExists = False
                                 print(f'Exists: {figExists}')
