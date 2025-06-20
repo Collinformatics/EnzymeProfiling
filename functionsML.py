@@ -938,21 +938,31 @@ class PredictActivity:
 
 
         # Parameters: Save Paths Embeddings
-        self.embeddingsTrainTag = (
+        self.embeddingsTagTrain = (
             f'Embeddings - ESM {self.sizeESM} - '
             f'Batch {self.batchSize} - {self.enzymeName} - '
             f'{self.datasetTag} - MinCounts {self.minSubCount} - '
-            f'N {self.subsTrainN} - {len(self.labelsXAxis)} AA')
-        self.embeddingsPredTag = (
+            f'N {self.subsTrainN} - {len(self.labelsXAxis)} AA - Scores')
+        self.embeddingsTagPred = (
             f'Embeddings - ESM {self.sizeESM} - '
             f'Batch {self.batchSize} - {self.enzymeName} - '
             f'Predictions - Min ES {self.minES} - MinCounts {self.minSubCount} - '
             f'N {self.subsPredN} - {len(self.labelsXAxis)} AA')
+        if self.useEF:
+            self.embeddingsTagTrain = self.embeddingsTagTrain.replace(
+                'MinCounts', 'EF - MinCounts')
+            self.embeddingsTagPred = self.embeddingsTagPred.replace(
+                'MinCounts', 'EF - MinCounts')
+        else:
+            self.embeddingsTagTrain = self.embeddingsTagTrain.replace(
+                'MinCounts', 'Count - MinCounts')
+            self.embeddingsTagPred = self.embeddingsTagPred.replace(
+                'MinCounts', 'Count - MinCounts')
         if (self.concatESM
                 and isinstance(self.layersESM, list)
                 and len(self.layersESM) > 1):
             for layer in self.layersESM:
-                filePath = f'{self.embeddingsTrainTag.replace(
+                filePath = f'{self.embeddingsTagTrain.replace(
                     'ESM', f'ESM L{layer}')}.csv'
                 self.embeddingsPathTrain.append(
                     os.path.join(self.pathEmbeddings, filePath))
@@ -960,29 +970,19 @@ class PredictActivity:
             self.concatESM = False
             if isinstance(self.layersESM, int):
                 self.layersESM = [self.layersESM]
-            filePath = f'{self.embeddingsTrainTag.replace(
+            filePath = f'{self.embeddingsTagTrain.replace(
             'ESM', f'ESM L{self.layersESM[0]}')}.csv'
             self.embeddingsPathTrain.append(
                     os.path.join(self.pathEmbeddings, filePath))
         for layer in self.layersESM:
-            filePath = f'{self.embeddingsPredTag.replace(
+            filePath = f'{self.embeddingsTagPred.replace(
                 'ESM', f'ESM L{layer}')}.csv'
             self.embeddingsPathPred.append(
                     os.path.join(self.pathEmbeddings, filePath))
         if self.tagChosenSubs != '':
-            self.embeddingsPredTag = self.embeddingsPredTag.replace(
+            self.embeddingsTagPred = self.embeddingsTagPred.replace(
                 f'MinCounts {self.minSubCount}',
                 f'MinCounts {self.minSubCount} - Added {self.tagChosenSubs}')
-        if self.useEF:
-            self.embeddingsTrainTag = self.embeddingsTrainTag.replace(
-                'MinCounts', 'Scores EF - MinCounts')
-            self.embeddingsPredTag = self.embeddingsPredTag.replace(
-                'MinCounts', 'Scores EF - MinCounts')
-        else:
-            self.embeddingsTrainTag = self.embeddingsTrainTag.replace(
-                'MinCounts', 'Scores Counts - MinCounts')
-            self.embeddingsPredTag = self.embeddingsPredTag.replace(
-                'MinCounts', 'Scores Counts - MinCounts')
 
 
         # Parameters: Save Paths Model Accuracy
@@ -1033,9 +1033,9 @@ class PredictActivity:
     def trainModel(self):
         # Define: Model paths
         modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
-                    f'{self.embeddingsTrainTag}')
+                    f'{self.embeddingsTagTrain}')
         # modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
-        #             f'N Trees {self.NTrees} - {self.embeddingsTrainTag}')
+        #             f'N Trees {self.NTrees} - {self.embeddingsTagTrain}')
         modelTagScikit = modelTag.replace('Test Size',
                                           f'Scikit - Test Size')
         modelTagXGBoost = modelTag.replace('Test Size',
@@ -1319,6 +1319,7 @@ class PredictActivity:
 
         def loadESM():
             missingFiles = []
+            loadedEmbeddings = []
 
             # Load: ESM Embeddings
             genEmbeddings = False
@@ -1332,9 +1333,8 @@ class PredictActivity:
             if genEmbeddings:
                 generateEmbeddingsESM(seqs=substrates, layersESM=missingLayersESM,
                                       savePaths=missingFiles)
-                loadESM()
+                loadedEmbeddings = loadESM()
             else:
-                loadedEmbeddings = []
                 for index, pathEmbeddings in enumerate(filePaths):
                     loadedEmbeddings.append(pd.read_csv(pathEmbeddings, index_col=0))
                 for index, layerEmbeddings in enumerate(loadedEmbeddings):
@@ -1400,19 +1400,23 @@ class PredictActivity:
         # Initialize lists for the clustered substrates
         rectangles = []
 
-        # Define component labels
-        pcaHeaders = []
-        for componentNumber in range(1, self.numPCs + 1):
-            pcaHeaders.append(f'PC{componentNumber}')
-        headerCombinations = list(combinations(pcaHeaders, 2))
 
         # # Cluster the datapoints
         # Step 1: Apply PCA on the standardized data
         pca = PCA(n_components=self.numPCs) # Adjust the number of components as needed
         scaler = StandardScaler()
-        data = scaler.fit_transform(embeddings)
+        data = scaler.fit_transform(embeddings.drop(columns='activity'))
         dataPCA = pca.fit_transform(data)
         # loadings = pca.components_.T
+        if self.numPCs == 2:
+            # Define component labels
+            pcaHeaders = []
+            for componentNumber in range(1, self.numPCs + 1):
+                pcaHeaders.append(f'PC{componentNumber}')
+        else:
+            # Generate a matching number of column headers
+            pcaHeaders = [f'PC{i + 1}' for i in range(dataPCA.shape[1])]
+        headerCombinations = list(combinations(pcaHeaders, 2))
 
         # Step 2: Create a DataFrame for PCA results
         dataPCA = pd.DataFrame(dataPCA, columns=pcaHeaders, index=indices)
