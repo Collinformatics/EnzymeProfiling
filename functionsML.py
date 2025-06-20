@@ -3,19 +3,21 @@
 
 
 import esm
-from itertools import  product
+from itertools import combinations, product
 import joblib
 import math
 import matplotlib.pyplot as plt
+from matplotlib.widgets import RectangleSelector
 import numpy as np
 import os
 import pandas as pd
 import platform
 import random
-import re
+from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.preprocessing import StandardScaler
 import sys
 import time
 import torch
@@ -138,7 +140,8 @@ class RandomForestRegressor:
                 modelCV.fit(xTrain, yTrain)
                 end = time.time()
                 runtime = (end - start) / 60
-                print(f'Training Time: {red}{round(runtime, 3):,} min{resetColor}\n')
+                print(f'Training Time: {red}'
+                      f'{round(runtime, self.roundVal):,} min{resetColor}\n')
                 print(f'Best Hyperparameters: '
                       f'{greenLight}{modelCV.best_params_}{resetColor}')
 
@@ -159,9 +162,9 @@ class RandomForestRegressor:
                 R2 = r2_score(yPred, yTest)
                 print(f'{greenLight}{accuracy}{resetColor}\n\n')
                 print(f'Prediction Accuracy: {purple}{tag}{resetColor}\n'
-                      f'     MAE: {red}{round(MAE, 3)}{resetColor}\n'
-                      f'     MSE: {red}{round(MSE, 3)}{resetColor}\n'
-                      f'     R2: {red}{round(R2, 3)}{resetColor}\n')
+                      f'     MAE: {red}{round(MAE, self.roundVal)}{resetColor}\n'
+                      f'     MSE: {red}{round(MSE, self.roundVal)}{resetColor}\n'
+                      f'     R2: {red}{round(R2, self.roundVal)}{resetColor}\n')
                 if saveModel and not os.path.exists(path):
                     print(f'Saving Trained ESM Model:\n'
                           f'     {greenDark}{path}{resetColor}\n')
@@ -188,7 +191,7 @@ class RandomForestRegressor:
             activityPred = np.expm1(activityPred)  # Reverse log1p transform
             end = time.time()
             runtime = (end - start) * 1000
-            print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+            print(f'     Runtime: {red}{round(runtime, self.roundVal):,} ms{resetColor}\n')
 
             # Rank predictions
             activityPredRandom = {
@@ -203,7 +206,7 @@ class RandomForestRegressor:
             for iteration, (substrate, value) in enumerate(activityPredRandom.items()):
                 if iteration >= printNumber:
                     break
-                print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
+                print(f'     {substrate}: {red}{round(value, self.roundVal):,}{resetColor}')
             print('\n')
 
             # Get: Chosen substrate predictions
@@ -222,7 +225,7 @@ class RandomForestRegressor:
                             enumerate(activityPredChosen.items())):
                         activity = float(activity)
                         print(f'     {pink}{substrate}{resetColor}: '
-                              f'{red}{round(activity, 3):,}{resetColor}')
+                              f'{red}{round(activity, self.roundVal):,}{resetColor}')
                     print('\n')
 
         makePredictions(model=self.modelH, tag=self.modelTagHigh)
@@ -323,8 +326,8 @@ Params Grid: Random ForestRegressor - XGB
 class RandomForestRegressorXGB:
     def __init__(self, dfTrain, dfPred, maxValue, tagExperiment, selectSubsTopPercent,
                  selectSubsBottomPercent, pathModel, modelTag, modelAccuracy,
-                 modelAccuracyPaths, pathFigures, datasetTagHigh, datasetTagMid,
-                 datasetTagLow, layerESM, testSize, device, trainModel=True,
+                 modelAccuracyPaths, figSize, pathFigures, datasetTagHigh, datasetTagMid,
+                 datasetTagLow, layersESM, layerESMTag, testSize, device, trainModel=True,
                  evalMetric='rmse'):
         """
         :param evalMetric: options include 'rmse' and 'mae'
@@ -343,8 +346,8 @@ class RandomForestRegressorXGB:
         self.selectSubsBottomPercent = selectSubsBottomPercent
         self.subsPred = list(dfPred.index)
         self.predictions = {}
-        self.layersESM = layerESM
-        self.layerESMTag = f'ESM Layer {self.layersESM}'
+        self.layersESM = layersESM
+        self.layerESMTag = layerESMTag
         print(f'Tag: {purple}{self.layerESMTag}{resetColor}')
         self.modelAccuracy = modelAccuracy
         self.predictionAccuracy = {}
@@ -354,8 +357,7 @@ class RandomForestRegressorXGB:
 
         # Parameters: Figures
         self.pathFigures = pathFigures
-        self.figSize = (9.5, 8)
-        self.figSizeMini = (self.figSize[0], 6)
+        self.figSize = figSize
         self.residueLabelType = 2 # 0 = full AA name, 1 = 3-letter code, 2 = 1 letter
         self.labelSizeTitle = 18
         self.labelSizeAxis = 16
@@ -364,21 +366,16 @@ class RandomForestRegressorXGB:
         self.tickLength = 4
         self.figureResolution = 300
 
+        # Parameters: Misc
+        self.roundVal = 3
+
         # Params: Grid search
-        # self.paramGrid = {
-        #     'colsample_bytree': np.arange(0.6, 1.0, 0.2),
-        #     'learning_rate': [0.05, 0.01],
-        #     'max_leaves': range(100, 250, 50),
-        #     'min_child_weight': range(1, 3, 1),
-        #     'n_estimators': range(3500, 5500, 500),
-        #     'subsample': np.arange(0.5, 1.0, 0.1)
-        # }
         self.paramGrid = {
             'colsample_bytree': np.arange(0.6, 1.0, 0.2),
             'learning_rate': [0.05, 0.1],
-            'max_leaves': range(100, 450, 50),
+            'max_leaves': range(100, 350, 50),
             'min_child_weight': [1],
-            'n_estimators': [1500, 2000, 2500], # 3500
+            'n_estimators': [1000, 1500, 2000], # 3500
             'subsample': np.arange(0.6, 1.2, 0.2)
         }
         # 'max_leaves': range(2, 10, 1) # N terminal nodes
@@ -550,13 +547,17 @@ class RandomForestRegressorXGB:
 
                 # Inspect results
                 saveModel = False
+                betterMSE, betterR2 = True, True
+                if self.layerESMTag in self.modelAccuracy[tagData].columns:
+                    # betterMSE = (accuracy.loc[indexEvalMetric, self.layerESMTag] <
+                    #              self.modelAccuracy[tagData
+                    #              ].loc[indexEvalMetric, self.layerESMTag])
+                    betterR2 = (R2 > self.modelAccuracy[tagData].loc['R²', self.layerESMTag])
                 if (self.layerESMTag not in self.modelAccuracy[tagData].columns or
-                        (accuracy.loc[indexEvalMetric, self.layerESMTag] <
-                         self.modelAccuracy[tagData].loc[
-                             indexEvalMetric, self.layerESMTag])):
+                        betterR2):
                     saveModel = True
-                    newColumn = (
-                            self.layerESMTag not in self.modelAccuracy[tagData].columns)
+                    newColumn = (self.layerESMTag not in
+                                 self.modelAccuracy[tagData].columns)
 
                     # Record: Model performance
                     self.bestParams[tagData] = {self.layerESMTag: params.copy()}
@@ -587,13 +588,13 @@ class RandomForestRegressorXGB:
                         print(f'Prediction Values: {pink}{dataset}{resetColor}\n'
                               f'{greenDark}{predictions}{resetColor}\n\n')
 
-                    runtime = round((end - start), 3)
-                    runtimeTotal = round((end - startTraining) / 60, 3)
-                    rate = round(combination / runtimeTotal, 3)
+                    runtime = round((end - start), self.roundVal)
+                    runtimeTotal = round((end - startTraining) / 60, self.roundVal)
+                    rate = round(combination / runtimeTotal, self.roundVal)
                     if rate == 0:
                         timeRemaining = float('inf')
                     else:
-                        timeRemaining = round((totalParamCombos - combination) / rate, 3)
+                        timeRemaining = round((totalParamCombos - combination) / rate, self.roundVal)
                     for dataset, values in self.modelAccuracy.items():
                         print(f'Prediction Accuracy For Subset: {pink}{dataset}'
                               f'{resetColor}\n'
@@ -641,7 +642,7 @@ class RandomForestRegressorXGB:
             totalParamCombos = len(paramCombos)
             for combination, paramCombo in enumerate(paramCombos):
                 params = dict(zip(paramNames, paramCombo))
-                percentComplete = round((combination / totalParamCombos) * 100, 3)
+                percentComplete = round((combination / totalParamCombos) * 100, self.roundVal)
                 printData = (combination % 25 == 0)
 
                 # Train Model
@@ -688,8 +689,8 @@ class RandomForestRegressorXGB:
             print('=============================== Training Results '
                   '================================')
             end = time.time()
-            runtimeTotal = round((end - startTraining) / 60, 3)
-            rate = round(totalParamCombos / runtimeTotal, 3)
+            runtimeTotal = round((end - startTraining) / 60, self.roundVal)
+            rate = round(totalParamCombos / runtimeTotal, self.roundVal)
             print(f'Training Completed\n')
             for tag, params in self.bestParams.items():
                 print(f'Subset: {pink}{tag}{resetColor}\n'
@@ -740,7 +741,7 @@ class RandomForestRegressorXGB:
             plt.plot(axisLimits, axisLimits, color='#101010', lw=self.lineThickness)
             plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
             plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
-            plt.title(f'{tag}\nR² = {R2}\n'
+            plt.title(f'{tag}\nR² = {round(R2, 2)}\n'
                       f'Randon Forest Regressor Accuracy\n'
                       f'{self.layerESMTag}',
                       fontsize=self.labelSizeTitle, fontweight='bold')
@@ -794,7 +795,7 @@ class RandomForestRegressorXGB:
         activityPred = np.expm1(activityPred) # Reverse log1p transform
         end = time.time()
         runtime = (end - start) * 1000
-        print(f'     Runtime: {red}{round(runtime, 3):,} ms{resetColor}\n')
+        print(f'     Runtime: {red}{round(runtime, self.roundVal):,} ms{resetColor}\n')
 
         # Rank predictions
         activityPredRandom = {
@@ -809,7 +810,7 @@ class RandomForestRegressorXGB:
         for iteration, (substrate, value) in enumerate(activityPredRandom.items()):
             if iteration >= printNumber:
                 break
-            print(f'     {substrate}: {red}{round(value, 3):,}{resetColor}')
+            print(f'     {substrate}: {red}{round(value, self.roundVal):,}{resetColor}')
         print('\n')
 
         # Get: Chosen substrate predictions
@@ -828,7 +829,7 @@ class RandomForestRegressorXGB:
                         enumerate(activityPredChosen.items())):
                     activity = float(activity)
                     print(f'     {pink}{substrate}{resetColor}: '
-                          f'{red}{round(activity, 3):,}{resetColor}')
+                          f'{red}{round(activity, self.roundVal):,}{resetColor}')
                 print('\n')
 
 
@@ -856,9 +857,9 @@ class RandomForestRegressorXGB:
 class PredictActivity:
     def __init__(self, enzymeName, datasetTag, folderPath, subsTrain,
                  subsPercentSelectTop, subsPercentSelectBottom,
-                 maxTrainingScore, subsPred, subsPredChosen, useEF, tagChosenSubs,
-                 minSubCount, minES, modelType, concatESM, layersESM, testSize, batchSize,
-                 labelsXAxis, printNumber, modelSize=2):
+                 maxTrainingScore, subsPred, subsPredChosen, useEF, filterPCA,
+                 tagChosenSubs, minSubCount, minES, modelType, concatESM, layersESM,
+                 testSize, batchSize, labelsXAxis, printNumber, saveFigures, modelSize=2):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
@@ -882,12 +883,30 @@ class PredictActivity:
         self.subsPredN = len(subsPred)
         self.subsPredChosen = subsPredChosen
         self.useEF = useEF
+        self.filterPCA = filterPCA
+        self.numPCs = 2
         self.tagChosenSubs = tagChosenSubs
         self.minSubCount = minSubCount
         self.minES = minES
         self.labelsXAxis = labelsXAxis
         self.printNumber = printNumber
+        self.selectedSubstrates = []
+        self.selectedDatapoints = []
+        self.rectangles = []
         self.predictions = {}
+
+        # Parameters: Figures
+        self.saveFigures = saveFigures
+        self.figSize = (9.5, 8)
+        self.labelSizeTitle = 18
+        self.labelSizeAxis = 16
+        self.labelSizeTicks = 13
+        self.lineThickness = 1.5
+        self.tickLength = 4
+        self.figureResolution = 300
+
+        # Parameters: Misc
+        self.roundVal = 3
 
         # Parameters: Model
         self.modelType = modelType
@@ -902,6 +921,7 @@ class PredictActivity:
         }
         self.concatESM = concatESM
         self.layersESM = layersESM
+        self.layersESMTag = f'ESM Layer {self.layersESM}'.replace(', ', ',')
         self.embeddingsPathTrain = []
         self.embeddingsPathPred = []
         self.batchSize = batchSize
@@ -1038,7 +1058,7 @@ class PredictActivity:
         # End function
         if self.embeddingsSubsTrain is None:
             print(f'{orange}ESM output{resetColor} is None\n'
-                  f'ESM layer {red}{layerESM}{resetColor} cannot be extracted\n\n')
+                  f'ESM layer {red}{self.layersESM}{resetColor} cannot be extracted\n\n')
             sys.exit()
 
         # Select a model to train
@@ -1061,11 +1081,11 @@ class PredictActivity:
                 tagExperiment=self.tagExperiment, maxValue=self.maxTrainingScore,
                 pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
                 modelAccuracy=self.modelAccuracy,
-                modelAccuracyPaths=self.pathModelAccuracy,
+                modelAccuracyPaths=self.pathModelAccuracy, figSize=self.figSize,
                 pathFigures=self.pathFigures, datasetTagHigh=self.subsetTagHigh,
                 datasetTagMid=self.subsetTagMid, datasetTagLow=self.subsetTagLow,
-                layerESM=self.layersESM, testSize=self.testingSetSize, device=self.device)
-
+                layersESM=self.layersESM, layerESMTag=self.layersESMTag,
+                testSize=self.testingSetSize, device=self.device)
             # Record predictions
             self.predictions[self.modelType] = randomForestRegressorXGB.predictions
             for dataset, values, in randomForestRegressorXGB.modelAccuracy.items():
@@ -1223,20 +1243,22 @@ class PredictActivity:
                         runtimeTotal = (end - startInit) / 60
                         percentCompletion = round((i / batchTotal)* 100, 1)
                         if i % 10 == 0:
-                            rate = round(i / runtimeTotal, 3)
+                            rate = round(i / runtimeTotal, self.roundVal)
                             if rate == 0:
                                 timeRemaining = float('inf')
                             else:
-                                timeRemaining = round((batchTotal - i) / rate, 3)
+                                timeRemaining = round((batchTotal - i) / rate,
+                                                      self.roundVal)
                             print(f'ESM Progress ({yellow}Layer {layerESM}{resetColor}): '
                                   f'{red}{i:,}{resetColor} / {red}{batchTotal:,}'
                                   f'{resetColor} '
                                   f'({red}{percentCompletion} %{resetColor})\n'
                                   f'     Batch Shape: {greenLight}{batch.shape}'
                                   f'{resetColor}\n'
-                                  f'     Runtime: {red}{round(runtime, 3):,} s'
-                                  f'{resetColor}\n'
-                                  f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
+                                  f'     Runtime: {red}'
+                                  f'{round(runtime, self.roundVal):,} s{resetColor}\n'
+                                  f'     Total Time: {red}'
+                                  f'{round(runtimeTotal, self.roundVal):,} min'
                                   f'{resetColor}\n'
                                   f'     Remaining Runtime: {red}{timeRemaining:,} min'
                                   f'{resetColor}\n')
@@ -1253,9 +1275,9 @@ class PredictActivity:
                 print(f'ESM Progress ({yellow}Layer {layerESM}{resetColor}): '
                       f'{red}{batchTotal:,}{resetColor} / {red}{batchTotal:,}'
                       f'{resetColor} ({red}{percentCompletion} %{resetColor})\n'
-                      f'     Runtime: {red}{round(runtime, 3):,} s'
+                      f'     Runtime: {red}{round(runtime, self.roundVal):,} s'
                       f'{resetColor}\n'
-                      f'     Total Time: {red}{round(runtimeTotal, 3):,} min'
+                      f'     Total Time: {red}{round(runtimeTotal, self.roundVal):,} min'
                       f'{resetColor}\n'
                       f'     Remaining Runtime: {red}{0:,} min'
                       f'{resetColor}\n')
@@ -1291,6 +1313,7 @@ class PredictActivity:
                 # plt.hist(subEmbeddings.loc[:, 'activity'], bins=100)
                 # plt.title("Activity Distribution")
                 # plt.show()
+
             del model, alphabet
 
 
@@ -1337,11 +1360,15 @@ class PredictActivity:
                 )
         else:
             subEmbeddings = loadedEmbeddings[0]
-        print(f'Substrate Embeddings:\n'
-              f'{greenLight}{subEmbeddings}{resetColor}\n\n')
+        if self.filterPCA:
+            # Filter Data: PCA
+            subEmbeddings = self.plotPCA(substrates=substrates, embeddings=subEmbeddings)
+        else:
+            print(f'Substrate Embeddings:\n'
+                  f'{greenLight}{subEmbeddings}{resetColor}\n\n')
         pd.set_option('display.max_columns', None)
         pd.set_option('display.max_rows', None)
-
+        
         return subEmbeddings
 
 
@@ -1359,3 +1386,201 @@ class PredictActivity:
                   f'{blue}{values}{resetColor}\n')
             values.to_csv(pathSave)
 
+
+
+    def plotPCA(self, substrates, embeddings, combinedMotifs=False):
+        print('====================================== PCA '
+              '======================================')
+        N = len(substrates.keys())
+        indices = embeddings.index
+
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Total unique substrates: {red}{N:,}{resetColor}\n')
+
+        # Initialize lists for the clustered substrates
+        rectangles = []
+
+        # Define component labels
+        pcaHeaders = []
+        for componentNumber in range(1, self.numPCs + 1):
+            pcaHeaders.append(f'PC{componentNumber}')
+        headerCombinations = list(combinations(pcaHeaders, 2))
+
+        # # Cluster the datapoints
+        # Step 1: Apply PCA on the standardized data
+        pca = PCA(n_components=self.numPCs) # Adjust the number of components as needed
+        scaler = StandardScaler()
+        data = scaler.fit_transform(embeddings)
+        dataPCA = pca.fit_transform(data)
+        # loadings = pca.components_.T
+
+        # Step 2: Create a DataFrame for PCA results
+        dataPCA = pd.DataFrame(dataPCA, columns=pcaHeaders, index=indices)
+        print(f'PCA data:{red} # of components = {self.numPCs}\n'
+              f'{greenLight}{dataPCA}{resetColor}\n\n')
+
+        # Step 3: Print explained variance ratio
+        varRatio = pca.explained_variance_ratio_ * 100
+        print(f'Explained Variance Ratio: '
+              f'{red}{" ".join([f"{x:.3f}" for x in varRatio])}{resetColor} %\n\n')
+
+
+        # Define: Figure title
+        title = (f'\n{self.enzymeName}\n'
+                 f'{self.datasetTag}\n'
+                 f'{self.layersESMTag.replace(',', ', ')}\n'
+                 f'{N:,} Unique Substrates')
+
+        if combinedMotifs and len(self.motifIndexExtracted) > 1:
+            title = title.replace('Motifs', 'Combined Motifs')
+
+
+        # Plot the data
+        for components in headerCombinations:
+            fig, ax = plt.subplots(figsize=self.figSize)
+
+            def selectDatapoints(eClick, eRelease):
+                # # Function to update selection with a rectangle
+
+                nonlocal ax, rectangles
+
+                # Define x, y coordinates
+                x1, y1 = eClick.xdata, eClick.ydata  # Start of the rectangle
+                x2, y2 = eRelease.xdata, eRelease.ydata  # End of the rectangle
+
+                # Collect selected datapoints
+                selection = []
+                selectedSubs = []
+                for index, (x, y) in enumerate(zip(dataPCA.loc[:, 'PC1'],
+                                                   dataPCA.loc[:, 'PC2'])):
+                    if (min(x1, x2) <= x <= max(x1, x2) and
+                            min(y1, y2) <= y <= max(y1, y2)):
+                        selection.append((x, y))
+                        selectedSubs.append(dataPCA.index[index])
+                if selection:
+                    self.selectedDatapoints.append(selection)
+                    self.selectedSubstrates.append(selectedSubs)
+
+                # Draw the boxes
+                if self.selectedDatapoints:
+                    for index, box in enumerate(self.selectedDatapoints):
+                        # Calculate the bounding box for the selected points
+                        padding = 0.05
+                        xMinBox = min(x for x, y in box) - padding
+                        xMaxBox = max(x for x, y in box) + padding
+                        yMinBox = min(y for x, y in box) - padding
+                        yMaxBox = max(y for x, y in box) + padding
+
+                        # Draw a single rectangle around the bounding box
+                        boundingRect = plt.Rectangle((xMinBox, yMinBox),
+                                                     width=xMaxBox - xMinBox,
+                                                     height=yMaxBox - yMinBox,
+                                                     linewidth=2,
+                                                     edgecolor='black',
+                                                     facecolor='none')
+                        ax.add_patch(boundingRect)
+                        self.rectangles.append(boundingRect)
+
+                        # Add text only if there are multiple boxes
+                        if len(self.selectedDatapoints) > 1:
+                            # Calculate the center of the rectangle for text positioning
+                            centerX = (xMinBox + xMaxBox) / 2
+                            centerY = (yMinBox + yMaxBox) / 2
+
+                            # Number the boxes
+                            text = ax.text(centerX, centerY, f'{index + 1}',
+                                           horizontalalignment='center',
+                                           verticalalignment='center',
+                                           fontsize=25,
+                                           color='#F79620',
+                                           fontweight='bold')
+                            text.set_path_effects(
+                                [path_effects.Stroke(linewidth=2, foreground='black'),
+                                 path_effects.Normal()])
+                plt.draw()
+            plt.scatter(dataPCA[components[0]], dataPCA[components[1]],
+                        c='#CC5500', edgecolor='black')
+            plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+            plt.xlabel(f'Principal Component {components[0][-1]} '
+                       f'({np.round(varRatio[0], self.roundVal)} %)',
+                       fontsize=self.labelSizeAxis)
+            plt.ylabel(f'Principal Component {components[1][-1]} '
+                       f'({np.round(varRatio[1], self.roundVal)} %)',
+                       fontsize=self.labelSizeAxis)
+            plt.subplots_adjust(top=0.852, bottom=0.075, left=0.13, right=0.938)
+
+
+            # Set tick parameters
+            ax.tick_params(axis='both', which='major', length=self.tickLength,
+                           labelsize=self.labelSizeTicks, width=self.lineThickness)
+
+            # Set the thickness of the figure border
+            for _, spine in ax.spines.items():
+                spine.set_visible(True)
+                spine.set_linewidth(self.lineThickness)
+
+
+            # Create a RectangleSelector
+            selector = RectangleSelector(ax,
+                                         selectDatapoints,
+                                         useblit=True,
+                                         minspanx=5,
+                                         minspany=5,
+                                         spancoords='pixels',
+                                         interactive=True)
+
+            # Change rubber band color
+            selector.set_props(facecolor='none', edgecolor='green', linewidth=3)
+
+            fig.canvas.mpl_connect('key_press_event', pressKey)
+            # fig.tight_layout()
+            plt.show()
+
+
+        # # Save the Figure
+        if self.saveFigures:
+            # Define: Save location
+            figLabel = \
+                (f'{self.enzymeName} - PCA - ESM {self.sizeESM} {self.layersESMTag} - '
+                 f'{self.datasetTag} - {N} - MinCounts {self.minSubCount}.png')
+            if combinedMotifs and len(self.motifIndexExtracted) > 1:
+                figLabel = figLabel.replace(self.datasetTag,
+                                            f'Combined {self.datasetTag}')
+            saveLocation = os.path.join(self.pathFigures, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                figExists = True
+                figLabel = figLabel.replace('PCA', f'PCA 1')
+                saveLocation = os.path.join(self.pathFigures, figLabel)
+                if os.path.exists(saveLocation):
+                    while figExists:
+                        for index in range(2, 501):
+                            figLabel = figLabel.replace(f'PCA {index - 1}',
+                                                        f'PCA {index}')
+                            saveLocation = os.path.join(self.pathFigures, figLabel)
+                            if not os.path.exists(saveLocation):
+                                figExists = False
+                                print(f'Exists: {figExists}')
+                                break
+            print(f'Saving figure at path:\n'
+                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
+            fig.savefig(saveLocation, dpi=self.figureResolution)
+
+        # Create a list of collected substrate dictionaries
+        if self.selectedSubstrates:
+            filteredEmbeddings = pd.DataFrame()
+            for index, substrateSet in enumerate(self.selectedSubstrates):
+                filteredData = embeddings.loc[substrateSet, :]
+                print(f'Sorted Filtered Substrate Embeddings: '
+                      f'{red}PCA Cluster {index + 1}{resetColor}\n'
+                      f'{filteredData.sort_values(by='activity', ascending=False)}\n\n')
+                filteredEmbeddings = pd.concat([filteredEmbeddings, filteredData],
+                                               ignore_index=False)
+            print(f'Sorted Filtered Data: {purple}{self.layersESMTag}{resetColor}\n'
+                  f'{greenLight}{filteredEmbeddings.sort_values(
+                      by='activity', ascending=False)}{resetColor}\n\n')
+            time.sleep(2)
+            return filteredEmbeddings
+        else:
+            return embeddings
