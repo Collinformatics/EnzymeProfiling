@@ -5298,7 +5298,8 @@ class NGS:
         print(f'Normalized Values:')
         if useIntegers:
             for iteration, (substrate, value) in enumerate(substratesNormValues.items()):
-                print(f'     {pink}{substrate}, {red}{value:,}{resetColor}')
+                print(f'     {pink}{substrate}, {red}{round(value, self.roundVal):,}'
+                      f'{resetColor}')
                 if iteration >= self.printNumber:
                     break
         else:
