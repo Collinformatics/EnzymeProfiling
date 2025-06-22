@@ -243,7 +243,7 @@ class RandomForestRegressor:
 
 
 """
-Params Grid: Random ForestRegressor - XGB
+Params Grid: Random Forest Regressor - XGB
     max_leaves:
         You can use it instead of max_depth if you care more about model
         complexity in terms of decision regions than tree height.
@@ -324,10 +324,7 @@ Params Grid: Random ForestRegressor - XGB
         Doesn't affect training but useful for model interpretation.
 """
 class RandomForestRegressorXGB:
-    def __init__(self, dfTrain, dfPred, maxValue, tagExperiment, selectSubsTopPercent,
-                 selectSubsBottomPercent, pathModel, modelTag, modelAccuracy,
-                 modelAccuracyPaths, figSize, pathFigures, datasetTagHigh, datasetTagMid,
-                 datasetTagLow, layersESM, layerESMTag, testSize, device, trainModel=True,
+    def __init__(self, parentObj, pathModel, modelTag, trainModel=True,
                  evalMetric='rmse'):
         """
         :param evalMetric: options include 'rmse' and 'mae'
@@ -338,27 +335,35 @@ class RandomForestRegressorXGB:
         print(f'ML Algorithm: {purple}Random Forest Regressor{resetColor}\n'
               f'Module: {purple}XGBoost{resetColor}\n'
               f'Model: {purple}{modelTag}{resetColor}\n')
-        print(f'Save PAth:\n{pathModel}\n')
+        dfTrain = parentObj.embeddingsSubsTrain
+        dfPred = parentObj.embeddingsSubsPred
+        modelAccuracyPaths = parentObj.pathModelAccuracy
 
-        self.device = device
-        self.tagExperiment = tagExperiment
-        self.maxValue = maxValue
-        self.selectSubsTopPercent = selectSubsTopPercent
-        self.selectSubsBottomPercent = selectSubsBottomPercent
+        self.device = parentObj.device
+        self.tagExperiment = parentObj.tagExperiment
+        self.maxValue = parentObj.maxTrainingScore
+        self.selectSubsTopPercent = parentObj.subsPercentSelectTop
+        self.selectSubsBottomPercent = parentObj.subsPercentSelectBottom
         self.subsPred = list(dfPred.index)
         self.predictions = {}
-        self.layersESM = layersESM
-        self.layerESMTag = layerESMTag
+        self.layersESM = parentObj.layersESM
+        self.layerESMTag = parentObj.layersESMTag
         print(f'Tag: {purple}{self.layerESMTag}{resetColor}')
-        self.modelAccuracy = modelAccuracy
+        self.modelAccuracy = parentObj.modelAccuracy
         self.predictionAccuracy = {}
         self.modelBestPredictions = {}
-        self.bestParams = {datasetTagHigh: {}, datasetTagMid: {}, datasetTagLow: {}}
         self.sortedColumns = []
+        self.datasetTagHigh = parentObj.subsetTagHigh
+        self.datasetTagMid = parentObj.subsetTagMid
+        self.datasetTagLow =  parentObj.subsetTagLow
+        self.bestParams = {self.datasetTagHigh: {},
+                           self.datasetTagMid: {},
+                           self.datasetTagLow: {}}
 
         # Parameters: Figures
-        self.pathFigures = pathFigures
-        self.figSize = figSize
+        self.pathFigures = parentObj.pathFigures
+        self.pathFiguresTraining = parentObj.pathFiguresTraining
+        self.figSize = parentObj.figSize
         self.residueLabelType = 2 # 0 = full AA name, 1 = 3-letter code, 2 = 1 letter
         self.labelSizeTitle = 18
         self.labelSizeAxis = 16
@@ -375,10 +380,10 @@ class RandomForestRegressorXGB:
         # Params: Grid search
         self.paramGrid = {
             'colsample_bytree': np.arange(0.6, 1.0, 0.2),
-            'learning_rate': [0.05, 0.1],
-            'max_leaves': range(100, 350, 50),
-            'min_child_weight': [1],
-            'n_estimators': [1000, 1500, 2000], # 3500
+            'learning_rate': [0.2, 0.15, 0.1, 0.05, 0.01],
+            'max_leaves': range(10, 310, 50),
+            'min_child_weight': [1, 3, 5, 10],
+            'n_estimators': [50, 100, 150, 200], # , 200, 300, 400, 500, 600, 1000, 2000,
             'subsample': np.arange(0.6, 1.2, 0.2)
         }
         # 'max_leaves': range(2, 10, 1) # N terminal nodes
@@ -397,20 +402,21 @@ class RandomForestRegressorXGB:
               f'     2: {red}{self.activityQuantile2}{resetColor}\n')
 
         # Parameters: Saving the model
-        pathModelH = pathModel.replace('Embeddings', f'{datasetTagHigh} - Embeddings')
+        pathModelH = pathModel.replace(
+            'Embeddings', f'{self.datasetTagHigh} - Embeddings')
         pathModelH = pathModelH.replace(' %', '')
         # pathModelH = pathModelH.replace('Activity Scores: ', '')
-        pathModelM = pathModel.replace('Embeddings', f'{datasetTagMid} - Embeddings')
+        pathModelM = pathModel.replace(
+            'Embeddings', f'{self.datasetTagMid} - Embeddings')
         pathModelM = pathModelM.replace(' %', '')
-        pathModel = pathModel.replace('Embeddings', f'{datasetTagLow} - Embeddings')
+        pathModel = pathModel.replace(
+            'Embeddings', f'{self.datasetTagLow} - Embeddings')
         pathModel = pathModel.replace(' %', '')
         modelPaths = {
-            datasetTagHigh: pathModelH,
-            datasetTagMid: pathModelM,
-            datasetTagLow: pathModel
+            self.datasetTagHigh: pathModelH,
+            self.datasetTagMid: pathModelM,
+            self.datasetTagLow: pathModel
         }
-        print(f'Save PAth:\n{pathModelH}\n')
-        sys.exit()
 
 
         # Get Subset: High activity
@@ -436,15 +442,16 @@ class RandomForestRegressorXGB:
         pd.set_option('display.max_rows', self.printMaxRows)
         print(f'Selecting Top {red}{self.selectSubsTopPercent} %'
               f'{resetColor} of Substrates')
-        print(f'Sorted ESM Embeddings: {pink}{datasetTagHigh}{resetColor}\n'
+        print(f'Sorted ESM Embeddings: {pink}{self.datasetTagHigh}{resetColor}\n'
               f'{dfHigh.sort_values(by='activity', ascending=False)}\n\n')
-        print(f'Sorted ESM Embeddings: {pink}Mids{resetColor}\n'
+        print(f'Sorted ESM Embeddings: {pink}{self.datasetTagMid}{resetColor}\n'
               f'{dfMid.sort_values(by='activity', ascending=False)}\n\n')
-        print(f'Sorted ESM Embeddings: {pink}{datasetTagLow}{resetColor}\n'
+        print(f'Sorted ESM Embeddings: {pink}{self.datasetTagLow}{resetColor}\n'
               f'{dfLow.sort_values(by='activity', ascending=False)}\n\n')
         pd.set_option('display.max_columns', None)
 
         # Split datasets
+        testSize = parentObj.testingSetSize
         # xTraining, xTesting, yTraining, yTesting = train_test_split(
         #     x, y, test_size=testSize, random_state=19)
         xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
@@ -467,19 +474,19 @@ class RandomForestRegressorXGB:
             xTestingL, yTestingL = cupy.array(xTestingL), cupy.array(yTestingL)
 
 
-        print(f'Training Data: {pink}{datasetTagHigh}{resetColor}\n'
+        print(f'Training Data: {pink}{self.datasetTagHigh}{resetColor}\n'
               f'Splitting Training Set: '
               f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
               f'{round(testSize * 100, 0)}{resetColor}\n'
               f'     Train: {yellow}{xTrainingH.shape}{resetColor}\n'
               f'     Test: {yellow}{xTestingH.shape}{resetColor}\n')
-        print(f'Training Data: {pink}{datasetTagMid}{resetColor}\n'
+        print(f'Training Data: {pink}{self.datasetTagMid}{resetColor}\n'
               f'Splitting Training Set: '
               f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
               f'{round(testSize * 100, 0)}{resetColor}\n'
               f'     Train: {yellow}{xTrainingM.shape}{resetColor}\n'
               f'     Test: {yellow}{xTestingM.shape}{resetColor}\n')
-        print(f'Training Data: {pink}{datasetTagLow}{resetColor}\n'
+        print(f'Training Data: {pink}{self.datasetTagLow}{resetColor}\n'
               f'Splitting Training Set: '
               f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
               f'{round(testSize * 100, 0)}{resetColor}\n'
@@ -521,7 +528,7 @@ class RandomForestRegressorXGB:
 
                 # Train the model
                 start = time.time()
-                if tagData == datasetTagHigh:
+                if tagData == self.datasetTagHigh:
                     model.fit(xTrain, yTrain, eval_set=[(xTest, yTest)],
                               verbose=False, sample_weight=yTrain)
                 else:
@@ -555,10 +562,11 @@ class RandomForestRegressorXGB:
                 saveModel = False
                 betterMSE, betterR2 = True, True
                 if self.layerESMTag in self.modelAccuracy[tagData].columns:
-                    # betterMSE = (accuracy.loc[indexEvalMetric, self.layerESMTag] <
-                    #              self.modelAccuracy[tagData
-                    #              ].loc[indexEvalMetric, self.layerESMTag])
-                    betterR2 = (R2 > self.modelAccuracy[tagData].loc['R²', self.layerESMTag])
+                    betterMSE = (accuracy.loc[indexEvalMetric, self.layerESMTag] <
+                                 self.modelAccuracy[tagData
+                                 ].loc[indexEvalMetric, self.layerESMTag])
+                    betterR2 = (
+                            R2 > self.modelAccuracy[tagData].loc['R²', self.layerESMTag])
                 if (self.layerESMTag not in self.modelAccuracy[tagData].columns or
                         betterR2):
                     saveModel = True
@@ -610,8 +618,8 @@ class RandomForestRegressorXGB:
                           f'{red}{runtime:,} s{resetColor}\n'
                           f'Time Training All Models: '
                           f'{red}{runtimeTotal:,} min{resetColor}\n'
-                          f'Training Rate: '
-                          f'{red}{rate:,} combinations / min{resetColor}\n'
+                          f'Training Rate: {red}{rate:,} combinations{resetColor} / '
+                          f'{red}min{resetColor}\n'
                           f'Training Progress: {red}{combination}{resetColor} / '
                           f'{red}{totalParamCombos}{resetColor} '
                           f'({red}{percentComplete} %{resetColor})\n'
@@ -656,7 +664,7 @@ class RandomForestRegressorXGB:
                 printData = (combination % 25 == 0)
 
                 # Train Model
-                tag = datasetTagHigh
+                tag = self.datasetTagHigh
                 model, keepModel = trainModel(
                     model=XGBRegressor(
                         device=self.device, n_jobs=nJobs, eval_metric=evalMetric,
@@ -667,29 +675,29 @@ class RandomForestRegressorXGB:
                 if keepModel:
                     self.modelH = model
 
-                # Train Model
-                tag = datasetTagMid
-                model, keepModel = trainModel(
-                    model=XGBRegressor(
-                        device=self.device, n_jobs=nJobs, eval_metric=evalMetric,
-                        tree_method="hist", random_state=42, max_bin=64, **params),
-                    xTrain=xTrainingM, yTrain=yTrainingM,
-                    xTest=xTestingM, yTest=yTestingM,
-                    tagData=tag)
-                if keepModel:
-                        self.modelM = model
-
-                # Train Model
-                tag = datasetTagLow
-                model, keepModel = trainModel(
-                    model=XGBRegressor(
-                        device=self.device, n_jobs=nJobs, eval_metric=evalMetric,
-                        tree_method="hist", random_state=42, max_bin=64, **params),
-                    xTrain=xTrainingL, yTrain=yTrainingL,
-                    xTest=xTestingL, yTest=yTestingL,
-                    tagData=tag, lastModel=True)
-                if keepModel:
-                    self.modelL = model
+                # # Train Model
+                # tag = self.datasetTagMid
+                # model, keepModel = trainModel(
+                #     model=XGBRegressor(
+                #         device=self.device, n_jobs=nJobs, eval_metric=evalMetric,
+                #         tree_method="hist", random_state=42, max_bin=64, **params),
+                #     xTrain=xTrainingM, yTrain=yTrainingM,
+                #     xTest=xTestingM, yTest=yTestingM,
+                #     tagData=tag)
+                # if keepModel:
+                #         self.modelM = model
+                #
+                # # Train Model
+                # tag = self.datasetTagLow
+                # model, keepModel = trainModel(
+                #     model=XGBRegressor(
+                #         device=self.device, n_jobs=nJobs, eval_metric=evalMetric,
+                #         tree_method="hist", random_state=42, max_bin=64, **params),
+                #     xTrain=xTrainingL, yTrain=yTrainingL,
+                #     xTest=xTestingL, yTest=yTestingL,
+                #     tagData=tag, lastModel=True)
+                # if keepModel:
+                #     self.modelL = model
 
 
             # # End Training
@@ -888,6 +896,7 @@ class PredictActivity:
         self.datasetTag = datasetTag
         self.subsInitial = None
         self.subsTrain = subsTrain
+        self.subsLen = len(next(iter(self.subsTrain)))
         self.subsPercentSelectTop = subsPercentSelectTop
         self.subsPercentSelectBottom = subsPercentSelectBottom
         self.maxTrainingScore = maxTrainingScore
@@ -936,7 +945,7 @@ class PredictActivity:
         }
         self.concatESM = concatESM
         self.layersESM = layersESM
-        self.layersESMTag = f'ESM Layer {self.layersESM}'.replace(', ', ',')
+        self.layersESMTag = f'ESM L{self.layersESM}'.replace(', ', ',')
         self.embeddingsPathTrain = []
         self.embeddingsPathPred = []
         self.batchSize = batchSize
@@ -957,21 +966,21 @@ class PredictActivity:
         else:
             scoreType = 'Counts'
         self.embeddingsTagTrain = (
-            f'Embeddings - ESM L{self.layersESM} {self.sizeESM} - Batch '
+            f'Embeddings - {self.layersESMTag} {self.sizeESM} - Batch '
             f'{self.batchSize} - {self.enzymeName} - {self.datasetTag} - {scoreType} - '
             f'MinCounts {self.minSubCount} - N {self.subsTrainN} - '
-            f'{len(self.labelsXAxis)} AA')
+            f'{self.subsLen} AA')
         self.embeddingsTagPred = (
-            f'Embeddings - ESM L{self.layersESM} {self.sizeESM} - Batch '
+            f'Embeddings - {self.layersESM} {self.sizeESM} - Batch '
             f'{self.batchSize} - {self.enzymeName} -  Predictions - '
             f'Min ES {self.minES} - {scoreType} - MinCounts {self.minSubCount} - '
-            f'N {self.subsPredN} - {len(self.labelsXAxis)} AA')
+            f'N {self.subsPredN} - {self.subsLen} AA')
         if (self.concatESM
                 and isinstance(self.layersESM, list)
                 and len(self.layersESM) > 1):
             for layer in self.layersESM:
                 filePath = f'{self.embeddingsTagTrain.replace(
-                    'ESM', f'ESM L{layer}')}.csv'
+                    f'{self.layersESMTag}', f'ESM L{layer}')}.csv'
                 self.embeddingsPathTrain.append(
                     os.path.join(self.pathEmbeddings, filePath))
         else:
@@ -982,9 +991,10 @@ class PredictActivity:
             'ESM', f'ESM L{self.layersESM[0]}')}.csv'
             self.embeddingsPathTrain.append(
                     os.path.join(self.pathEmbeddings, filePath))
+
         for layer in self.layersESM:
             filePath = f'{self.embeddingsTagPred.replace(
-                'ESM', f'ESM L{layer}')}.csv'
+                f'{self.layersESMTag}', f'ESM L{layer}')}.csv'
             self.embeddingsPathPred.append(
                     os.path.join(self.pathEmbeddings, filePath))
         if self.tagChosenSubs != '':
@@ -993,9 +1003,9 @@ class PredictActivity:
                 f'MinCounts {self.minSubCount} - Added {self.tagChosenSubs}')
 
         # Parameters: Save Paths Model Accuracy
-        self.tagExperiment = (f'Model Accuracy - {modelType} - ESM {self.sizeESM} '
-                              f' Layer {self.layersESM} - {enzymeName} - {datasetTag} - '
-                              f'MinCounts {minSubCount}')
+        self.tagExperiment = (f'Model Accuracy - {modelType} - {self.layersESMTag} '
+                              f'{self.sizeESM} - {enzymeName} - {datasetTag} - '
+                              f'MinCounts {minSubCount} - {self.subsLen} AA')
         self.tagExperiment = self.tagExperiment.replace(':', '')
         if self.useEF:
             self.tagExperiment = self.tagExperiment.replace(
@@ -1040,7 +1050,7 @@ class PredictActivity:
     def trainModel(self):
         # Define: Model paths
         modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
-                    f'{self.embeddingsTagTrain}')
+                    f'{self.embeddingsTagTrain.replace(self.layersESMTag, 'ESM')}')
         # modelTag = (f'Random Forest - Test Size {self.testingSetSize} - '
         #             f'N Trees {self.NTrees} - {self.embeddingsTagTrain}')
         modelTagScikit = modelTag.replace('Test Size',
@@ -1071,28 +1081,18 @@ class PredictActivity:
         # Select a model to train
         if self.modelType == 'Random Forest Regressor: Scikit-Learn':
             # Model: Scikit-Learn Random Forest Regressor
-            RandomForestRegressor = RandomForestRegressor(
+            randomForestRegressor = RandomForestRegressor(
                 dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
                 subsPredChosen=self.subsPredChosen, minES=self.minES,
                 pathModel=pathModelScikit, modelTag=modelTagScikit, layerESM=layerESM,
                 testSize=self.testingSetSize, device=self.device,
                 printNumber=self.printNumber)
-            self.modelAccuracy = randomForestRegressorXGB.modelAccuracy
-            self.predictions[self.modelType] = RandomForestRegressor.predictions
+            self.modelAccuracy = randomForestRegressor.modelAccuracy
+            self.predictions[self.modelType] = randomForestRegressor.predictions
         elif self.modelType == 'Random Forest Regressor: XGBoost':
             # Model: XGBoost Random Forest
-            randomForestRegressorXGB = RandomForestRegressorXGB(
-                dfTrain=self.embeddingsSubsTrain, dfPred=self.embeddingsSubsPred,
-                selectSubsTopPercent=self.subsPercentSelectTop,
-                selectSubsBottomPercent=self.subsPercentSelectBottom,
-                tagExperiment=self.tagExperiment, maxValue=self.maxTrainingScore,
-                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost,
-                modelAccuracy=self.modelAccuracy,
-                modelAccuracyPaths=self.pathModelAccuracy, figSize=self.figSize,
-                pathFigures=self.pathFigures, datasetTagHigh=self.subsetTagHigh,
-                datasetTagMid=self.subsetTagMid, datasetTagLow=self.subsetTagLow,
-                layersESM=self.layersESM, layerESMTag=self.layersESMTag,
-                testSize=self.testingSetSize, device=self.device)
+            randomForestRegressorXGB = RandomForestRegressorXGB(parentObj=self,
+                pathModel=pathModelXGBoost, modelTag=modelTagXGBoost)
             # Record predictions
             self.predictions[self.modelType] = randomForestRegressorXGB.predictions
             for dataset, values, in randomForestRegressorXGB.modelAccuracy.items():
@@ -1552,11 +1552,12 @@ class PredictActivity:
             # Define: Save location
             figLabel = \
                 (f'{self.enzymeName} - PCA - ESM {self.sizeESM} {self.layersESMTag} - '
-                 f'{self.datasetTag} - {N} - MinCounts {self.minSubCount}.png')
-            if self.useEF:
-                figLabel = figLabel.replace('MinCounts', 'EF - MinCounts')
-            else:
-                figLabel = figLabel.replace('MinCounts', 'Count - MinCounts')
+                 f'{self.datasetTag} - {N} - MinCounts {self.minSubCount} - '
+                 f'{self.subsLen} AA.png')
+            # if self.useEF:
+            #     figLabel = figLabel.replace('MinCounts', 'EF - MinCounts')
+            # else:
+            #     figLabel = figLabel.replace('MinCounts', 'Count - MinCounts')
             saveLocation = os.path.join(self.pathFiguresTraining, figLabel)
 
             # Save figure

@@ -62,30 +62,30 @@ inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
-inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
+inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'']  # , 'P3\'', 'P4\''
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
+inPlotOnlyWords = True
 inModelSize = 1 # 0 = 15B Params, 1 = 3B Params, 2 = 650M Params
 inUseFilteredReadingFrame = True
 inFilterWithPCA = True
 inSelectSubstratesTop = 10 # 10 = Top 10 quantile
 inSelectSubstratesBottom = 50 # 10 = Top 10 quantile
-inPlotOnlyWords = True
 inFixedResidue = ['Q']
-inFixedPosition = [4]
+inFixedPosition = [4, 5, 6]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 1000
-inUseEnrichmentFactor = False
+inMinimumSubstrateCount = 100
+inUseEnrichmentFactor = True
 
 # Input 4: Machine Learning
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
 inConcatenateLayersESM = True
-inLayersESM = [36, 30, 25, 20, 14, 5]
+inLayersESM = [36, 30, 20, 12, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
@@ -106,6 +106,8 @@ inPlotLogo = True
 inPlotWeblogo = True
 inPlotMotifEnrichment = True
 inPlotMotifEnrichmentNBars = True
+inPlotMotifEnrichment = False
+inPlotMotifEnrichmentNBars = False
 inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
@@ -113,8 +115,6 @@ if inPlotOnlyWords:
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
-    inPlotMotifEnrichment = False
-    inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
 inPlotWordCloud = False # <--------------------
 inPlotBarGraphs = False
