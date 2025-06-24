@@ -694,7 +694,7 @@ class NGS:
         print('============================= Calculate: AA Counts '
               '==============================')
         print(f'Dataset: {purple}{datasetType}{resetColor}\n'
-              f'Unique substrate count:{red} {len(substrates):,}{resetColor}')
+              f'Unique substrate count: {red}{len(substrates):,}{resetColor}')
 
         # Determine substrate length
         firstSub, lengthSubstrate = None, None
@@ -775,7 +775,7 @@ class NGS:
                 sys.exit(1)
 
         print(f'Total substrates: {red}{totalSubs:,}{resetColor}\n'
-              f'Total Unique Substrates:{red} {len(substrates):,}{resetColor}\n\n')
+              f'Total Unique Substrates: {red}{len(substrates):,}{resetColor}\n\n')
 
         return countedData, totalSubs
 
@@ -1998,7 +1998,7 @@ class NGS:
             iteration += 1
             if iteration >= self.printNumber:
                 break
-        print(f'\nUnique Substrates:{red} {len(substrates):,}{resetColor}\n\n')
+        print(f'\nUnique Substrates: {red}{len(substrates):,}{resetColor}\n\n')
 
         # Extract motif
         countTotalSubstrates = 0
@@ -2022,7 +2022,7 @@ class NGS:
                 print()
                 break
 
-        print(f'Unique Motifs:{red} {len(motifs):,}{resetColor}\n\n')
+        print(f'Unique Motifs: {red}{len(motifs):,}{resetColor}\n\n')
 
         return motifs
 
@@ -2641,7 +2641,7 @@ class NGS:
 
         # Suffix tree
         if self.plotSuffixTree:
-            print(f'ADD: Suffix tree')
+            print(f'ADD: Suffix tree\n\n')
 
         return motifES
 
@@ -2750,7 +2750,10 @@ class NGS:
             if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 title = title.replace(self.datasetTag,
                                       f'Combined {self.datasetTag}')
-        if limitNBars and not isinstance(predType, bool) and predType.lower() != 'chosen':
+        if (limitNBars
+                and predType is not None
+                and predType.lower() != 'chosen'
+                and predModel is not None):
             title = title.replace(f'{NSubs:,}', f'Top {plotNSubs:,}')
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.ylabel(yLabel, fontsize=self.labelSizeAxis)
@@ -3980,9 +3983,9 @@ class NGS:
 
             # Print: Sample sizes
             print(f'{greyDark}Dataset Size{resetColor}:\n'
-                  f'     Initial Substrates:{red} {len(initialSubsDF):,}{resetColor}\n'
-                  f'     Final Substrates:{red} {len(finalSubsDF):,}{resetColor}\n'
-                  f'     Enriched Substrates:{red} {len(enrichedSubsDF):,}{resetColor}\n')
+                  f'     Initial Substrates: {red}{len(initialSubsDF):,}{resetColor}\n'
+                  f'     Final Substrates: {red}{len(finalSubsDF):,}{resetColor}\n'
+                  f'     Enriched Substrates: {red}{len(enrichedSubsDF):,}{resetColor}\n')
 
             if os.path.exists(filePathCSV):
                 print(f'{orange}The{red} {datasetType}{orange} dataset at was '
@@ -5310,3 +5313,33 @@ class NGS:
         print('\n')
 
         return substratesNormValues
+
+
+
+    def predictActivityHeatmap(self, predSubstrates):
+        print('=========================== Predict Substrate Activity '
+              '==========================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Evaluating {red}{len(predSubstrates):,}{resetColor} '
+              f'Substrate Sequences\n')
+        sublen = len(next(iter(predSubstrates)))
+
+        # Predict activity
+        activityScores = {}
+        for substrate in predSubstrates:
+            score = 0
+            for index in range(sublen):
+                AA = substrate[index]
+                pos = self.eMap.columns[index]
+                score += self.eMap.loc[AA, pos]
+            activityScores[substrate] = score
+        activityScores = dict(sorted(activityScores.items(),
+                                   key=lambda x: x[1], reverse=True))
+        print(f'Predicted Relative Activity:')
+        for index, (substrate, ES) in enumerate(activityScores.items()):
+            print(f'     {pink} {substrate}{resetColor}, '
+                  f'ES:{red} {ES:.3f}{resetColor}')
+        print('\n')
+
+        self.plotMotifEnrichment(motifs=activityScores, limitNBars=True,
+                                 predActivity=True, predType='Custom')

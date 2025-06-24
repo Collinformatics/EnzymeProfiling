@@ -4,6 +4,7 @@
 
 
 from functions import getFileNames, NGS
+from itertools import product
 import os
 import sys
 
@@ -20,11 +21,11 @@ inSetFigureTimer = False
 inPlotOnlyWords = True
 inFixResidues = True
 inFixedResidue = ['Q']
-inFixedPosition = [5]
+inFixedPosition = [4]
 inExcludeResidues = True
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 10
+inMinimumSubstrateCount = 1000
 inMinDeltaS = 0.6
 inPrintFixedSubs = True
 inShowSampleSize = True
@@ -45,8 +46,10 @@ if inPlotOnlyWords:
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
+    inPlotMotifEnrichment = False
+    inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
-inPlotWordCloud = True
+inPlotWordCloud = False # <--------------------
 inPlotBarGraphs = False
 inPlotPCA = False
 inPlotSuffixTree = True
@@ -77,13 +80,19 @@ inTotalWords = 50
 inNSequences = 50
 
 # Input 10: PCA
-inPCAMotif = True
+inPCAMotif = False
 inNumberOfPCs = 2
 inTotalSubsPCA = 10000
 inIncludeSubCountsESM = False
 inExtractPopulations = False
 inPlotEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
+
+# Input 11: Predict Activity
+inPredictActivity = True
+inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
+                       'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
+                       'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
 
 # Input 11: Optimal Substrates
 inEvaluateOS = False
@@ -130,14 +139,14 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           minEntropy=inMinDeltaS, figEMSquares=inShowEnrichmentAsSquares,
           xAxisLabels=labelAAPos, printNumber=inPrintNumber, showNValues=inShowSampleSize,
           bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
-          filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
-          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
-          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
-          plotFigMotifEnrich=inPlotMotifEnrichment,
+          filesInit=filesInitial, filesFinal=filesFinal, useEF=inUseEnrichmentFactor,
+          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
+          plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
+          plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
           plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
-          plotFigWords=inPlotWordCloud,  wordLimit=inLimitWords, wordsTotal=inTotalWords, 
+          plotFigWords=inPlotWordCloud,  wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotFigPCA=inPlotPCA,
-          numPCs=inTotalSubsPCA, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
+          numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
@@ -239,7 +248,7 @@ enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial, probFinal=pr
 # Evaluate: Sequences
 motifs = ngs.processSubstrates(
     subsInit=substratesInitial, subsFinal=substratesFinal, motifs=substratesFinal,
-    subLabel=labelAAPos, plotEF=inUseEnrichmentFactor)
+    subLabel=labelAAPos)
 
 if inPlotPCA:
     finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
@@ -293,6 +302,9 @@ if inPlotPCA:
             print(f'Debug PCA')
             sys.exit()
 
+# Predict substrate activity
+if inPredictActivity:
+    ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates)
 
 
 # ========================================================================================
@@ -304,9 +316,9 @@ if inEvaluateOS:
         combinations = 1
         optimalAA = []
         substratesOS = {}
-        for indexColumn, column in enumerate(heights.columns):
+        for indexColumn, column in enumerate(ngs.eMap.columns):
             # Find the best residues at this position
-            optimalAAPos = heights[column].nlargest(inMaxResidueCount)
+            optimalAAPos = ngs.eMap[column].nlargest(inMaxResidueCount)
 
             # Filter the data
             for rank, (AA, ES) in (
@@ -314,7 +326,7 @@ if inEvaluateOS:
                 if ES <= 0:
                     optimalAAPos = optimalAAPos.drop(index=AA)
             optimalAA.append(optimalAAPos)
-        print(f'Optimal Residues: {inEnzymeName} - Fixed {fixedSubSeq}')
+        print(f'Optimal Residues: {purple}{inEnzymeName} - {fixedSubSeq}{resetColor}')
         for index, data in enumerate(optimalAA, start=1):
             # Determine the number of variable residues at this position
             numberAA = len(data)
@@ -322,77 +334,37 @@ if inEvaluateOS:
 
             # Define substrate position
             positionSub = labelAAPos[index-1]
-            print(f'Position:{purple} {positionSub}{resetColor}')
-
-            for AA, datapoint in data.items():
-                print(f'     {AA}:{white} {datapoint:.6f}{resetColor}')
-            print('')
-        print(f'Possible Substrate Combinations:{greyDark} {combinations:,}'
+            print(f'Preferred Residues:\n'
+                  f'{greenLight}{data}{resetColor}\n')
+        print(f'Possible Substrate Combinations: {red}{combinations:,}'
               f'{resetColor}\n\n')
 
-        # Use the optimal residues to determine OS
-        substrate = ''
-        score = 0
-        for index, data in enumerate(optimalAA, start=1):
-            # Select the top-ranked AA for each position
-            topAA = data.idxmax()
-            topES = data.max()
+        # Make all possible substrate sequences
+        residueChoices = [series.index.tolist() for series in optimalAA]
+        subCombos = list(product(*residueChoices))
+        substrates = [''.join(combo) for combo in subCombos]
 
-        # Construct the OS
-        substrate += ''.join(topAA)
-        score += topES
+        # Predict activity
+        substratesOS = {}
+        for substrate in substrates:
+            score = 0
+            for index in range(len(substrate)):
+                AA = substrate[index]
+                pos = ngs.eMap.columns[index]
+                score += ngs.eMap.loc[AA, pos]
+            substratesOS[substrate] = score
+        substratesOS = dict(sorted(substratesOS.items(),
+                                   key=lambda x: x[1], reverse=True))
 
-        # Update OS dictionary
-        substratesOS[substrate] = score
-        # print(f'{white}OS{resetColor}:{white} {substrate}{resetColor}, '
-        #       f'{white}ES{resetColor}: {score:.6f}\n\n')
-
-        # Create additional substrates
-        # print(f'========== Create substrates ==========')
-        for indexColumn, column in enumerate(heights.columns):
-            # print(f'Column Index:{white} {indexColumn}{resetColor}, '
-            #       f'Column:{white} {column}{resetColor}')
-
-            # Collect new substrates to add after the iteration
-            newSubstratesList = []
-
-            for substrate, ESMax in list(substratesOS.items()):
-                # print(f'Current Substrates:\n'
-                #       f'     Substrate:{purple} {substrate}{resetColor}, '
-                #       f'ES:{white} {ESMax}{resetColor}\n')
-                AAOS = substrate[indexColumn]
-                ESOS = optimalAA[indexColumn][AAOS]
-
-                # Access the correct filtered data for the column
-                optimalAAPos = optimalAA[indexColumn]
-                for AA, ES in optimalAAPos.items():
-                    if AA != AAOS:
-                        # print(f'New Residue:{white} {AA}{resetColor}, '
-                        #       f'ES:{white} {ES:.6f}{resetColor}\n'
-                        #       f'     Replaced Residue:{white} {AAOS}{resetColor}, '
-                        #       f'ES:{white} {ES:.6f}{resetColor}\n')
-
-                        # Replace AAOS with AA
-                        newSubstrate = substrate[:indexColumn] + AA + substrate[indexColumn + 1:]
-                        newES = ESMax + (ES - ESOS)
-                        # print(f'     New Substrate:{greyDark} {newSubstrate}{resetColor}, '
-                        #       f'ES:{white} {newES}{resetColor}\n'
-                        #       f'          ES New:{white} {ES}{resetColor}\n'
-                        #       f'          ES Old:{white} {ESOS}{resetColor}\n\n')
-
-                        # Collect new substrate and ES to add later
-                        newSubstratesList.append((newSubstrate, newES))
-            # Update substratesOS with new substrates after the iteration
-            for newSubstrate, newES in newSubstratesList:
-                substratesOS[newSubstrate] = newES
-
-        substratesOS = sorted(substratesOS.items(), key=lambda x: x[1], reverse=True)
-        print(f'Top {inPrintOSNumber} Optimal Substrates:')
-        for i, (substrate, ES) in enumerate(substratesOS[:inPrintOSNumber], start=1):
-            print(f'     Substrate:{white} {substrate}{resetColor}, '
-                  f'ES:{white} {ES:.6f}{resetColor}')
+        print(f'Predicted Optimal Substrates:')
+        for index, (substrate, ES) in enumerate(substratesOS.items()):
+            print(f'     {pink} {substrate}{resetColor}, '
+                  f'ES:{red} {ES:.3f}{resetColor}')
+            if index >= inPrintOSNumber:
+                sys.exit()
 
         print(f'\nNumber of substrates:{greyDark} {len(substratesOS):,}{resetColor}\n\n')
+
 
 
 if inEvaluateSubstrateEnrichment:
