@@ -383,7 +383,7 @@ class RandomForestRegressorXGB:
             'learning_rate': [0.2, 0.15, 0.1, 0.05, 0.01],
             'max_leaves': range(10, 310, 50),
             'min_child_weight': [1, 3, 5, 10],
-            'n_estimators': [50, 100, 150, 200], # , 200, 300, 400, 500, 600, 1000, 2000,
+            'n_estimators': [50, 100, 150, 200, 500, 1000, 2000, 3000],
             'subsample': np.arange(0.6, 1.2, 0.2)
         }
         # 'max_leaves': range(2, 10, 1) # N terminal nodes
@@ -400,6 +400,23 @@ class RandomForestRegressorXGB:
         print(f'Selection Quantiles:\n'
               f'     1: {red}{self.activityQuantile1}{resetColor}\n'
               f'     2: {red}{self.activityQuantile2}{resetColor}\n')
+
+        # ================================================================================
+        # ================================================================================
+        # ================================================================================
+        # Parameters: Models
+        self.trainOnlyTopSubs = True
+        self.models = {}
+        if self.trainOnlyTopSubs:
+            self.models[self.datasetTagHigh] = None
+        else:
+            self.models[self.datasetTagHigh] = None
+            self.models[self.datasetTagMid] = None
+            self.models[self.datasetTagLow] = None
+        # ================================================================================
+        # ================================================================================
+        # ================================================================================
+
 
         # Parameters: Saving the model
         pathModelH = pathModel.replace(
@@ -557,6 +574,8 @@ class RandomForestRegressorXGB:
                 accuracy.loc['MAE', self.layerESMTag] = MAE
                 accuracy.loc['MSE', self.layerESMTag] = MSE
                 accuracy.loc['R²', self.layerESMTag] = R2
+                # if R2 == 0.0:
+                #     R2 = -float('inf')
 
                 # Inspect results
                 saveModel = False
@@ -663,6 +682,7 @@ class RandomForestRegressorXGB:
                                         self.roundVal)
                 printData = (combination % 25 == 0)
 
+                # for tag in self.models.keys():
                 # Train Model
                 tag = self.datasetTagHigh
                 model, keepModel = trainModel(
@@ -671,7 +691,7 @@ class RandomForestRegressorXGB:
                         tree_method="hist", random_state=42, max_bin=64, **params),
                     xTrain=xTrainingH, yTrain=yTrainingH,
                     xTest=xTestingH, yTest=yTestingH,
-                    tagData=tag)
+                    tagData=tag, lastModel=True) # <----------- lastModel=True -----------
                 if keepModel:
                     self.modelH = model
 
