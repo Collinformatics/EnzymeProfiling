@@ -25,11 +25,13 @@ inFixedPosition = [4]
 inExcludeResidues = True
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 1000
+inMinimumSubstrateCount = 10
 inMinDeltaS = 0.6
 inPrintFixedSubs = True
 inShowSampleSize = True
 inUseEnrichmentFactor = False
+inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
+inUseCodonProb = False # Use AA prob from inCodonSequence to calculate enrichment
 
 # Input 3: Making Figures
 inPlotEntropy = True
@@ -42,7 +44,7 @@ inPlotMotifEnrichmentNBars = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
-    inPlotEnrichmentMap = False
+    # inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
@@ -55,7 +57,6 @@ inPlotPCA = False
 inPlotSuffixTree = True
 inPlotCounts = False
 inPlotAADistribution = False
-inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inPlotPositionalProbDist = False # For understanding shannon entropy
 
 # Input 4: Inspecting The data
@@ -90,21 +91,22 @@ inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
 
 # Input 11: Predict Activity
 inPredictActivity = True
+inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
                        'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
 
-# Input 11: Optimal Substrates
+# Input 12: Optimal Substrates
 inEvaluateOS = False
 inPrintOSNumber = 10
 inMaxResidueCount = 4
 
-# Input 12: Evaluate Substrate Enrichment
+# Input 13: Evaluate Substrate Enrichment
 inEvaluateSubstrateEnrichment = False # ============= Fix: Load Initial Subs =============
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
-# Input 13: Evaluate Positional Preferences
+# Input 14: Evaluate Positional Preferences
 inPlotPosProb = False # Plot RF distributions of a given AA
 inCompairAA = 'L' # Select AA of interest (different A than inFixedResidue)
 
@@ -153,14 +155,18 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
 
 # ====================================== Load data =======================================
 # Get dataset tag
-fixedSubSeq = ngs.getDatasetTag()
+fixedSubSeq = ngs.getDatasetTag(useCodonProb=inUseCodonProb, codon=inCodonSequence)
 
 # Load: Counts
 countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
 
-# Calculate: RF
-probInitial = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
-                                         fileType='Initial Sort')
+# Calculate: Initial sort probabilities
+if inUseCodonProb:
+    # Evaluate: Degenerate codon probabilities
+    probInitial = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+else:
+    probInitial = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
+                                             fileType='Initial Sort')
 
 # substratesInitial = None
 loadFilteredSubs = False
@@ -304,7 +310,9 @@ if inPlotPCA:
 
 # Predict substrate activity
 if inPredictActivity:
-    ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates)
+    ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
+                               predModel=ngs.datasetTag, predLabel=inPredictionTag)
+
 
 
 # ========================================================================================

@@ -6,7 +6,6 @@ from Bio import BiopythonWarning
 import esm
 import gzip
 from itertools import combinations, product
-
 import math
 import logomaker
 import matplotlib.patheffects as path_effects
@@ -1717,7 +1716,7 @@ class NGS:
 
 
 
-    def getDatasetTag(self, combinedMotifs=False):
+    def getDatasetTag(self, useCodonProb=False, codon=None, combinedMotifs=False):
         if combinedMotifs:
             if len(self.fixedPos) == 1:
                 self.datasetTag = f'Reading Frame {self.fixedAA[0]}@R{self.fixedPos[0]}'
@@ -1789,6 +1788,8 @@ class NGS:
                 self.datasetTag = 'Unfiltered'
     
         # Define: Dataset Label
+        if useCodonProb:
+            self.datasetTag = f'{codon} Enrichment - {self.datasetTag}'
         if self.initialize:
             self.datasetTagMotif = self.datasetTag
             self.initialize = False
@@ -2737,8 +2738,15 @@ class NGS:
         else:
             yLabel = 'Counts'
         if predActivity:
-            title = (f'{self.enzymeName}\n{predModel}\n'
-                         f'{NSubs:,} {predType} Sequences')
+            datasetTag = self.datasetTag.replace(' - ', '\n')
+            if predModel is None:
+                if '\n' in datasetTag:
+                    title = f'{self.enzymeName}\n{datasetTag}'
+                else:
+                    title = f'\n{self.enzymeName}\n{datasetTag}'
+            else:
+                title = (f'{self.enzymeName}\n{predModel}\n'
+                             f'{NSubs:,} {predType} Sequences')
             yLabel = 'Predicted Activity'
         else:
             if clusterNumPCA is not None:
@@ -2794,10 +2802,18 @@ class NGS:
                                 f'{motifLen} AA - Plot N {plotNSubs} - '
                                 f'MinCounts {self.minSubCount}.png')
                 else:
-                    figLabel = (f'{self.enzymeName} - Predicted Activity - '
-                                f'{self.datasetTag} - {predType} Subs - {predModel} - '
-                                f'{motifLen} AA - Select N {self.NSubBars} '
-                                f'Plot N {plotNSubs} - MinCounts {self.minSubCount}.png')
+                    if predModel is None:
+                        predType = predType.replace('/', '_')
+                        figLabel = (f'{self.enzymeName} - Predicted Activity - '
+                                    f'{self.datasetTag} - {predType} - '
+                                    f'{motifLen} AA - N {plotNSubs} - '
+                                    f'MinCounts {self.minSubCount}.png')
+                    else:
+                        figLabel = (f'{self.enzymeName} - Predicted Activity - '
+                                    f'{self.datasetTag} - {predType} Subs - '
+                                    f'{predModel} - {motifLen} AA - '
+                                    f'Select N {self.NSubBars} Plot N {plotNSubs} - '
+                                    f'MinCounts {self.minSubCount}.png')
             else:
                 if limitNBars:
                     figLabel = (f'{self.enzymeName} - Motif Enrichment - '
@@ -5316,7 +5332,7 @@ class NGS:
 
 
 
-    def predictActivityHeatmap(self, predSubstrates):
+    def predictActivityHeatmap(self, predSubstrates, predModel, predLabel):
         print('=========================== Predict Substrate Activity '
               '==========================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -5342,4 +5358,4 @@ class NGS:
         print('\n')
 
         self.plotMotifEnrichment(motifs=activityScores, limitNBars=True,
-                                 predActivity=True, predType='Custom')
+                                 predActivity=True, predType=predLabel)
