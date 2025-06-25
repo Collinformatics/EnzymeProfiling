@@ -1,4 +1,4 @@
-from functions import filePaths, NGS
+from functions import getFileNames, NGS
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -17,24 +17,26 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'MMP7'
-inPathFolder = f'/path/{inEnzymeName}'
+inEnzymeName = 'Mpro2'
+inPathFolder = f'{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
-inMotifPositions = ['P3', 'P2', 'P1', 'P1\'', 'P2\''] #
-inIndexNTerminus = 1 # Define the index if the first AA in the binned substrate
+inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\''] # , 'P2\''
+inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
-inFixedResidue = ['L']
-inFixedPosition = [3, 4]
+inFixedResidue = ['Q']
+inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
+inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
+inUseCodonProb = False # Use AA prob from inCodonSequence to calculate enrichment
 
 # Input 4: Figures
 # inPlotPCA = False # PCA plot of an individual fixed frame
@@ -49,14 +51,13 @@ inPlotMotifEnrichmentNBars = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
-    inPlotEnrichmentMap = False
+    # inPlotEnrichmentMap = False # <-----------------------------------------------------
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
-    inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
-inPlotBarGraphs = False
+inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
 inPlotActivityFACS = False
@@ -95,7 +96,14 @@ inTotalSubsPCA = int(5*10**4)
 inIncludeSubCountsESM = True
 inPlotEntropyPCAPopulations = False
 
-# Input 11: Printing The Data
+# Input 11: Predict Activity
+inPredictActivity = True
+inPredictionTag = 'pp1a/b Substrates'
+inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
+                       'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
+                       'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
+
+# Input 12: Printing The Data
 inPrintLoadedSubs = True
 inPrintSampleSize = True
 inPrintCounts = True
@@ -104,10 +112,8 @@ inPrintES = True
 inPrintEntropy = True
 inPrintMotifData = True
 inPrintNumber = 10
-inCodonSequence = 'NNS' # Base probabilities of degenerate codons (can be N, S, or K)
-inUseCodonProb = False # If True: use "inCodonSequence" for baseline probabilities
 
-# Input 12: Evaluate Known Substrates
+# Input 13: Evaluate Known Substrates
 inNormalizePredictions = True
 inYMaxPred = 1.05
 inYMinPred, inYMinPredScaled, inYMinPredAI = 0, 0, -0.25
@@ -154,14 +160,14 @@ inDatapointColor = []
 for _ in inSubsPredict:
     inDatapointColor.append(inBarColor)
 
-# Input 13: Evaluate Binned Substrates
+# Input 14: Evaluate Binned Substrates
 inPlotEnrichedSubstrateFrame = False
 inPrintLoadedFrames = True
 inPlotBinnedSubNumber = 30
 inPlotBinnedSubProb = True
 inPlotBinnedSubYMax = 0.07
 
-# Input 14: Predict Binned Substrate Enrichment
+# Input 15: Predict Binned Substrate Enrichment
 inEvaluatePredictions = False
 inPrintPredictions = False
 inBottomParam = 0.16
@@ -206,7 +212,7 @@ pd.set_option('display.width', 1000)
 pd.set_option('display.float_format', '{:,.3f}'.format)
 
 # Load: Dataset labels
-enzymeName, filesInitial, filesFinal, labelAAPos = filePaths(enzyme=inEnzymeName)
+enzymeName, filesInitial, filesFinal, labelAAPos = getFileNames(enzyme=inEnzymeName)
 motifLen = len(inMotifPositions)
 motifFramePos = [inIndexNTerminus, inIndexNTerminus + motifLen]
 
@@ -224,7 +230,6 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
-          plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotFigPCA=inPlotPCA,
           numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
@@ -828,9 +833,14 @@ def plotFACSData():
 # Load: Counts
 countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
 
-# Calculate: RF
-probInitialAvg = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
-                                            fileType='Initial Sort', calcAvg=True)
+# Calculate: Initial sort probabilities
+if inUseCodonProb:
+    # Evaluate: Degenerate codon probabilities
+    probInitialAvg = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+else:
+    probInitialAvg = ngs.calculateProbabilities(counts=countsInitial,
+                                                N=countsInitialTotal,
+                                                fileType='Initial Sort')
 
 
 
@@ -843,10 +853,11 @@ motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
     motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
 # Get dataset tag
-ngs.getDatasetTag(combinedMotifs=True)
+ngs.getDatasetTag(combinedMotifs=True, useCodonProb=inUseCodonProb, codon=inCodonSequence)
 
 # Display current sample size
-ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal)
+ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal,
+                     NFinalUnique=len(motifs.keys()))
 
 # Evaluate dataset
 combinedMotifs = False
@@ -874,6 +885,14 @@ ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedReleas
                         combinedMotifs=combinedMotifs, releasedCounts=True)
 
 
+# Predict substrate activity
+if inPredictActivity:
+    ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
+                               predModel=ngs.datasetTag, predLabel=inPredictionTag,
+                               releasedCounts=True)
+sys.exit()
+
+
 # # Evaluate: Motif Sequences
 # Count fixed substrates
 motifCountsFinal, motifsCountsTotal = ngs.countResidues(substrates=motifs,
@@ -895,7 +914,6 @@ ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
                       combinedMotifs=combinedMotifs)
 
 sys.exit()
-
 
 # Set flag
 subsPredict = None

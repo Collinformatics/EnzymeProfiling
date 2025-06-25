@@ -1420,7 +1420,7 @@ class NGS:
                                            f'Combined {self.datasetTagMotif}')
         else:
             self.titleWords = f'{self.enzymeName}\nUnfiltered'
-        if len(self.motifIndexExtracted) > 1:
+        if len(self.motifIndexExtracted) <= 1:
             self.titleReleased = self.titleReleased.replace('Combined ', '')
             self.titleCombined = self.titleCombined.replace('Combined ', '')
             self.titleWeblogoCombined =  self.titleWeblogoCombined.replace('Combined ', '')
@@ -2114,15 +2114,20 @@ class NGS:
                 scores = self.eMap
 
         # Define: Figure title
+        print(f'Index Ext: {self.motifIndexExtracted}\n'
+              f'   Length: {len(self.motifIndexExtracted)}\n')
         if releasedCounts:
             title = self.titleReleased
-        elif combinedMotifs and len(self.motifIndexExtracted) > 1:
-            title = self.titleCombined
+        # elif combinedMotifs and len(self.motifIndexExtracted) > 1:
+        #     print(f'A\n')
+        #     title = self.titleCombined
         elif combinedMotifs:
+            print(f'B\n')
             title = self.titleCombined
-            title = title.replace('Combined ', '')
         else:
             title = self.title
+        if ' - ' in title:
+            title = title.replace(' - ', '\n')
 
 
         if self.motifFilter:
@@ -5332,7 +5337,8 @@ class NGS:
 
 
 
-    def predictActivityHeatmap(self, predSubstrates, predModel, predLabel):
+    def predictActivityHeatmap(self, predSubstrates, predModel, predLabel,
+                               releasedCounts=False):
         print('=========================== Predict Substrate Activity '
               '==========================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -5340,14 +5346,20 @@ class NGS:
               f'Substrate Sequences\n')
         sublen = len(next(iter(predSubstrates)))
 
+        # Record values
+        if releasedCounts:
+            eMap = self.eMapReleased
+        else:
+            eMap = self.eMap
+
         # Predict activity
         activityScores = {}
         for substrate in predSubstrates:
             score = 0
             for index in range(sublen):
                 AA = substrate[index]
-                pos = self.eMap.columns[index]
-                score += self.eMap.loc[AA, pos]
+                pos = eMap.columns[index]
+                score += eMap.loc[AA, pos]
             activityScores[substrate] = score
         activityScores = dict(sorted(activityScores.items(),
                                    key=lambda x: x[1], reverse=True))
