@@ -51,7 +51,7 @@ inPlotMotifEnrichmentNBars = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
-    # inPlotEnrichmentMap = False # <-----------------------------------------------------
+    inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False

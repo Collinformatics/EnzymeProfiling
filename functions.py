@@ -2114,8 +2114,6 @@ class NGS:
                 scores = self.eMap
 
         # Define: Figure title
-        print(f'Index Ext: {self.motifIndexExtracted}\n'
-              f'   Length: {len(self.motifIndexExtracted)}\n')
         if releasedCounts:
             title = self.titleReleased
         # elif combinedMotifs and len(self.motifIndexExtracted) > 1:
@@ -2771,13 +2769,21 @@ class NGS:
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.ylabel(yLabel, fontsize=self.labelSizeAxis)
         plt.axhline(y=0, color='black', linewidth=self.lineThickness)
-        plt.ylim(yMin, yMax)
+
 
         # Set: y ticks
-        step = yMax / 10
-        yTicks = np.arange(0, yMax + step, step)
+        if max(y) == 1.0:
+            yMax = 1.0
+            step = 0.2
+            yTicks = np.arange(0, yMax + step, step)
+            yMax += 0.1
+        else:
+            step = yMax / 10
+            yTicks = np.arange(0, yMax + step, step)
+        plt.ylim(yMin, yMax)
         plt.xticks(rotation=90, ha='center')
         plt.yticks(yTicks)
+
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -5363,6 +5369,10 @@ class NGS:
             activityScores[substrate] = score
         activityScores = dict(sorted(activityScores.items(),
                                    key=lambda x: x[1], reverse=True))
+        maxActivity = max(activityScores.values())
+        for substrate, score in activityScores.items():
+            activityScores[substrate] = score / maxActivity
+
         print(f'Predicted Relative Activity:')
         for index, (substrate, ES) in enumerate(activityScores.items()):
             print(f'     {pink} {substrate}{resetColor}, '
