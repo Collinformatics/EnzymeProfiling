@@ -1,13 +1,15 @@
 import os.path
-import sys
+import platform
 from rdkit import Chem
 from rdkit.Chem import Draw
+import sys
 import torch
 import torch.nn.functional as F
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, global_mean_pool
 from sklearn.model_selection import train_test_split
+
 
 
 # Colors: Console
@@ -28,9 +30,15 @@ resetColor = '\033[0m'
 
 
 
+inEnzymeName = 'Mpro2'
+inPathFolder = f'{inEnzymeName}'
+
+inMinimumSubstrateCount = 10
+inUseEnrichmentFactor = True
 
 inPlotSub = False
 inBatchSize = 10
+
 
 
 substrates = {
@@ -84,24 +92,54 @@ class GNN(torch.nn.Module):
 
 
 class graphSubstrates:
-    def __init__(self, substrates, enzymeName, datasetTag, batchSize):
+    def __init__(self, folderPath, substrates, enzymeName, datasetTag, minSubCount, useEF,
+                 batchSize):
+        # Parameters: Files
+        self.pathFolder = folderPath
+        self.pathData = os.path.join(self.pathFolder, 'Data')
+        self.pathModels = os.path.join(self.pathFolder, 'Models')
+        self.pathFigures = os.path.join(self.pathFolder, 'Figures')
+        self.pathFiguresTraining = os.path.join(self.pathFolder, 'FiguresModelTraining')
+        os.makedirs(self.pathData, exist_ok=True)
+        os.makedirs(self.pathModels, exist_ok=True)
+        os.makedirs(self.pathFigures, exist_ok=True)
+        os.makedirs(self.pathFiguresTraining, exist_ok=True)
+
         # Parameters: Data
         self.substrates = substrates
         self.substratesNum = len(substrates.keys())
+        self.subsLen = len(next(iter(self.substrates)))
         self.enzymeName = enzymeName
         self.datasetTag = datasetTag
+        self.minSubCount = minSubCount
+        self.useEF = useEF
         self.mol = []
         self.plotSubstrate()
 
+        # Parameters: Model
+        self.device = self.getDevice()
+        self.testingSetSize = 0.2
+        self.batchSize = batchSize
+
         # Parameters: Misc
         self.roundVal = 3
-        self.testSize = 0.2
+
+        # Parameters: Model Path
+        if self.useEF:
+            scoreType = 'EF'
+        else:
+            scoreType = 'Counts'
+        self.tagGNN = (
+            f'GNN - {self.enzymeName} - {self.datasetTag} - '
+            f'Test Size {self.testingSetSize} - Batch {self.batchSize} - {scoreType} - '
+            f'MinCounts {self.minSubCount} - N {self.substratesNum} - {self.subsLen} AA')
+        self.pathGNN  = os.path.join(self.pathModels, f'{self.tagGNN}.pt')
+
 
         # Generate: Molecular graph
         self.graph = self.molToGraph()
 
         # Train model
-        self.batchSize = batchSize
         self.trainGNN()
 
 
@@ -109,49 +147,67 @@ class graphSubstrates:
     def trainGNN(self):
         print('================================= Training GNN '
               '==================================')
-        print(f'Loss Function: {purple}Mean Squared Error{resetColor}\n'
-              f'Testing Size: {red}{self.testSize}{resetColor}\n'
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Loss Function: {purple}Mean Squared Error{resetColor}\n'
+              f'Testing Size: {red}{self.testingSetSize}{resetColor}\n'
               f'Batch Size: {red}{self.batchSize}{resetColor}\n')
 
-        # Randomly split the dataset
-        trainGraphs, testGraphs = train_test_split(self.graph, test_size=0.2,
-                                                   random_state=42)
-
-        # Create separate loaders
-        loaderTrain = DataLoader(trainGraphs, batch_size=self.batchSize, shuffle=True)
-        loaderTest = DataLoader(testGraphs, batch_size=self.batchSize, shuffle=False)
         model = GNN(inputDim=1, hiddenDim=32, outputDim=1)
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+        model.to(self.device)
 
-        # Train the model
-        epochs = 100
-        for epoch in range(1, epochs+1):
-            model.train()
-            totalLoss = 0
-            for batch in loaderTrain:
-                optimizer.zero_grad()
-                out = model(batch.x, batch.edge_index, batch.batch)
-                loss = F.mse_loss(out, batch.y.float()) # depends on your task
-                loss.backward()
-                optimizer.step()
-                totalLoss += loss.item()
-            if epoch % 25 == 0:
-                print(f'Epoch: {red}{epoch}{resetColor} / {red}{epochs}{resetColor}\n'
-                      f' Loss: {red}{round(totalLoss, self.roundVal):,}{resetColor}\n')
-                # print(f'Predicted: {greenLight}{out}{resetColor}\n\n'
-                #       f'Activity: {greenLight}{batch.y.float()}{resetColor}\n')
+        if os.path.exists(self.pathGNN):
+            print(f'Loading model:\n'
+                  f'     {greenDark}{self.pathGNN}{resetColor}\n\n')
+            model.load_state_dict(torch.load(self.pathGNN))
+        else:
+            # Randomly split the dataset
+            trainGraphs, testGraphs = train_test_split(self.graph, test_size=0.2,
+                                                       random_state=42)
 
-        # After training loop
-        model.eval()
-        testLoss = 0
-        with torch.no_grad():
-            for batch in loaderTest:
-                out = model(batch.x, batch.edge_index, batch.batch)
-                loss = F.mse_loss(out.view(-1), batch.y.float())
-                testLoss += loss.item()
-        print(f'Testing Model Accuracy:\n'
-              f'     MSE: {red}{round(testLoss / len(loaderTest), self.roundVal)}'
-              f'{resetColor}\n\n')
+            # Create dataloaders
+            loaderTrain = DataLoader(trainGraphs, batch_size=self.batchSize, shuffle=True)
+            loaderTest = DataLoader(testGraphs, batch_size=self.batchSize, shuffle=False)
+
+            # Set: Optimizer
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+            # Train the model
+            epochs = 100
+            for epoch in range(1, epochs+1):
+                model.train()
+                totalLoss = 0
+                for batch in loaderTrain:
+                    batch = batch.to(self.device)
+                    optimizer.zero_grad()
+                    out = model(batch.x, batch.edge_index, batch.batch)
+                    loss = F.mse_loss(out, batch.y.float()) # depends on your task
+                    loss.backward()
+                    optimizer.step()
+                    totalLoss += loss.item()
+                if epoch % 25 == 0:
+                    print(f'Epoch: {red}{epoch}{resetColor} / {red}{epochs}'
+                          f'{resetColor}\n'
+                          f' Loss: {red}{round(totalLoss, self.roundVal):,}'
+                          f'{resetColor}\n')
+                    # print(f'Predicted: {greenLight}{out}{resetColor}\n\n'
+                    #       f'Activity: {greenLight}{batch.y.float()}{resetColor}\n')
+
+            # Test the model
+            model.eval()
+            testLoss = 0
+            with torch.no_grad():
+                for batch in loaderTest:
+                    out = model(batch.x, batch.edge_index, batch.batch)
+                    loss = F.mse_loss(out.view(-1), batch.y.float())
+                    testLoss += loss.item()
+            print(f'Model Accuracy:\n'
+                  f'     MSE: {red}{round(testLoss / len(loaderTest), self.roundVal)}'
+                  f'{resetColor}\n\n')
+
+            # Save the model
+            print(f'Saving model at:\n'
+                  f'     {greenDark}{self.pathGNN}{resetColor}\n\n')
+            torch.save(model.state_dict(), self.pathGNN)
 
 
 
@@ -226,5 +282,25 @@ class graphSubstrates:
             img.show()  # Opens in default viewer
 
 
-graph = graphSubstrates(substrates=substrates, enzymeName='Mpro2',
-                        datasetTag='Testing Substrates', batchSize=inBatchSize)
+
+    def getDevice(self):
+        # Set device
+        print('============================== Set Training Device '
+              '==============================')
+        if torch.cuda.is_available():
+            device = 'cuda:0'
+            print(f'Train with Device:{magenta} {device}{resetColor}\n'
+                  f'Device Name:{magenta} {torch.cuda.get_device_name(device)}'
+                  f'{resetColor}\n\n')
+        else:
+            device = 'cpu'
+            print(f'Train with Device:{magenta} {device}{resetColor}\n'
+                  f'Device Name:{magenta} {platform.processor()}{resetColor}\n\n')
+
+        return device
+
+
+graph = graphSubstrates(folderPath=inPathFolder, substrates=substrates,
+                        enzymeName=inEnzymeName, datasetTag='Testing Substrates',
+                        minSubCount=inMinimumSubstrateCount, useEF=inUseEnrichmentFactor,
+                        batchSize=inBatchSize)
