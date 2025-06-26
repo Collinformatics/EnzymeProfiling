@@ -1,4 +1,5 @@
 from functions import getFileNames, NGS
+from functionsGNN import GNN
 from functionsML import PredictActivity
 import pandas as pd
 import sys
@@ -50,8 +51,6 @@ import sys
 #           meanEmbedding = torch.stack(hidden_states[26:35]).mean(dim=0)
 
 
-# Try: Q@R5 Fixed S@R1
-
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
@@ -62,41 +61,42 @@ inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
-inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'']  # , 'P3\'', 'P4\''
+inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\'']  #
 inIndexNTerminus = 0  # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
-inPlotOnlyWords = True
 inModelSize = 1 # 0 = 15B Params, 1 = 3B Params, 2 = 650M Params
-inUseFilteredReadingFrame = True
-inFilterWithPCA = True
-inSelectSubstratesTop = 10 # 10 = Top 10 quantile
-inSelectSubstratesBottom = 50 # 10 = Top 10 quantile
+inUseFilteredReadingFrame = False
+inPlotOnlyWords = True
 inFixedResidue = ['Q']
-inFixedPosition = [4, 5, 6]
-inExcludeResidues = False
+inFixedPosition = [4]
+inExcludeResidues = True
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 100
-inUseEnrichmentFactor = True
+inMinimumSubstrateCount = 10
+inUseEnrichmentFactor = False
 
-# Input 4: Machine Learning
+# Input 4: GNN
+inBatchSizeGNN = 400
+inTrainingEpochs = 100
+
+# Input 4: Random Forest
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inConcatenateLayersESM = True
-inLayersESM = [36, 30, 20, 12, 5]
+inLayersESM = [10, 14, 12, 8, 5] # [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
 inMinES = 0 # Minimum ES for randomized substrates
 inSubsPred = {
-    'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']
-}
+    'Dennis': ['CLLQARFS', 'VLLQGFVH', 'AKLQGDFH', 'VHLQCSIH', 'TLLQACVG', 'IRLQCGIM']}
 inGeneratedSubsFilter = { # Restrictions for generated substrates
     'R3': ['L'],
     'R4': ['Q']
 }
+
+
 
 # Input 5: Figures
 inPlotEntropy = True
@@ -106,8 +106,6 @@ inPlotLogo = True
 inPlotWeblogo = True
 inPlotMotifEnrichment = True
 inPlotMotifEnrichmentNBars = True
-inPlotMotifEnrichment = False
-inPlotMotifEnrichmentNBars = False
 inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
@@ -115,8 +113,11 @@ if inPlotOnlyWords:
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
+    inPlotMotifEnrichment = False
+    inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
 inPlotWordCloud = False # <--------------------
+
 inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
 inShowSampleSize = True  # Include the sample size in your figures
@@ -145,11 +146,11 @@ inTotalWords = inPlotNBars
 
 
 
+
 # ==================================== Set Parameters ====================================
 # Print options
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
-
 
 # Colors:
 white = '\033[38;2;255;255;255m'
@@ -182,10 +183,9 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           xAxisLabelsMotif=inMotifPositions, printNumber=inPrintNumber,
           showNValues=inShowSampleSize, bigAAonTop=inBigLettersOnTop, findMotif=False,
           folderPath=inPathFolder, filesInit=filesInitial, filesFinal=filesFinal,
-          useEF=inUseEnrichmentFactor, plotPosS=inPlotEntropy,
-          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
-          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
-          plotFigMotifEnrich=inPlotMotifEnrichment,
+          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
+          plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
+          plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
           plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotFigPCA=inPlotPCA,
@@ -208,6 +208,7 @@ substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
 # Get dataset tag
 ngs.getDatasetTag(combinedMotifs=inUseFilteredReadingFrame)
+print(f'Tag: {purple}{ngs.datasetTag}{resetColor}')
 
 paths = ngs.getFilePath(datasetTag=ngs.datasetTag, motifPath=inUseFilteredReadingFrame)
 if inUseFilteredReadingFrame:
@@ -247,13 +248,14 @@ ngs.calculateEntropy(probability=probMotif, combinedMotifs=inUseFilteredReadingF
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
                         combinedMotifs=inUseFilteredReadingFrame)
 
-# Evaluate: Sequences
-motifsTraining = ngs.processSubstrates(
-    subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
-    subLabel=inMotifPositions, combinedMotifs=inUseFilteredReadingFrame)
+if inUseEnrichmentFactor:
+    # Evaluate: Sequences
+    motifs = ngs.processSubstrates(
+        subsInit=substratesInitial, subsFinal=substratesFiltered, motifs=motifs,
+        subLabel=inMotifPositions, combinedMotifs=inUseFilteredReadingFrame)
 
 # Normalize substrate scores
-subsTrain = ngs.normalizeValues(substrates=motifsTraining, datasetTag=ngs.datasetTag)
+subsTrain = ngs.normalizeValues(substrates=motifs, datasetTag=ngs.datasetTag)
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
@@ -264,17 +266,23 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
 # Set option
 pd.set_option('display.max_rows', 10)
 
-# Predict activity
+
+# Predict Activity: GNN
+graph = GNN(folderPath=inPathFolder, substrates=subsTrain, enzymeName=inEnzymeName,
+            datasetTag=ngs.datasetTag, minSubCount=inMinimumSubstrateCount,
+            useEF=inUseEnrichmentFactor, epochs=inTrainingEpochs,
+            batchSize=inBatchSizeGNN, saveFigures=inSaveFigures)
+
+sys.exit()
+
+# Predict Activity: RFR
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
-    subsTrain=subsTrain, subsPercentSelectTop=inSelectSubstratesTop,
-    subsPercentSelectBottom=inSelectSubstratesBottom,
-    maxTrainingScore=ngs.maxValue, subsPred=substratesPred, subsPredChosen=inSubsPred,
-    useEF=inUseEnrichmentFactor, filterPCA=inFilterWithPCA, tagChosenSubs=tagPredSubs,
-    minSubCount=inMinimumSubstrateCount, concatESM=inConcatenateLayersESM,
-    layersESM=inLayersESM, minES=inMinES, modelType=inModelType, testSize=inTestSize,
-    batchSize=inESMBatchSize, labelsXAxis=inMotifPositions, printNumber=inPrintNumber,
-    saveFigures=inSaveFigures, modelSize=inModelSize)
+    subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
+    useEF=inUseEnrichmentFactor, tagChosenSubs=tagPredSubs,
+    minSubCount=inMinimumSubstrateCount, layersESM=inLayersESM, minES=inMinES,
+    modelType=inModelType, testSize=inTestSize, batchSize=inESMBatchSize,
+    labelsXAxis=inMotifPositions, printNumber=inPrintNumber, modelSize=inModelSize)
 predictions.trainModel()
 
 # # Evaluate: Predictions

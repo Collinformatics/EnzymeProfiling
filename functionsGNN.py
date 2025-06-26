@@ -111,7 +111,7 @@ class graphNN(torch.nn.Module):
 
 class GNN:
     def __init__(self, folderPath, substrates, enzymeName, datasetTag, minSubCount, useEF,
-                 batchSize, saveFigures):
+                 epochs, batchSize, saveFigures):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')
@@ -125,6 +125,7 @@ class GNN:
 
         # Parameters: Data
         self.substrates = substrates
+        self.substratesTest = None
         self.substratesNum = len(substrates.keys())
         self.subsLen = len(next(iter(self.substrates)))
         self.enzymeName = enzymeName
@@ -138,6 +139,7 @@ class GNN:
         self.model = None
         self.device = self.getDevice()
         self.testingSetSize = 0.2
+        self.epochs = epochs
         self.batchSize = batchSize
 
         # Parameters: Figures
@@ -187,6 +189,8 @@ class GNN:
         # Randomly split the dataset
         trainGraphs, testGraphs = train_test_split(self.graph, test_size=0.2,
                                                    random_state=42)
+        self.substratesTest = [data.substrate for data in testGraphs]
+
 
         # Create dataloaders
         loaderTrain = DataLoader(trainGraphs, batch_size=self.batchSize, shuffle=True)
@@ -202,8 +206,7 @@ class GNN:
             optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
 
             # Train the model
-            epochs = 100
-            for epoch in range(1, epochs+1):
+            for epoch in range(1, self.epochs+1):
                 self.model.train()
                 totalLoss = 0
                 for batch in loaderTrain:
@@ -214,8 +217,8 @@ class GNN:
                     loss.backward()
                     optimizer.step()
                     totalLoss += loss.item()
-                if epoch % 25 == 0:
-                    print(f'Epoch: {red}{epoch}{resetColor} / {red}{epochs}'
+                if epoch % 20 == 0:
+                    print(f'Epoch: {red}{epoch}{resetColor} / {red}{self.epochs}'
                           f'{resetColor}\n'
                           f' Loss: {red}{round(totalLoss, self.roundVal):,}'
                           f'{resetColor}\n')
@@ -236,9 +239,7 @@ class GNN:
               '=============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
               f'Loss Function: {purple}Mean Squared Error{resetColor}\n'
-              f'Model Type: {purple}{modelType}{resetColor}\n')
-
-        #
+              f'Model Type: {purple}{modelType}{resetColor}')
         yTest = []
         yPred = []
         testLoss = 0
@@ -255,29 +256,29 @@ class GNN:
                 yTest.extend(batch.y.cpu().numpy())
                 yPred.extend(out.view(-1).cpu().numpy())
 
-        # Create DataFrame
+        # Collect datapoints
         results = pd.DataFrame({
             'yTest': yTest,
             'yPred': yPred
         })
+        results.index = self.substratesTest
+        results = results.sort_values(by='yTest', ascending=False)
+        R2 = r2_score(results.loc[:, 'yTest'], results.loc[:, 'yPred'])
 
         print(f'Model Accuracy:\n'
-              f'     MSE: {red}{round(testLoss / len(testingLoader), self.roundVal)}'
-              f'{resetColor}\n\n')
+              f'     MSE: {red}{round(testLoss / len(testingLoader), 
+                                      self.roundVal)}{resetColor}\n'
+              f'     R²: {red}{round(R2, self.roundVal)}{resetColor}\n\n')
 
-        self.plotTestingPredictions(data=results)
+        self.plotTestingPredictions(data=results, modelType=modelType, R2=R2)
 
 
 
 
-    def plotTestingPredictions(self, data, modelType):
+    def plotTestingPredictions(self, data, modelType, R2):
         print(f'====================== Scatter Plot - Prediction Accuracy '
               f'======================')
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f'Data: {purple}{modelType}{resetColor}\n'
-              f'{data}\n\n')
-
-
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}')
         x = data.loc[:, 'yTest']
         y = data.loc[:, 'yPred']
 
@@ -288,7 +289,9 @@ class GNN:
         maxValue = math.ceil(maxValue / unit) * unit
         maxValue += unit
         axisLimits = [0, maxValue]
-        R2 = r2_score(x, y)
+        print(f'R²: {red}{round(R2, self.roundVal)}{resetColor}\n\n'
+              f'Data: {purple}{modelType}{resetColor}\n'
+              f'{data}\n\n')
 
 
         # Plot the data
@@ -297,7 +300,7 @@ class GNN:
         plt.plot(axisLimits, axisLimits, color='#101010', lw=self.lineThickness)
         plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
         plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
-        plt.title(f'\n{self.datasetTag}\nR² = {round(R2, 2)}\nGNN',
+        plt.title(f'\n{self.datasetTag}\nR² = {round(R2, self.roundVal)}\nGNN',
                   fontsize=self.labelSizeTitle, fontweight='bold')
         plt.subplots_adjust(top=0.852, bottom=0.075, left=0.162, right=0.935)
 
@@ -374,6 +377,7 @@ class GNN:
 
             # Collect data
             data = Data(x=x, edge_index=edgeIndex, edge_attr=edgeAttr, y=y)
+            data.substrate = substrate # Record substrates
             if graphList == []:
                 N = 10
                 print(f'Substrate: {pink}{next(iter(self.substrates))}{resetColor}\n'
@@ -425,6 +429,6 @@ class GNN:
         return device
 
 
-graph = GNN(folderPath=inPathFolder, substrates=substrates, enzymeName=inEnzymeName,
-            datasetTag='Testing Substrates', minSubCount=inMinimumSubstrateCount,
-            useEF=inUseEnrichmentFactor, batchSize=inBatchSize, saveFigures=inSaveFigures)
+# graph = GNN(folderPath=inPathFolder, substrates=substrates, enzymeName=inEnzymeName,
+#             datasetTag='Testing Substrates', minSubCount=inMinimumSubstrateCount,
+#             useEF=inUseEnrichmentFactor, batchSize=inBatchSize, saveFigures=inSaveFigures)
