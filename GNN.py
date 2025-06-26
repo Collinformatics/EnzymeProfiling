@@ -117,6 +117,7 @@ class graphSubstrates:
         self.plotSubstrate()
 
         # Parameters: Model
+        self.model = None
         self.device = self.getDevice()
         self.testingSetSize = 0.2
         self.batchSize = batchSize
@@ -151,35 +152,35 @@ class graphSubstrates:
               f'Loss Function: {purple}Mean Squared Error{resetColor}\n'
               f'Testing Size: {red}{self.testingSetSize}{resetColor}\n'
               f'Batch Size: {red}{self.batchSize}{resetColor}\n')
+        self.model = GNN(inputDim=1, hiddenDim=32, outputDim=1)
+        self.model.to(self.device)
 
-        model = GNN(inputDim=1, hiddenDim=32, outputDim=1)
-        model.to(self.device)
+        # Randomly split the dataset
+        trainGraphs, testGraphs = train_test_split(self.graph, test_size=0.2,
+                                                   random_state=42)
+
+        # Create dataloaders
+        loaderTrain = DataLoader(trainGraphs, batch_size=self.batchSize, shuffle=True)
+        loaderTest = DataLoader(testGraphs, batch_size=self.batchSize, shuffle=False)
+
 
         if os.path.exists(self.pathGNN):
             print(f'Loading model:\n'
                   f'     {greenDark}{self.pathGNN}{resetColor}\n\n')
-            model.load_state_dict(torch.load(self.pathGNN))
+            self.model.load_state_dict(torch.load(self.pathGNN))
         else:
-            # Randomly split the dataset
-            trainGraphs, testGraphs = train_test_split(self.graph, test_size=0.2,
-                                                       random_state=42)
-
-            # Create dataloaders
-            loaderTrain = DataLoader(trainGraphs, batch_size=self.batchSize, shuffle=True)
-            loaderTest = DataLoader(testGraphs, batch_size=self.batchSize, shuffle=False)
-
             # Set: Optimizer
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
 
             # Train the model
             epochs = 100
             for epoch in range(1, epochs+1):
-                model.train()
+                self.model.train()
                 totalLoss = 0
                 for batch in loaderTrain:
                     batch = batch.to(self.device)
                     optimizer.zero_grad()
-                    out = model(batch.x, batch.edge_index, batch.batch)
+                    out = self.model(batch.x, batch.edge_index, batch.batch)
                     loss = F.mse_loss(out, batch.y.float()) # depends on your task
                     loss.backward()
                     optimizer.step()
@@ -192,22 +193,33 @@ class graphSubstrates:
                     # print(f'Predicted: {greenLight}{out}{resetColor}\n\n'
                     #       f'Activity: {greenLight}{batch.y.float()}{resetColor}\n')
 
-            # Test the model
-            model.eval()
-            testLoss = 0
-            with torch.no_grad():
-                for batch in loaderTest:
-                    out = model(batch.x, batch.edge_index, batch.batch)
-                    loss = F.mse_loss(out.view(-1), batch.y.float())
-                    testLoss += loss.item()
-            print(f'Model Accuracy:\n'
-                  f'     MSE: {red}{round(testLoss / len(loaderTest), self.roundVal)}'
-                  f'{resetColor}\n\n')
-
             # Save the model
             print(f'Saving model at:\n'
                   f'     {greenDark}{self.pathGNN}{resetColor}\n\n')
-            torch.save(model.state_dict(), self.pathGNN)
+            torch.save(self.model.state_dict(), self.pathGNN)
+
+        self.testModel(testingLoader=loaderTest, modelType='GNN')
+
+
+
+    def testModel(self, testingLoader, modelType):
+        print('============================ Testing Model Accuracy '
+              '=============================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Loss Function: {purple}Mean Squared Error{resetColor}\n'
+              f'Model Type: {purple}{modelType}{resetColor}\n')
+        
+        # Test the model
+        self.model.eval()
+        testLoss = 0
+        with torch.no_grad():
+            for batch in testingLoader:
+                out = self.model(batch.x, batch.edge_index, batch.batch)
+                loss = F.mse_loss(out.view(-1), batch.y.float())
+                testLoss += loss.item()
+        print(f'Model Accuracy:\n'
+              f'     MSE: {red}{round(testLoss / len(testingLoader), self.roundVal)}'
+              f'{resetColor}\n\n')
 
 
 
