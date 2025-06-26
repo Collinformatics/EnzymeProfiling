@@ -266,12 +266,10 @@ class GNN:
         R2 = r2_score(results.loc[:, 'yTest'], results.loc[:, 'yPred'])
 
         print(f'Model Accuracy:\n'
-              f'     MSE: {red}{round(testLoss / len(testingLoader), 
-                                      self.roundVal)}{resetColor}\n'
-              f'     R²: {red}{round(R2, self.roundVal)}{resetColor}\n\n')
+              f'     MSE: {red}{(testLoss / len(testingLoader)):.3e}{resetColor}\n'
+              f'     R²: {red}{R2:.3e}{resetColor}\n\n')
 
         self.plotTestingPredictions(data=results, modelType=modelType, R2=R2)
-
 
 
 
@@ -289,9 +287,15 @@ class GNN:
         maxValue = math.ceil(maxValue / unit) * unit
         maxValue += unit
         axisLimits = [0, maxValue]
-        print(f'R²: {red}{round(R2, self.roundVal)}{resetColor}\n\n'
+        print(f'R²: {red}{R2:.3e}{resetColor}\n\n'
               f'Data: {purple}{modelType}{resetColor}\n'
               f'{data}\n\n')
+
+        useSciNotation = True
+        title = f'\n{self.datasetTag}\nR² = {round(R2, self.roundVal)}\nGNN'
+        if useSciNotation:
+            title = f'\n{self.datasetTag}\nR² = {R2:.3e}\nGNN'
+
 
 
         # Plot the data
@@ -300,7 +304,7 @@ class GNN:
         plt.plot(axisLimits, axisLimits, color='#101010', lw=self.lineThickness)
         plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
         plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
-        plt.title(f'\n{self.datasetTag}\nR² = {round(R2, self.roundVal)}\nGNN',
+        plt.title(title,
                   fontsize=self.labelSizeTitle, fontweight='bold')
         plt.subplots_adjust(top=0.852, bottom=0.075, left=0.162, right=0.935)
 
