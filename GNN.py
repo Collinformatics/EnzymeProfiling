@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GCNConv, global_mean_pool
+from sklearn.model_selection import train_test_split
 
 
 # Colors: Console
@@ -94,6 +95,7 @@ class graphSubstrates:
 
         # Parameters: Misc
         self.roundVal = 3
+        self.testSize = 0.2
 
         # Generate: Molecular graph
         self.graph = self.molToGraph()
@@ -107,18 +109,26 @@ class graphSubstrates:
     def trainGNN(self):
         print('================================= Training GNN '
               '==================================')
-        print(f'Batch Size: {red}{self.batchSize}{resetColor}\n')
+        print(f'Loss Function: {purple}Mean Squared Error{resetColor}\n'
+              f'Testing Size: {red}{self.testSize}{resetColor}\n'
+              f'Batch Size: {red}{self.batchSize}{resetColor}\n')
 
-        loader = DataLoader(self.graph, batch_size=self.batchSize, shuffle=True)
+        # Randomly split the dataset
+        trainGraphs, testGraphs = train_test_split(self.graph, test_size=0.2,
+                                                   random_state=42)
+
+        # Create separate loaders
+        loaderTrain = DataLoader(trainGraphs, batch_size=self.batchSize, shuffle=True)
+        loaderTest = DataLoader(testGraphs, batch_size=self.batchSize, shuffle=False)
         model = GNN(inputDim=1, hiddenDim=32, outputDim=1)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-
+        # Train the model
         epochs = 100
         for epoch in range(1, epochs+1):
             model.train()
             totalLoss = 0
-            for batch in loader:
+            for batch in loaderTrain:
                 optimizer.zero_grad()
                 out = model(batch.x, batch.edge_index, batch.batch)
                 loss = F.mse_loss(out, batch.y.float()) # depends on your task
@@ -129,8 +139,19 @@ class graphSubstrates:
                 print(f'Epoch: {red}{epoch}{resetColor} / {red}{epochs}{resetColor}\n'
                       f' Loss: {red}{round(totalLoss, self.roundVal):,}{resetColor}\n')
                 # print(f'Predicted: {greenLight}{out}{resetColor}\n\n'
-                #       f'Activity: {greenLight}{batch.y.float()}{resetColor}\n\n')
-        print('')
+                #       f'Activity: {greenLight}{batch.y.float()}{resetColor}\n')
+
+        # After training loop
+        model.eval()
+        testLoss = 0
+        with torch.no_grad():
+            for batch in loaderTest:
+                out = model(batch.x, batch.edge_index, batch.batch)
+                loss = F.mse_loss(out.view(-1), batch.y.float())
+                testLoss += loss.item()
+        print(f'Testing Model Accuracy:\n'
+              f'     MSE: {red}{round(testLoss / len(loaderTest), self.roundVal)}'
+              f'{resetColor}\n\n')
 
 
 
