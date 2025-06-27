@@ -1,5 +1,5 @@
 from functions import getFileNames, NGS
-from functionsGNN import GNN
+# from functionsGNN import GNN
 from functionsML import PredictActivity
 import pandas as pd
 import sys
@@ -75,16 +75,18 @@ inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 10
 inUseEnrichmentFactor = False
+inSubQuantileTop = 1
+inSubQuantileBottom = 50
 
 # Input 4: GNN
 inBatchSizeGNN = 400
 inTrainingEpochs = 100
 
-# Input 4: Random Forest
+# Input 5: Random Forest
 inModelTypes = ['Random Forest Regressor: Scikit-Learn',
                 'Random Forest Regressor: XGBoost']
 inModelType = inModelTypes[1]
-inLayersESM = [10, 14, 12, 8, 5] # [36, 30, 25, 20, 15, 10, 5]
+inLayersESM = [30, 20, 14] # [36, 30, 25, 20, 15, 10, 5]
 inTestSize = 0.2
 inESMBatchSizes = [4096, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
 inESMBatchSize = inESMBatchSizes[5]
@@ -96,9 +98,7 @@ inGeneratedSubsFilter = { # Restrictions for generated substrates
     'R4': ['Q']
 }
 
-
-
-# Input 5: Figures
+# Input 6: Figures
 inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = False
@@ -117,19 +117,18 @@ if inPlotOnlyWords:
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
 inPlotWordCloud = False # <--------------------
-
 inPlotBarGraphs = False
 inPlotPCA = False  # PCA plot of the combined set of motifs
 inShowSampleSize = True  # Include the sample size in your figures
 
-# Input 6: Processing The data
+# Input 7: Processing The data
 inPrintNumber = 10
 
-# Input 7: Plot Heatmap
+# Input 8: Plot Heatmap
 inShowEnrichmentScores = True
 inShowEnrichmentAsSquares = False
 
-# Input 8: Plot Sequence Motif
+# Input 9: Plot Sequence Motif
 inNormLetters = False  # Normalize fixed letter heights
 inPlotWeblogoMotif = False
 inShowWeblogoYTicks = True
@@ -137,10 +136,10 @@ inAddHorizontalLines = False
 inPlotNegativeWeblogoMotif = False
 inBigLettersOnTop = False
 
-# Input 9: Motif Enrichment
+# Input 10: Motif Enrichment
 inPlotNBars = 50
 
-# Input 10: Word Cloud
+# Input 11: Word Cloud
 inLimitWords = True
 inTotalWords = inPlotNBars
 
@@ -258,7 +257,7 @@ if inUseEnrichmentFactor:
 subsTrain = ngs.normalizeValues(substrates=motifs, datasetTag=ngs.datasetTag)
 
 # Select a subset of the substrates
-subsTrain = ngs.divideDataset(substrates=subsTrain)
+subsTrain = ngs.divideDataset(substrates=subsTrain, quantileSplit=inSubQuantileTop)
 
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
@@ -269,22 +268,23 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
 # Set option
 pd.set_option('display.max_rows', 10)
 
-# Predict Activity: GNN
-graph = GNN(folderPath=inPathFolder, substrates=subsTrain, enzymeName=inEnzymeName,
-            datasetTag=ngs.datasetTag, minSubCount=inMinimumSubstrateCount,
-            useEF=inUseEnrichmentFactor, epochs=inTrainingEpochs,
-            batchSize=inBatchSizeGNN, saveFigures=inSaveFigures)
-
-sys.exit()
+# # Predict Activity: GNN
+# graph = GNN(folderPath=inPathFolder, substrates=subsTrain, enzymeName=inEnzymeName,
+#             datasetTag=ngs.datasetTag, minSubCount=inMinimumSubstrateCount,
+#             useEF=inUseEnrichmentFactor, epochs=inTrainingEpochs,
+#             batchSize=inBatchSizeGNN, saveFigures=inSaveFigures)
+# sys.exit()
 
 # Predict Activity: RFR
 predictions = PredictActivity(
     enzymeName=enzymeName, folderPath=inPathFolder, datasetTag=ngs.datasetTag,
     subsTrain=subsTrain, subsPred=substratesPred, subsPredChosen=inSubsPred,
-    useEF=inUseEnrichmentFactor, tagChosenSubs=tagPredSubs,
-    minSubCount=inMinimumSubstrateCount, layersESM=inLayersESM, minES=inMinES,
-    modelType=inModelType, testSize=inTestSize, batchSize=inESMBatchSize,
-    labelsXAxis=inMotifPositions, printNumber=inPrintNumber, modelSize=inModelSize)
+    subsPercentSelectTop=inSubQuantileTop, subsPercentSelectBottom=inSubQuantileBottom,
+    maxTrainingScore=ngs.maxValue, useEF=inUseEnrichmentFactor, filterPCA=inPlotPCA,
+    tagChosenSubs=tagPredSubs, minSubCount=inMinimumSubstrateCount, layersESM=inLayersESM,
+    minES=inMinES, modelType=inModelType, concatESM=True, testSize=inTestSize,
+    batchSize=inESMBatchSize, labelsXAxis=inMotifPositions, printNumber=inPrintNumber,
+    saveFigures=inSaveFigures, modelSize=inModelSize)
 predictions.trainModel()
 
 # # Evaluate: Predictions

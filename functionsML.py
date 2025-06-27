@@ -390,17 +390,6 @@ class RandomForestRegressorXGB:
         # 'max_depth': range(2, 6, 1)
 
 
-        # Process dataframe
-        x = dfTrain.drop(columns='activity').values
-        y = np.log1p(dfTrain['activity'].values)
-
-        # Parameters: Slitting the dataset
-        self.activityQuantile1 = (100 - self.selectSubsTopPercent) / 100
-        self.activityQuantile2 = self.selectSubsBottomPercent / 100
-        print(f'Selection Quantiles:\n'
-              f'     1: {red}{self.activityQuantile1}{resetColor}\n'
-              f'     2: {red}{self.activityQuantile2}{resetColor}\n')
-
         # ================================================================================
         # ================================================================================
         # ================================================================================
@@ -416,7 +405,6 @@ class RandomForestRegressorXGB:
         # ================================================================================
         # ================================================================================
         # ================================================================================
-
 
         # Parameters: Saving the model
         pathModelH = pathModel.replace(
@@ -435,6 +423,16 @@ class RandomForestRegressorXGB:
             self.datasetTagLow: pathModel
         }
 
+        # Process dataframe
+        x = dfTrain.drop(columns='activity').values
+        y = np.log1p(dfTrain['activity'].values)
+
+        # Parameters: Slitting the dataset
+        self.activityQuantile1 = (100 - self.selectSubsTopPercent) / 100
+        self.activityQuantile2 = self.selectSubsBottomPercent / 100
+        print(f'Selection Quantiles:\n'
+              f'     1: {red}{self.activityQuantile1}{resetColor}\n'
+              f'     2: {red}{self.activityQuantile2}{resetColor}\n')
 
         # Get Subset: High activity
         threshold1 = dfTrain['activity'].quantile(self.activityQuantile1)
@@ -469,10 +467,12 @@ class RandomForestRegressorXGB:
 
         # Split datasets
         testSize = parentObj.testingSetSize
-        # xTraining, xTesting, yTraining, yTesting = train_test_split(
-        #     x, y, test_size=testSize, random_state=19)
-        xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
-            xHigh, yHigh, test_size=testSize, random_state=19)
+        if self.trainOnlyTopSubs:
+            xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
+                x, y, test_size=testSize, random_state=19)
+        else:
+            xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
+                xHigh, yHigh, test_size=testSize, random_state=19)
         xTrainingM, xTestingM, yTrainingM, yTestingM = train_test_split(
             xMid, yMid, test_size=testSize, random_state=19)
         xTrainingL, xTestingL, yTrainingL, yTestingL = train_test_split(
@@ -893,11 +893,11 @@ class RandomForestRegressorXGB:
 
 
 class PredictActivity:
-    def __init__(self, enzymeName, datasetTag, folderPath, subsTrain,
-                 subsPercentSelectTop, subsPercentSelectBottom,
-                 maxTrainingScore, subsPred, subsPredChosen, useEF, filterPCA,
-                 tagChosenSubs, minSubCount, minES, modelType, concatESM, layersESM,
-                 testSize, batchSize, labelsXAxis, printNumber, saveFigures, modelSize=2):
+    def __init__(self, enzymeName, datasetTag, folderPath, subsTrain, subsPred,
+                 subsPredChosen, subsPercentSelectTop, subsPercentSelectBottom,
+                 maxTrainingScore, useEF, filterPCA, tagChosenSubs, minSubCount,
+                 minES, modelType, concatESM, layersESM, testSize, batchSize,
+                 labelsXAxis, printNumber, saveFigures, modelSize=2):
         # Parameters: Files
         self.pathFolder = folderPath
         self.pathData = os.path.join(self.pathFolder, 'Data')

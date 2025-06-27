@@ -5342,7 +5342,7 @@ class NGS:
 
 
 
-    def divideDataset(self, substrates):
+    def divideDataset(self, substrates, quantileSplit):
         print('================================ Divide Dataset '
               '=================================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
@@ -5354,19 +5354,14 @@ class NGS:
                                             columns=['Activity'])
 
         # Split dataset
-        keepQuantile = 1
-        cutoff = (100 - keepQuantile) / 100
+        cutoff = (100 - quantileSplit) / 100
         threshold = dfSubstrates['Activity'].quantile(cutoff)
         dfHigh = dfSubstrates[dfSubstrates['Activity'] > threshold]
         dfLow = dfSubstrates[dfSubstrates['Activity'] <= threshold]
-        print(f'Substrates: {pink}Top {keepQuantile} % Activity Scores\n'
+        print(f'Substrates: {pink}Top {quantileSplit}% Activity Scores\n'
               f'{resetColor}{dfHigh}\n\n\n'
-              f'Substrates: {pink}Remaining {100 - keepQuantile} % Activity Scores\n'
+              f'Substrates: {pink}Remaining {100 - quantileSplit}% Activity Scores\n'
               f'{resetColor}{dfLow}\n\n')
-
-        # for substrate in dfLow.index:
-        #     score = dfLow.loc[substrate, 'Activity']
-        #     if score
 
 
         # seq = 'LVLQ'
