@@ -5429,7 +5429,7 @@ class NGS:
         collectedSubs = {}
         for substrate in substratesFiltered.index:
             collectedSubs[substrate] = substratesFiltered.loc[substrate, 'Activity']
-        sys.exit()
+
         return collectedSubs
 
 
