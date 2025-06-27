@@ -466,6 +466,7 @@ class RandomForestRegressorXGB:
         pd.set_option('display.max_columns', None)
 
         # Split datasets
+
         testSize = parentObj.testingSetSize
         if self.trainOnlyTopSubs:
             xTrainingH, xTestingH, yTrainingH, yTestingH = train_test_split(
@@ -493,23 +494,27 @@ class RandomForestRegressorXGB:
 
         print(f'Training Data: {pink}{self.datasetTagHigh}{resetColor}\n'
               f'Splitting Training Set: '
+              f'N = {red}{xTrainingH.shape[0] + xTestingH.shape[0]}{resetColor}, '
               f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
               f'{round(testSize * 100, 0)}{resetColor}\n'
               f'     Train: {yellow}{xTrainingH.shape}{resetColor}\n'
               f'     Test: {yellow}{xTestingH.shape}{resetColor}\n')
-        print(f'Training Data: {pink}{self.datasetTagMid}{resetColor}\n'
-              f'Splitting Training Set: '
-              f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
-              f'{round(testSize * 100, 0)}{resetColor}\n'
-              f'     Train: {yellow}{xTrainingM.shape}{resetColor}\n'
-              f'     Test: {yellow}{xTestingM.shape}{resetColor}\n')
-        print(f'Training Data: {pink}{self.datasetTagLow}{resetColor}\n'
-              f'Splitting Training Set: '
-              f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
-              f'{round(testSize * 100, 0)}{resetColor}\n'
-              f'     Train: {yellow}{xTrainingL.shape}{resetColor}\n'
-              f'     Test: {yellow}{xTestingL.shape}{resetColor}\n')
-        print(f'Unique Substrates: {red}{dfTrain.shape[0]:,}{resetColor}\n')
+        if self.trainOnlyTopSubs:
+            print(f'Training Data: {pink}{self.datasetTagMid}{resetColor}\n'
+                  f'Splitting Training Set: '
+                  f'N = {red}{xTrainingM.shape[0] + xTestingM.shape[0]}{resetColor}, '
+                  f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
+                  f'{round(testSize * 100, 0)}{resetColor}\n'
+                  f'     Train: {yellow}{xTrainingM.shape}{resetColor}\n'
+                  f'     Test: {yellow}{xTestingM.shape}{resetColor}\n')
+            print(f'Training Data: {pink}{self.datasetTagLow}{resetColor}\n'
+                  f'Splitting Training Set: '
+                  f'N = {red}{xTrainingL.shape[0] + xTestingL.shape[0]}{resetColor}, '
+                  f'{yellow}{round((1 - testSize) * 100, 0)}{pink}:{yellow}'
+                  f'{round(testSize * 100, 0)}{resetColor}\n'
+                  f'     Train: {yellow}{xTrainingL.shape}{resetColor}\n'
+                  f'     Test: {yellow}{xTestingL.shape}{resetColor}\n')
+            print(f'Unique Substrates: {red}{dfTrain.shape[0]:,}{resetColor}\n')
 
 
         def getLayerNumber(col):
@@ -958,11 +963,17 @@ class PredictActivity:
         self.subsetTagMid = f'Mids'
         self.subsetTagLow = f'Bottom {self.subsPercentSelectBottom} %'
         accuracyDF = pd.DataFrame(0.0, index=['MAE','MSE','R²'], columns=[])
-        self.modelAccuracy = {
-            self.subsetTagHigh: accuracyDF.copy(),
-            self.subsetTagMid: accuracyDF.copy(),
-            self.subsetTagLow: accuracyDF.copy(),
-        }
+        self.trainOnlyTopSubs = True
+        if self.trainOnlyTopSubs:
+            self.modelAccuracy = {
+                self.subsetTagHigh: accuracyDF.copy()
+            }
+        else:
+            self.modelAccuracy = {
+                self.subsetTagHigh: accuracyDF.copy(),
+                self.subsetTagMid: accuracyDF.copy(),
+                self.subsetTagLow: accuracyDF.copy(),
+            }
         self.concatESM = concatESM
         self.layersESM = layersESM
         self.layersESMTag = f'ESM L{self.layersESM}'.replace(', ', ',')
@@ -1025,7 +1036,8 @@ class PredictActivity:
         # Parameters: Save Paths Model Accuracy
         self.tagExperiment = (f'Model Accuracy - {modelType} - {self.layersESMTag} '
                               f'{self.sizeESM} - {enzymeName} - {datasetTag} - '
-                              f'MinCounts {minSubCount} - {self.subsLen} AA')
+                              f'N {self.subsTrainN} - MinCounts {minSubCount} - '
+                              f'{self.subsLen} AA')
         self.tagExperiment = self.tagExperiment.replace(':', '')
         if self.useEF:
             self.tagExperiment = self.tagExperiment.replace(
