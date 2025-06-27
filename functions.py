@@ -5308,7 +5308,7 @@ class NGS:
     def normalizeValues(self, substrates, datasetTag):
         print(f'=============================== Normalize Values '
               f'===============================')
-        print(f'Dataset: {datasetTag}')
+        print(f'Dataset: {purple}{datasetTag}{resetColor}')
         self.maxValue = max(substrates.values())
         print(f'Max Value: {red}{self.maxValue:,}{resetColor}\n')
 
@@ -5338,11 +5338,19 @@ class NGS:
                     break
         print('\n')
 
+        return substratesNormValues
+
+
+
+    def divideDataset(self, substrates):
+        print('================================ Divide Dataset '
+              '=================================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
 
         # Convert data to a df
         pd.set_option('display.max_rows', 10)
-        dfSubstrates = pd.DataFrame(substratesNormValues.values(),
-                                            index=substratesNormValues.keys(),
+        dfSubstrates = pd.DataFrame(substrates.values(),
+                                            index=substrates.keys(),
                                             columns=['Activity'])
 
         # Split dataset
@@ -5351,35 +5359,10 @@ class NGS:
         threshold = dfSubstrates['Activity'].quantile(cutoff)
         dfHigh = dfSubstrates[dfSubstrates['Activity'] > threshold]
         dfLow = dfSubstrates[dfSubstrates['Activity'] <= threshold]
-        print(f'Substrates: {pink}Top {keepQuantile} %{resetColor}\n'
-              f'{greenLight}{dfHigh}{resetColor}\n\n\n'
-              f'Substrates: {pink}Remaining {100 - keepQuantile} %{resetColor}\n'
-              f'{greenLight}{dfLow}{resetColor}\n\n')
-
-        # Divide low substrate scores
-        numSections = 5
-        maxScoreLow = max(dfLow.loc[:, 'Activity'])
-        minScoreLow = min(dfLow.loc[:, 'Activity'])
-        section = maxScoreLow / numSections
-        set = np.arange(minScoreLow, maxScoreLow + section, section)[::-1]
-        set[0] = maxScoreLow
-        print(f'Divide low activity dataset: {pink}Activity Ranges{resetColor}')
-        for index, valueA in enumerate(set):
-            index = index + 1
-            valueB = set[index]
-
-            # Select substrates
-            selected = dfLow[(dfLow['Activity'] <= valueA)
-                             & (dfLow['Activity'] > valueB)]
-            print(f'Set: {red}{index}{resetColor}\n'
-                  f'{selected}\n'
-                  f'Activity Range: {red}{round(valueA, 5)} - {round(valueB, 5)}'
-                  f'{resetColor}\n\n')
-
-            if index == numSections:
-                break
-        print(f'{resetColor}')
-
+        print(f'Substrates: {pink}Top {keepQuantile} % Activity Scores\n'
+              f'{resetColor}{dfHigh}\n\n\n'
+              f'Substrates: {pink}Remaining {100 - keepQuantile} % Activity Scores\n'
+              f'{resetColor}{dfLow}\n\n')
 
         # for substrate in dfLow.index:
         #     score = dfLow.loc[substrate, 'Activity']
@@ -5406,9 +5389,50 @@ class NGS:
         #               f'{resetColor}')
         # print('')
 
-        sys.exit()
 
-        return substratesNormValues
+        # Divide low substrate scores
+        substratesFiltered = dfHigh
+        numSections = 5
+        maxScoreLow = max(dfLow.loc[:, 'Activity'])
+        minScoreLow = min(dfLow.loc[:, 'Activity'])
+        section = maxScoreLow / numSections
+        activityRange = np.arange(minScoreLow, maxScoreLow + section, section)[::-1]
+        activityRange[0] = maxScoreLow
+
+        # Collect substrates
+        print(f'Collecting substrates from the low activity dataset:')
+        for index, valueA in enumerate(activityRange):
+            if index == numSections - 1:
+                break
+            index = index + 1
+            valueB = activityRange[index]
+
+            # Select substrates
+            selected = dfLow[(dfLow['Activity'] <= valueA)
+                             & (dfLow['Activity'] > valueB)]
+            selectedSubsN = len(selected.index)
+            print(f'Low Activity Subset: {red}{index}{resetColor}\n'
+                  f'   Total substrates: {red}{selectedSubsN}{resetColor}\n'
+                  f'     Activity Range: {red}{round(valueA, 5)}{resetColor} - '
+                  f'{red}{round(valueB, 5)}{resetColor}')
+
+            if index > 2:
+                # Select subset of the subset
+                selectNthSubstrate = 10
+                print(f'     Selecting every {red}{selectNthSubstrate}th{resetColor} '
+                      f'substrate')
+                selected = selected.iloc[::selectNthSubstrate]
+            substratesFiltered = pd.concat([substratesFiltered, selected])
+            print(f'{selected}\n\n')
+        print(f'Filtered Substrates:\n{greenLight}{substratesFiltered}{resetColor}\n\n')
+
+        collectedSubs = {}
+        for substrate in substratesFiltered.index:
+            collectedSubs[substrate] = substratesFiltered.loc[substrate, 'Activity']
+        sys.exit()
+        return collectedSubs
+
+
 
     def predictActivityHeatmap(self, predSubstrates, predModel, predLabel,
                                releasedCounts=False):

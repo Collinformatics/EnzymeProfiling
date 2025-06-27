@@ -257,6 +257,10 @@ if inUseEnrichmentFactor:
 # Normalize substrate scores
 subsTrain = ngs.normalizeValues(substrates=motifs, datasetTag=ngs.datasetTag)
 
+# Select a subset of the substrates
+subsTrain = ngs.divideDataset(substrates=subsTrain)
+sys.exit()
+
 # # Predicting Substrate Activity
 # Generate: Prediction substrates
 substratesPred, tagPredSubs = ngs.generateSubstrates(
