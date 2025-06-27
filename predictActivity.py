@@ -266,7 +266,6 @@ substratesPred, tagPredSubs = ngs.generateSubstrates(
 # Set option
 pd.set_option('display.max_rows', 10)
 
-
 # Predict Activity: GNN
 graph = GNN(folderPath=inPathFolder, substrates=subsTrain, enzymeName=inEnzymeName,
             datasetTag=ngs.datasetTag, minSubCount=inMinimumSubstrateCount,

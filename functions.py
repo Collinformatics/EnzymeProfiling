@@ -2586,9 +2586,8 @@ class NGS:
                     predActivity=predActivity, predModel=predModel, predType=predType)
 
                 # Plot: Work cloud
-                self.plotWordCloud(
-                    substrates=motifES, combinedMotifs=combinedMotifs,
-                    predActivity=predActivity, predModel=predModel)
+                self.plotWordCloud(substrates=motifES, combinedMotifs=combinedMotifs,
+                                   predActivity=predActivity, predModel=predModel)
 
             return None
         else:
@@ -2599,8 +2598,7 @@ class NGS:
 
         # Plot: Work cloud
         if self.plotFigWords:
-            self.plotWordCloud(
-                substrates=motifES, combinedMotifs=combinedMotifs)
+            self.plotWordCloud(substrates=motifES, combinedMotifs=combinedMotifs)
 
 
         predMotif = False
@@ -5325,7 +5323,7 @@ class NGS:
         substratesNormValues = {}
         for substrate, value in substrates.items():
             substratesNormValues[substrate] = (value / self.maxValue)
-        print(f'Normalized Values:')
+        print(f'Normalized Values: {purple}Top {self.printNumber} Substrates{resetColor}')
         if useIntegers:
             for iteration, (substrate, value) in enumerate(substratesNormValues.items()):
                 print(f'     {pink}{substrate}, {red}{round(value, self.roundVal):,}'
@@ -5334,14 +5332,83 @@ class NGS:
                     break
         else:
             for iteration, (substrate, value) in enumerate(substratesNormValues.items()):
-                print(f'     {pink}{substrate}, {red}{round(value, 3):,}{resetColor}')
+                print(f'     {pink}{substrate}{resetColor}, {red}{round(value, 3):,}'
+                      f'{resetColor}')
                 if iteration >= self.printNumber:
                     break
         print('\n')
 
+
+        # Convert data to a df
+        pd.set_option('display.max_rows', 10)
+        dfSubstrates = pd.DataFrame(substratesNormValues.values(),
+                                            index=substratesNormValues.keys(),
+                                            columns=['Activity'])
+
+        # Split dataset
+        keepQuantile = 1
+        cutoff = (100 - keepQuantile) / 100
+        threshold = dfSubstrates['Activity'].quantile(cutoff)
+        dfHigh = dfSubstrates[dfSubstrates['Activity'] > threshold]
+        dfLow = dfSubstrates[dfSubstrates['Activity'] <= threshold]
+        print(f'Substrates: {pink}Top {keepQuantile} %{resetColor}\n'
+              f'{greenLight}{dfHigh}{resetColor}\n\n\n'
+              f'Substrates: {pink}Remaining {100 - keepQuantile} %{resetColor}\n'
+              f'{greenLight}{dfLow}{resetColor}\n\n')
+
+        # Divide low substrate scores
+        numSections = 5
+        maxScoreLow = max(dfLow.loc[:, 'Activity'])
+        minScoreLow = min(dfLow.loc[:, 'Activity'])
+        section = maxScoreLow / numSections
+        set = np.arange(minScoreLow, maxScoreLow + section, section)[::-1]
+        set[0] = maxScoreLow
+        print(f'Divide low activity dataset: {pink}Activity Ranges{resetColor}')
+        for index, valueA in enumerate(set):
+            index = index + 1
+            valueB = set[index]
+
+            # Select substrates
+            selected = dfLow[(dfLow['Activity'] <= valueA)
+                             & (dfLow['Activity'] > valueB)]
+            print(f'Set: {red}{index}{resetColor}\n'
+                  f'{selected}\n'
+                  f'Activity Range: {red}{round(valueA, 5)} - {round(valueB, 5)}'
+                  f'{resetColor}\n\n')
+
+            if index == numSections:
+                break
+        print(f'{resetColor}')
+
+
+        # for substrate in dfLow.index:
+        #     score = dfLow.loc[substrate, 'Activity']
+        #     if score
+
+
+        # seq = 'LVLQ'
+        # seq2 = 'NDL'
+        # print(f'Find Sequence: {greenLight}{seq}_{seq2}{resetColor}')
+        # for substrate, value in substratesNormValues.items():
+        #     if seq in substrate and seq2 in substrate:
+        #     # if 'CSMQLGLT' in substrate:
+        #         print(f'     {pink}{substrate}{resetColor}, {red}{round(value, 5):,}'
+        #               f'{resetColor}')
+        # print('')
+        #
+        # seq = 'TVLQ'
+        # seq2 = 'AML'
+        # print(f'Find Sequence: {greenLight}{seq}_{seq2}{resetColor}')
+        # for substrate, value in substratesNormValues.items():
+        #     if seq in substrate and seq2 in substrate:
+        #         # if 'CSMQLGLT' in substrate:
+        #         print(f'     {pink}{substrate}{resetColor}, {red}{round(value, 5):,}'
+        #               f'{resetColor}')
+        # print('')
+
+        sys.exit()
+
         return substratesNormValues
-
-
 
     def predictActivityHeatmap(self, predSubstrates, predModel, predLabel,
                                releasedCounts=False):
