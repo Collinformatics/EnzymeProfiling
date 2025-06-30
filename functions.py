@@ -2999,8 +2999,8 @@ class NGS:
             motifEnrichment = {}
             ratios = {}
             totalCountsInit = 0
-            totalCountsInitAdj = 0
             totalCountsFinal = 0
+            totalMissingSubs = 0
             totalUniqueSubsFinal = len(subsFinal)
 
 
@@ -3038,15 +3038,13 @@ class NGS:
                     # Limit subInit length to match frame extraction zones
                     countInit = subsInit[substrate]
                 else:
+                    totalMissingSubs += 1
                     countInit = 1
                     totalCountsFinal += 1
                 totalCountsInit += countInit
-                if countInit == 1:
-                    totalCountsInitAdj += countInit
+                # if countInit == 1:
+                #     totalCountsInitAdj += countInit
                 ratios[substrate] = count / countInit
-
-            print(f'Motif Indices: {self.motifIndexExtracted}\n')
-            # sys.exit()
 
             # Sort collected substrates and add to the list
             ratios = dict(sorted(ratios.items(), key=lambda x: x[1], reverse=True))
@@ -3062,10 +3060,12 @@ class NGS:
                     print('')
                     break
 
-            print(f'Unique Substrates: {red}{totalUniqueSubsFinal:,}{resetColor}\n'
-                  f'Counts +1: {red}{totalCountsInitAdj:,}{resetColor}\n'
-                  f'Percent +1: {yellow}'
-                  f'{round(100*(totalCountsInitAdj / 
+            print(f'Total substrates in the final sort: '
+                  f'{red}{totalUniqueSubsFinal:,}{resetColor}\n'
+                  f'Final substrates missing in the initial sort: '
+                  f'{red}{totalMissingSubs:,}{resetColor}\n'
+                  f'Percentage of unaccounted final substrates: {yellow}'
+                  f'{round(100*(totalMissingSubs / 
                                 totalUniqueSubsFinal), self.roundVal)} %'
                   f'{resetColor}')
 
