@@ -110,13 +110,13 @@ def processStandardCurve(psc, plotFig=False):
         # Scatter plot
         fig, ax = plt.subplots(figsize=(9.5, 8))
         plt.scatter(x, y, color='#BF5700', marker='o')
-        plt.title('Product Standard Curve', fontsize=18, fontweight='bold')
+        plt.title('\nProduct Standard Curve', fontsize=18, fontweight='bold')
         plt.xlabel(f'{psc.columns[0]}', fontsize=16)
         plt.ylabel(f'{psc.columns[1]}', fontsize=16)
         plt.grid(True)
         plt.plot(x, fitLine, color='#32D713', label=fit)
         plt.tight_layout()
-        plt.legend()
+        plt.legend(fontsize=12, prop={'weight': 'bold'})
         fig.canvas.mpl_connect('key_press_event', pressKey)
         plt.show()
 
@@ -214,7 +214,7 @@ def processKinetics(slope, dataset, plotFig=False):
             plt.grid(True)
             plt.plot(x, fitLine, label=fit, color='#F8971F')
             plt.tight_layout()
-            plt.legend()
+            plt.legend(fontsize=12, prop={'weight': 'bold'})
             fig.canvas.mpl_connect('key_press_event', pressKey)
             plt.show()
     print()
@@ -241,21 +241,21 @@ def MichaelisMenten(substrateConc, velocity):
 
     # Fit data
     popt, pcov = curve_fit(MM, substrateConc, v, bounds=(0, np.inf))
-    Vmax, Km = popt
+    vMax, Km = popt
 
-    print(f'Vmax: {red}{Vmax:.3f}{resetColor}\n'
+    print(f'Vmax: {red}{vMax:.3f}{resetColor}\n'
           f'Km = {red}{Km:.3f}{resetColor}\n\n')
 
     # Fit the data
     xFit = np.linspace(0, max(substrateConc) * 1.2, 100)
-    yFit = MM(xFit, Vmax, Km)
+    yFit = MM(xFit, vMax, Km)
 
 
     # Plot the data
     fig, ax = plt.subplots(figsize=(9.5, 8))
     plt.scatter(substrateConc, v, color='#BF5700')
     plt.plot(xFit, yFit, color='#32D713', label='Michaelis-Menten fit')
-    plt.title(f'Michaelis-Menten\n{inEnzymeName}',
+    plt.title(f'Michaelis-Menten\n{inEnzymeName}\nVmax = {vMax}\nKm = {Km}',
               fontsize=18, fontweight='bold')
     plt.xlabel(f'[Substrate]', fontsize=16)
     plt.ylabel(f'Velocity', fontsize=16)
