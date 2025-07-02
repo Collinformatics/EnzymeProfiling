@@ -1,3 +1,5 @@
+from tokenize import group
+
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -8,18 +10,21 @@ import sys
 
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
-inFileName = 'SAVLQSGFR-Raw data and analyzed data'
-inPathFolder = f'{inEnzymeName}'
-inSheetName = ['Product Standard Curve', 'Sheet1', 'S1-Abz-SAVLQSGFR-Lys(Dnp)-15nM']
+inFileName = 'Kinetics template-SVTFQSAVK'
+inPathFolder = f'{inEnzymeName}/Kinetics'
+inSheetName = ['Product standard', 'SVTFQSAVK_Raw data']
 
 # Input 2: Process Data
-inPlotAllFigs = True
-inStdCurveStartIndex = 2
+inConcentrationUnit = 'uM'
+inPlotAllFigs = False
+inStdCurveStartIndex = 0
 inConcCutoff = 10 # Max percentage of substrate concentration in rxn plot
 
 
 
 # =================================== Setup Parameters ===================================
+pd.set_option('display.float_format', '{:,.2f}'.format)
+
 # Colors:
 white = '\033[38;2;255;255;255m'
 greyDark = '\033[38;2;144;144;144m'
@@ -49,43 +54,70 @@ def pressKey(event):
 
 
 
-def loadExcel(loadSheet=''):
+def loadExcel(sheetName='', loadStandard=False):
     print('=================================== Load Data '
           '===================================')
-    print(f'Loading Excel Sheet: {pink}{loadSheet}{resetColor}')
+    print(f'Loading Excel Sheet: {pink}{sheetName}{resetColor}')
     path = os.path.join(inPathFolder, inFileName)
     if '.xlsx' not in path:
         path += '.xlsx'
     print(f'Loading file at path:\n     {greenDark}{path}{resetColor}\n\n')
 
     # Load data
-    if loadSheet == '':
-        data = pd.read_excel(path, header=None)
+    if loadStandard:
+        data = pd.read_excel(path, sheet_name=sheetName, header=None)
+
+        # Remove NaN
+        dataFiltered = data.dropna(how='all')
+        dataFiltered = dataFiltered.dropna(axis=1, how='all')
+
+        # Set Headers
+        dataFiltered.columns = list(dataFiltered.iloc[0])  # Set the first row as header
+        dataFiltered = dataFiltered[1:]
+        dataFiltered = dataFiltered.reset_index(drop=True)
+
+        print(f'Raw Data: {pink}{sheetName}{resetColor}\n{data}\n\n\n'
+              f'Loaded Data: {pink}{sheetName}{resetColor}\n{dataFiltered}\n\n')
     else:
-        if loadSheet == inSheetName[2]:
-            data = pd.read_excel(path, sheet_name=loadSheet, header=[0, 1], index_col=[0])
-        else:
-            data = pd.read_excel(path, sheet_name=loadSheet, header=None)
+        data = pd.read_excel(path, sheet_name=sheetName, header=None, index_col=[0])
+        print(f'Raw Data: {pink}{sheetName}{resetColor}\n{data}\n\n')
+        indexHeader = data.index[1]
 
-            # Remove NaN
-            data = data.dropna(how='all')
-            data = data.dropna(axis=1, how='all')
+        # Identify the indices for each substrate concentration
+        columnHeaders = data.iloc[0].tolist()
+        indexConc = {}
+        for index, conc in enumerate(columnHeaders):
+            if not pd.isna(conc):
+                if conc in indexConc.keys():
+                    indexConc[conc].append(index)
+                else:
+                    indexConc[conc] = [index]
 
-            # Set Headers
-            data.columns = list(data.iloc[0]) # Set the first row as header
-            data = data[1:]
-            data = data.reset_index(drop=True)
 
-        print(f'Raw Data: {pink}{loadSheet}{resetColor}\n{data}\n\n')
+        # Group data by substrate concentration
+        dataFiltered = {}
+        df = pd.DataFrame(0.0, index=[], columns=[])
+        for conc, value in indexConc.items():
+            # Get only the data rows, remove the first 2 rows (NaN and Time)
+            filteredIndex = data.index[2:]
+            triplicate = data.loc[filteredIndex, [data.columns[i] for i in value]].copy()
 
-        # if loadSheet != inSheetName[0]:
-        #     # Remove empty wells
-        #     print('Removing even numbered columns\n')
-        #     data = data[[col for col in data.columns if int(col[1:]) % 2 == 1]]
+            # 2. Redefine column headers
+            newHeaders = data.iloc[1, value].tolist() # row 1 = 'G1', 'H1', 'I1'
+            triplicate.columns = newHeaders
+            triplicate.index.name = indexHeader
+            dataFiltered[f'{conc} {inConcentrationUnit}'] = triplicate
 
-    print(f'Loaded Data: {pink}{loadSheet}{resetColor}\n{data}\n\n')
+            # Statistical analysis
+            triplicate.loc[:, 'Avg'] = round(triplicate.loc[:, :].mean(axis=1), 2)
+            triplicate.loc[:, 'StDev'] = round(triplicate.std(axis=1), 2)
 
-    return data
+        print(f'Loaded Data: {pink}{sheetName}{resetColor}')
+        for conc, value in dataFiltered.items():
+            print(f'Concentration: {purple}{conc}{resetColor}\n{value}\n\n')
+
+
+    return dataFiltered
 
 
 
@@ -93,8 +125,8 @@ def processStandardCurve(psc, plotFig=False):
     print('======================= Processing Product Standard Curve '
           '=======================')
     psc.loc[:, 'Ratio'] = psc.iloc[:, 1] / psc.iloc[:, 0]
-    print(f'Product Standard Curve:\n{psc}\n'
-          f'Plotting data starting at index: {red}{inStdCurveStartIndex}{resetColor}\n'
+    print(f'Product Standard Curve:\n{psc}\n\n'
+          f'Collecting data starting at index: {red}{inStdCurveStartIndex}{resetColor}\n'
           f'{psc.iloc[inStdCurveStartIndex:, :]}\n')
     x = pd.to_numeric(psc.iloc[inStdCurveStartIndex+1:, 0], errors='raise')
     y = pd.to_numeric(psc.iloc[inStdCurveStartIndex+1:, 1], errors='raise')
@@ -124,30 +156,26 @@ def processStandardCurve(psc, plotFig=False):
 
 
 
-def processKinetics(slope, dataset, plotFig=False):
+def processKinetics(slope, datasets, plotFig=False):
     print('=========================== Processing Kinetics Data '
           '============================')
     print(f'Slope: {red}{round(slope, 3)}{resetColor}')
+    print(f'Slope: {red}{round(slope, 3)}{resetColor}')
+    print(datasets)
+    print('\n')
 
-
-    # Extract substrate concentrations
-    concentrations = []
-    for conc in dataset.columns:
-        if conc[0] not in concentrations:
-            concentrations.append(conc[0])
-    print(f'Substrate Concentrations: {red}{", ".join(concentrations)}{resetColor}\n\n')
 
     # Process florescence
-    datasets = {}
-    reactions = pd.DataFrame(0.0, index=dataset.index, columns=[])
-    for conc in concentrations:
-        group = dataset[conc].copy()
-        group.loc[:, 'Avg'] = round(group.loc[:, :].mean(axis=1), 2)
-        group.loc[:, 'StDev'] = round(group.std(axis=1), 2)
+    for conc, values in datasets:
+        # group = dataset[conc].copy()
+        # group.loc[:, 'Avg'] = round(group.loc[:, :].mean(axis=1), 2)
+        # group.loc[:, 'StDev'] = round(group.std(axis=1), 2)
         group.loc[:, '[Prod]'] = round((group.loc[:, 'Avg'] / slope), 2)
 
+        print(f'Values: {purple}{conc}{resetColor}\n{group}\n\n')
+
         # Extract product concentrations
-        reactions.loc[:, conc] = group.loc[:, '[Prod]']
+
         datasets[conc] = group
     print(f'Reactions:\n{reactions}\n\n')
 
@@ -267,12 +295,12 @@ def MichaelisMenten(substrateConc, velocity):
 
 # ====================================== Load data =======================================
 # Load: Product Standard Curve
-prodStdCurve = loadExcel(loadSheet=inSheetName[0])
+prodStdCurve = loadExcel(sheetName=inSheetName[0], loadStandard=True)
 m = processStandardCurve(psc=prodStdCurve, plotFig=inPlotAllFigs)
 
 # Load: Kinetics Data
-data = loadExcel(loadSheet=inSheetName[2])
+fluorescence = loadExcel(sheetName=inSheetName[1])
 
 # Process kinetics
-subConc, v = processKinetics(slope=m, dataset=data, plotFig=inPlotAllFigs)
+subConc, v = processKinetics(slope=m, dataset=fluorescence, plotFig=inPlotAllFigs)
 MichaelisMenten(substrateConc=subConc, velocity=v)
