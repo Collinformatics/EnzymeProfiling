@@ -9,7 +9,7 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inFileName = 'SAVLQSGFR-Raw data and analyzed data'
-inPathFolder = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inPathFolder = f'/NGS/{inEnzymeName}'
 inSheetName = ['Product Standard Curve', 'Sheet1', 'S1-Abz-SAVLQSGFR-Lys(Dnp)-15nM']
 
 # Input 2: Process Data
