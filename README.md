@@ -7,6 +7,7 @@
       pip install logomaker
       pip install matplotlib
       pip install numpy
+      pip install openpyxl
       pip install pandas
       pip install playsound
       pip install PyObjC
