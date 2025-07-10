@@ -7,6 +7,7 @@ from scipy.optimize import curve_fit
 import sys
 
 
+
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2'
 inFileName = 'Kinetics template-SVTFQSAVK'
@@ -16,9 +17,10 @@ inSubstrate = inFileName.split('-')[1]
 
 # Input 2: Process Data
 inConcentrationUnit = 'uM'
-inPlotAllFigs = True
+inPlotAllFigs = False
 inStdCurveStartIndex = 0
 inConcCutoff = 10 # Max percentage of substrate concentration in rxn plot
+inMaxCovariance = 0.3
 
 
 
@@ -168,10 +170,10 @@ def processKinetics(slope, datasets, plotFig=False):
     print('Statistical analysis:')
     for conc, data in datasets.items():
         # Statistical analysis
-        data.loc[:, 'Avg'] = round(data.loc[:, :].mean(axis=1), 2)
-        data.loc[:, 'StDev'] = round(data.std(axis=1), 2)
+        data.loc[:, 'Avg'] = data.loc[:, :].mean(axis=1)
+        data.loc[:, 'StDev'] = data.std(axis=1)
         data.loc[:, 'CoVar'] = data.loc[:, 'StDev'] / data.loc[:, 'Avg']
-        data.loc[:, '[Prod]'] = round((data.loc[:, 'Avg'] / slope), 2)
+        data.loc[:, '[Prod]'] = data.loc[:, 'Avg'] / slope
         print(f'Substrate concentration: {purple}{conc}{resetColor}\n{data}\n\n')
 
 
@@ -181,8 +183,6 @@ def processKinetics(slope, datasets, plotFig=False):
     for conc, values in datasets.items():
         if 'uM' in conc:
             numericConc = float(conc.replace('uM', ''))
-        else:
-            numericConc = float(conc.replace('mM', ''))
         subConc.append(numericConc)
         cutoff = numericConc / inConcCutoff
 
@@ -229,6 +229,9 @@ def processKinetics(slope, datasets, plotFig=False):
 def MichaelisMenten(substrateConc, velocity):
     print('=============================== Michaelis-Menten '
           '================================')
+    dec = 2
+
+
     print('Velocities:')
     v = []
     for key, value in velocity.items():
@@ -253,7 +256,6 @@ def MichaelisMenten(substrateConc, velocity):
     xFit = np.linspace(0, max(substrateConc) * 1.2, 100)
     yFit = MM(xFit, vMax, Km)
 
-    dec = 2
 
     # Plot the data
     fig, ax = plt.subplots(figsize=(9.5, 8))

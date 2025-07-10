@@ -20,18 +20,19 @@ inSetFigureTimer = False
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
 inFixResidues = True
-inFixedResidue = ['Q']
-inFixedPosition = [4]
+inFixedResidue = ['P','Q']
+inFixedPosition = [3,6]
 inExcludeResidues = True
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 10
+inMinimumSubstrateCount = 1
 inMinDeltaS = 0.6
 inPrintFixedSubs = True
 inShowSampleSize = True
 inUseEnrichmentFactor = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inUseCodonProb = False # Use AA prob from inCodonSequence to calculate enrichment
+inAvgInitialProb = False
 
 # Input 3: Making Figures
 inPlotEntropy = True
@@ -90,7 +91,7 @@ inPlotEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
 
 # Input 11: Predict Activity
-inPredictActivity = True
+inPredictActivity = False
 inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
@@ -161,12 +162,11 @@ fixedSubSeq = ngs.getDatasetTag(useCodonProb=inUseCodonProb, codon=inCodonSequen
 countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
 
 # Calculate: Initial sort probabilities
-if inUseCodonProb:
-    # Evaluate: Degenerate codon probabilities
-    probInitial = ngs.calculateProbCodon(codonSeq=inCodonSequence)
-else:
-    probInitial = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
-                                             fileType='Initial Sort')
+probInitial = ngs.calculateProbabilities(counts=countsInitial,
+                                         N=countsInitialTotal,
+                                         fileType='Initial Sort',
+                                         calcAvg=inAvgInitialProb)
+
 
 # substratesInitial = None
 loadFilteredSubs = False
@@ -204,9 +204,9 @@ if inFixResidues:
         # Load: Substrates
         substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
 else:
-    # # Load: Substrates
-    # (substratesInitial, totalSubsInitial,
-    #  substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs(loadInitial=True)
+    # Load: Substrates
+    (substratesInitial, totalSubsInitial,
+     substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs()
 
     # Load: Counts
     countsFinal, countsFinalTotal = ngs.loadCounts(fileType='Final Sort', filter=False)
@@ -248,13 +248,20 @@ probFinal = ngs.calculateProbabilities(counts=countsFinal, N=countsFinalTotal,
 entropy = ngs.calculateEntropy(probability=probFinal)
 
 # Calculate: Enrichment scores
-enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinal)
-
+if inUseCodonProb:
+    # Evaluate: Degenerate codon probabilities
+    probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+    enrichmentScores = ngs.calculateEnrichment(probInitial=probCodon,
+                                               probFinal=probFinal)
+else:
+    enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial,
+                                               probFinal=probFinal)
 
 # Evaluate: Sequences
-motifs = ngs.processSubstrates(
-    subsInit=substratesInitial, subsFinal=substratesFinal, motifs=substratesFinal,
-    subLabel=labelAAPos)
+if inUseEnrichmentFactor:
+    motifs = ngs.processSubstrates(
+        subsInit=substratesInitial, subsFinal=substratesFinal, motifs=substratesFinal,
+        subLabel=labelAAPos)
 
 if inPlotPCA:
     finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
@@ -392,9 +399,10 @@ if inPlotAADistribution:
                             codonType=inCodonSequence, datasetTag=fixedSubSeq)
 
     # Evaluate: Degenerate codon probabilities
-    codonProbs = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+    probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+
     # Plot: Codon probabilities
-    ngs.plotLibraryProbDist(probInitial=probFinal, probFinal=codonProbs,
+    ngs.plotLibraryProbDist(probInitial=probFinal, probFinal=probCodon,
                             codonType=inCodonSequence, datasetTag=inCodonSequence,
                             skipInitial=True)
 

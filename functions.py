@@ -195,7 +195,7 @@ class NGS:
         self.plotFigLogo = plotFigLogo
         self.plotFigWebLogo = plotFigWebLogo
         self.plotFigMotifEnrich = plotFigMotifEnrich
-        self.plotFigMotifEnrichSelect = plotFigMotifEnrich # plotFigMotifEnrichSelect
+        self.plotFigMotifEnrichSelect = plotFigMotifEnrichSelect
         self.plotFigWords = plotFigWords
         self.wordsLimit = wordLimit
         self.wordsTotal = wordsTotal
@@ -1491,10 +1491,10 @@ class NGS:
                    for c, s in zip(codonSeq, combination)):
                 codons.append(''.join(combination))
 
-            # Print: All possible codon combinations
-            for index, codon in enumerate(codons, 1):
-                print(f'Codon {index}: {codon}')
-            print('')
+        # Print: All possible codon combinations
+        for index, codon in enumerate(codons, 1):
+            print(f'Codon {index}: {codon}')
+        print('')
 
         # Count the possible codon combinations for each AA
         codonCounts = pd.DataFrame(index=self.letters, columns=['Counts'], data=0)
@@ -1921,7 +1921,7 @@ class NGS:
                         break
 
 
-        print(f'\nNumber of substrates with fixed {red}{fixedString}{resetColor}: '
+        print(f'\nNumber of substrates with fixed {purple}{fixedString}{resetColor}: '
               f'{red}{fixedSubsTotal:,}{resetColor}\n\n')
 
         return rankedFixedSubstrates, fixedSubsTotal
@@ -2035,6 +2035,7 @@ class NGS:
               '==========================')
         print(f'Enrichment Scores:\n'
               f'     {magenta}log₂(prob FinalAA / prob InitialAA){resetColor}\n\n')
+        print(f'Prob Final:\n{probFinal}\n\n')
         # Calculate: Enrichment scores
         if len(probInitial.columns) == 1:
             matrix = pd.DataFrame(0.0, index=probFinal.index,
@@ -2043,11 +2044,20 @@ class NGS:
                 matrix.loc[:, position] = np.log2(probFinal.loc[:, position] /
                                                   probInitial.iloc[:, 0])
         else:
-            probInitial.columns = probFinal.columns
-            matrix  = np.log2(probFinal / probInitial)
-        print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n\n'
-              f'{matrix.round(self.roundVal)}\n\n')
+            if len(probInitial.columns) != len(probFinal.columns):
+                print(f'{orange}ERROR: The number of columns in the Initial Sort '
+                      f'({cyan}{len(probInitial.columns)}{orange}) needs to equal to the '
+                      f'number of columns in the Final Sort '
+                      f'({cyan}{len(probFinal.columns)}{orange})\n'
+                      f'     Initial: {cyan}{probInitial.columns}{orange}\n'
+                      f'       Final: {cyan}{probFinal.columns}\n\n')
+                sys.exit(1)
 
+            probInitial.columns = probFinal.columns
+            matrix = np.log2(probFinal / probInitial)
+            # matrix = probFinal
+        print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n'
+              f'{matrix.round(self.roundVal)}\n\n')
 
         print('====================== Calculate: Scaled Enrichment Score '
               '=======================')
@@ -2057,6 +2067,7 @@ class NGS:
         # Calculate: Letter heights
         heights = pd.DataFrame(0, index=matrix.index,
                                columns=matrix.columns, dtype=float)
+
         for indexColumn in heights.columns:
             heights.loc[:, indexColumn] = (matrix.loc[:, indexColumn] *
                                            self.entropy.loc[indexColumn, 'ΔS'])
@@ -2759,10 +2770,12 @@ class NGS:
             if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 title = title.replace(self.datasetTag,
                                       f'Combined {self.datasetTag}')
-        if (limitNBars
-                and predType is not None
-                and predType.lower() != 'chosen'
-                and predModel is not None):
+        print(f'pred: {predType}\n\n')
+        # if (limitNBars
+        #         and predType is not None
+        #         and predType.lower() != 'chosen'
+        #         and predModel is not None):
+        if limitNBars and predType is not None and predModel is not None:
             title = title.replace(f'{NSubs:,}', f'Top {plotNSubs:,}')
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.ylabel(yLabel, fontsize=self.labelSizeAxis)
@@ -4506,7 +4519,9 @@ class NGS:
             if yMax < maxY:
                 while yMax < maxY:
                     yMax += tickStepSize
-        yMax = round(yMax, 1)
+            yMax = round(yMax, 1)
+        yMax = 0.15
+        tickStepSize = 0.05
 
 
         def plotFig(probability, sortType):
@@ -5444,14 +5459,42 @@ class NGS:
         else:
             eMap = self.eMap
 
+        # Make sure the eMap has the correct number of columns to evaluate the substrates
+        for substrate in predSubstrates:
+            if len(eMap.columns) != len(substrate):
+                print(f'{orange}ERROR: The Enrichment Map '
+                      f'({cyan}{len(eMap.columns)}{orange}) is not long enough to '
+                      f'evaluate the substrate ({cyan}{len(substrate)}{orange})\n'
+                      f'     Enrichment Map: {cyan}{eMap.columns}{orange}\n'
+                      f'          Substrate: {cyan}{substrate}\n\n')
+                sys.exit(1)
+
         # Predict activity
         activityScores = {}
+        firstSub = True
+        addES = 0
         for substrate in predSubstrates:
             score = 0
             for index in range(sublen):
                 AA = substrate[index]
                 pos = eMap.columns[index]
-                score += eMap.loc[AA, pos]
+
+                # if index >= 5: # <--------------------------------------------------------
+                #     if firstSub:
+                #         firstSub = False
+                #         print(f'Stopping at index: '
+                #               f'{yellow}{eMap.columns[index]}{resetColor}\n\n')
+                #     break
+                # if firstSub:
+                #     print(f'Scoring Pos: {greenLight}{pos}{resetColor}')
+
+                # self.entropy.loc[pos, 'ΔS']
+                ES = eMap.loc[AA, pos]
+                # if abs(ES) >= 0.5:
+                if ES < 0:
+                    ES *= 5
+                addES += 1
+                score += ES
             activityScores[substrate] = score
         activityScores = dict(sorted(activityScores.items(),
                                    key=lambda x: x[1], reverse=True))
@@ -5464,6 +5507,88 @@ class NGS:
             print(f'     {pink} {substrate}{resetColor}, '
                   f'ES:{red} {ES:.3f}{resetColor}')
         print('\n')
+        print(f'Added ESs: {red}{addES}{resetColor}')
 
         self.plotMotifEnrichment(motifs=activityScores, limitNBars=True,
                                  predActivity=True, predType=predLabel)
+
+
+
+    def codonPredictions(self, codon, codonProb, substrates):
+        print('=============================== Codon Predictions '
+              '===============================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Codon: {purple}{codon}{resetColor}\n{codonProb}\n\n')
+        codonProb = codonProb.copy() * 100
+
+        iteration = 0
+        print(f'Substrates:')
+        for substrate, count in substrates.items():
+            iteration += 1
+            print(f'     {pink}{substrate}{resetColor}, Counts: {red}{count:,}'
+                  f'{resetColor}')
+            if iteration >= self.printNumber:
+                break
+        print('\n')
+
+        # Calculate codon scores
+        N = 10000
+        # colName = 'Average RF'
+        colName = 'Probability'
+        codonEnrichment = {}
+        substratesSelect = {}
+        iteration = 0
+        for substrate, count in substrates.items():
+            substratesSelect[substrate] = count
+            score = 0
+            for AA in substrate:
+                if score == 0:
+                    score = codonProb.loc[AA, colName]
+                else:
+                    score *= codonProb.loc[AA, colName]
+            codonEnrichment[substrate] = score
+            iteration += 1
+            if iteration >= N:
+                break
+
+        # Print codon scores
+        iteration = 0
+        print(f'Codon Scores:')
+        for substrate, score in codonEnrichment.items():
+            iteration += 1
+            print(f'     {pink}{substrate}{resetColor}, '
+                  f'Score: {red}{round(score, self.roundVal):,}'
+                  f'{resetColor}')
+            if iteration >= self.printNumber:
+                break
+        print('\n')
+
+        # Plot codon enrichment scores as a scatter plot
+        x = list(substratesSelect.values())
+        y = list(codonEnrichment.values())
+        xMax, xMin = max(x), min(x)
+        yMax, yMin = max(y), min(y)
+        print(f'Boundaries:\n'
+              f'     X: {red}{xMax:,}{resetColor} - {red}{xMin:,}{resetColor}\n'
+              f'     Y: {red}{yMax:,}{resetColor} - {red}{yMin:,}{resetColor}\n\n')
+        lowerLim = -10000
+
+        fig, ax = plt.subplots(figsize=self.figSize)
+        plt.scatter(x, y, color='#BF5700', edgecolor='black')
+        plt.xlabel('Substrates', fontsize=self.labelSizeAxis)
+        plt.ylabel('Codon Enrichment Score', fontsize=self.labelSizeAxis)
+        plt.title(f'{codon} Codon Enrichment Scores\n{self.datasetTag}',
+                  fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.grid(True, linestyle='-', color='black')
+        plt.xlim(lowerLim, 250000)
+        plt.ylim(lowerLim*10, 2100000)
+
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks)
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+
+        plt.show()
+

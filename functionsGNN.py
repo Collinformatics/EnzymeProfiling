@@ -346,7 +346,7 @@ class GNN:
     def molToGraph(self):
         print('===================== Convert Substrates To Molecular Graph '
               '=====================')
-        print(f'N Substrates: {red}{self.substratesNum}{resetColor}\n')
+        print(f'Total Substrates: {red}{self.substratesNum}{resetColor}\n')
 
         # Evaluate: Peptides
         for substrate in self.substrates.keys():
@@ -384,7 +384,8 @@ class GNN:
             data.substrate = substrate # Record substrates
             if graphList == []:
                 N = 10
-                print(f'Substrate: {pink}{next(iter(self.substrates))}{resetColor}\n'
+                print(f'Evaluating Substrates:'
+                      f'Substrate: {pink}{next(iter(self.substrates))}{resetColor}\n'
                       f'Activity: {red}{y}{resetColor}\n\n'
                       f'X (First {red}{N}{resetColor} atoms):\n'
                       f'{greenLight}{x[:N]}{resetColor}\n\n'
