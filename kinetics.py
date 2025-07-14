@@ -1,30 +1,29 @@
 import datetime
-from time import time_ns
+import math
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+from sklearn.metrics import r2_score
 from scipy.optimize import curve_fit
 from scipy.signal import savgol_filter
-from scipy.stats import linregress
 import sys
 
 
 
-
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
-inFileName = 'Kinetics template-60nM SVILQAPFR'
+inEnzymeName = 'Mpro2' # 'SAVLQSGFR-Raw data and analyzed data' #
+inFileName = 'Kinetics-15nM SAVLQSGFR'
 inPathFolder = f'{inEnzymeName}/Kinetics'
 inSheetName = ['Product standard', 'Sub_Raw data']
 inSubstrate = inFileName.split('-')[1]
 
 # Input 2: Process Data
-inBurstKinetics = True
-inConcentrationUnit = 'uM'
+inBurstKinetics = False
+inConcentrationUnit = 'μM'
 inPlotAllFigs = True
 inStdCurveStartIndex = 0
-inConcCutoff = 10 # Max percentage of substrate concentration in rxn plot
+inConcCutoff = 15 # Max percentage of substrate concentration in rxn plot
 inMaxCovariance = 0.3
 
 
@@ -141,6 +140,16 @@ def processStandardCurve(psc, plotFig=False):
     x = pd.to_numeric(psc.iloc[inStdCurveStartIndex+1:, 0], errors='raise')
     y = pd.to_numeric(psc.iloc[inStdCurveStartIndex+1:, 1], errors='raise')
 
+    # Evaluate: Y axis
+    maxValue = math.ceil(max(y))
+    minValue = math.floor(min(y))
+    magnitude = math.floor(math.log10(maxValue))
+    unit = 10 ** (magnitude - 1)
+    yMax = math.ceil(maxValue / unit) * unit
+    yMax += 3 * unit  # Increase yMax
+    # yMin = math.floor(minValue / unit) * unit
+    yMin = 0
+
 
     # Fit the datapoints
     slope, intercept = np.polyfit(x, y, 1)  # Degree 1 polynomial = linear
@@ -154,10 +163,11 @@ def processStandardCurve(psc, plotFig=False):
         plt.scatter(x, y, color='#BF5700', marker='o')
         plt.title(f'\nProduct Standard Curve\n{inEnzymeName}\n{inSubstrate}',
                   fontsize=18, fontweight='bold')
-        plt.xlabel(f'{psc.columns[0]}', fontsize=16)
+        plt.xlabel(f'{psc.columns[0]} ({inConcentrationUnit})', fontsize=16)
         plt.ylabel(f'{psc.columns[1]}', fontsize=16)
+        plt.ylim(yMin, yMax)
         plt.grid(True)
-        plt.plot(x, fitLine, color='#32D713', label=fit)
+        plt.plot(x, fitLine, color='black', label=fit)
         plt.tight_layout()
         plt.legend(fontsize=12, prop={'weight': 'bold'})
         fig.canvas.mpl_connect('key_press_event', pressKey)
@@ -180,15 +190,23 @@ def processKinetics(slope, datasets, plotFig=False):
         data.loc[:, 'StDev'] = data.std(axis=1)
         data.loc[:, 'CoVar'] = data.loc[:, 'StDev'] / data.loc[:, 'Avg']
         data.loc[:, '[Prod]'] = data.loc[:, 'Avg'] / slope
-        print(f'Substrate concentration: {purple}{conc}{resetColor}\n{data}\n\n')
+        print(f'Substrate concentration: {purple}{conc} ({inConcentrationUnit})'
+              f'{resetColor}\n{data}\n\n')
 
 
     # Plot individual reactions
     reactionSlopes = {}
     for conc, values in datasets.items():
+        if isinstance(conc, str):
+            if 'uM' in conc:
+                conc = conc.replace('uM', '')
+                conc = float(conc)
+            elif  inConcentrationUnit in conc:
+                conc = conc.replace(inConcentrationUnit, '')
+                conc = float(conc)
         cutoff = conc / inConcCutoff
-        print(f'Numeric Conc: {red}{conc} {inConcentrationUnit}{resetColor}\n'
-              f'Cutoff: {cutoff}\n\n')
+        print(f'Concentration: {red}{conc} {inConcentrationUnit}{resetColor}\n'
+              f'     Cutoff: {red}{cutoff} {inConcentrationUnit}{resetColor}\n')
 
         # Filter datapoints
         x = pd.to_numeric(values.index, errors='coerce')
@@ -197,14 +215,29 @@ def processKinetics(slope, datasets, plotFig=False):
         x = x[mask]
         y = y[mask]
 
-
-        # Fit the datapoints
         if len(x) != 0:
+            # Evaluate: Y axis
+            maxValue = math.ceil(max(y))
+            magnitude = math.floor(math.log10(maxValue))
+            unit = 10 ** (magnitude - 1)
+            yMax = math.ceil(maxValue / unit) * unit
+            yMax += 3 * unit  # Increase yMax
+            yMin = 0
+
+            # Fit the datapoints
             slope, intercept = np.polyfit(x, y, 1) # Degree 1 polynomial = linear
             fitLine = slope * x + intercept
             fit = f'y = {slope:.3f}x + {intercept:.3f}'
             print(f'Fit: {red}{fit}{resetColor}\n\n')
             reactionSlopes[conc] = slope
+
+            # Predictions
+            predictedY = slope * np.array(x) + intercept
+
+            # Calculate R² values
+            rSquared = r2_score(y, predictedY)
+            print(f'R² Value: {red}{round(rSquared, 3)}{resetColor}\n\n')
+            fit += f'\nR² = {round(rSquared, 3)}'
 
 
             if plotFig:
@@ -212,8 +245,8 @@ def processKinetics(slope, datasets, plotFig=False):
                 fig, ax = plt.subplots(figsize=(9.5, 8))
                 plt.scatter(x, y, color='#BF5700', marker='o')
                 plt.title(f'\n{inEnzymeName}\n{inSubstrate}\n'
-                          f'Substrate Concentration: {(conc)} {inConcentrationUnit}\n'
-                          f'Maximum Product Concentration: {cutoff}',
+                          f'Substrate Concentration: {conc} {inConcentrationUnit}\n'
+                          f'Maximum Product Concentration: {round(cutoff, 2)}',
                           fontsize=18, fontweight='bold')
                 plt.xlabel(f'Time', fontsize=16)
                 plt.ylabel(f'Product Concentration', fontsize=16)
@@ -223,6 +256,194 @@ def processKinetics(slope, datasets, plotFig=False):
                 plt.legend(fontsize=12, prop={'weight': 'bold'})
                 fig.canvas.mpl_connect('key_press_event', pressKey)
                 plt.show()
+
+    return reactionSlopes
+
+
+
+def processKineticsBurst(slope, datasets, plotFig):
+    print('======================== Processing Burst Kinetics Data '
+          '=========================')
+    print(f'Slope: {red}{round(slope, 3)}{resetColor}\n')
+    slopeRelease = []
+
+    # Process florescence data
+    print('Statistical analysis:')
+    for conc, data in datasets.items():
+        # Statistical analysis
+        data.loc[:, 'Avg'] = data.loc[:, :].mean(axis=1)
+        data.loc[:, 'StDev'] = data.std(axis=1)
+        data.loc[:, 'CoVar'] = data.loc[:, 'StDev'] / data.loc[:, 'Avg']
+        data.loc[:, '[Prod]'] = data.loc[:, 'Avg'] / slope
+        print(f'Substrate concentration: {purple}{conc}{resetColor}\n{data}\n\n')
+
+
+    # Plot individual reactions
+    reactionSlopes = {}
+    for conc, values in datasets.items():
+        if isinstance(conc, str):
+            if 'uM' in conc:
+                conc = conc.replace('uM', '')
+                conc = float(conc)
+            elif  inConcentrationUnit in conc:
+                conc = conc.replace(inConcentrationUnit, '')
+                conc = float(conc)
+        cutoff = conc / inConcCutoff
+        print(f'Concentration: {red}{conc} {inConcentrationUnit}{resetColor}\n'
+              f'     Cutoff: {red}{cutoff} {inConcentrationUnit}{resetColor}\n')
+
+        # Filter datapoints
+        x = pd.to_numeric(values.index, errors='coerce')
+        y = pd.to_numeric(values.loc[:, '[Prod]'], errors='coerce')
+        mask = y <= cutoff
+        x = x[mask]
+        y = y[mask]
+
+        # print(f'Dataset: {purple}{conc} {inConcentrationUnit}{resetColor}')
+
+        # Get datapoints
+        x = np.array(x)
+        y = np.array(y)
+        print(f'     Number of datapoints:\n'
+              f'          X, Y: {red}{len(x)}{resetColor}, {red}{len(y)}{resetColor}\n')
+
+        windowLenght = int(0.1 * len(x))
+        if windowLenght % 2 == 0:
+            windowLenght += 1
+        if windowLenght == 1:
+            windowLenght = 3
+        print(f'     Window Length: {windowLenght}\n')
+
+
+        # Fit the datapoints
+        try:
+            smoothedProduct = savgol_filter(y, window_length=windowLenght, polyorder=2)
+            rate = np.gradient(smoothedProduct, x)
+            threshold = 0.5 * np.max(rate)
+            burstEndIndex = np.where(rate < threshold)[0][0]
+        except:
+            burstEndIndex = int(0.3 * len(rate))
+        print(f'     Split Index: {red}{burstEndIndex}{resetColor}')
+
+        # Evaluate splitting
+        if burstEndIndex == 0:
+            # cutoff = conc / inConcCutoff
+            # print(f'Concentration: {red}{conc} {inConcentrationUnit}{resetColor}\n'
+            #       f'     Cutoff: {red}{cutoff} {inConcentrationUnit}{resetColor}\n')
+            #
+            # # Filter datapoints
+            # mask = y <= cutoff
+            # x = x[mask]
+            # y = y[mask]
+            # print(f'X, Y: {len(x)}, {len(y)}\n')
+
+            # Fit the line
+            slope, intercept = np.polyfit(x, y, 1)  # Degree 1 polynomial = linear
+            fitLine = slope * x + intercept
+            fit = f'y = {slope:.3f}x + {intercept:.3f}'
+            print(f'     Fit: {red}{fit}{resetColor}\n')
+            reactionSlopes[conc] = slope
+
+            # Predictions
+            predictedY = slope * np.array(x) + intercept
+
+            # Calculate R² values
+            rSquared = r2_score(y, predictedY)
+            print(f'R² Value: {red}{round(rSquared, 3)}{resetColor}\n\n')
+            fit += f'\nR² = {round(rSquared, 3)}'
+
+
+            if plotFig:
+                # Scatter plot
+                fig, ax = plt.subplots(figsize=(9.5, 8))
+                plt.scatter(x, y, color='#BF5700', marker='o')
+                plt.plot(x, fitLine, label=fit, color='#F8971F')
+                plt.title(f'\n{inEnzymeName}\n{inSubstrate}\n'
+                          f'Substrate Concentration: {conc} {inConcentrationUnit}\n'
+                          f'Maximum Product Concentration: '
+                          f'{round(cutoff, 2)} {inConcentrationUnit}',
+                          fontsize=18, fontweight='bold')
+                plt.xlabel(f'Time (min)', fontsize=16)
+                plt.ylabel(f'Product Concentration ({inConcentrationUnit})',
+                           fontsize=16)
+                # plt.ylim(yMin, yMax)
+                plt.grid(True)
+                plt.tight_layout()
+                plt.legend(fontsize=12, prop={'weight': 'bold'})
+                fig.canvas.mpl_connect('key_press_event', pressKey)
+                plt.show()
+        else:
+            # Phase 1: Burst
+            timeBurst = x[:burstEndIndex]
+            productBurst = y[:burstEndIndex]
+
+            # Phase 2: Steady-State
+            timeSteady = x[burstEndIndex:]
+            productSteady = y[burstEndIndex:]
+            print(f'     Dataset Size:\n'
+                  f'           Set 1: '
+                  f'{red}{len(timeBurst)}{resetColor}, '
+                  f'{red}{len(productBurst)}{resetColor}\n'
+                  f'           Set 2: '
+                  f'{red}{len(timeSteady)}{resetColor}, '
+                  f'{red}{len(productSteady)}{resetColor}\n')
+
+            # Fit the line
+            slope1, intercept1 = np.polyfit(
+                timeBurst, productBurst, 1) # Fit burst phase
+            slope2, intercept2 = np.polyfit(
+                timeSteady, productSteady, 1) # Fit steady-state phase
+            fit1 = f'y = {slope1:.3f}x + {intercept1:.3f}'
+            fit2 = f'y = {slope2:.3f}x + {intercept2:.3f}'
+            print(f'     Fit 1: {red}{fit1}{resetColor}\n'
+                  f'     Fit 2: {red}{fit2}{resetColor}\n')
+            reactionSlopes[conc] = slope1
+            slopeRelease.append(slope2)
+
+            # Predictions
+            predictedBurst = slope1 * np.array(timeBurst) + intercept1
+            predictedSteady = slope2 * np.array(timeSteady) + intercept2
+
+            # Calculate R² values
+            rSquared1 = r2_score(productBurst, predictedBurst)
+            rSquared2 = r2_score(productSteady, predictedSteady)
+            print(f'R² Values:\n'
+                  f'     Fit 1: {red}{round(rSquared1, 3)}{resetColor}\n'
+                  f'     Fit 2: {red}{round(rSquared2, 3)}{resetColor}\n\n')
+            fit1 += f'\nR² = {round(rSquared1, 3)}'
+            fit2 += f'\nR² = {round(rSquared2, 3)}'
+
+
+            if plotFig:
+                # Scatter plot
+                fig, ax = plt.subplots(figsize=(9.5, 8))
+                plt.scatter(x, y, color='#BF5700', marker='o')
+                plt.plot(timeBurst, slope1 * timeBurst + intercept1,
+                         label=fit1, color='#F8971F') # Burst fit
+                plt.plot(timeSteady, slope2 * timeSteady + intercept2,
+                         label=fit2, color='black') # Steady-state fit
+                plt.title(f'\n{inEnzymeName}\n{inSubstrate}\n'
+                          f'Substrate Concentration: {conc} {inConcentrationUnit}\n'
+                          f'Maximum Product Concentration: '
+                          f'{round(cutoff, 2)} {inConcentrationUnit}',
+                          fontsize=18, fontweight='bold')
+                plt.xlabel(f'Time (min)', fontsize=16)
+                plt.ylabel(f'Product Concentration ({inConcentrationUnit})',
+                           fontsize=16)
+                # plt.ylim(yMin, yMax)
+                plt.grid(True, color='black')
+                plt.tight_layout()
+                plt.legend(fontsize=12, prop={'weight': 'bold'})
+                fig.canvas.mpl_connect('key_press_event', pressKey)
+                plt.show()
+
+    # Evaluate: Release rate
+    releaseAvg, releaseStDev = np.mean(slopeRelease), np.std(slopeRelease)
+    print(f'Release Rate:\n'
+          f'     Average: {red}{releaseAvg:.3e} {inConcentrationUnit}/min'
+          f'{resetColor}\n'
+          f'      St Dev: {red}{releaseStDev:.3e} {inConcentrationUnit}/min'
+          f'{resetColor}\n\n')
 
     return reactionSlopes
 
@@ -252,135 +473,34 @@ def MichaelisMenten(velocity):
     popt, pcov = curve_fit(MM, substrateConc, v, bounds=(0, np.inf))
     vMax, Km = popt
 
-    print(f'Dataset: {purple}{inEnzymeName} {inSubstrate}{resetColor}\n'
-          f'Vmax: {red}{vMax:.3f}{resetColor}\n'
-          f'Km = {red}{Km:.3f}{resetColor}\n\n')
-
     # Fit the data
     xFit = np.linspace(0, max(substrateConc) * 1.2, 100)
     yFit = MM(xFit, vMax, Km)
 
+    # Calculate R² values
+    predictedV = MM(np.array(substrateConc), vMax, Km)
+    rSquared = r2_score(v, predictedV)
+    fit = f'R² = {rSquared:.3f}'
+
+    print(f'Dataset: {purple}{inEnzymeName} {inSubstrate}{resetColor}\n'
+          f'     Km = {red}{Km:.3f}{resetColor}\n'
+          f'     Vmax: {red}{vMax:.3f}{resetColor}\n'
+          f'     R² Value: {red}{rSquared:.3f}{resetColor}\n')
 
     # Plot the data
     fig, ax = plt.subplots(figsize=(9.5, 8))
     plt.scatter(substrateConc, v, color='#BF5700')
-    plt.plot(xFit, yFit, color='#32D713', label='Michaelis-Menten fit')
+    plt.plot(xFit, yFit, color='#F8971F', label='Michaelis-Menten fit')
     plt.title(f'Michaelis-Menten\n{inEnzymeName}\n{inSubstrate}\n'
-              f'Km = {round(Km, dec)}\nVmax = {round(vMax, dec)}',
+              f'Km = {round(Km, dec)} {inConcentrationUnit}\n'
+              f'Vmax = {round(vMax, dec)} {inConcentrationUnit}/min\n'
+              f'{fit}',
               fontsize=18, fontweight='bold')
-    plt.xlabel(f'[Substrate]', fontsize=16)
-    plt.ylabel(f'Velocity', fontsize=16)
+    plt.xlabel(f'[Substrate] ({inConcentrationUnit})', fontsize=16)
+    plt.ylabel(f'Velocity ({inConcentrationUnit}/min)', fontsize=16)
     plt.tight_layout()
     fig.canvas.mpl_connect('key_press_event', pressKey)
     plt.show()
-
-
-def processKineticsBurst(slope, datasets, plotFig):
-    print('======================== Processing Burst Kinetics Data '
-          '=========================')
-    print(f'Slope: {red}{round(slope, 3)}{resetColor}\n')
-
-    # Process florescence data
-    print('Statistical analysis:')
-    for conc, data in datasets.items():
-        # Statistical analysis
-        data.loc[:, 'Avg'] = data.loc[:, :].mean(axis=1)
-        data.loc[:, 'StDev'] = data.std(axis=1)
-        data.loc[:, 'CoVar'] = data.loc[:, 'StDev'] / data.loc[:, 'Avg']
-        data.loc[:, '[Prod]'] = data.loc[:, 'Avg'] / slope
-        print(f'Substrate concentration: {purple}{conc}{resetColor}\n{data}\n\n')
-
-
-    # Plot individual reactions
-    reactionSlopes = {}
-    for conc, values in datasets.items():
-        # Get datapoints
-        x = np.array(pd.to_numeric(values.index, errors='coerce'))
-        y = np.array(pd.to_numeric(values.loc[:, '[Prod]'], errors='coerce'))
-        print(f'X, Y: {len(x)}, {len(y)}\n')
-
-        # Fit the datapoints
-        smoothedProduct = savgol_filter(y, window_length=15, polyorder=2)
-        print(f'Len(y): {len(y)}, Len(smoothedProduct): {len(smoothedProduct)}\n')
-        rate = np.gradient(smoothedProduct, x)
-        threshold = 0.5 * np.max(rate)
-        burstEndIndex = np.where(rate < threshold)[0][0]
-        print(f'Split Index: {burstEndIndex}\n')
-
-        # Evaluate splitting
-        if burstEndIndex == 0:
-            # cutoff = conc / inConcCutoff
-            # print(f'Numeric Conc: {red}{conc} {inConcentrationUnit}{resetColor}\n'
-            #       f'Cutoff: {cutoff}\n\n')
-            #
-            # # Filter datapoints
-            # mask = y <= cutoff
-            # x = x[mask]
-            # y = y[mask]
-            # print(f'X, Y: {len(x)}, {len(y)}\n')
-
-            slope, intercept = np.polyfit(x, y, 1)  # Degree 1 polynomial = linear
-            fitLine = slope * x + intercept
-            fit = f'y = {slope:.3f}x + {intercept:.3f}'
-            print(f'Fit: {red}{fit}{resetColor}\n\n')
-            reactionSlopes[conc] = slope
-
-            if plotFig:
-                # Scatter plot
-                fig, ax = plt.subplots(figsize=(9.5, 8))
-                plt.scatter(x, y, color='#BF5700', marker='o')
-                plt.title(f'\n{inEnzymeName}\n{inSubstrate}\n'
-                          f'Substrate Concentration: {conc} {inConcentrationUnit}',
-                          fontsize=18, fontweight='bold')
-                plt.xlabel(f'Time', fontsize=16)
-                plt.ylabel(f'Product Concentration', fontsize=16)
-                plt.grid(True)
-                plt.plot(x, fitLine, label=fit, color='black')
-                plt.tight_layout()
-                plt.legend(fontsize=12, prop={'weight': 'bold'})
-                fig.canvas.mpl_connect('key_press_event', pressKey)
-                plt.show()
-        else:
-            # Phase 1: Burst
-            timeBurst = x[:burstEndIndex]
-            productBurst = y[:burstEndIndex]
-
-            # Phase 2: Steady-State
-            timeSteady = x[burstEndIndex:]
-            productSteady = y[burstEndIndex:]
-            print(f'Time 1: {len(timeBurst)}, {len(productBurst)}\n'
-                  f'Time 2: {len(timeSteady)}, {len(productSteady)}\n\n')
-
-            # Fit burst phase
-            slope1, intercept1, *_ = linregress(timeBurst, productBurst)
-
-            # Fit steady-state phase
-            slope2, intercept2, *_ = linregress(timeSteady, productSteady)
-
-            reactionSlopes[conc] = slope1
-
-
-            if plotFig:
-                # Scatter plot
-                fig, ax = plt.subplots(figsize=(9.5, 8))
-                plt.scatter(x, y, color='#BF5700', marker='o')
-                plt.plot(timeBurst, slope1 * timeBurst + intercept1,
-                         label='Burst Fit', color='blue') # Burst fit
-                plt.plot(timeSteady, slope2 * timeSteady + intercept2,
-                         label='Steady-State Fit', color='red') # Steady-state fit
-                plt.title(f'\n{inEnzymeName}\n{inSubstrate}\n'
-                          f'Substrate Concentration: {conc} {inConcentrationUnit}',
-                          fontsize=18, fontweight='bold')
-                plt.xlabel(f'Time', fontsize=16)
-                plt.ylabel(f'Product Concentration', fontsize=16)
-                plt.grid(True)
-                plt.tight_layout()
-                plt.legend(fontsize=12, prop={'weight': 'bold'})
-                fig.canvas.mpl_connect('key_press_event', pressKey)
-                plt.show()
-
-    return reactionSlopes
-
 
 
 
