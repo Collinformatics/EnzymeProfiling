@@ -13,13 +13,13 @@ import sys
 
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2' # 'SAVLQSGFR-Raw data and analyzed data' #
-inFileName = 'Kinetics-15nM SAVLQSGFR'
-inPathFolder = f'{inEnzymeName}/Kinetics'
+inFileName = 'Kinetics-100nM SVILQAPFR'
+inPathFolder = f'{inEnzymeName}/Kinetics2'
 inSheetName = ['Product standard', 'Sub_Raw data']
 inSubstrate = inFileName.split('-')[1]
 
 # Input 2: Process Data
-inBurstKinetics = False
+inBurstKinetics = True
 inConcentrationUnit = 'μM'
 inPlotAllFigs = True
 inStdCurveStartIndex = 0
@@ -307,15 +307,14 @@ def processKineticsBurst(slope, datasets, plotFig):
         print(f'     Number of datapoints:\n'
               f'          X, Y: {red}{len(x)}{resetColor}, {red}{len(y)}{resetColor}\n')
 
+
+        # Fit the datapoints
         windowLenght = int(0.1 * len(x))
         if windowLenght % 2 == 0:
             windowLenght += 1
         if windowLenght == 1:
             windowLenght = 3
         print(f'     Window Length: {windowLenght}\n')
-
-
-        # Fit the datapoints
         try:
             smoothedProduct = savgol_filter(y, window_length=windowLenght, polyorder=2)
             rate = np.gradient(smoothedProduct, x)
