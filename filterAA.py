@@ -12,7 +12,7 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'MMP7'
 inPathFolder = f'{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
@@ -20,9 +20,9 @@ inSetFigureTimer = False
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
 inFixResidues = True
-inFixedResidue = ['P','Q']
-inFixedPosition = [3,6]
-inExcludeResidues = True
+inFixedResidue = ['V',['L','M'],['L','M']] # 'A','V','L','Q'
+inFixedPosition = [2,3,5]
+inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
 inMinimumSubstrateCount = 1
@@ -47,7 +47,7 @@ if inPlotOnlyWords:
     inPlotEntropy = False
     # inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
-    inPlotLogo = False
+    inPlotLogo = True
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False

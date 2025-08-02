@@ -17,7 +17,7 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'MMP7'
 inPathFolder = f'{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
@@ -25,16 +25,19 @@ inSetFigureTimer = False
 # Input 2: Experimental Parameters
 # inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
 inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\''] # , 'P2\''
+# inMotifPositions = ['P5', 'P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\''] # Q@R5
+# inMotifPositions = ['P6', 'P5', 'P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\''] # Q@R6
+inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\''] # , 'P2\''
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
-inFixedResidue = ['Q']
-inFixedPosition = [4]
+inFixedResidue = ['L']
+inFixedPosition = [3]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
-inMinimumSubstrateCount = 10
+inMinimumSubstrateCount = 1
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inUseCodonProb = False # Use AA prob from inCodonSequence to calculate enrichment
 
@@ -53,9 +56,9 @@ if inPlotOnlyWords:
     inPlotEntropy = False
     inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
-    inPlotLogo = False
+    # inPlotLogo = False
     inPlotWeblogo = False
-    inPlotMotifEnrichment = False
+    # inPlotMotifEnrichment = False
     inPlotWordCloud = True
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
@@ -97,7 +100,7 @@ inIncludeSubCountsESM = True
 inPlotEntropyPCAPopulations = False
 
 # Input 11: Predict Activity
-inPredictActivity = True
+inPredictActivity = False
 inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
@@ -213,6 +216,7 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 
 # Load: Dataset labels
 enzymeName, filesInitial, filesFinal, labelAAPos = getFileNames(enzyme=inEnzymeName)
+inMotifPositions = labelAAPos
 motifLen = len(inMotifPositions)
 motifFramePos = [inIndexNTerminus, inIndexNTerminus + motifLen]
 
@@ -230,6 +234,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
+          plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotFigPCA=inPlotPCA,
           numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
@@ -838,10 +843,15 @@ if inUseCodonProb:
     # Evaluate: Degenerate codon probabilities
     probInitialAvg = ngs.calculateProbCodon(codonSeq=inCodonSequence)
 else:
-    probInitialAvg = ngs.calculateProbabilities(counts=countsInitial,
-                                                N=countsInitialTotal,
-                                                fileType='Initial Sort')
-
+    if len(labelAAPos) == len(inMotifPositions):
+        probInitialAvg = ngs.calculateProbabilities(counts=countsInitial,
+                                                    N=countsInitialTotal,
+                                                    fileType='Initial Sort')
+    else:
+        probInitialAvg = ngs.calculateProbabilities(counts=countsInitial,
+                                                    N=countsInitialTotal,
+                                                    fileType='Initial Sort',
+                                                    calcAvg=True)
 
 
 # ===================================== Run The Code =====================================
@@ -884,12 +894,33 @@ ngs.calculateEntropy(probability=probCombinedReleasedMotif,
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedReleasedMotif,
                         combinedMotifs=combinedMotifs, releasedCounts=True)
 
+seq='VILQ'
+totalSubs = 0
+print(f'Find Seq: {red}{seq}{resetColor}')
+for substrate, count in motifs.items():
+    totalSubs += count
+    if seq in substrate:
+        print(f'     {pink}{substrate}{resetColor}, Count: {red}{count:,}{resetColor}')
+print(f'\nTotal Substrates: {red}{totalSubs:,}{resetColor}\n')
+
+
+sys.exit()
 
 # Predict substrate activity
 if inPredictActivity:
     ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
                                predModel=ngs.datasetTag, predLabel=inPredictionTag,
                                releasedCounts=True)
+
+# Evaluate codon
+probInitialAvg = ngs.calculateProbabilities(counts=countsInitial,
+                                            N=countsInitialTotal,
+                                            fileType='Initial Sort',
+                                            calcAvg=True)
+probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+# ngs.codonPredictions(codon=inCodonSequence, codonProb=probInitialAvg, substrates=motifs)
+ngs.codonPredictions(codon=inCodonSequence, codonProb=probCodon, substrates=motifs)
+
 sys.exit()
 
 
@@ -912,7 +943,6 @@ ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
 ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
                       motifs=motifs, subLabel=inMotifPositions,
                       combinedMotifs=combinedMotifs)
-
 sys.exit()
 
 # Set flag
