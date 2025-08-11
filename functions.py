@@ -115,11 +115,26 @@ def getFileNames(enzyme):
         inFileNamesInitialSort = ['Src-I_S4_L001', 'Src-I_S4_L002']
         inFileNamesFinalSort = ['Src-F_S2_L001', 'Src-F_S2_L002']
         inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
-    elif enzyme.lower() == 'veev' or enzyme.lower() == 've':
-        enzyme = 'VEEV'
+    elif enzyme.lower() == 'den':
+        enzyme = 'Dengue'
         inFileNamesInitialSort = ['VE-I_S1_L001']
         inFileNamesFinalSort = ['VE-R4_S2_L001']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
+    elif enzyme.lower() == 'veev' or enzyme.lower() == 've':
+        enzyme = 'Venezuelan Equine Encephalitis Virus'
+        inFileNamesInitialSort = ['VE-I_S1_L001']
+        inFileNamesFinalSort = ['VE-R4_S2_L001']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
+    elif enzyme.lower() == 'wnv':
+        enzyme = 'West Nile Virus'
+        inFileNamesInitialSort = ['VE-I_S1_L001']
+        inFileNamesFinalSort = ['VE-R4_S2_L001']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
+    elif enzyme.lower() == 'zk':
+        enzyme = 'Zika Virus'
+        inFileNamesInitialSort = ['ZK-I_S1_L001']
+        inFileNamesFinalSort = ['ZK-F_S2_L001']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
     else:
         print(f'{orange}ERROR: There are no file names for {cyan}{enzyme}{orange}\n'
               f'       Add information to the "filePaths" function in '
@@ -463,6 +478,7 @@ class NGS:
                             QS = QS[start:end]
                             print(f'     QS Substrate: {QS}')
                         printedSeqs += 1
+            print()
 
             return printedSeqs
 
