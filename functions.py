@@ -447,11 +447,7 @@ class NGS:
 
             # Get: Quality score
             QS = datapoint.letter_annotations['phred_quality']
-            if printQS:
-                print(f'DNA sequence: {DNA}\n'
-                      f'     QS - Forward: {QS}')
-            else:
-                print(f'DNA sequence: {DNA}')
+            print(f'DNA sequence: {DNA}')
 
             # Inspect full DNA seq
             if startSeq in DNA and endSeq in DNA:
