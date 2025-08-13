@@ -12,16 +12,16 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'MMP7'
+inEnzymeName = 'ZK'
 inPathFolder = f'{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
-inFixResidues = True
-inFixedResidue = ['V',['L','M'],['L','M']] # 'A','V','L','Q'
-inFixedPosition = [2,3,5]
+inFixResidues = False
+inFixedResidue = ['P','L'] # 'A','V','L','Q'
+inFixedPosition = [1,3]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -171,11 +171,9 @@ probInitial = ngs.calculateProbabilities(counts=countsInitial,
 # substratesInitial = None
 loadFilteredSubs = False
 filePathFixedCountsFinal, filePathFixedSubsFinal = None, None
-substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
-countsFinal, countsFinalTotal = None, None
+substratesFinal, countsFinal, countsFinalTotal = None, None, None
 if inFixResidues:
-    if inUseEnrichmentFactor:
-        substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
+    substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
     filePathFixedSubsFinal, filePathFixedCountsFinal = (
         ngs.getFilePath(datasetTag=fixedSubSeq))
@@ -205,8 +203,11 @@ if inFixResidues:
         substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
 else:
     # Load: Substrates
-    (substratesInitial, totalSubsInitial,
-     substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs()
+    substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
+
+    # # Load: Substrates
+    # (substratesInitial, totalSubsInitial,
+    #  substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs()
 
     # Load: Counts
     countsFinal, countsFinalTotal = ngs.loadCounts(fileType='Final Sort', filter=False)
@@ -233,7 +234,8 @@ if inFixResidues:
             printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
 
 # Save the data
-ngs.saveData(substrates=substratesFinal, counts=countsFinal)
+if inFixResidues:
+    ngs.saveData(substrates=substratesFinal, counts=countsFinal)
 
 
 # Display current sample size
