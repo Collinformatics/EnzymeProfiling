@@ -11,7 +11,6 @@ import logomaker
 import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
-from matplotlib.pyplot import ylabel
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import RectangleSelector
 from sklearn.decomposition import PCA
@@ -116,22 +115,22 @@ def getFileNames(enzyme):
         inFileNamesFinalSort = ['Src-F_S2_L001', 'Src-F_S2_L002']
         inAAPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
     elif enzyme.lower() == 'den':
-        enzyme = 'Dengue'
-        inFileNamesInitialSort = ['VE-I_S1_L001']
-        inFileNamesFinalSort = ['VE-R4_S2_L001']
+        enzyme = 'Dengue Virus - NS2B/NS3'
+        inFileNamesInitialSort = ['DEN-I_S1_L001']
+        inFileNamesFinalSort = ['DEN-F_S2_L001']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
     elif enzyme.lower() == 'veev' or enzyme.lower() == 've':
-        enzyme = 'Venezuelan Equine Encephalitis Virus'
-        inFileNamesInitialSort = ['VE-I_S1_L001']
-        inFileNamesFinalSort = ['VE-R4_S2_L001']
+        enzyme = 'Venezuelan Equine Encephalitis Virus - nsP2'
+        inFileNamesInitialSort = ['VEEV-I_S1_L001']
+        inFileNamesFinalSort = ['VEEV-R4_S2_L001']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
     elif enzyme.lower() == 'wnv':
-        enzyme = 'West Nile Virus'
-        inFileNamesInitialSort = ['VE-I_S1_L001']
-        inFileNamesFinalSort = ['VE-R4_S2_L001']
+        enzyme = 'West Nile Virus - NS2B/NS3'
+        inFileNamesInitialSort = ['WNV-I_S3_L001']
+        inFileNamesFinalSort = ['WNV-F_S4_L001']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
     elif enzyme.lower() == 'zk':
-        enzyme = 'Zika Virus'
+        enzyme = 'Zika Virus - NS2B/NS3'
         inFileNamesInitialSort = ['ZK-I_S1_L001']
         inFileNamesFinalSort = ['ZK-F_S2_L001']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
@@ -1303,6 +1302,9 @@ class NGS:
             filePathSubs = os.path.join(self.pathData, f'substrates_{saveTag}')
             filePathCounts = os.path.join(self.pathData, f'counts_{saveTag}')
         else:
+            if self.datasetTag == 'Unfiltered':
+                return
+
             if countsReleased is None:
                 (filePathSubs,
                  filePathCounts) = self.getFilePath(datasetTag=self.datasetTag)
