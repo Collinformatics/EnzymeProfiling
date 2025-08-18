@@ -118,7 +118,7 @@ def getFileNames(enzyme):
         enzyme = 'Dengue Virus - NS2B/NS3'
         inFileNamesInitialSort = ['DEN-I_S1_L001']
         inFileNamesFinalSort = ['DEN-F_S2_L001']
-        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9']
     elif enzyme.lower() == 'veev' or enzyme.lower() == 've':
         enzyme = 'Venezuelan Equine Encephalitis Virus - nsP2'
         inFileNamesInitialSort = ['VEEV-I_S1_L001']
@@ -128,12 +128,12 @@ def getFileNames(enzyme):
         enzyme = 'West Nile Virus - NS2B/NS3'
         inFileNamesInitialSort = ['WNV-I_S3_L001']
         inFileNamesFinalSort = ['WNV-F_S4_L001']
-        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9']
     elif enzyme.lower() == 'zk':
         enzyme = 'Zika Virus - NS2B/NS3'
         inFileNamesInitialSort = ['ZK-I_S1_L001']
         inFileNamesFinalSort = ['ZK-F_S2_L001']
-        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9']
     else:
         print(f'{orange}ERROR: There are no file names for {cyan}{enzyme}{orange}\n'
               f'       Add information to the "filePaths" function in '
@@ -717,7 +717,7 @@ class NGS:
             break
 
         # Initialize the count matrix
-        if countMotif:
+        if countMotif and self.xAxisLabelsMotif is not None:
             countedData = pd.DataFrame(0,
                                        index=self.letters,
                                        columns=self.xAxisLabelsMotif,
@@ -792,48 +792,44 @@ class NGS:
 
 
     def getFilePath(self, datasetTag, motifPath=False, customTag=None):
+        print('============================== Define: File Paths '
+              '===============================')
         # Define: File path
         if motifPath:
             if customTag is None:
-                pathSubs = os.path.join(
-                    self.pathData,
-                    f'fixedMotifSubs - {self.enzymeName} - {self.datasetTagMotif} - '
-                    f'FinalSort - MinCounts {self.minSubCount}')
-                pathCounts = os.path.join(
-                    self.pathData,
-                    f'fixedMotifCounts - {self.enzymeName} - {self.datasetTagMotif} - '
-                    f'FinalSort - MinCounts {self.minSubCount}')
-                pathCountsReleased = os.path.join(
-                    self.pathData,
-                    f'fixedMotifCountsRel - {self.enzymeName} - {self.datasetTagMotif} - '
-                    f'FinalSort - MinCounts {self.minSubCount}')
+                file = f'{self.enzymeName} - {self.datasetTagMotif} - '
+                f'FinalSort - MinCounts {self.minSubCount}'
+                pathSubs = (
+                    os.path.join(self.pathData, f'fixedMotifSubs - {file}'))
+                pathCounts = (
+                    os.path.join(self.pathData, f'fixedMotifCounts - {file}'))
+                pathCountsReleased = (
+                    os.path.join(self.pathData, f'fixedMotifCountsRel - {file}'))
                 paths = [pathSubs, pathCounts, pathCountsReleased]
             else:
-                pathSubs = os.path.join(
-                    self.pathData,
-                    f'fixedMotifSubs - {self.enzymeName} - {customTag} - '
-                    f'FinalSort - MinCounts {self.minSubCount}')
-                pathCounts = os.path.join(
-                    self.pathData,
-                    f'fixedMotifCounts - {self.enzymeName} - {customTag} - '
-                    f'FinalSort - MinCounts {self.minSubCount}')
-                pathCountsReleased = os.path.join(
-                    self.pathData,
-                    f'fixedMotifCountsRel - {self.enzymeName} - {customTag} - '
-                    f'FinalSort - MinCounts {self.minSubCount}')
+                file = (f'{self.enzymeName} - {customTag} - FinalSort - '
+                        f'MinCounts {self.minSubCount}').replace('/', '_')
+                pathSubs = (
+                    os.path.join(self.pathData, f'fixedMotifSubs - {file}'))
+                pathCounts = (
+                    os.path.join(self.pathData, f'fixedMotifCounts - {file}'))
+                pathCountsReleased = (
+                    os.path.join(self.pathData, f'fixedMotifCountsRel - {file}'))
                 paths = [pathSubs, pathCounts, pathCountsReleased]
         else:
+            file = (f'{self.enzymeName} - {datasetTag} - FinalSort - '
+                    f'MinCounts {self.minSubCount}').replace('/', '_')
             pathSubs = os.path.join(
-                self.pathData,
-                f'fixedSubs - {self.enzymeName} - {datasetTag} - '
-                f'FinalSort - MinCounts {self.minSubCount}')
+                self.pathData, f'fixedSubs - {file}')
             pathCounts = os.path.join(
-                self.pathData,
-                f'counts - {self.enzymeName} - {datasetTag} - '
-                f'FinalSort - MinCounts {self.minSubCount}')
+                self.pathData, f'counts - {file}')
             self.pathFilteredSubs = pathSubs
             self.pathFilteredCounts = pathCounts
             paths = [pathSubs, pathCounts]
+
+        for path in paths:
+            print(f'Path:\n     {path}\n')
+        print('')
 
         return paths
 
@@ -1371,6 +1367,9 @@ class NGS:
                         f'MinCounts {self.minSubCount}.png')
         if combinedMotifs and len(self.motifIndexExtracted) < 2:
             figLabel = figLabel.replace('Combined ', '')
+        if '/' in figLabel:
+            figLabel = figLabel.replace('/', '_')
+
         saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
 
@@ -1950,7 +1949,7 @@ class NGS:
         else:
             print(f'Selecting non-continuous motif')
         print(f'Minimum ΔS Value:{red} {self.minEntropy} Bits{resetColor}\n\n'
-              f'Positional Entropy:\n'
+              f'Entropy:\n'
               f'{self.entropy}{resetColor}\n')
         subFrame = self.entropy.copy()
         lastPosition = len(self.entropy) - 1
@@ -2094,7 +2093,23 @@ class NGS:
             self.eMap = matrix
             self.eMapScaled = heights.copy()
 
-        heights.replace([np.inf, -np.inf], 0, inplace=True)
+        # Calculate: Max positive
+        columnTotals = []
+        for indexColumn in heights.columns:
+            totalPos = 0
+            for value in heights.loc[:, indexColumn]:
+                if value > 0:
+                    totalPos += value
+            columnTotals.append(totalPos)
+        yMax = max(columnTotals)
+        print(f'Y Max: {yMax}\n')
+
+        # Adjust values
+        for column in heights.columns:
+            if heights.loc[:, column].isna().any():
+                heights.loc[:, column] = heights.loc[:, column].replace(0.0, yMax)
+                heights.loc[:, column] = heights.loc[:, column].fillna(0)
+        heights = heights.replace([np.inf, -np.inf], 0)
         self.heights = heights
         print(f'Residue Heights: {purple}{self.datasetTag}{resetColor}\n'
               f'{heights}\n\n')
@@ -2149,8 +2164,8 @@ class NGS:
             title = self.titleCombined
         else:
             title = self.title
-        if ' - ' in title:
-            title = title.replace(' - ', '\n')
+        # if ' - ' in title:
+        #     title = title.replace(' - ', '\n')
 
 
         if self.motifFilter:
@@ -4468,7 +4483,7 @@ class NGS:
                             f'{self.datasetTag} - {len(xTicks)} AA - '
                             f'MinCounts {self.minSubCount}.png')
             else:
-                figLabel = (f'{self.enzymeName} - Positional Entropy - '
+                figLabel = (f'{self.enzymeName} - Entropy - '
                             f'Unfiltered - {len(xTicks)} AA - '
                             f'MinCounts {self.minSubCount}.png')
             if combinedMotifs and len(self.motifIndexExtracted) > 1:
@@ -4477,6 +4492,8 @@ class NGS:
             if releasedCounts:
                 figLabel = figLabel.replace(self.datasetTag,
                                             f'Released {self.datasetTag}')
+            if '/' in figLabel:
+                figLabel = figLabel.replace('/', '_')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
