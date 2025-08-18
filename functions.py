@@ -796,7 +796,6 @@ class NGS:
               '===============================')
         # Define: File path
         if motifPath:
-            print(1)
             if customTag is None:
                 file = (f'{self.enzymeName} - {self.datasetTagMotif} - '
                         f'FinalSort - MinCounts {self.minSubCount}').replace(
@@ -810,7 +809,6 @@ class NGS:
                     os.path.join(self.pathData, f'fixedMotifCountsRel - {file}'))
                 paths = [pathSubs, pathCounts, pathCountsReleased]
             else:
-                print(2)
                 file = (f'{self.enzymeName} - {customTag} - FinalSort - '
                         f'MinCounts {self.minSubCount}').replace('/', '_')
                 pathSubs = (
@@ -821,7 +819,6 @@ class NGS:
                     os.path.join(self.pathData, f'fixedMotifCountsRel - {file}'))
                 paths = [pathSubs, pathCounts, pathCountsReleased]
         else:
-            print(3)
             file = (f'{self.enzymeName} - {datasetTag} - FinalSort - '
                     f'MinCounts {self.minSubCount}').replace('/', '_')
             pathSubs = os.path.join(
