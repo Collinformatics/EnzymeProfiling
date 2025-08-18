@@ -13,8 +13,8 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'ZK'
 inPathFolder = f'{inEnzymeName}'
-inSaveData = False
-inSaveFigures = False
+inSaveData = True
+inSaveFigures = True
 inSetFigureTimer = True
 
 # Input 2: Computational Parameters
@@ -205,14 +205,11 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
         # Calculate total counts
         fixedCountsTotal = sum(fixedCounts.iloc[:, 0])
     else:
-
         # Fix the substrates if the files were not found
         print(f'Fixing substrates...\n\n')
         if exclude:
-            print(1)
             # Fix AA
             if len(fixedAA) == 1:
-                print(2)
                 for substrate, count in subs.items():
                     keepSub = True
 
@@ -261,26 +258,20 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
                         fixedSubs[substrate] = count
                         fixedSubsTotal += count
             else:
-                print(f'Scanning {red}{len(subs.keys()):,}{resetColor} substrates')
                 for substrate, count in subs.items():
-                    print('     ', substrate, count)
                     saveSeq = []
 
                     # Evaluate substrate
-                    print(f'Exclude: {excludeAA}\n  Index: {excludePosition}')
                     for indexExclude, AAExclude in enumerate(excludeAA):
                         if len(AAExclude) == 1:
 
                             indexRemoveAA = excludePosition[indexExclude] - 1
-                            print(f'     {indexRemoveAA}: {AAExclude}')
 
                             # Is the AA acceptable?
                             if substrate[indexRemoveAA] == AAExclude:
-                                print(f'Drop: {substrate}')
                                 saveSeq.append(False)
                                 continue
                         else:
-                            print(5)
                             # Remove Multiple AA at a specific position
                             for AAExcludeMulti in AAExclude:
                                 indexRemoveAA = excludePosition[indexExclude] - 1
@@ -293,7 +284,6 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
 
                     # If the substrate is accepted, look for the desired AA
                     if False not in saveSeq:
-                        print(f'Required: {fixedAA}')
                         for index in range(len(fixedAA)):
                             foundAA = False
                             for multiAA in fixedAA[index]:
@@ -310,7 +300,6 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
                             if count >= inMinimumSubstrateCount:
                                 fixedSubs[str(substrate)] = count
                                 fixedSubsTotal += count
-                    sys.exit()
         else:
             # Fix AA
             if len(fixedAA) == 1:
@@ -357,7 +346,6 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
         fixedCounts, fixedCountsTotal = ngs.countResidues(substrates=fixedSubs,
                                                           datasetType=sortType)
 
-        sys.exit()
 
         # Save the fixed substrate dataset
         if inSaveData and not inRefixMotif:
@@ -395,7 +383,11 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             AA = ', '.join(preferredResidues[index])
             print(f'     {pink}{AA}{resetColor}@{pink}R{preferredPositions[index]}'
                   f'{resetColor}')
-        print('\n')
+        print()
+        if tag is not None:
+            print()
+
+
 
     if len(fixRes) != 1:
         print(f'{orange}ERROR:\n'
@@ -412,6 +404,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     else:
         # Update: Dataset tag
         ngs.getDatasetTag()
+
 
     # # Fix The First Set Of Substrates
     substratesFinalFixed, countsFinalFixed, countsFinalFixedTotal = fixSubstrate(
@@ -490,8 +483,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                 preferredAA.append(AA)
         preferredResidues.append(preferredAA)
 
-        if iteration == 2:
-            sys.exit()
 
         # Sort preferredPositions and keep preferredResidues in sync
         sortedLists = sorted(zip(preferredPositions, preferredResidues))
@@ -611,13 +602,17 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
 
         # Inspect enrichment scores
+        print('================================ Inspect Filter '
+              '=================================')
+        dispPreferredAA()
         for index, indexPosition in enumerate(keepPositions):
             positionSub = f'R' + str(indexPosition)
             for AA in ngs.eMap.index:
                 ES = ngs.eMap.loc[AA, positionSub]
-                if ES <= inSetMinimumESFixAA and ES != float('-inf'):
+                if ES < inSetMinimumESFixAA and ES != float('-inf'):
                     if AA in keepResidues[index]:
                         keepResidues[index].remove(AA)
+        dispPreferredAA(tag=f'{greenLight}Filtered{resetColor}')
 
 
         # # Refix Dropped Position

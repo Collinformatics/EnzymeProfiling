@@ -796,9 +796,12 @@ class NGS:
               '===============================')
         # Define: File path
         if motifPath:
+            print(1)
             if customTag is None:
-                file = f'{self.enzymeName} - {self.datasetTagMotif} - '
-                f'FinalSort - MinCounts {self.minSubCount}'
+                file = (f'{self.enzymeName} - {self.datasetTagMotif} - '
+                        f'FinalSort - MinCounts {self.minSubCount}').replace(
+                    '/', '_')
+                print(f'File: {file}\n')
                 pathSubs = (
                     os.path.join(self.pathData, f'fixedMotifSubs - {file}'))
                 pathCounts = (
@@ -807,6 +810,7 @@ class NGS:
                     os.path.join(self.pathData, f'fixedMotifCountsRel - {file}'))
                 paths = [pathSubs, pathCounts, pathCountsReleased]
             else:
+                print(2)
                 file = (f'{self.enzymeName} - {customTag} - FinalSort - '
                         f'MinCounts {self.minSubCount}').replace('/', '_')
                 pathSubs = (
@@ -817,6 +821,7 @@ class NGS:
                     os.path.join(self.pathData, f'fixedMotifCountsRel - {file}'))
                 paths = [pathSubs, pathCounts, pathCountsReleased]
         else:
+            print(3)
             file = (f'{self.enzymeName} - {datasetTag} - FinalSort - '
                     f'MinCounts {self.minSubCount}').replace('/', '_')
             pathSubs = os.path.join(
@@ -1758,7 +1763,8 @@ class NGS:
                         if index == 0:
                             fixResidueList.append(
                                 f'Exclude_{removedAA}@R'
-                                f'{self.excludePosition[index]}'.replace(' ', ''))
+                                f'{self.excludePosition[index]}'.replace(
+                                    ' ', ''))
                         else:
                             fixResidueList.append(
                                 f'{removedAA}@R{self.excludePosition[index]}'.replace(
@@ -1766,14 +1772,18 @@ class NGS:
     
                     # Fix residues
                     for index in range(len(self.fixedAA)):
+                        tagFixedAA = self.fixedAA[index]
+                        if isinstance(tagFixedAA, list) and len(tagFixedAA) == 1:
+                            tagFixedAA = tagFixedAA[0]
+
                         if index == 0:
                             fixResidueList.append(
-                                f'Fixed_{self.fixedAA[index]}@R'
-                                f'{self.fixedPos[index]}'.replace(' ', ''))
+                                f'Fixed_{tagFixedAA}@R{self.fixedPos[index]}'.replace(
+                                    ' ', ''))
                         else:
                             fixResidueList.append(
-                                f' {self.fixedAA[index]}@R'
-                                f'{self.fixedPos[index]}'.replace(' ', ''))
+                                f' {tagFixedAA}@R{self.fixedPos[index]}'.replace(
+                                    ' ', ''))
                     self.datasetTag = '_'.join(fixResidueList)
                 else:
                     # Fix residues
