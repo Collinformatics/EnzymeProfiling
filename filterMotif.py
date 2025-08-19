@@ -1,3 +1,5 @@
+import numpy as np
+
 from functions import getFileNames, NGS, magenta
 import os
 import pandas as pd
@@ -13,18 +15,18 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'ZK'
 inPathFolder = f'{inEnzymeName}'
-inSaveData = True
-inSaveFigures = True
+inSaveData = False
+inSaveFigures = False
 inSetFigureTimer = True
 
 # Input 2: Computational Parameters
 inMinDeltaS = 0.6
 inRefixMotif = True
-inFixedResidue = ['R'] # Only use 1 AA
+inFixedResidue = [['A','G','S']] # Only use 1 AA
 inFixedPosition = [4]
-inExcludeResidues = True
-inExcludedResidue = ['R','R','R']
-inExcludedPosition = [3,5,6]
+inExcludeResidues = False
+inExcludedResidue = ['R','R','R','R']
+inExcludedPosition = [1,4,5,6]
 inManualEntropy = False
 inManualFrame = ['R4', 'R5', 'R6', 'R2']
 inFixFullMotifSeq = False
@@ -301,6 +303,8 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
                                 fixedSubs[str(substrate)] = count
                                 fixedSubsTotal += count
         else:
+
+            print('Fixing:',fixedAA)
             # Fix AA
             if len(fixedAA) == 1:
                 for substrate, count in subs.items():
@@ -345,6 +349,11 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
         # Count fixed substrates
         fixedCounts, fixedCountsTotal = ngs.countResidues(substrates=fixedSubs,
                                                           datasetType=sortType)
+        # Inspect data for 0 counts
+        for position in fixedCounts.columns:
+            if (fixedCounts.iloc[:, 0] == 0).all():
+                print(f'{orange}ERROR: Zeros counts at residue {cyan}{position}\n')
+                sys.exit()
 
 
         # Save the fixed substrate dataset
@@ -386,7 +395,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         print()
         if tag is not None:
             print()
-
 
 
     if len(fixRes) != 1:
@@ -451,7 +459,10 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     # # Determine: Other Important Residues
     # Initialize variables used for determining the preferred residues
     preferredPositions = [inFixedPosition[0]]
-    preferredResidues = [inFixedResidue]
+    if isinstance(inFixedResidue, list):
+        preferredResidues = inFixedResidue
+    else:
+        preferredResidues = [inFixedResidue]
 
     # # Fix The Next Set Of Substrates
     # Cycle through the substrate and fix AA
@@ -505,6 +516,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             subs=substrates, fixedAA=preferredResidues, fixedPosition=preferredPositions,
             exclude=inExcludeResidues, excludeAA=inExcludedResidue,
             excludePosition=inExcludedPosition, sortType=sortType)
+        if iteration >= 2:
+            sys.exit()
 
 
         # # Process Data
@@ -526,6 +539,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         # Inspect enrichment scores
         print('================================ Inspect Filter '
               '=================================')
+        print(2)
         dispPreferredAA()
         for index, indexPosition in enumerate(preferredPositions):
             position = f'R' + str(indexPosition)
@@ -534,6 +548,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                 if ES < inSetMinimumESFixAA and ES != float('-inf'):
                     if AA in preferredResidues[index]:
                         preferredResidues[index].remove(AA)
+        print(3)
         dispPreferredAA(tag=f'{greenLight}Filtered{resetColor}')
 
 

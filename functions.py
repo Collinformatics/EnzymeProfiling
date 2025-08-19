@@ -1171,7 +1171,7 @@ class NGS:
         print('============================ Load: Substrate Motifs '
               '=============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f'Motif Label: {blue}{", ".join(motifLabel)}{resetColor}\n\n')
+              f'Motif Label: {blue}{", ".join(motifLabel)}{resetColor}')
         frameLength = len(motifLabel)
         totalMotifs = 0
         motifs = {}
@@ -1179,7 +1179,7 @@ class NGS:
 
         # Assign: Motif parameters
         self.motifIndex = motifIndex
-        print(f'Motif Index: {self.motifIndex}\n')
+        print(f'Motif Index: {blue}{self.motifIndex}{resetColor}\n\n')
 
         
         # Load the substrates
@@ -2114,12 +2114,16 @@ class NGS:
         # Adjust values
         for column in heights.columns:
             if heights.loc[:, column].isna().any():
-                heights.loc[:, column] = heights.loc[:, column].replace(0.0, yMax)
+                nValues = heights[column].notna().sum()
+                print(f'Number non NaN values: {nValues}\n')
+                heights.loc[heights[column].notna(), column] = yMax / nValues
                 heights.loc[:, column] = heights.loc[:, column].fillna(0)
+
         heights = heights.replace([np.inf, -np.inf], 0)
         self.heights = heights
         print(f'Residue Heights: {purple}{self.datasetTag}{resetColor}\n'
               f'{heights}\n\n')
+
 
         # Plot: Enrichment Map
         if self.plotFigEM:
@@ -4781,7 +4785,7 @@ class NGS:
         print('========================= Plot: Statistical Evaluation '
               '==========================')
         # Set figure title
-        if self.showSampleSize:
+        if totalCounts is not None and self.showSampleSize:
             title = f'\n{self.enzymeName}\nAverage ES\nN={totalCounts:,}'
         else:
             title = f'\n\n{self.enzymeName}\nAverage ES'
