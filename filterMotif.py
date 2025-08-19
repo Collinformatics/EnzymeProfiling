@@ -15,12 +15,12 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'ZK'
 inPathFolder = f'{inEnzymeName}'
-inSaveData = False
-inSaveFigures = False
-inSetFigureTimer = False
+inSaveData = True
+inSaveFigures = True
+inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.6
+inMinDeltaS = 0.67
 inRefixMotif = True
 inFixedResidue = [['A','G','S']]
 inFixedPosition = [4] # Fix only at 1 position in the substrate
@@ -303,8 +303,6 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
                                 fixedSubs[str(substrate)] = count
                                 fixedSubsTotal += count
         else:
-
-            print('Fixing:',fixedAA)
             # Fix AA
             if len(fixedAA) == 1:
                 for substrate, count in subs.items():
