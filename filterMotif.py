@@ -17,13 +17,13 @@ inEnzymeName = 'ZK'
 inPathFolder = f'{inEnzymeName}'
 inSaveData = False
 inSaveFigures = False
-inSetFigureTimer = True
+inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inMinDeltaS = 0.6
 inRefixMotif = True
-inFixedResidue = [['A','G','S']] # Only use 1 AA
-inFixedPosition = [4]
+inFixedResidue = [['A','G','S']]
+inFixedPosition = [4] # Fix only at 1 position in the substrate
 inExcludeResidues = False
 inExcludedResidue = ['R','R','R','R']
 inExcludedPosition = [1,4,5,6]
@@ -446,7 +446,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
     # Save the data
-    ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
+    if inSaveData:
+        ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
 
 
     # Create released matrix df
@@ -516,8 +517,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             subs=substrates, fixedAA=preferredResidues, fixedPosition=preferredPositions,
             exclude=inExcludeResidues, excludeAA=inExcludedResidue,
             excludePosition=inExcludedPosition, sortType=sortType)
-        if iteration >= 2:
-            sys.exit()
 
 
         # # Process Data
@@ -534,7 +533,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
         # Save the data
-        ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
+        if inSaveData:
+            ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
 
         # Inspect enrichment scores
         print('================================ Inspect Filter '
@@ -614,7 +614,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
         # Save the data
-        ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
+        if inSaveData:
+            ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
 
         # Inspect enrichment scores
         print('================================ Inspect Filter '
@@ -667,7 +668,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
 
         # Save the data
-        ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
+        if inSaveData:
+            ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
 
         # Display loop status
         if position == ngs.subFrame.index[-1]:
@@ -704,8 +706,9 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
 
     # Save the data
-    ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed,
-                 countsReleased=countsReleased)
+    if inSaveData:
+        ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed,
+                     countsReleased=countsReleased)
 
     return (substratesFinalFixed, countsFinalFixed, countsFinalFixedTotal,
             countsReleased, releasedRF, releasedRFScaled)
