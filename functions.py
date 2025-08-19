@@ -800,7 +800,6 @@ class NGS:
                 file = (f'{self.enzymeName} - {self.datasetTagMotif} - '
                         f'FinalSort - MinCounts {self.minSubCount}').replace(
                     '/', '_')
-                print(f'File: {file}\n')
                 pathSubs = (
                     os.path.join(self.pathData, f'fixedMotifSubs - {file}'))
                 pathCounts = (
@@ -829,9 +828,11 @@ class NGS:
             self.pathFilteredCounts = pathCounts
             paths = [pathSubs, pathCounts]
 
+        print(f'File: {file}\n')
+        print(f'File paths:{greenDark}')
         for path in paths:
-            print(f'Path:\n     {path}\n')
-        print('')
+            print(f'     {path}')
+        print(f'{resetColor}')
 
         return paths
 
@@ -1090,7 +1091,11 @@ class NGS:
         # Load the counts
         for index, position in enumerate(self.fixedPos):
             # Define: File paths
-            motifTag = f'{self.fixedAA[0]}@R{position}'
+            if isinstance(self.fixedAA[0], list):
+                motifTag = f'[{",".join(self.fixedAA[0])}]@R{position}'
+            else:
+                motifTag = f'{self.fixedAA[0]}@R{position}'
+
 
             # Define: File paths
             _, _, pathFixedMotifRelCounts = self.getFilePath(
@@ -1181,11 +1186,13 @@ class NGS:
         self.motifIndex = motifIndex
         print(f'Motif Index: {blue}{self.motifIndex}{resetColor}\n\n')
 
-        
         # Load the substrates
         for index, position in enumerate(self.fixedPos):
             # Define: File paths
-            motifTag = f'{self.fixedAA[0]}@R{position}'
+            if isinstance(self.fixedAA[0], list):
+                motifTag = f'[{",".join(self.fixedAA[0])}]@R{position}'
+            else:
+                motifTag = f'{self.fixedAA[0]}@R{position}'
 
             # Define: File paths
             pathFixedMotifSubs, _, _ = self.getFilePath(
