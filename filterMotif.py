@@ -13,17 +13,17 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'ZK'
+inEnzymeName = 'DEN'
 inPathFolder = f'{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.67
+inMinDeltaS = 0.7
 inRefixMotif = True
 inFixedResidue = [['A','G','S']]
-inFixedPosition = [4] # Fix only at 1 position in the substrate
+inFixedPosition = [6] # Fix only at 1 position in the substrate
 inExcludeResidues = False
 inExcludedResidue = ['R','R','R','R']
 inExcludedPosition = [1,4,5,6]
@@ -167,16 +167,15 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
           f'{purple} {inEnzymeName} - {sortType}{resetColor}\n')
     print(f'Selecting substrates with:{magenta}')
     for index in range(len(fixedAA)):
-        AA = ', '.join(fixedAA[index])
+        AA = ','.join(fixedAA[index])
         print(f'     {AA}@R{fixedPosition[index]}')
     print(f'{resetColor}\n')
     if exclude:
         print(f'Excluding substrates with:{magenta}')
         for index in range(len(excludeAA)):
-            AA = ', '.join(excludeAA[index])
+            AA = ','.join(excludeAA[index])
             print(f'     {AA}@R{excludePosition[index]}')
     print(f'{resetColor}\n')
-
 
 
     # Initialize data structures
@@ -305,12 +304,22 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
         else:
             # Fix AA
             if len(fixedAA) == 1:
-                for substrate, count in subs.items():
-                    if substrate[fixedPosition[0] - 1] == fixedAA[0]:
-                        if count >= inMinimumSubstrateCount:
-                            fixedSubs[substrate] = count
-                            fixedSubsTotal += count
-                            continue
+                # Fix AA
+                if len(fixedAA) == 1:
+                    if isinstance(fixedAA[0], list):
+                        for substrate, count in subs.items():
+                            if substrate[fixedPosition[0] - 1] in fixedAA[0]:
+                                if count >= inMinimumSubstrateCount:
+                                    fixedSubs[substrate] = count
+                                    fixedSubsTotal += count
+                                    continue
+                    else:
+                        for substrate, count in subs.items():
+                            if substrate[fixedPosition[0] - 1] == fixedAA[0]:
+                                if count >= inMinimumSubstrateCount:
+                                    fixedSubs[substrate] = count
+                                    fixedSubsTotal += count
+                                    continue
             else:
                 for substrate, count in subs.items():
                     saveSeq = []
@@ -336,12 +345,16 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
         if inPrintFixedSubs:
             iteration = 0
             print(f'Selected Substrates:')
-            for substrate, count in fixedSubs.items():
-                print(f'     {pink}{substrate}{resetColor}, '
-                      f'Counts: {red}{count:,}{resetColor}')
-                iteration += 1
-                if iteration == inPrintNumber:
-                    break
+            if fixedSubs:
+                for substrate, count in fixedSubs.items():
+                    print(f'     {pink}{substrate}{resetColor}, '
+                          f'Counts: {red}{count:,}{resetColor}')
+                    iteration += 1
+                    if iteration == inPrintNumber:
+                        break
+            else:
+                print(
+                    f'{orange}ERROR: No substrates we selected.{resetColor}')
         print('\n')
 
         # Count fixed substrates
@@ -394,13 +407,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         if tag is not None:
             print()
 
-
-    if len(fixRes) != 1:
-        print(f'{orange}ERROR:\n'
-              f'     You can only fix 1 AA in the first iteration\n'
-              f'     You attempted to fix{resetColor}:{greenLightB} {fixRes}{orange}\n\n'
-              f'Trim the inFixedResidue list down to 1 AA & try again.\n')
-        sys.exit()
 
     if inCombineFixedMotifs:
         print(f'{orange}ERROR: inCombinedFixedMotifs ='

@@ -832,7 +832,7 @@ class NGS:
         print(f'File paths:{greenDark}')
         for path in paths:
             print(f'     {path}')
-        print(f'{resetColor}')
+        print(f'{resetColor}\n')
 
         return paths
 
@@ -1741,7 +1741,12 @@ class NGS:
     def getDatasetTag(self, useCodonProb=False, codon=None, combinedMotifs=False):
         if combinedMotifs:
             if len(self.fixedPos) == 1:
-                self.datasetTag = f'Reading Frame {self.fixedAA[0]}@R{self.fixedPos[0]}'
+                if isinstance(self.fixedAA[0], list):
+                    self.datasetTag = \
+                        f'Reading Frame [{",".join(self.fixedAA[0])}]@R{self.fixedPos[0]}'
+                else:
+                    self.datasetTag = \
+                        f'Reading Frame {self.fixedAA[0]}@R{self.fixedPos[0]}'
             else:
                 fixedPos = sorted(self.fixedPos)
                 continuous = True
@@ -1753,11 +1758,22 @@ class NGS:
                         continuous = False
                         break
                 if continuous:
-                    self.datasetTag = (f'Reading Frames {self.fixedAA[0]}@R{fixedPos[0]}-'
-                                  f'R{fixedPos[-1]}')
+                    if isinstance(self.fixedAA[0], list):
+                        self.datasetTag = (f'Reading Frames '
+                                           f'[{",".join(self.fixedAA[0])}]@R'
+                                           f'{fixedPos[0]}-R{fixedPos[-1]}')
+                    else:
+                        self.datasetTag = (f'Reading Frames {self.fixedAA[0]}@R'
+                                           f'{fixedPos[0]}-R{fixedPos[-1]}')
                 else:
-                    self.datasetTag = (f'Reading Frames {self.fixedAA[0]}@R{fixedPos[0]}-'
-                                  f'R{fixedPos[1]}, R{fixedPos[-1]}')
+                    if isinstance(self.fixedAA[0], list):
+                        self.datasetTag = (f'Reading Frames [{",".join(self.fixedAA[0])}]'
+                                           f'@R{fixedPos[0]}-R{fixedPos[1]}, '
+                                           f'R{fixedPos[-1]}')
+                    else:
+                        self.datasetTag = (f'Reading Frames {self.fixedAA[0]}'
+                                           f'@R{fixedPos[0]}-R{fixedPos[1]}, '
+                                           f'R{fixedPos[-1]}')
         else:
             if self.filterSubs:
                 fixResidueList = []
@@ -2330,6 +2346,7 @@ class NGS:
             columnTotals[1].append(totalNeg)
         yMax = max(columnTotals[0])
         yMin = min(columnTotals[1])
+        # yMin = -9.420
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -2622,9 +2639,9 @@ class NGS:
         frameESStDev = frameESCombined.groupby(level=1, sort=False).agg(calcStDev)
 
         print(f'Average: {purple}Enrichment Score\n'
-              f'{greyDark}{frameESAvg}{resetColor}\n\n'
+              f'{frameESAvg}\n\n'
               f'Standard Deviation: {purple}Enrichment Score\n'
-              f'{greyDark}{frameESStDev}{resetColor}\n\n')
+              f'{frameESStDev}\n\n')
 
 
         # Plot: Standard deviation
