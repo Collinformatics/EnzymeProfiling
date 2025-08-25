@@ -1,5 +1,3 @@
-import numpy as np
-
 from functions import getFileNames, NGS, magenta
 import os
 import pandas as pd
@@ -13,22 +11,22 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'DEN'
+inEnzymeName = 'MMP7'
 inPathFolder = f'{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
-inSetFigureTimer = True
+inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inMinDeltaS = 0.7
 inRefixMotif = True
-inFixedResidue = [['A','G','S']]
-inFixedPosition = [6] # Fix only at 1 position in the substrate
+inFixedResidue = ['L','L'] # ['R','G','G']
+inFixedPosition = [4,6] # Fix only at 1 position in the substrate
 inExcludeResidues = False
 inExcludedResidue = ['R','R','R','R']
 inExcludedPosition = [1,4,5,6]
 inManualEntropy = False
-inManualFrame = ['R4', 'R5', 'R6', 'R2']
+inManualFrame = ['R2','R3','R4','R5']
 inFixFullMotifSeq = False
 inMinimumSubstrateCount = 1
 inSetMinimumESFixAA = 0
@@ -181,6 +179,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
     # Initialize data structures
     fixedSubs = {}
     fixedSubsTotal = 0
+
 
     # # Load Data
     # Define: File path
@@ -424,7 +423,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         exclude=inExcludeResidues, excludeAA=inExcludedResidue,
         excludePosition=inExcludedPosition, sortType=sortType)
 
-    initialFixedPos = labelAAPos[inFixedPosition[0] - 1]
+    initialFixedPos = [labelAAPos[pos - 1] for pos in inFixedPosition]
 
     # Display current sample size
     ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalFixedTotal,
@@ -463,11 +462,13 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     # # Determine: Other Important Residues
     # Initialize variables used for determining the preferred residues
-    preferredPositions = [inFixedPosition[0]]
-    if isinstance(inFixedResidue, list):
-        preferredResidues = inFixedResidue
-    else:
-        preferredResidues = [inFixedResidue]
+    preferredPositions = inFixedPosition
+    preferredResidues = inFixedResidue
+
+    print(f'Fixing:\n'
+          f'     {preferredResidues}\n'
+          f'     {preferredPositions}\n')
+    print(f'Initial Fix:\n{initialFixedPos}\n')
 
     # # Fix The Next Set Of Substrates
     # Cycle through the substrate and fix AA
@@ -476,9 +477,10 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
               '===============================')
         print(f'Iteration: {red}{iteration}{resetColor}\n'
               f' Position: {red}{position}{resetColor}\n\n')
-        if position == initialFixedPos:
+        if position in initialFixedPos:
             # Skip the position that was already fixed
             continue
+
 
         # Update: Figure label
         ngs.saveFigureIteration += 1
@@ -534,7 +536,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                                                     fileType=f'Fixed Final Sort')
 
         # Calculate enrichment scores
-        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
+        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed,
+                                posFilter=position)
 
         # Save the data
         if inSaveData:
@@ -543,7 +546,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         # Inspect enrichment scores
         print('================================ Inspect Filter '
               '=================================')
-        print(2)
         dispPreferredAA()
         for index, indexPosition in enumerate(preferredPositions):
             position = f'R' + str(indexPosition)
@@ -576,7 +578,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                 keepResidues.pop(indexDrop)
                 keepPositions.pop(indexDrop)
                 print(f'Dropped Substrate Restriction:\n'
-                      f'     Release:{purple} {position}{resetColor}\n\n'
+                      f'     Release: {purple}{position}{resetColor}\n\n'
                       f'Fixing Substrates with:')
                 for index in range(len(keepResidues)):
                     AA = ', '.join(keepResidues[index])
@@ -615,7 +617,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                                                     fileType='Fixed Final Sort')
 
         # Calculate enrichment scores
-        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
+        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed,
+                                posFilter=position, relFilter=True)
 
         # Save the data
         if inSaveData:
@@ -669,7 +672,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                                                     fileType='Fixed Final Sort')
 
         # Calculate enrichment scores
-        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
+        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed,
+                                posFilter=position)
 
         # Save the data
         if inSaveData:

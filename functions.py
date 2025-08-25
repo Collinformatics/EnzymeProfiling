@@ -280,10 +280,11 @@ class NGS:
 
         # Verify directory paths
         if not os.path.exists(self.pathFolder):
-            print(f'{orange}ERROR: Folder not found\n'
-                  f'Check input: "{cyan}inPathFolder{orange}"\n'
-                  f'     inPathFolder = {self.pathFolder}\n')
-            sys.exit(1)
+            os.makedirs(self.pathFolder, exist_ok=True)
+            # print(f'{orange}ERROR: Folder not found\n'
+            #       f'Check input: "{cyan}inPathFolder{orange}"\n'
+            #       f'     inPathFolder = {self.pathFolder}\n')
+            # sys.exit(1)
         if self.pathData is not None:
             if not os.path.exists(self.pathData):
                 os.makedirs(self.pathData, exist_ok=True)
@@ -371,6 +372,19 @@ class NGS:
         else:
             colorList = [(i / (len(colors) - 1), color) for i, color in enumerate(colors)]
         return LinearSegmentedColormap.from_list('custom_colormap', colorList)
+
+
+
+    @staticmethod
+    def dropColumnsFromMatrix(countMatrix, datasetType, dropColumn):
+        print(f'Dropping column from: {blue}{dropColumn}{resetColor}')
+        countMatrix = countMatrix.drop(columns=dropColumn)
+        countsFormatted = countMatrix.to_string(
+            formatters={column: '{:,.0f}'.format for column in
+                        countMatrix.select_dtypes(include='number').columns})
+        print(f'Dataset: {purple}{datasetType}{resetColor}\n{countsFormatted}\n\n')
+
+        return countMatrix
 
 
 
@@ -838,7 +852,7 @@ class NGS:
 
 
 
-    def loadCounts(self, filter, fileType, datasetTag=None):
+    def loadCounts(self, filter, fileType, datasetTag=None, dropColumn=False):
         print('================================== Load Counts '
               '==================================')
         if filter:
@@ -903,6 +917,13 @@ class NGS:
                   f'{formattedCounts}\n'
                   f'Substrate Count: {red}'
                   f'{substrateCounts:,}{resetColor}\n\n')
+
+        # Drop columns
+        if dropColumn:
+            countedData = self.dropColumnsFromMatrix(countMatrix=countedData,
+                                                     datasetType=fileType,
+                                                     dropColumn=dropColumn)
+
         # Sum each column
         columnSums = pd.DataFrame(np.sum(countedData, axis=0), columns=['Total Counts'])
         columnSumsFormat = columnSums.apply(lambda x: x.map('{:,}'.format))
@@ -1094,7 +1115,13 @@ class NGS:
             if isinstance(self.fixedAA[0], list):
                 motifTag = f'[{",".join(self.fixedAA[0])}]@R{position}'
             else:
-                motifTag = f'{self.fixedAA[0]}@R{position}'
+                if len(self.fixedAA) > 1:
+                    tagsFixed = []
+                    for indexPos, AA in enumerate(self.fixedAA):
+                        tagsFixed.append(f'{AA}@R{self.fixedPos[indexPos]}')
+                    motifTag = ' '.join(tagsFixed)
+                else:
+                    motifTag = f'{self.fixedAA[0]}@R{position}'
 
 
             # Define: File paths
@@ -1192,7 +1219,14 @@ class NGS:
             if isinstance(self.fixedAA[0], list):
                 motifTag = f'[{",".join(self.fixedAA[0])}]@R{position}'
             else:
-                motifTag = f'{self.fixedAA[0]}@R{position}'
+                if len(self.fixedAA) > 1:
+                    tagsFixed = []
+                    for indexPos, AA in enumerate(self.fixedAA):
+                        tagsFixed.append(f'{AA}@R{self.fixedPos[indexPos]}')
+                    motifTag = ' '.join(tagsFixed)
+                else:
+                    motifTag = f'{self.fixedAA[0]}@R{position}'
+
 
             # Define: File paths
             pathFixedMotifSubs, _, _ = self.getFilePath(
@@ -1561,6 +1595,52 @@ class NGS:
             print(f'{np.round(prob, 4)}\n\n')
 
         return prob
+
+
+
+    def scanForSequence(self, seqsScan, substrates, datasetType):
+        print('======================= Scanning For Substrate Sequences '
+              '========================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'File Type: {purple}{datasetType}{resetColor}\n')
+
+        # Evaluate sample size
+        totalCounts = sum(substrates.values())
+        print(f'Total Substrates: {red}{totalCounts:,}{resetColor}\n')
+
+        print(f'Collecting substrates with:{blue}')
+        for sequence in seqsScan:
+            print(f'     {sequence}')
+        print(f'{resetColor}')
+
+        # Collect substrates with sequences of interest
+        collectedSubs = {}
+        totalCollected = 0
+        for substrate, count in substrates.items():
+            for sequence in seqsScan:
+                if sequence in substrate:
+                    totalCollected += count
+                    if sequence in collectedSubs.keys():
+                        collectedSubs[substrate] += count
+                    else:
+                        collectedSubs[substrate] = count
+        collectedSubs = dict(sorted(collectedSubs.items(),
+                                    key=lambda x: x[1], reverse=True))
+
+        print(f'Collected Substrates:')
+        for index, (substrate, count) in enumerate(collectedSubs.items()):
+            print(f'     {greenLight}{substrate}{resetColor}: Counts {red}{count:,}')
+            if index >= 10:
+                break
+
+        print(f'{resetColor}\n'
+              f'Total collected substrates: {red}{totalCollected:,}{resetColor}\n'
+              f'Total unique substrates: {red}{len(collectedSubs.keys()):,}'
+              f'{resetColor}\n\n'
+              f'Percent collected: {red}{totalCollected:,}{resetColor} / '
+              f'{red}{totalCounts:,}{resetColor} = '
+              f' {red}{round((totalCollected/totalCounts),3)*100} %'
+              f'{resetColor}')
 
 
 
@@ -2073,7 +2153,8 @@ class NGS:
 
 
     def calculateEnrichment(self, probInitial, probFinal,
-                            releasedCounts=False, combinedMotifs=False):
+                            releasedCounts=False, combinedMotifs=False,
+                            posFilter=False, relFilter=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
         print(f'Enrichment Scores:\n'
@@ -2152,16 +2233,22 @@ class NGS:
         if self.plotFigEM:
             self.plotEnrichmentScores(dataType='Enrichment',
                                       releasedCounts=releasedCounts,
-                                      combinedMotifs=combinedMotifs)
+                                      combinedMotifs=combinedMotifs,
+                                      posFilter=posFilter,
+                                      relFilter=relFilter)
         if self.plotFigEMScaled:
             self.plotEnrichmentScores(dataType='Scaled Enrichment',
                                       releasedCounts=releasedCounts,
-                                      combinedMotifs=combinedMotifs)
+                                      combinedMotifs=combinedMotifs,
+                                      posFilter=posFilter,
+                                      relFilter=relFilter)
 
         # Plot: Enrichment Logo
         if self.plotFigLogo:
             self.plotEnrichmentLogo(releasedCounts=releasedCounts,
-                                    combinedMotifs=combinedMotifs)
+                                    combinedMotifs=combinedMotifs,
+                                    posFilter=posFilter,
+                                    relFilter=relFilter)
 
         # Calculate & Plot: Weblogo
         if self.plotFigWebLogo:
@@ -2172,7 +2259,8 @@ class NGS:
 
 
 
-    def plotEnrichmentScores(self, dataType, combinedMotifs=False, releasedCounts=False):
+    def plotEnrichmentScores(self, dataType, combinedMotifs=False, releasedCounts=False,
+                             posFilter=False, relFilter=False):
         print('============================ Plot: Enrichment Score '
               '=============================')
         # Select: Dataset
@@ -2201,13 +2289,20 @@ class NGS:
         # if ' - ' in title:
         #     title = title.replace(' - ', '\n')
 
-
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Unique Substrates: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}')
         if self.motifFilter:
             print(f'Figure Number: '
                   f'{magenta}{self.saveFigureIteration}{resetColor}')
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f'Unique Substrates: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}\n\n'
+        if posFilter:
+            if relFilter:
+                print(f'Releasing Filter: {magenta}{posFilter}{resetColor}')
+            else:
+                print(f'Applying Filter: {magenta}{posFilter}{resetColor}')
+
+        print(f'\n\nEnrichment Scores:\n'
               f'{scores}\n\n')
+
 
 
         # Create heatmap
@@ -2308,7 +2403,8 @@ class NGS:
 
 
 
-    def plotEnrichmentLogo(self, combinedMotifs=False, releasedCounts=False):
+    def plotEnrichmentLogo(self, combinedMotifs=False, releasedCounts=False,
+                           posFilter=False, relFilter=False):
         print('============================= Plot: Enrichment Logo '
               '=============================')
         # Define: Figure title
@@ -2323,13 +2419,18 @@ class NGS:
             title = self.title
 
         # Print: data
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'Unique Substrates: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}')
         if self.motifFilter:
             print(f'Figure Number: '
                   f'{magenta}{self.saveFigureIteration}{resetColor}')
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f'Unique Substrates: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}\n')
-        print(f'Residue heights:\n'
-              f'{self.heights}\n')
+        if posFilter:
+            if relFilter:
+                print(f'Releasing Filter: {magenta}{posFilter}{resetColor}')
+            else:
+                print(f'Applying Filter: {magenta}{posFilter}{resetColor}')
+        print(f'\n\nResidue heights:\n'
+              f'{self.heights}\n\n')
 
 
         # Calculate: Max and min
@@ -2346,7 +2447,7 @@ class NGS:
             columnTotals[1].append(totalNeg)
         yMax = max(columnTotals[0])
         yMin = min(columnTotals[1])
-        # yMin = -9.420
+        # yMin = -19.299
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -2641,7 +2742,7 @@ class NGS:
         print(f'Average: {purple}Enrichment Score\n'
               f'{frameESAvg}\n\n'
               f'Standard Deviation: {purple}Enrichment Score\n'
-              f'{frameESStDev}\n\n')
+              f'{frameESStDev}{resetColor}\n\n')
 
 
         # Plot: Standard deviation
