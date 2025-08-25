@@ -12,19 +12,19 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'ZK'
+inEnzymeName = 'DEN'
 inPathFolder = f'{inEnzymeName}'
-inSaveFigures = True
+inSaveFigures = False
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
-inFixResidues = False
-inFixedResidue = ['P','L'] # 'A','V','L','Q'
-inFixedPosition = [1,3]
+inFixResidues = True
+inFixedResidue = [['G','S']] # [['A','G','S']]
+inFixedPosition = [4]
 inExcludeResidues = False
-inExcludedResidue = ['Q']
-inExcludedPosition = [8]
+inExcludedResidue = ['R']
+inExcludedPosition = [6]
 inMinimumSubstrateCount = 1
 inMinDeltaS = 0.6
 inPrintFixedSubs = True
@@ -33,6 +33,7 @@ inUseEnrichmentFactor = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inUseCodonProb = False # Use AA prob from inCodonSequence to calculate enrichment
 inAvgInitialProb = False
+inDropResidue = [] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
 
 # Input 3: Making Figures
 inPlotEntropy = True
@@ -44,12 +45,12 @@ inPlotMotifEnrichment = True
 inPlotMotifEnrichmentNBars = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
-    inPlotEntropy = False
+    # inPlotEntropy = False
     # inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
     inPlotLogo = True
     inPlotWeblogo = False
-    inPlotMotifEnrichment = False
+    # inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
 inPlotWordCloud = False # <--------------------
@@ -80,6 +81,10 @@ inTotalWords = 50
 
 # Input 9: Bar Graphs
 inNSequences = 50
+
+# Input 10: Scan For AA Sequences
+inScanForSequences = True
+inFindSequences = ['KRGG', 'RRGG']
 
 # Input 10: PCA
 inPCAMotif = False
@@ -159,7 +164,8 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
 fixedSubSeq = ngs.getDatasetTag(useCodonProb=inUseCodonProb, codon=inCodonSequence)
 
 # Load: Counts
-countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
+countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort',
+                                                   dropColumn=inDropResidue)
 
 # Calculate: Initial sort probabilities
 probInitial = ngs.calculateProbabilities(counts=countsInitial,
@@ -185,7 +191,8 @@ if inFixResidues:
         # Load: Counts
         countsFinal, countsFinalTotal = ngs.loadCounts(filter=True,
                                                        fileType='Final Sort',
-                                                       datasetTag=fixedSubSeq)
+                                                       datasetTag=fixedSubSeq,
+                                                       dropColumn=inDropResidue)
 
         # Load: Substrates
         substratesFinal, totalSubsFinal = ngs.loadSubstratesFiltered()
@@ -210,11 +217,12 @@ else:
     #  substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs()
 
     # Load: Counts
-    countsFinal, countsFinalTotal = ngs.loadCounts(fileType='Final Sort', filter=False)
+    countsFinal, countsFinalTotal = ngs.loadCounts(fileType='Final Sort', filter=False,
+                                                   dropColumn=inDropResidue)
 
 
 
-# ================================== Evaluate The data ===================================
+# ================================== Evaluate The Data ===================================
 if inFixResidues:
     if loadFilteredSubs:
         # Fix AA
@@ -237,7 +245,6 @@ if inFixResidues:
 if inFixResidues:
     ngs.saveData(substrates=substratesFinal, counts=countsFinal)
 
-
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalTotal,
                      NFinalUnique=len(substratesFinal.keys()))
@@ -259,6 +266,12 @@ else:
     enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial,
                                                probFinal=probFinal)
 
+# Scan for partial AA sequences
+if inScanForSequences:
+    ngs.scanForSequence(seqsScan=inFindSequences, substrates=substratesFinal,
+                        datasetType='Final Sort')
+
+
 # Evaluate: Sequences
 if inUseEnrichmentFactor:
     motifs = ngs.processSubstrates(
@@ -267,7 +280,6 @@ if inUseEnrichmentFactor:
 
 if inPlotPCA:
     finalSubsMotif = ngs.getMotif(substrates=substratesFinal)
-
     if inUseEnrichmentFactor:
         if substratesInitial is None:
             print(f'{red}Write code to load in the initial substrates{resetColor}\n')

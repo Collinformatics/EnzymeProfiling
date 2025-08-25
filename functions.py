@@ -377,12 +377,18 @@ class NGS:
 
     @staticmethod
     def dropColumnsFromMatrix(countMatrix, datasetType, dropColumn):
-        print(f'Dropping column from: {blue}{dropColumn}{resetColor}')
-        countMatrix = countMatrix.drop(columns=dropColumn)
-        countsFormatted = countMatrix.to_string(
-            formatters={column: '{:,.0f}'.format for column in
-                        countMatrix.select_dtypes(include='number').columns})
-        print(f'Dataset: {purple}{datasetType}{resetColor}\n{countsFormatted}\n\n')
+        printMatrix = False
+        for pos in dropColumn:
+            if pos in countMatrix.columns:
+                printMatrix = True
+                print(f'Dropping column: {blue}{dropColumn}{resetColor}')
+                countMatrix = countMatrix.drop(columns=pos)
+
+        if printMatrix:
+            countsFormatted = countMatrix.to_string(
+                formatters={column: '{:,.0f}'.format for column in
+                            countMatrix.select_dtypes(include='number').columns})
+            print(f'Counts: {purple}{datasetType}{resetColor}\n{countsFormatted}\n\n')
 
         return countMatrix
 
@@ -842,7 +848,7 @@ class NGS:
             self.pathFilteredCounts = pathCounts
             paths = [pathSubs, pathCounts]
 
-        print(f'File: {file}\n')
+        print(f'File: {greenLight}{file}{resetColor}\n')
         print(f'File paths:{greenDark}')
         for path in paths:
             print(f'     {path}')
@@ -2304,7 +2310,6 @@ class NGS:
               f'{scores}\n\n')
 
 
-
         # Create heatmap
         cMapCustom = self.createCustomColorMap(colorType='EM')
 
@@ -2447,7 +2452,12 @@ class NGS:
             columnTotals[1].append(totalNeg)
         yMax = max(columnTotals[0])
         yMin = min(columnTotals[1])
-        # yMin = -19.299
+
+        # Manually set yMin
+        inSetYMin = False
+        # inSetYMin = True
+        if inSetYMin:
+            yMin = -40.17928
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -2534,6 +2544,8 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Logo'
+            if inSetYMin:
+                datasetType += ' yMin'
             self.saveFigure(fig=fig, figType=datasetType,  seqLen=len(data.columns),
                             combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 

@@ -11,17 +11,17 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'MMP7'
+inEnzymeName = 'WNV'
 inPathFolder = f'{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.7
+inMinDeltaS = 1
 inRefixMotif = True
-inFixedResidue = ['L','L'] # ['R','G','G']
-inFixedPosition = [4,6] # Fix only at 1 position in the substrate
+inFixedResidue = ['R','G'] # ['R','G','G']
+inFixedPosition = [4,5] # Fix only at 1 position in the substrate
 inExcludeResidues = False
 inExcludedResidue = ['R','R','R','R']
 inExcludedPosition = [1,4,5,6]
@@ -36,6 +36,7 @@ inCombineFixedMotifs = False
 inPredictSubstrateEnrichmentScores = False
 inDuplicateFigure = True
 inShowSampleSize = True
+inDropResidue = ['R9'] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
 
 # Input 3: Figures
 inPlotEntropy = True
@@ -46,7 +47,6 @@ inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = False
 inPlotLogo = False
-
 inPlotWeblogo = False
 inPlotUnscaledScatter = False
 inPlotScaledScatter = False
@@ -117,6 +117,7 @@ greyDark = '\033[38;2;144;144;144m'
 purple = '\033[38;2;189;22;255m'
 pink = '\033[38;2;255;0;242m'
 cyan = '\033[38;2;22;255;212m'
+blue = '\033[38;5;51m'
 green = '\033[38;2;5;232;49m'
 greenLight = '\033[38;2;204;255;188m'
 greenLightB = '\033[38;2;204;255;188m'
@@ -152,7 +153,8 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
 
 # ====================================== Load Data =======================================
 # Load: Counts
-countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort')
+countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initial Sort',
+                                                   dropColumn=inDropResidue)
 
 
 
@@ -173,7 +175,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
         for index in range(len(excludeAA)):
             AA = ','.join(excludeAA[index])
             print(f'     {AA}@R{excludePosition[index]}')
-    print(f'{resetColor}\n')
+        print(f'{resetColor}')
 
 
     # Initialize data structures
@@ -380,6 +382,12 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
             # Save the counted substrate data
             fixedCounts.to_csv(filePathFixedCounts, index=True, float_format='%.0f')
 
+    # Remove column(s) from the matrix
+    if inDropResidue:
+        fixedCounts = ngs.dropColumnsFromMatrix(countMatrix=fixedCounts,
+                                                 datasetType=sortType,
+                                                 dropColumn=inDropResidue)
+
     return fixedSubs, fixedCounts, fixedCountsTotal
 
 
@@ -432,7 +440,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     # Calculate RF
     probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
                                                 N=countsFinalFixedTotal,
-                                                fileType=sortType)
+                                                fileType=sortType,
+                                                )
 
     # Calculate: Entropy
     ngs.calculateEntropy(probability=probFinalFixed,
@@ -468,7 +477,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     print(f'Fixing:\n'
           f'     {preferredResidues}\n'
           f'     {preferredPositions}\n')
-    print(f'Initial Fix:\n{initialFixedPos}\n')
+    print(f'Initial Fix Pos: {initialFixedPos}\n\n')
 
     # # Fix The Next Set Of Substrates
     # Cycle through the substrate and fix AA
