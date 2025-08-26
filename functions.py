@@ -2186,13 +2186,23 @@ class NGS:
             probInitial.columns = probFinal.columns
             matrix = np.log2(probFinal / probInitial)
             # matrix = probFinal
-        print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n'
-              f'{matrix.round(self.roundVal)}\n\n')
+        if releasedCounts:
+            print(f'Enrichment Score: {purple}Released Counts{resetColor}\n'
+                  f'{matrix.round(self.roundVal)}\n\n')
+            print(f'Prob Final:\n{probFinal}\n\n'
+                  f'Prob Initial:\n{probInitial}\n\n')
+        else:
+            print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n'
+                  f'{matrix.round(self.roundVal)}\n\n')
 
         print('====================== Calculate: Scaled Enrichment Score '
               '=======================')
-        print(f'Scale Enrichment Scores:\n'
-              f'     {magenta}Enrichment Scores * ΔS{resetColor}\n')
+        if releasedCounts:
+            print(f'Scale Enrichment Scores: {purple}Released Counts{resetColor}\n'
+                  f'     {magenta}Enrichment Scores * ΔS{resetColor}\n')
+        else:
+            print(f'Scale Enrichment Scores:\n'
+                  f'     {magenta}Enrichment Scores * ΔS{resetColor}\n')
 
         # Calculate: Letter heights
         heights = pd.DataFrame(0, index=matrix.index,
@@ -2457,7 +2467,7 @@ class NGS:
         inSetYMin = False
         # inSetYMin = True
         if inSetYMin:
-            yMin = -40.17928
+            yMin = -32.10027
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
