@@ -696,13 +696,12 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     # Extract motif
     ngs.getMotif(substrates=substratesFinalFixed)
 
+    # Release the filter
     countsReleased, releasedRF = releaseCounts(substrates=substrates,
                                                countsFiltered=countsFinalFixed,
                                                keepResidues=keepResidues,
                                                keepPositions=keepPositions,
                                                sortType=sortType)
-
-    print(f'Rel Return:\n{countsReleased}\n\n')
 
     # Save the data
     if inSaveData:
