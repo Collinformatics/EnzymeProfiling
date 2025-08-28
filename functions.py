@@ -68,7 +68,7 @@ resetColor = '\033[0m'
 # =================================== Define Functions ===================================
 def getFileNames(enzyme):
     if enzyme.lower() == 'eln' or enzyme.lower() == 'hne':
-        enzyme = 'ELN'
+        enzyme = 'Human Neutrophil Elastase'
         inFileNamesInitialSort = ['ELN-I_S1_L001', 'ELN-I_S1_L002']
         inFileNamesFinalSort = ['ELN-R4_S2_L001', 'ELN-R4_S2_L002']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
@@ -100,7 +100,7 @@ def getFileNames(enzyme):
                                 'Mpro2-R4_S3_L003', 'Mpro2-R4_S3_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
     elif enzyme.lower() == 'mmp7':
-        enzyme = 'MMP7'
+        enzyme = 'Matrix Metalloproteinase-7'
         inFileNamesInitialSort = ['MMP7-I_S3_L001', 'MMP7-I_S3_L002']
         inFileNamesFinalSort = ['MMP7-R4_S4_L001', 'MMP7-R4_S4_L002']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
@@ -2160,7 +2160,7 @@ class NGS:
 
     def calculateEnrichment(self, probInitial, probFinal,
                             releasedCounts=False, combinedMotifs=False,
-                            posFilter=False, relFilter=False):
+                            posFilter=False, relFilter=False, releasedIteration=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
         print(f'Enrichment Scores:\n'
@@ -2189,8 +2189,8 @@ class NGS:
         if releasedCounts:
             print(f'Enrichment Score: {purple}Released Counts{resetColor}\n'
                   f'{matrix.round(self.roundVal)}\n\n')
-            print(f'Prob Final:\n{probFinal}\n\n'
-                  f'Prob Initial:\n{probInitial}\n\n')
+            print(f'Prob Initial:\n{probInitial}\n\n'
+                  f'Prob Final:\n{probFinal}\n\n')
         else:
             print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n'
                   f'{matrix.round(self.roundVal)}\n\n')
@@ -2445,7 +2445,7 @@ class NGS:
             else:
                 print(f'Applying Filter: {magenta}{posFilter}{resetColor}')
         print(f'\n\nResidue heights:\n'
-              f'{self.heights}\n\n')
+              f'{self.heights}\n')
 
 
         # Calculate: Max and min
@@ -2467,7 +2467,7 @@ class NGS:
         inSetYMin = False
         # inSetYMin = True
         if inSetYMin:
-            yMin = -32.10027
+            yMin = -4.62059
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -2761,7 +2761,7 @@ class NGS:
         frameESAvg = frameESCombined.groupby(level=1, sort=False).agg(calcAverage)
         frameESStDev = frameESCombined.groupby(level=1, sort=False).agg(calcStDev)
 
-        print(f'Average: {purple}Enrichment Score\n'
+        print(f'Average: {purple}Enrichment Score{resetColor}\n'
               f'{frameESAvg}\n\n'
               f'Standard Deviation: {purple}Enrichment Score\n'
               f'{frameESStDev}{resetColor}\n\n')

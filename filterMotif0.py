@@ -169,7 +169,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
     print(f'Selecting substrates with:{magenta}')
     for index in range(len(fixedAA)):
         AA = ','.join(fixedAA[index])
-        print(f'     {AA}{resetColor}@{magenta}R{fixedPosition[index]}')
+        print(f'     {AA}@R{fixedPosition[index]}')
     print(f'{resetColor}\n')
     if exclude:
         print(f'Excluding substrates with:{magenta}')
@@ -497,8 +497,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
         # Add the position from this iteration to the list of inspected locations
         if 'R' in position:
-            pos = int(position.replace('R', ''))
-            preferredPositions.append(pos)
+            preferredPositions.append(int(position.split('R')[1]))
         else:
             preferredPositions.append(int(position))
             print(f'     Prefered: {preferredPositions}\n\n')
@@ -510,7 +509,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             if ES >= inSetMinimumESFixAA:
                 preferredAA.append(AA)
         preferredResidues.append(preferredAA)
-
 
 
         # Sort preferredPositions and keep preferredResidues in sync
@@ -565,6 +563,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                 if ES < inSetMinimumESFixAA and ES != float('-inf'):
                     if AA in preferredResidues[index]:
                         preferredResidues[index].remove(AA)
+        print(3)
         dispPreferredAA(tag=f'{greenLight}Filtered{resetColor}')
 
 
@@ -587,12 +586,12 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                 # Drop the element at indexDrop
                 keepResidues.pop(indexDrop)
                 keepPositions.pop(indexDrop)
-                print(f'Release Position: {purple}{position}{resetColor}\n'
-                      f'Released Filter:')
+                print(f'Dropped Substrate Restriction:\n'
+                      f'     Release: {purple}{position}{resetColor}\n\n'
+                      f'Fixing Substrates with:')
                 for index in range(len(keepResidues)):
                     AA = ', '.join(keepResidues[index])
-                    print(f'     {magenta}{AA}{resetColor}@'
-                          f'{magenta}R{keepPositions[index]}'
+                    print(f'     {purple}{AA}{resetColor}@{purple}R{keepPositions[index]}'
                           f'{resetColor}')
                 print('\n')
                 break
@@ -611,6 +610,11 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             subs=substrates, fixedAA=keepResidues, fixedPosition=keepPositions,
             exclude=inExcludeResidues, excludeAA=inExcludedResidue,
             excludePosition=inExcludedPosition, sortType=sortType)
+
+
+        # Record counts at released position
+        countsReleased.loc[:, position] = countsFinalFixed.loc[:, position]
+        print(f'Released Counts:\n{countsReleased}\n\n')
 
 
         # # Process Data
@@ -691,16 +695,34 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
             print(f'{red}This is the final figure{resetColor}\n\n')
             datasetTag = f'{datasetTag} - Final'
 
+
+    # Initialize matrix
+    releasedRF = pd.DataFrame(0.0, index=ngs.eMap.index,
+                              columns=ngs.eMap.columns)
+    releasedRFScaled = releasedRF.copy()
+
+    # Fill in missing columns in the released counts matrix and calculate RF
+    for position in countsReleased.columns:
+        if position not in ngs.subFrame.index:
+            countsReleased.loc[:, position] = countsFinalFixed.loc[:, position]
+
+        releasedRF.loc[:, position] = (countsReleased.loc[:, position] /
+                                       countsFinalFixedTotal)
+        releasedRFScaled.loc[:, position] = (releasedRF.loc[:, position] *
+                                             ngs.entropy.loc[position, 'ΔS'])
+    print(f'Released counts:\n'
+          f'{countsReleased}\n\n'
+          f'Scaled RF:{purple} Fixed Frame{resetColor}\n'
+          f'{releasedRFScaled}\n\n')
+
+
+    # Calculate enrichment scores
+    ngs.calculateEnrichment(probInitial=probInitial, probFinal=releasedRF,
+                            releasedCounts=True)
     
     # Extract motif
     ngs.getMotif(substrates=substratesFinalFixed)
 
-    # Release the filter
-    countsReleased, releasedRF = releaseCounts(substrates=substrates,
-                                               countsFiltered=countsFinalFixed,
-                                               keepResidues=keepResidues,
-                                               keepPositions=keepPositions,
-                                               sortType=sortType)
 
     # Save the data
     if inSaveData:
@@ -708,109 +730,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                      countsReleased=countsReleased)
 
     return (substratesFinalFixed, countsFinalFixed, countsFinalFixedTotal,
-            countsReleased, releasedRF)
-
-
-
-def releaseCounts(substrates, countsFiltered, keepResidues, keepPositions, sortType):
-    print('================================ Release Counts '
-          '=================================')
-    print(f'Filter:{purple}')
-    for index in range(len(keepResidues)):
-        print(f'     {keepResidues[index]}{resetColor}@{purple}R{keepPositions[index]}')
-    print(f'{resetColor}\n')
-
-    # Initialize matrices
-    countsReleased = pd.DataFrame(0, index=ngs.eMap.index,
-                                  columns=ngs.eMap.columns)
-    countsTotal = pd.DataFrame(0, index=ngs.eMap.columns, columns=['Total Counts'])
-    releasedRF = pd.DataFrame(0.0, index=ngs.eMap.index,
-                              columns=ngs.eMap.columns)
-
-
-    def populateMatrix(counts, popPosition):
-        # Record counts at released position
-        print('======================== Populate Released Count Matrix '
-              '=========================')
-        print(f'Populate Position: {magenta}{popPosition}{resetColor}')
-        countsReleased.loc[:, popPosition] = counts.loc[:, popPosition]
-        print(f'Released Counts:\n{countsReleased}\n')
-
-    # Determine which residues will be released
-    indexDrop = None
-    populatedPositions = []
-    for indexRel, posDrop in enumerate(ngs.subFrame.index):
-        populatedPositions.append(posDrop)
-        position = posDrop
-        if 'R' in posDrop:
-            posDrop = int(posDrop.replace('R', ''))
-        fixAA = keepResidues.copy()
-        fixPos = keepPositions.copy()
-
-        # Identify drop
-        if posDrop in fixPos:
-            indexDrop = fixPos.index(posDrop)
-        else:
-            print(f'{orange}ERROR: The drop position {cyan}{posDrop}{orange} was not '
-                  f'found in the list of fixed positions {cyan}{fixPos}{orange}\n\n')
-            sys.exit()
-        print(f'Removing Filter: {magenta}{position}{resetColor}\n'
-              f'New Filter:')
-
-        # Drop the element at indexDrop
-        fixAA.pop(indexDrop)
-        fixPos.pop(indexDrop)
-        for index in range(len(fixAA)):
-            AA = ','.join(fixAA[index])
-            print(f'     {magenta}{AA}{resetColor}@{magenta}R{fixPos[index]}'
-                  f'{resetColor}')
-        print('\n')
-
-        # Update NGS attributes
-        ngs.fixedAA = fixAA
-        ngs.fixedPos = fixPos
-
-        # # Fix Substrates with released position
-        # Update: Dataset tag
-        ngs.getDatasetTag()
-
-        # Fix Substrates: Release position
-        substratesFinalFixed, countsFinalFixed, countsFinalFixedTotal = fixSubstrate(
-            subs=substrates, fixedAA=fixAA, fixedPosition=fixPos,
-            exclude=inExcludeResidues, excludeAA=inExcludedResidue,
-            excludePosition=inExcludedPosition, sortType=sortType)
-
-        # Save the data
-        if inSaveData:
-            ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
-
-        # Record counts
-        populateMatrix(counts=countsFinalFixed, popPosition=position)
-
-    # Populate remaining columns
-    for position in countsReleased.columns:
-        if position not in populatedPositions:
-            populateMatrix(counts=countsFiltered, popPosition=position)
-
-    # Calculate N values
-    for position in countsReleased.columns:
-        N = sum(countsReleased.loc[:, position])
-        countsTotal.loc[position, 'Total Counts'] = N
-    print(f'{countsTotal}\n\n')
-
-    # Calculate RF
-    for position in countsReleased.columns:
-        releasedRF.loc[:, position] = (countsReleased.loc[:, position] /
-                                       countsTotal.loc[position, 'Total Counts'])
-    print(f'Relative Frequency: {purple}Released counts{resetColor}\n'
-          f'{releasedRF}\n\n')
-
-    # Calculate enrichment scores
-    ngs.calculateEnrichment(probInitial=probInitial, probFinal=releasedRF,
-                            releasedCounts=True, releasedIteration=indexRel)
-
-    return countsReleased, releasedRF
-
+            countsReleased, releasedRF, releasedRFScaled)
 
 
 
