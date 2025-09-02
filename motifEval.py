@@ -883,7 +883,8 @@ if inPlotStats:
 else:
     countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
         motifLabel=inMotifPositions, motifIndex=motifFramePos)
-# sys.exit()
+print(f'\n\nDebug Complete')
+sys.exit()
 
 
 # Calculate: RF

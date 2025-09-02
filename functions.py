@@ -183,6 +183,7 @@ class NGS:
         self.xAxisLabels = xAxisLabels
         self.xAxisLabelsMotif = xAxisLabelsMotif
         self.motifLen = None
+        self.motifTags = None
         self.printNumber = printNumber
         self.selectedSubstrates = []
         self.selectedDatapoints = []
@@ -886,12 +887,12 @@ class NGS:
                     tags[index].append(tag)
 
         # Define: Motif tags
-        motifTags = []
+        self.motifTags = []
         for combo in zip(*tags):
-            motifTags.append(" ".join(combo))
+            self.motifTags.append(" ".join(combo))
 
         # Define: File path
-        for motifTag in motifTags:
+        for motifTag in self.motifTags:
             file = (f'{self.enzymeName} - {motifTag} - '
                     f'FinalSort - MinCounts {self.minSubCount}').replace(
                 '/', '_')
@@ -1163,38 +1164,16 @@ class NGS:
         countsMotifsAll = []
         totalCountsFixedFrame = None
 
+
+        # Define: File paths
+        paths = self.getFilePathCombined(loadCountsRel=True)
+
         # Load the counts
-        for index, position in enumerate(self.fixedPos):
-            # Define: File paths
-            if isinstance(self.fixedAA[0], list):
-                motifTag = f'[{",".join(self.fixedAA[0])}]@R{position}'
-            else:
-                if len(self.fixedAA) > 1:
-                    if len(self.fixedPos[index]) > 1:
-                        motifTag = None
-                        tags = []
-                        for indexAA, AA in enumerate(self.fixedAA):
-                            pos = self.fixedPos[indexAA][index]
-
-                            tag = f'{AA}@R{pos}'
-                            tags.append(tag)
-                            motifTag = ' '.join(tags)
-                    else:
-                        tagsFixed = []
-                        for indexPos, AA in enumerate(self.fixedAA):
-                            tagsFixed.append(f'{AA}@R{self.fixedPos[indexPos]}')
-                        motifTag = ' '.join(tagsFixed)
-                else:
-                    motifTag = f'{self.fixedAA[0]}@R{position}'
-
-
-            # Define: File paths
-            _, _, pathFixedMotifRelCounts = self.getFilePathCombined(loadCountsRel=True)
-
+        for index, pathFixedMotifRelCounts in enumerate(paths):
             # Look for the file
             if os.path.exists(pathFixedMotifRelCounts):
-                print(f'Loading: {greenLightB}Released Counts\n{greenDark}'
-                      f'     {pathFixedMotifRelCounts}{resetColor}\n\n')
+                print(f'Loading ({index}):  {greenLightB}Released Counts\n{greenDark}'
+                      f'     {pathFixedMotifRelCounts}{resetColor}\n')
 
                 # Load file
                 countsLoaded = pd.read_csv(pathFixedMotifRelCounts, index_col=0)
@@ -1204,21 +1183,19 @@ class NGS:
                 startSubPrevious = startPosition
                 if index != 0:
                     # Evaluate previous motif index
-                    print(f'Pos ({index}): {self.fixedPos}')
+                    # print(f'Pos ({index}): {self.fixedPos}')
                     if isinstance(self.fixedPos[0], list):
                         frame = self.fixedPos[0]
-                        print(f'Frame: {frame}')
+                        # print(f'Frame: {frame}')
                         pos = frame[index]
                         pos2 = frame[index - 1]
                         fixedPosDifference = pos - pos2
-                        print(f'  Pos: {pos} - {pos2}')
-                        print(f' Diff: {fixedPosDifference}\n')
                     else:
                         pos = self.fixedPos[index]
                         pos2 = self.fixedPos[index - 1]
                         fixedPosDifference = pos - pos2
-                        print(f'  Pos: {pos} - {pos2}')
-                        print(f' Diff: {fixedPosDifference}\n')
+                    # print(f'  Pos: {pos} - {pos2}')
+                    # print(f' Diff: {fixedPosDifference}\n')
 
                     # Define: Frame indices
                     startSubPrevious += fixedPosDifference
@@ -1236,7 +1213,8 @@ class NGS:
                 formattedCounts = countsFixedFrame.to_string(
                     formatters={column: '{:,.0f}'.format for column in
                                 countsFixedFrame.select_dtypes(include='number').columns})
-                print(f'Selecting Positions: {purple}Fixed Motif {motifTag}{resetColor}\n'
+                print(f'Selecting Positions: {purple}Fixed Motif {self.motifTags[index]}'
+                      f'{resetColor}\n'
                       f'Counts: {blue}{fixedFramePos}{resetColor}\n'
                       f'{formattedCounts}\n\n')
 
@@ -1297,10 +1275,11 @@ class NGS:
         # Define: File paths
         paths = self.getFilePathCombined(loadSubs=True)
 
+        # Load the substrates
         for index, pathFixedMotifSubs in enumerate(paths):
             # Look for the file
             if os.path.exists(pathFixedMotifSubs):
-                print(f'Loading ({index}): {greenLightB}Filtered Motif\n{greenDark}'
+                print(f'Loading ({index}): {greenLightB}Filtered Substrates\n{greenDark}'
                       f'     {pathFixedMotifSubs}{resetColor}\n\n')
 
                 # Load file
@@ -1320,21 +1299,19 @@ class NGS:
                 startSubPrevious = startPosition
                 if index != 0:
                     # Evaluate previous motif index
-                    print(f'Pos ({index}): {self.fixedPos}')
+                    # print(f'Pos ({index}): {self.fixedPos}')
                     if isinstance(self.fixedPos[0], list):
                         frame = self.fixedPos[0]
-                        print(f'Frame: {frame}')
+                        # print(f'Frame: {frame}')
                         pos = frame[index]
                         pos2 = frame[index - 1]
                         fixedPosDifference = pos - pos2
-                        print(f'  Pos: {pos} - {pos2}')
-                        print(f' Diff: {fixedPosDifference}\n')
                     else:
                         pos = self.fixedPos[index]
                         pos2 = self.fixedPos[index - 1]
                         fixedPosDifference = pos - pos2
-                        print(f'  Pos: {pos} - {pos2}')
-                        print(f' Diff: {fixedPosDifference}\n')
+                    print(f'  Pos: {pos} - {pos2}')
+                    print(f' Diff: {fixedPosDifference}\n')
 
                     # Define: Frame indices
                     startSubPrevious += fixedPosDifference
@@ -2580,9 +2557,10 @@ class NGS:
 
         # Manually set yMin
         inSetYMin = False
-        inSetYMin = False
+        # inSetYMin = True
         if inSetYMin:
             yMin = -yMax/2
+            yMin = -3.549
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -2883,7 +2861,8 @@ class NGS:
 
 
         # Plot: Standard deviation
-        self.plotStats(data=frameESStDev, totalCounts=None, dataType='StDev')
+        self.plotStats(data=frameESStDev, totalCounts=None, dataType='StDev',
+                       combinedMotifs=True)
 
 
 
@@ -5048,9 +5027,13 @@ class NGS:
               '==========================')
         # Set figure title
         if totalCounts is not None and self.showSampleSize:
-            title = f'\n{self.enzymeName}\nAverage ES\nN={totalCounts:,}'
+            title = f'{self.enzymeName}\n{self.datasetTag}\nAverage ES\nN={totalCounts:,}'
         else:
-            title = f'\n\n{self.enzymeName}\nAverage ES'
+            if combinedMotifs:
+                title = f'\n{self.enzymeName}\nCombined {self.datasetTag}\nAverage ES'
+            else:
+                title = f'\n{self.enzymeName}\n{self.datasetTag}\nAverage ES'
+
 
 
         # Create heatmap
