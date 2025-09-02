@@ -1280,7 +1280,7 @@ class NGS:
             # Look for the file
             if os.path.exists(pathFixedMotifSubs):
                 print(f'Loading ({index}): {greenLightB}Filtered Substrates\n{greenDark}'
-                      f'     {pathFixedMotifSubs}{resetColor}\n\n')
+                      f'     {pathFixedMotifSubs}{resetColor}\n')
 
                 # Load file
                 with open(pathFixedMotifSubs, 'rb') as file:
@@ -1310,8 +1310,8 @@ class NGS:
                         pos = self.fixedPos[index]
                         pos2 = self.fixedPos[index - 1]
                         fixedPosDifference = pos - pos2
-                    print(f'  Pos: {pos} - {pos2}')
-                    print(f' Diff: {fixedPosDifference}\n')
+                    # print(f'  Pos: {pos} - {pos2}')
+                    # print(f' Diff: {fixedPosDifference}\n')
 
                     # Define: Frame indices
                     startSubPrevious += fixedPosDifference
@@ -1888,15 +1888,15 @@ class NGS:
                         f'Reading Frame {self.fixedAA[0]}@R{self.fixedPos[0]}'
             else:
                 fixedPos = sorted(self.fixedPos)
-                print(f'Fixed Pos: {fixedPos}')
+                # print(f'Fixed Pos: {fixedPos}')
                 continuous = True
                 multiCombinedFrames = False
                 for index in range(len(fixedPos) - 1):
-                    print(f'Idx: {index}')
+                    # print(f'Idx: {index}')
                     pos1, pos2 = fixedPos[index], fixedPos[index + 1]
-                    print(f'Pos:\n'
-                          f'     {pos1}\n'
-                          f'     {pos2}\n\n')
+                    # print(f'Pos:\n'
+                    #       f'     {pos1}\n'
+                    #       f'     {pos2}\n\n')
                     if isinstance(pos1, int) and isinstance(pos2, index):
                         if pos1 == pos2 - 1 or pos1 == pos2 + 1:
                             continue
