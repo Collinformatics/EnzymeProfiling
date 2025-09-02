@@ -879,13 +879,9 @@ if inPlotStats:
     # Evaluate statistics
     ngs.fixedMotifStats(countsList=countsMotifs, initialProb=probInitialAvg,
                         motifFrame=inMotifPositions, datasetTag=ngs.datasetTag)
-
 else:
     countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
         motifLabel=inMotifPositions, motifIndex=motifFramePos)
-print(f'\n\nDebug Complete')
-sys.exit()
-
 
 # Calculate: RF
 probCombinedReleasedMotif = ngs.calculateProbabilitiesCM(

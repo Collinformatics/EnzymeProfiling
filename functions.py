@@ -2560,7 +2560,7 @@ class NGS:
         # inSetYMin = True
         if inSetYMin:
             yMin = -yMax/2
-            yMin = -3.549
+            yMin = -2.736
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -2811,8 +2811,7 @@ class NGS:
             formattedCounts = countsFrame.to_string(
                 formatters={column: '{:,.0f}'.format for column in
                             countsFrame.select_dtypes(include='number').columns})
-            print(f'Counts: {purple}Fixed Motif '
-                  f'{self.fixedAA[0]}@R{self.fixedPos[index]}{resetColor}\n'
+            print(f'Counts: {purple}{self.motifTags[index]}{resetColor}\n'
                   f'{formattedCounts}\n')
 
             for column in countsFrame.columns:
@@ -2826,8 +2825,7 @@ class NGS:
                 frameES.loc[:, column] = np.log2(
                     frameProb.loc[:, column] / initialProb['Average RF'])
 
-            print(f'Enrichment Score: {purple}Fixed Motif '
-                  f'{self.fixedAA[0]}@R{self.fixedPos[index]}\n'
+            print(f'Enrichment Score: {purple}{self.motifTags[index]}\n'
                   f'{greenLight}{frameES}{resetColor}\n\n')
             frameESList.append(frameES.copy())
 
@@ -2835,7 +2833,7 @@ class NGS:
         frameESCombined = pd.concat(frameESList, axis=0, keys=range(len(frameESList)))
 
         def calcAverage(x):
-            # Function to calcglate standard deviation ignoring -inf values
+            # Function to calculate standard deviation ignoring -inf values
 
             # Remove -inf values
             xFiltered = x.replace([-np.inf, np.inf], np.nan).dropna()
@@ -5025,6 +5023,8 @@ class NGS:
                   combinedMotifs=False, releasedCounts=False):
         print('========================= Plot: Statistical Evaluation '
               '==========================')
+        print(f'{dataType}: {purple}{self.datasetTag}{resetColor}\n{data}\n\n')
+
         # Set figure title
         if totalCounts is not None and self.showSampleSize:
             title = f'{self.enzymeName}\n{self.datasetTag}\nAverage ES\nN={totalCounts:,}'
@@ -5033,8 +5033,6 @@ class NGS:
                 title = f'\n{self.enzymeName}\nCombined {self.datasetTag}\nAverage ES'
             else:
                 title = f'\n{self.enzymeName}\n{self.datasetTag}\nAverage ES'
-
-
 
         # Create heatmap
         cMapCustom = self.createCustomColorMap(colorType=dataType)
@@ -5053,7 +5051,6 @@ class NGS:
         if int(cBarMax * 10) % 2 != 0:
             # Set max to an even value
             cBarMax = (cBarMax * 10 + 1) / 10
-        print(f'Max: {cBarMax}')
 
 
         # Plot the heatmap with numbers centered inside the squares
