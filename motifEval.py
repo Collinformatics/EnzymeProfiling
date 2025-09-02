@@ -861,7 +861,6 @@ substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 # Load: Substrate motifs
 motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
     motifLabel=inMotifPositions, motifIndex=motifFramePos)
-sys.exit()
 
 # Get dataset tag
 ngs.getDatasetTag(combinedMotifs=True, useCodonProb=inUseCodonProb, codon=inCodonSequence)
@@ -904,17 +903,6 @@ ngs.calculateEntropy(probability=probCombinedReleasedMotif,
 # Calculate enrichment scores
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedReleasedMotif,
                         combinedMotifs=combinedMotifs, releasedCounts=True)
-
-
-
-seq='VILQ'
-totalSubs = 0
-print(f'Find Seq: {red}{seq}{resetColor}')
-for substrate, count in motifs.items():
-    totalSubs += count
-    if seq in substrate:
-        print(f'     {pink}{substrate}{resetColor}, Count: {red}{count:,}{resetColor}')
-print(f'\nTotal Substrates: {red}{totalSubs:,}{resetColor}\n')
 
 
 sys.exit()

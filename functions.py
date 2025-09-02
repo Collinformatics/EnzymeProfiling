@@ -862,7 +862,7 @@ class NGS:
     def getFilePathCombined(self, loadSubs=False, loadCounts=False, loadCountsRel=False):
         print('============================== Define: File Paths '
               '===============================')
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
         tags = [[] for _ in range(len(self.fixedAA))]
         paths = []
 
@@ -1202,26 +1202,35 @@ class NGS:
                 # Load file
                 countsLoaded = pd.read_csv(pathFixedMotifRelCounts, index_col=0)
 
-                # Define motif positions and extract the data
+                # Define motif positions and extract the sequence
                 startPosition = motifIndex[0]
                 startSubPrevious = startPosition
                 if index != 0:
                     # Evaluate previous motif index
-                    if isinstance(self.fixedPos[index], int):
-                        fixedPosDifference = (self.fixedPos[index] -
-                                              self.fixedPos[index - 1])
+                    print(f'Pos ({index}): {self.fixedPos}')
+                    if isinstance(self.fixedPos[0], list):
+                        frame = self.fixedPos[0]
+                        print(f'Frame: {frame}')
+                        pos = frame[index]
+                        pos2 = frame[index - 1]
+                        fixedPosDifference = pos - pos2
+                        print(f'  Pos: {pos} - {pos2}')
+                        print(f' Diff: {fixedPosDifference}\n')
                     else:
-                        fixedPosDifference = 1
-                        print(f'{yellow}WARNING: The fixedPosDifference variable was not'
-                              f'dynamically set, the value was set to {cyan}'
-                              f'{fixedPosDifference}{yellow}.\nThis could be a source '
-                              f'of error.{resetColor}\n\n')
+                        pos = self.fixedPos[index]
+                        pos2 = self.fixedPos[index - 1]
+                        fixedPosDifference = pos - pos2
+                        print(f'  Pos: {pos} - {pos2}')
+                        print(f' Diff: {fixedPosDifference}\n')
+
+                    # Define: Frame indices
                     startSubPrevious += fixedPosDifference
                     startSub = index + startSubPrevious - 1
                     endSub = startSub + frameLength
                 else:
                     startSub = startPosition
                     endSub = motifIndex[-1]
+
                 fixedFramePos = countsLoaded.columns[startSub:endSub]
                 countsFixedFrame = countsLoaded.loc[:, fixedFramePos]
                 countsFixedFrame.columns = motifLabel
@@ -1313,9 +1322,8 @@ class NGS:
                 startPosition = motifIndex[0]
                 startSubPrevious = startPosition
                 if index != 0:
-                    print(f'Pos ({index}): {self.fixedPos}')
-
                     # Evaluate previous motif index
+                    print(f'Pos ({index}): {self.fixedPos}')
                     if isinstance(self.fixedPos[0], list):
                         frame = self.fixedPos[0]
                         print(f'Frame: {frame}')
@@ -1906,7 +1914,9 @@ class NGS:
                         f'Reading Frame {self.fixedAA[0]}@R{self.fixedPos[0]}'
             else:
                 fixedPos = sorted(self.fixedPos)
+                print(f'Fixed Pos: {fixedPos}')
                 continuous = True
+                multiCombinedFrames = False
                 for index in range(len(fixedPos) - 1):
                     print(f'Idx: {index}')
                     pos1, pos2 = fixedPos[index], fixedPos[index + 1]
@@ -1923,11 +1933,30 @@ class NGS:
                                     if (pos1[indexPos] == pos1[indexPos + 1] - 1 or
                                             pos1[indexPos] == pos1[indexPos + 1] + 1):
                                         continue
+                    elif isinstance(pos1, list) or isinstance(pos2, list):
+                        # Evaluate combined frames with multiple fixed positons
+                        multiCombinedFrames = True
+                        if isinstance(pos1, list):
+                            for indexPos, posA in enumerate(pos1[:-1]):
+                                posB = pos1[indexPos + 1]
+                                if posB - posA != 1:
+                                    continuous = False
+                                    break
+                        else:
+                            for indexPos, posA in enumerate(pos2[:-1]):
+                                posB = pos2[indexPos + 1]
+                                if posB - posA != 1:
+                                    continuous = False
+                                    break
                     else:
                         continuous = False
                         break
                 if continuous:
-                    if isinstance(self.fixedAA[0], list):
+                    if multiCombinedFrames:
+                        self.datasetTag = (f'Reading Frames '
+                                           f'{self.fixedAA[0]}@R{fixedPos[0]}-'
+                                           f'{self.fixedAA[-1]}@R{fixedPos[-1]}')
+                    elif isinstance(self.fixedAA[0], list):
                         self.datasetTag = (f'Reading Frames '
                                            f'[{",".join(self.fixedAA[0])}]@R'
                                            f'{fixedPos[0]}-R{fixedPos[-1]}')
@@ -2005,6 +2034,7 @@ class NGS:
         if self.initialize:
             self.datasetTagMotif = self.datasetTag
             self.initialize = False
+        print(f'Dataset: {self.datasetTag}\n')
 
         return self.datasetTag
 
