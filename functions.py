@@ -1291,10 +1291,10 @@ class NGS:
         # Define: File paths
         paths = self.getFilePathCombined(loadSubs=True)
 
-        for pathFixedMotifSubs in paths:
+        for index, pathFixedMotifSubs in enumerate(paths):
             # Look for the file
             if os.path.exists(pathFixedMotifSubs):
-                print(f'Loading: {greenLightB}Filtered Motif\n{greenDark}'
+                print(f'Loading ({index}): {greenLightB}Filtered Motif\n{greenDark}'
                       f'     {pathFixedMotifSubs}{resetColor}\n\n')
 
                 # Load file
@@ -1313,19 +1313,25 @@ class NGS:
                 startPosition = motifIndex[0]
                 startSubPrevious = startPosition
                 if index != 0:
+                    print(f'Pos ({index}): {self.fixedPos}')
+
                     # Evaluate previous motif index
-                    print(self.fixedPos)
-                    print(self.fixedPos[index])
-                    print('\n')
-                    if isinstance(self.fixedPos[index], int):
-                        fixedPosDifference = (self.fixedPos[index] -
-                                              self.fixedPos[index - 1])
+                    if isinstance(self.fixedPos[0], list):
+                        frame = self.fixedPos[0]
+                        print(f'Frame: {frame}')
+                        pos = frame[index]
+                        pos2 = frame[index - 1]
+                        fixedPosDifference = pos - pos2
+                        print(f'  Pos: {pos} - {pos2}')
+                        print(f' Diff: {fixedPosDifference}\n')
                     else:
-                        fixedPosDifference = 1
-                        print(f'{yellow}WARNING: The fixedPosDifference variable was not'
-                              f'dynamically set, the value was set to {cyan}'
-                              f'{fixedPosDifference}{yellow}.\nThis could be a source '
-                              f'of error.{resetColor}\n\n')
+                        pos = self.fixedPos[index]
+                        pos2 = self.fixedPos[index - 1]
+                        fixedPosDifference = pos - pos2
+                        print(f'  Pos: {pos} - {pos2}')
+                        print(f' Diff: {fixedPosDifference}\n')
+
+                    # Define: Frame indices
                     startSubPrevious += fixedPosDifference
                     startSub = index + startSubPrevious - 1
                     endSub = startSub + frameLength

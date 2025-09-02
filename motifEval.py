@@ -23,7 +23,7 @@ inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-inMotifPositions = ['P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\''] # , 'P3\''
+inMotifPositions = ['P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\''] # , 'P3\''
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
 # inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7'] #
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
@@ -861,6 +861,7 @@ substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 # Load: Substrate motifs
 motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
     motifLabel=inMotifPositions, motifIndex=motifFramePos)
+sys.exit()
 
 # Get dataset tag
 ngs.getDatasetTag(combinedMotifs=True, useCodonProb=inUseCodonProb, codon=inCodonSequence)
