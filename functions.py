@@ -828,6 +828,7 @@ class NGS:
                     os.path.join(self.pathData, f'fixedMotifCountsRel - {file}'))
                 paths = [pathSubs, pathCounts, pathCountsReleased]
             else:
+
                 file = (f'{self.enzymeName} - {customTag} - FinalSort - '
                         f'MinCounts {self.minSubCount}').replace('/', '_')
                 pathSubs = (
@@ -849,6 +850,53 @@ class NGS:
             paths = [pathSubs, pathCounts]
 
         print(f'File: {greenLight}{file}{resetColor}\n')
+        print(f'File paths:{greenDark}')
+        for path in paths:
+            print(f'     {path}')
+        print(f'{resetColor}\n')
+
+        return paths
+
+
+
+    def getFilePathCombined(self, loadSubs=False, loadCounts=False, loadCountsRel=False):
+        print('============================== Define: File Paths '
+              '===============================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n\n')
+        tags = [[] for _ in range(len(self.fixedAA))]
+        paths = []
+
+        # Define: Dataset
+        dataset = None
+        if loadSubs:
+            dataset = 'fixedMotifSubs'
+        elif loadCounts:
+            dataset = 'fixedMotifCounts'
+        elif loadCountsRel:
+            dataset = 'fixedMotifCountsRel'
+
+        # Define: File tags
+        for index, AA in enumerate(self.fixedAA):
+            if isinstance(AA, list):
+                AA = f'[{','.join(AA)}]'
+            position = self.fixedPos[index]
+            if len(position) > 1:
+                for pos in position:
+                    tag = f'{AA}@R{pos}'
+                    tags[index].append(tag)
+
+        # Define: Motif tags
+        motifTags = []
+        for combo in zip(*tags):
+            motifTags.append(" ".join(combo))
+
+        # Define: File path
+        for motifTag in motifTags:
+            file = (f'{self.enzymeName} - {motifTag} - '
+                    f'FinalSort - MinCounts {self.minSubCount}').replace(
+                '/', '_')
+            paths.append(os.path.join(self.pathData, f'{dataset} - {file}'))
+
         print(f'File paths:{greenDark}')
         for path in paths:
             print(f'     {path}')
@@ -1122,22 +1170,34 @@ class NGS:
                 motifTag = f'[{",".join(self.fixedAA[0])}]@R{position}'
             else:
                 if len(self.fixedAA) > 1:
-                    tagsFixed = []
-                    for indexPos, AA in enumerate(self.fixedAA):
-                        tagsFixed.append(f'{AA}@R{self.fixedPos[indexPos]}')
-                    motifTag = ' '.join(tagsFixed)
+                    if len(self.fixedPos[index]) > 1:
+                        motifTag = None
+                        print(f'Fix: {red}{self.fixedAA}{resetColor}\n'
+                              f'Pos: {red}{self.fixedPos[index]}{resetColor}\n')
+                        tags = []
+                        for indexAA, AA in enumerate(self.fixedAA):
+                            pos = self.fixedPos[indexAA][index]
+
+                            tag = f'{AA}@R{pos}'
+                            tags.append(tag)
+                            motifTag = ' '.join(tags)
+                        print(f'Motif Tag: {motifTag}\n\n')
+                    else:
+                        tagsFixed = []
+                        for indexPos, AA in enumerate(self.fixedAA):
+                            tagsFixed.append(f'{AA}@R{self.fixedPos[indexPos]}')
+                        motifTag = ' '.join(tagsFixed)
                 else:
                     motifTag = f'{self.fixedAA[0]}@R{position}'
 
 
             # Define: File paths
-            _, _, pathFixedMotifRelCounts = self.getFilePath(
-                datasetTag=self.datasetTag, motifPath=True, customTag=motifTag)
+            _, _, pathFixedMotifRelCounts = self.getFilePathCombined(loadCountsRel=True)
 
             # Look for the file
             if os.path.exists(pathFixedMotifRelCounts):
                 print(f'Loading: {greenLightB}Released Counts\n{greenDark}'
-                      f'     {pathFixedMotifRelCounts}{resetColor}\n')
+                      f'     {pathFixedMotifRelCounts}{resetColor}\n\n')
 
                 # Load file
                 countsLoaded = pd.read_csv(pathFixedMotifRelCounts, index_col=0)
@@ -1147,8 +1207,15 @@ class NGS:
                 startSubPrevious = startPosition
                 if index != 0:
                     # Evaluate previous motif index
-                    fixedPosDifference = (self.fixedPos[index] -
-                                          self.fixedPos[index - 1])
+                    if isinstance(self.fixedPos[index], int):
+                        fixedPosDifference = (self.fixedPos[index] -
+                                              self.fixedPos[index - 1])
+                    else:
+                        fixedPosDifference = 1
+                        print(f'{yellow}WARNING: The fixedPosDifference variable was not'
+                              f'dynamically set, the value was set to {cyan}'
+                              f'{fixedPosDifference}{yellow}.\nThis could be a source '
+                              f'of error.{resetColor}\n\n')
                     startSubPrevious += fixedPosDifference
                     startSub = index + startSubPrevious - 1
                     endSub = startSub + frameLength
@@ -1214,34 +1281,21 @@ class NGS:
         totalMotifs = 0
         motifs = {}
         substrates = {}
+        motifTag = None
 
         # Assign: Motif parameters
         self.motifIndex = motifIndex
         print(f'Motif Index: {blue}{self.motifIndex}{resetColor}\n\n')
 
-        # Load the substrates
-        for index, position in enumerate(self.fixedPos):
-            # Define: File paths
-            if isinstance(self.fixedAA[0], list):
-                motifTag = f'[{",".join(self.fixedAA[0])}]@R{position}'
-            else:
-                if len(self.fixedAA) > 1:
-                    tagsFixed = []
-                    for indexPos, AA in enumerate(self.fixedAA):
-                        tagsFixed.append(f'{AA}@R{self.fixedPos[indexPos]}')
-                    motifTag = ' '.join(tagsFixed)
-                else:
-                    motifTag = f'{self.fixedAA[0]}@R{position}'
 
+        # Define: File paths
+        paths = self.getFilePathCombined(loadSubs=True)
 
-            # Define: File paths
-            pathFixedMotifSubs, _, _ = self.getFilePath(
-                datasetTag=self.datasetTag, motifPath=True, customTag=motifTag)
-
+        for pathFixedMotifSubs in paths:
             # Look for the file
             if os.path.exists(pathFixedMotifSubs):
                 print(f'Loading: {greenLightB}Filtered Motif\n{greenDark}'
-                      f'     {pathFixedMotifSubs}{resetColor}\n')
+                      f'     {pathFixedMotifSubs}{resetColor}\n\n')
 
                 # Load file
                 with open(pathFixedMotifSubs, 'rb') as file:
@@ -1260,8 +1314,18 @@ class NGS:
                 startSubPrevious = startPosition
                 if index != 0:
                     # Evaluate previous motif index
-                    fixedPosDifference = (self.fixedPos[index] -
-                                          self.fixedPos[index - 1])
+                    print(self.fixedPos)
+                    print(self.fixedPos[index])
+                    print('\n')
+                    if isinstance(self.fixedPos[index], int):
+                        fixedPosDifference = (self.fixedPos[index] -
+                                              self.fixedPos[index - 1])
+                    else:
+                        fixedPosDifference = 1
+                        print(f'{yellow}WARNING: The fixedPosDifference variable was not'
+                              f'dynamically set, the value was set to {cyan}'
+                              f'{fixedPosDifference}{yellow}.\nThis could be a source '
+                              f'of error.{resetColor}\n\n')
                     startSubPrevious += fixedPosDifference
                     startSub = index + startSubPrevious - 1
                     endSub = startSub + frameLength
@@ -1309,6 +1373,7 @@ class NGS:
                 sys.exit(1)
 
             self.motifIndexExtracted.append((startSub, endSub))
+
         # Evaluate: Loaded data
         self.motifLen = len(next(iter(motifs)))
 
@@ -1837,9 +1902,21 @@ class NGS:
                 fixedPos = sorted(self.fixedPos)
                 continuous = True
                 for index in range(len(fixedPos) - 1):
+                    print(f'Idx: {index}')
                     pos1, pos2 = fixedPos[index], fixedPos[index + 1]
-                    if pos1 == pos2 - 1 or pos1 == pos2 + 1:
-                        continue
+                    print(f'Pos:\n'
+                          f'     {pos1}\n'
+                          f'     {pos2}\n\n')
+                    if isinstance(pos1, int) and isinstance(pos2, index):
+                        if pos1 == pos2 - 1 or pos1 == pos2 + 1:
+                            continue
+                        else:
+                            # continue
+                            if isinstance(pos1, list):
+                                for indexPos in range(len(pos1)-1):
+                                    if (pos1[indexPos] == pos1[indexPos + 1] - 1 or
+                                            pos1[indexPos] == pos1[indexPos + 1] + 1):
+                                        continue
                     else:
                         continuous = False
                         break
@@ -1933,7 +2010,7 @@ class NGS:
         fixedSubs = {}
         fixedSubsTotal = 0
         print(f'Selecting {purple}{sortType} {resetColor}substrates with: '
-              f'{red}{fixedString}{resetColor}\n')
+              f'{purple}{fixedString}{resetColor}\n')
 
         # Sort the substrate dictionary by counts
         substrates = dict(sorted(substrates.items(), key=lambda x: x[1], reverse=True))
@@ -2116,7 +2193,7 @@ class NGS:
         motifs = {}
         indexStart = min(self.motifIndex)
         indexEnd = max(self.motifIndex) + 1
-        print(f'Reading Frame Indices: {purple}{self.datasetTag}{resetColor}\n')
+        print(f'Reading Frame: {purple}{self.datasetTag}{resetColor}\n')
 
         # Print: data
         iteration = 0
@@ -2204,10 +2281,15 @@ class NGS:
             print(f'Scale Enrichment Scores:\n'
                   f'     {magenta}Enrichment Scores * ΔS{resetColor}\n')
 
+        # if releasedCounts:
+        #     print(f'Set Values: Fraud!!!')
+        #     matrix.loc['G', 'R4'] = -0.556
+        #     matrix.loc['S', 'R4'] = -0.762
+        #     matrix.loc['R', 'R5'] = -0.352
+
         # Calculate: Letter heights
         heights = pd.DataFrame(0, index=matrix.index,
                                columns=matrix.columns, dtype=float)
-
         for indexColumn in heights.columns:
             heights.loc[:, indexColumn] = (matrix.loc[:, indexColumn] *
                                            self.entropy.loc[indexColumn, 'ΔS'])
@@ -2465,9 +2547,9 @@ class NGS:
 
         # Manually set yMin
         inSetYMin = False
-        # inSetYMin = True
+        inSetYMin = True
         if inSetYMin:
-            yMin = -4.62059
+            yMin = -yMax/2
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -2733,8 +2815,8 @@ class NGS:
                 frameES.loc[:, column] = np.log2(
                     frameProb.loc[:, column] / initialProb['Average RF'])
 
-            print(f'Enrichment Score:'
-                  f'{purple}Fixed Motif {self.fixedAA[0]}@R{self.fixedPos[index]}\n'
+            print(f'Enrichment Score: {purple}Fixed Motif '
+                  f'{self.fixedAA[0]}@R{self.fixedPos[index]}\n'
                   f'{greenLight}{frameES}{resetColor}\n\n')
             frameESList.append(frameES.copy())
 
@@ -2763,7 +2845,7 @@ class NGS:
 
         print(f'Average: {purple}Enrichment Score{resetColor}\n'
               f'{frameESAvg}\n\n'
-              f'Standard Deviation: {purple}Enrichment Score\n'
+              f'Standard Deviation: {purple}Enrichment Score{resetColor}\n'
               f'{frameESStDev}{resetColor}\n\n')
 
 
@@ -4990,18 +5072,23 @@ class NGS:
         # Modify the colorbar
         cbar = heatmap.collections[0].colorbar
         tickLabels = cbar.ax.get_yticklabels()
+        print(f'Tick Labels: {tickLabels}')
         cbarLabels = []
         for label in tickLabels:
             labelText = label.get_text() # Get the text of the label
             try:
                 labelValue = float(labelText) # Convert to a float
-                if labelValue.is_integer():  # Check if it's an integer
-                    cbarLabels.append(int(labelValue)) # Append as an integer
+                cbarLabels.append(int(labelValue))  # Append as an integer
+                # if labelValue.is_integer():  # Check if it's an integer
+                #     cbarLabels.append(int(labelValue)) # Append as an integer
+                # else:
+                #     cbarLabels.append(labelValue)
             except ValueError:
                 print(f'{orange}ERROR: Unable to plot the{cyan} {dataType}{orange} '
                       f'label{cyan} {label}\n')
                 sys.exit(1)
         cbar.set_ticks(cbarLabels) # Set the positions of the ticks
+        print(f'cbar Ticks: {cbarLabels}\n\n')
         cbar.set_ticklabels(cbarLabels)
         cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
                             length=self.tickLength, width=self.lineThickness)

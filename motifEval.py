@@ -23,17 +23,15 @@ inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-# inMotifPositions = ['-2', '-1', '0', '1', '2', '3']
-inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\''] # , 'P2\''
-# inMotifPositions = ['P5', 'P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\''] # Q@R5
-# inMotifPositions = ['P6', 'P5', 'P4', 'P3', 'P2', 'P1', 'P1\'', 'P2\''] # Q@R6
-inMotifPositions = ['P4', 'P3', 'P2', 'P1', 'P1\''] # , 'P2\''
+inMotifPositions = ['P3', 'P2', 'P1', 'P1\'', 'P2\'', 'P3\'', 'P4\''] # , 'P3\''
+# inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
+# inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7'] #
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
-inFixedResidue = ['L']
-inFixedPosition = [3]
+inFixedResidue = ['L','L']
+inFixedPosition = [[3,4,5], [5,6,7]]
 inExcludeResidues = False
 inExcludedResidue = ['Q']
 inExcludedPosition = [8]
@@ -54,12 +52,13 @@ inPlotMotifEnrichmentNBars = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
-    inPlotEnrichmentMap = False
+    # inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
     # inPlotLogo = False
     inPlotWeblogo = False
-    # inPlotMotifEnrichment = False
+    inPlotMotifEnrichment = False
     inPlotWordCloud = True
+inPlotStats = True
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
@@ -216,7 +215,7 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 
 # Load: Dataset labels
 enzymeName, filesInitial, filesFinal, labelAAPos = getFileNames(enzyme=inEnzymeName)
-inMotifPositions = labelAAPos
+# inMotifPositions = labelAAPos
 motifLen = len(inMotifPositions)
 motifFramePos = [inIndexNTerminus, inIndexNTerminus + motifLen]
 
@@ -660,7 +659,7 @@ def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
                     avgEnrichment /= iterationPrint
                     avgComputational /= iterationPrint
                     print(f'Average Displayed Enrichment Score:'
-                          f'{pink} {avgEnrichment}{resetColor}\n'
+                          f' {pink}{avgEnrichment}{resetColor}\n'
                           f'Average Displayed Predicted Score:'
                           f'{pink} {avgComputational}{resetColor}\n\n')
                     break
@@ -854,6 +853,7 @@ else:
                                                     calcAvg=True)
 
 
+
 # ===================================== Run The Code =====================================
 # Load: Substrates
 substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
@@ -877,8 +877,18 @@ if len(ngs.motifIndexExtracted) > 1:
 
 # # Evaluate: Count Matrices
 # Load: Motif counts
-countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
-    motifLabel=inMotifPositions, motifIndex=motifFramePos)
+if inPlotStats:
+    countsMotifs, countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
+        motifLabel=inMotifPositions, motifIndex=motifFramePos, returnList=True)
+
+    # Evaluate statistics
+    ngs.fixedMotifStats(countsList=countsMotifs, initialProb=probInitialAvg,
+                        motifFrame=inMotifPositions, datasetTag=ngs.datasetTag)
+
+else:
+    countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
+        motifLabel=inMotifPositions, motifIndex=motifFramePos)
+# sys.exit()
 
 
 # Calculate: RF
@@ -893,6 +903,8 @@ ngs.calculateEntropy(probability=probCombinedReleasedMotif,
 # Calculate enrichment scores
 ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedReleasedMotif,
                         combinedMotifs=combinedMotifs, releasedCounts=True)
+
+
 
 seq='VILQ'
 totalSubs = 0
