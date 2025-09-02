@@ -1172,8 +1172,6 @@ class NGS:
                 if len(self.fixedAA) > 1:
                     if len(self.fixedPos[index]) > 1:
                         motifTag = None
-                        print(f'Fix: {red}{self.fixedAA}{resetColor}\n'
-                              f'Pos: {red}{self.fixedPos[index]}{resetColor}\n')
                         tags = []
                         for indexAA, AA in enumerate(self.fixedAA):
                             pos = self.fixedPos[indexAA][index]
@@ -1181,7 +1179,6 @@ class NGS:
                             tag = f'{AA}@R{pos}'
                             tags.append(tag)
                             motifTag = ' '.join(tags)
-                        print(f'Motif Tag: {motifTag}\n\n')
                     else:
                         tagsFixed = []
                         for indexPos, AA in enumerate(self.fixedAA):
@@ -2583,7 +2580,7 @@ class NGS:
 
         # Manually set yMin
         inSetYMin = False
-        inSetYMin = True
+        inSetYMin = False
         if inSetYMin:
             yMin = -yMax/2
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
@@ -2886,7 +2883,7 @@ class NGS:
 
 
         # Plot: Standard deviation
-        self.plotStats(countedData=frameESStDev, totalCounts=None, dataType='StDev')
+        self.plotStats(data=frameESStDev, totalCounts=None, dataType='StDev')
 
 
 
@@ -5045,7 +5042,7 @@ class NGS:
 
 
 
-    def plotStats(self, countedData, totalCounts, dataType,
+    def plotStats(self, data, totalCounts, dataType,
                   combinedMotifs=False, releasedCounts=False):
         print('========================= Plot: Statistical Evaluation '
               '==========================')
@@ -5061,18 +5058,27 @@ class NGS:
 
         # Convert the counts to a data frame for Seaborn heatmap
         if self.residueLabelType == 0:
-            countedData.index = [residue[0] for residue in self.residues]
+            data.index = [residue[0] for residue in self.residues]
         elif self.residueLabelType == 1:
-            countedData.index = [residue[1] for residue in self.residues]
+            data.index = [residue[1] for residue in self.residues]
         elif self.residueLabelType == 2:
-            countedData.index = [residue[2] for residue in self.residues]
+            data.index = [residue[2] for residue in self.residues]
+
+        # Define color bar limits
+        cBarMax = np.max(data)
+        cBarMax = math.ceil(cBarMax * 10) / 10 # Round up the 1st decimal
+        if int(cBarMax * 10) % 2 != 0:
+            # Set max to an even value
+            cBarMax = (cBarMax * 10 + 1) / 10
+        print(f'Max: {cBarMax}')
+
 
         # Plot the heatmap with numbers centered inside the squares
         fig, ax = plt.subplots(figsize=self.figSizeEM)
-        heatmap = sns.heatmap(countedData, annot=True, fmt='.3f', cmap=cMapCustom,
+        heatmap = sns.heatmap(data, annot=True, fmt='.3f', cmap=cMapCustom,
                               cbar=True, linewidths=self.lineThickness-1,
                               linecolor='black', square=False, center=None,
-                              annot_kws={'fontweight': 'bold'})
+                              annot_kws={'fontweight': 'bold'}, vmax=cBarMax, vmin=0)
         ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
         ax.set_ylabel('Residue', fontsize=self.labelSizeAxis)
         ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
@@ -5092,14 +5098,14 @@ class NGS:
         ax.tick_params(axis='y', labelrotation=0)
 
         # Set x-ticks
-        xTicks = np.arange(len(countedData.columns)) + 0.5
+        xTicks = np.arange(len(data.columns)) + 0.5
         ax.set_xticks(xTicks)
-        ax.set_xticklabels(countedData.columns)
+        ax.set_xticklabels(data.columns)
 
         # Set y-ticks
-        yTicks = np.arange(len(countedData.index)) + 0.5
+        yTicks = np.arange(len(data.index)) + 0.5
         ax.set_yticks(yTicks)
-        ax.set_yticklabels(countedData.index)
+        ax.set_yticklabels(data.index)
 
         # Set the edge thickness
         for _, spine in ax.spines.items():
@@ -5107,25 +5113,6 @@ class NGS:
 
         # Modify the colorbar
         cbar = heatmap.collections[0].colorbar
-        tickLabels = cbar.ax.get_yticklabels()
-        print(f'Tick Labels: {tickLabels}')
-        cbarLabels = []
-        for label in tickLabels:
-            labelText = label.get_text() # Get the text of the label
-            try:
-                labelValue = float(labelText) # Convert to a float
-                cbarLabels.append(int(labelValue))  # Append as an integer
-                # if labelValue.is_integer():  # Check if it's an integer
-                #     cbarLabels.append(int(labelValue)) # Append as an integer
-                # else:
-                #     cbarLabels.append(labelValue)
-            except ValueError:
-                print(f'{orange}ERROR: Unable to plot the{cyan} {dataType}{orange} '
-                      f'label{cyan} {label}\n')
-                sys.exit(1)
-        cbar.set_ticks(cbarLabels) # Set the positions of the ticks
-        print(f'cbar Ticks: {cbarLabels}\n\n')
-        cbar.set_ticklabels(cbarLabels)
         cbar.ax.tick_params(axis='y', which='major', labelsize=self.labelSizeTicks,
                             length=self.tickLength, width=self.lineThickness)
         cbar.outline.set_linewidth(self.lineThickness)

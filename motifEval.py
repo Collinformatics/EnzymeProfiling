@@ -9,11 +9,6 @@ from sklearn.metrics import r2_score
 import sys
 
 
-# ========================================================================================
-# ======================== Try predicting motif enrichment Scores ========================
-# ========================================================================================
-
-
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
@@ -855,15 +850,15 @@ else:
 
 
 # ===================================== Run The Code =====================================
+# Get dataset tag
+ngs.getDatasetTag(combinedMotifs=True, useCodonProb=inUseCodonProb, codon=inCodonSequence)
+
 # Load: Substrates
 substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
 # Load: Substrate motifs
 motifs, motifsCountsTotal, substratesFiltered = ngs.loadMotifSeqs(
     motifLabel=inMotifPositions, motifIndex=motifFramePos)
-
-# Get dataset tag
-ngs.getDatasetTag(combinedMotifs=True, useCodonProb=inUseCodonProb, codon=inCodonSequence)
 
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=motifsCountsTotal,
@@ -1070,7 +1065,8 @@ if (inPlotBarGraphs or inPlotBinnedSubstrateES
         # Cluster substrates
         subPopulations = ngs.plotPCA(
             substrates=motifs, data=tokensESM, indices=subsESM, numberOfPCs=inNumberOfPCs,
-            fixedTag=ngs.labelCombinedMotifs, N=subCountsESM, fixedSubs=True, saveTag=ngs.labelCombinedMotifs)
+            fixedTag=ngs.labelCombinedMotifs, N=subCountsESM, fixedSubs=True,
+            saveTag=ngs.labelCombinedMotifs)
 
         # Plot: Substrate clusters
         if (inPlotEnrichmentMap or inPlotLogo
