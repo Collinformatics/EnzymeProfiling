@@ -1901,7 +1901,6 @@ class NGS:
                         if pos1 == pos2 - 1 or pos1 == pos2 + 1:
                             continue
                         else:
-                            # continue
                             if isinstance(pos1, list):
                                 for indexPos in range(len(pos1)-1):
                                     if (pos1[indexPos] == pos1[indexPos + 1] - 1 or
@@ -1925,27 +1924,38 @@ class NGS:
                     else:
                         continuous = False
                         break
+
+                # Define
+                fixedAA1 = self.fixedAA[0]
+                if isinstance(fixedAA1, list):
+                    fixedAA1 = f'[{','.join(fixedAA1)}]'
+                fixedPos1 = self.fixedPos[0]
+                if isinstance(fixedPos1, list):
+                    fixedPos1 = f'[{','.join(fixedPos1)}]'
+                fixedAA2 = self.fixedAA[-1]
+                if isinstance(fixedAA2, list):
+                    fixedAA2 = f'[{','.join(fixedAA2)}]'
+                fixedPos2 = self.fixedPos[-1]
+                if isinstance(fixedPos2, list):
+                    fixedPos2 = f'[{','.join(fixedPos2)}]'
+
+                # Define the tag
                 if continuous:
+                    # Define the tag
                     if multiCombinedFrames:
+                        print(1)
                         self.datasetTag = (f'Reading Frames '
-                                           f'{self.fixedAA[0]}@R{fixedPos[0]}-'
-                                           f'{self.fixedAA[-1]}@R{fixedPos[-1]}')
-                    elif isinstance(self.fixedAA[0], list):
-                        self.datasetTag = (f'Reading Frames '
-                                           f'[{",".join(self.fixedAA[0])}]@R'
-                                           f'{fixedPos[0]}-R{fixedPos[-1]}')
+                                           f'{fixedAA1}@R{fixedPos[0]}-'
+                                           f'{fixedAA2}@R{fixedPos[-1]}')
                     else:
-                        self.datasetTag = (f'Reading Frames {self.fixedAA[0]}@R'
+                        print(2)
+                        self.datasetTag = (f'Reading Frames {fixedAA1}@R'
                                            f'{fixedPos[0]}-R{fixedPos[-1]}')
                 else:
-                    if isinstance(self.fixedAA[0], list):
-                        self.datasetTag = (f'Reading Frames [{",".join(self.fixedAA[0])}]'
-                                           f'@R{fixedPos[0]}-R{fixedPos[1]}, '
-                                           f'R{fixedPos[-1]}')
-                    else:
-                        self.datasetTag = (f'Reading Frames {self.fixedAA[0]}'
-                                           f'@R{fixedPos[0]}-R{fixedPos[1]}, '
-                                           f'R{fixedPos[-1]}')
+                    print(3)
+                    self.datasetTag = (f'Reading Frames {fixedAA1}'
+                                       f'@R{fixedPos[0]}-R{fixedPos[1]}, '
+                                       f'R{fixedPos[-1]}')
         else:
             if self.filterSubs:
                 fixResidueList = []
@@ -2008,7 +2018,8 @@ class NGS:
         if self.initialize:
             self.datasetTagMotif = self.datasetTag
             self.initialize = False
-        print(f'Dataset: {self.datasetTag}\n')
+        print(f'Dataset Tag: {self.datasetTag}\n\n')
+        sys.exit()
 
         return self.datasetTag
 
