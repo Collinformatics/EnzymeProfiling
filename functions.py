@@ -829,7 +829,6 @@ class NGS:
                     os.path.join(self.pathData, f'fixedMotifCountsRel - {file}'))
                 paths = [pathSubs, pathCounts, pathCountsReleased]
             else:
-
                 file = (f'{self.enzymeName} - {customTag} - FinalSort - '
                         f'MinCounts {self.minSubCount}').replace('/', '_')
                 pathSubs = (
@@ -891,17 +890,32 @@ class NGS:
         for combo in zip(*tags):
             self.motifTags.append(" ".join(combo))
 
+        # Exclude residues
+        excludeTag = None
+        if self.excludeAAs:
+            fixResidueList = []
+            for index, removedAA in enumerate(self.excludeAA):
+                fixResidueList.append(
+                    f'{removedAA}@R'
+                    f'{self.excludePosition[index]}'.replace(' ', ''))
+            excludeTag = f'Exclude {' '.join(fixResidueList)}'
+
         # Define: File path
         for motifTag in self.motifTags:
-            file = (f'{self.enzymeName} - {motifTag} - '
-                    f'FinalSort - MinCounts {self.minSubCount}').replace(
-                '/', '_')
-            paths.append(os.path.join(self.pathData, f'{dataset} - {file}'))
+            if self.excludeAAs:
+                file = (f'{self.enzymeName} - {excludeTag} Fixed {motifTag} - '
+                        f'FinalSort - MinCounts {self.minSubCount}'
+                        ).replace('/', '_')
+            else:
+                file = (f'{self.enzymeName} - {motifTag} - FinalSort - MinCounts '
+                        f'{self.minSubCount}').replace('/', '_')
 
+            paths.append(os.path.join(self.pathData, f'{dataset} - {file}'))
         print(f'File paths:{greenDark}')
         for path in paths:
             print(f'     {path}')
         print(f'{resetColor}\n')
+        # sys.exit()
 
         return paths
 
@@ -1925,37 +1939,47 @@ class NGS:
                         continuous = False
                         break
 
-                # Define
+                # Define subtags
                 fixedAA1 = self.fixedAA[0]
                 if isinstance(fixedAA1, list):
                     fixedAA1 = f'[{','.join(fixedAA1)}]'
                 fixedPos1 = self.fixedPos[0]
                 if isinstance(fixedPos1, list):
-                    fixedPos1 = f'[{','.join(fixedPos1)}]'
+                    fixedPos1 = f'[{','.join(map(str, fixedPos1))}]'
                 fixedAA2 = self.fixedAA[-1]
                 if isinstance(fixedAA2, list):
                     fixedAA2 = f'[{','.join(fixedAA2)}]'
                 fixedPos2 = self.fixedPos[-1]
                 if isinstance(fixedPos2, list):
-                    fixedPos2 = f'[{','.join(fixedPos2)}]'
+                    fixedPos2 = f'[{','.join(map(str, fixedPos2))}]'
 
                 # Define the tag
                 if continuous:
-                    # Define the tag
                     if multiCombinedFrames:
-                        print(1)
+                        # print(1)
                         self.datasetTag = (f'Reading Frames '
-                                           f'{fixedAA1}@R{fixedPos[0]}-'
-                                           f'{fixedAA2}@R{fixedPos[-1]}')
+                                           f'{fixedAA1}@R{fixedPos1}-'
+                                           f'{fixedAA2}@R{fixedPos2}')
                     else:
-                        print(2)
+                        # print(2)
                         self.datasetTag = (f'Reading Frames {fixedAA1}@R'
-                                           f'{fixedPos[0]}-R{fixedPos[-1]}')
+                                           f'{fixedPos1}-R{fixedPos2}')
                 else:
-                    print(3)
+                    # print(3)
                     self.datasetTag = (f'Reading Frames {fixedAA1}'
                                        f'@R{fixedPos[0]}-R{fixedPos[1]}, '
                                        f'R{fixedPos[-1]}')
+
+            # Exclude residues
+            if self.excludeAAs:
+                fixResidueList = []
+                for index, removedAA in enumerate(self.excludeAA):
+                    fixResidueList.append(
+                        f'{removedAA}@R'
+                        f'{self.excludePosition[index]}'.replace(' ', ''))
+                excludeTag = f'Exclude {' '.join(fixResidueList)}'
+                self.datasetTag = self.datasetTag.replace(
+                    'Frames', f'Frames {excludeTag} Fixed')
         else:
             if self.filterSubs:
                 fixResidueList = []
@@ -2018,8 +2042,7 @@ class NGS:
         if self.initialize:
             self.datasetTagMotif = self.datasetTag
             self.initialize = False
-        print(f'Dataset Tag: {self.datasetTag}\n\n')
-        sys.exit()
+        print(f'Dataset Tag: {purple}{self.datasetTag}{resetColor}\n\n')
 
         return self.datasetTag
 
@@ -2407,6 +2430,8 @@ class NGS:
             title = self.title
         # if ' - ' in title:
         #     title = title.replace(' - ', '\n')
+        if len(self.datasetTag.replace('[', '').replace(']', '').replace('-', '')) > 40:
+            title = title.replace('Frames ', 'Frames\n')
 
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
               f'Unique Substrates: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}')
@@ -2535,6 +2560,8 @@ class NGS:
             title = title.replace('Combined ', '')
         else:
             title = self.title
+        if len(self.datasetTag.replace('[', '').replace(']', '').replace('-', '')) > 40:
+            title = title.replace('Frames ', 'Frames\n')
 
         # Print: data
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -2570,8 +2597,8 @@ class NGS:
         inSetYMin = False
         # inSetYMin = True
         if inSetYMin:
-            yMin = -yMax/2
-            yMin = -2.736
+            # yMin = -yMax/2
+            yMin = -29.716
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -5034,7 +5061,11 @@ class NGS:
                   combinedMotifs=False, releasedCounts=False):
         print('========================= Plot: Statistical Evaluation '
               '==========================')
+        # self.datasetTag = 'Reading Frames AAAAAAAAAAAAAAAAAAAAAAAAAA'
         print(f'{dataType}: {purple}{self.datasetTag}{resetColor}\n{data}\n\n')
+        print(f'Dataset Tag Len: {red}{len(
+            self.datasetTag.replace('[', '').replace(']', '').replace('-', ''))}'
+              f'{resetColor}\n\n')
 
         # Set figure title
         if totalCounts is not None and self.showSampleSize:
@@ -5042,8 +5073,12 @@ class NGS:
         else:
             if combinedMotifs:
                 title = f'\n{self.enzymeName}\nCombined {self.datasetTag}\nAverage ES'
+                if len(self.datasetTag.replace('[', '').replace(
+                        ']', '').replace('-', '')) > 40:
+                    title = title.replace('Frames ', 'Frames\n')
             else:
                 title = f'\n{self.enzymeName}\n{self.datasetTag}\nAverage ES'
+
 
         # Create heatmap
         cMapCustom = self.createCustomColorMap(colorType=dataType)
