@@ -1410,7 +1410,7 @@ class NGS:
         # Define: Save path
         filePathCountsReleased = None
         if self.expressDNA:
-            folder = os.path.join('data0', self.enzymeName, 'Data')
+            folder = os.path.join('data', self.enzymeName, 'Data')
 
             if not os.path.exists(folder):
                 os.makedirs(folder, exist_ok=True)
