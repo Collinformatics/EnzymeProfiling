@@ -278,7 +278,6 @@ class NGS:
         np.set_printoptions(suppress=True) # Prevent data from printing in sci notation
         np.seterr(divide='ignore')
 
-
         # Verify directory paths
         if not os.path.exists(self.pathFolder):
             os.makedirs(self.pathFolder, exist_ok=True)
@@ -1411,8 +1410,15 @@ class NGS:
         # Define: Save path
         filePathCountsReleased = None
         if self.expressDNA:
-            filePathSubs = os.path.join(self.pathData, f'substrates_{saveTag}')
-            filePathCounts = os.path.join(self.pathData, f'counts_{saveTag}')
+            folder = os.path.join('data0', self.enzymeName, 'Data')
+
+            if not os.path.exists(folder):
+                os.makedirs(folder, exist_ok=True)
+
+            self.pathSaveFigs = os.path.join('data', self.enzymeName, 'Figures')
+
+            filePathSubs = os.path.join(folder, f'substrates_{saveTag}')
+            filePathCounts = os.path.join(folder, f'counts_{saveTag}')
         else:
             if self.datasetTag == 'Unfiltered':
                 return

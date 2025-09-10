@@ -11,23 +11,23 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'ELN'
-inPathFolder = f'{inEnzymeName}'
+inEnzymeName = 'MMP7'
+inPathFolder = f'data/{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.44 # 0.44
+inMinDeltaS = 0.75
 inRefixMotif = True
-inFixedResidue = [['C','I','V']]
-inFixedPosition = [6] # Fix only at 1 position in the substrate
+inFixedResidue = ['L','L']
+inFixedPosition = [5,7] # Fix only at 1 position in the substrate
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
 inManualEntropy = False
 inManualFrame = ['R2','R3','R4','R5']
-inFixFullMotifSeq = True
+inFixFullMotifSeq = False
 inMinimumSubstrateCount = 1
 inSetMinimumESFixAA = 0
 inSetMinimumESReleaseAA = -1
@@ -161,7 +161,7 @@ countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initi
 
 # =================================== Define Functions ===================================
 def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePosition,
-                 sortType):
+                 sortType, posFilter=False):
     print('==================================== Fix Substrates '
           '=====================================')
     print(f'Substrate Dataset:'
@@ -209,7 +209,7 @@ def fixSubstrate(subs, fixedAA, fixedPosition, exclude, excludeAA, excludePositi
         fixedCountsTotal = sum(fixedCounts.iloc[:, 0])
     else:
         # Fix the substrates if the files were not found
-        print(f'Fixing substrates...\n\n')
+        print(f'Fixing substrates at {magenta}{posFilter}{resetColor}\n\n')
         if exclude:
             # Fix AA
             if len(fixedAA) == 1:
@@ -408,7 +408,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         else:
             print(f'Preferred Residues: {tag}')
         for index in range(len(preferredResidues)):
-            AA = ', '.join(preferredResidues[index])
+            AA = ','.join(preferredResidues[index])
             print(f'     {pink}{AA}{resetColor}@{pink}R{preferredPositions[index]}'
                   f'{resetColor}')
         print()
@@ -441,8 +441,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     # Calculate RF
     probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
                                                 N=countsFinalFixedTotal,
-                                                fileType=sortType,
-                                                )
+                                                fileType=sortType)
 
     # Calculate: Entropy
     ngs.calculateEntropy(probability=probFinalFixed,
@@ -461,11 +460,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
     # Save the data
     if inSaveData:
         ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
-
-
-    # Create released matrix df
-    countsReleased = pd.DataFrame(0, index=ngs.eMap.index,
-                                  columns=ngs.eMap.columns)
 
     # Update: Algorithm parameter
     ngs.motifInit = False
@@ -533,7 +527,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         substratesFinalFixed, countsFinalFixed, countsFinalFixedTotal = fixSubstrate(
             subs=substrates, fixedAA=preferredResidues, fixedPosition=preferredPositions,
             exclude=inExcludeResidues, excludeAA=inExcludedResidue,
-            excludePosition=inExcludedPosition, sortType=sortType)
+            excludePosition=inExcludedPosition, sortType=sortType, posFilter=position)
 
 
         # # Process Data
@@ -579,7 +573,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         # Update: Figure label
         ngs.saveFigureIteration += 1
 
-
         # Determine which residues will be released
         indexDrop = None
         for indexDrop, indexPos in enumerate(preferredPositions):
@@ -590,7 +583,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                 print(f'Release Position: {purple}{position}{resetColor}\n'
                       f'Released Filter:')
                 for index in range(len(keepResidues)):
-                    AA = ', '.join(keepResidues[index])
+                    AA = ','.join(keepResidues[index])
                     print(f'     {magenta}{AA}{resetColor}@'
                           f'{magenta}R{keepPositions[index]}'
                           f'{resetColor}')
@@ -610,7 +603,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         substratesFinalFixed, countsFinalFixed, countsFinalFixedTotal = fixSubstrate(
             subs=substrates, fixedAA=keepResidues, fixedPosition=keepPositions,
             exclude=inExcludeResidues, excludeAA=inExcludedResidue,
-            excludePosition=inExcludedPosition, sortType=sortType)
+            excludePosition=inExcludedPosition, sortType=sortType, posFilter=position)
 
 
         # # Process Data
@@ -655,7 +648,6 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         keepResidues.insert(indexDrop, preferredAA)
         keepPositions.insert(indexDrop, int(position.split('R')[1]))
 
-
         # Update: Dataset tag
         ngs.getDatasetTag()
 
@@ -663,10 +655,11 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
         substratesFinalFixed, countsFinalFixed, countsFinalFixedTotal = fixSubstrate(
             subs=substrates, fixedAA=keepResidues, fixedPosition=keepPositions,
             exclude=inExcludeResidues, excludeAA=inExcludedResidue,
-            excludePosition=inExcludedPosition, sortType=sortType)
+            excludePosition=inExcludedPosition, sortType=sortType, posFilter=position)
 
         # Update: Figure label
         ngs.saveFigureIteration += 1
+
 
         # # Process Data
         # Display current sample size
@@ -732,9 +725,11 @@ def releaseCounts(substrates, countsFiltered, keepResidues, keepPositions, sortT
         # Record counts at released position
         print('======================== Populate Released Count Matrix '
               '=========================')
-        print(f'Populate Position: {magenta}{popPosition}{resetColor}')
+        print(f'Populate Position: {magenta}{popPosition}{resetColor}\n'
+              f'Dataset: {purple}{ngs.datasetTag}{resetColor}\n')
         countsReleased.loc[:, popPosition] = counts.loc[:, popPosition]
-        print(f'Released Counts:\n{countsReleased}\n')
+        print(f'Released Counts:\n{countsReleased}\n\n')
+
 
     # Determine which residues will be released
     indexDrop = None
@@ -776,9 +771,9 @@ def releaseCounts(substrates, countsFiltered, keepResidues, keepPositions, sortT
 
         # Fix Substrates: Release position
         substratesFinalFixed, countsFinalFixed, countsFinalFixedTotal = fixSubstrate(
-            subs=substrates, fixedAA=fixAA, fixedPosition=fixPos,
+            subs=substrates, fixedAA=ngs.fixedAA, fixedPosition=ngs.fixedPos,
             exclude=inExcludeResidues, excludeAA=inExcludedResidue,
-            excludePosition=inExcludedPosition, sortType=sortType)
+            excludePosition=inExcludedPosition, sortType=sortType, posFilter=position)
 
         # Save the data
         if inSaveData:

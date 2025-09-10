@@ -12,19 +12,19 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'DEN'
-inPathFolder = f'{inEnzymeName}'
-inSaveFigures = False
+inEnzymeName = 'Fyn'
+inPathFolder = f'data/{inEnzymeName}'
+inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
 inFixResidues = True
-inFixedResidue = [['G','S']] # [['A','G','S']]
-inFixedPosition = [4]
-inExcludeResidues = False
-inExcludedResidue = ['R']
-inExcludedPosition = [6]
+inFixedResidue = [] # ['R',['G','S']] # [['A','G','S']]
+inFixedPosition = []
+inExcludeResidues = True
+inExcludedResidue = ['Y','Y','Y','Y','Y','Y','Y','Y']
+inExcludedPosition = [1,2,3,4,6,7,8,9,10]
 inMinimumSubstrateCount = 1
 inMinDeltaS = 0.6
 inPrintFixedSubs = True
@@ -33,7 +33,7 @@ inUseEnrichmentFactor = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inUseCodonProb = False # Use AA prob from inCodonSequence to calculate enrichment
 inAvgInitialProb = False
-inDropResidue = [] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
+inDropResidue = ['R'] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
 
 # Input 3: Making Figures
 inPlotEntropy = True
@@ -83,7 +83,7 @@ inTotalWords = 50
 inNSequences = 50
 
 # Input 10: Scan For AA Sequences
-inScanForSequences = True
+inScanForSequences = False
 inFindSequences = ['KRGG', 'RRGG']
 
 # Input 10: PCA
