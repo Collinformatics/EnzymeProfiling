@@ -12,7 +12,7 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Fyn'
+inEnzymeName = 'WNV'
 inPathFolder = f'data/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
@@ -20,11 +20,11 @@ inSetFigureTimer = False
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
 inFixResidues = True
-inFixedResidue = [] # ['R',['G','S']] # [['A','G','S']]
-inFixedPosition = []
-inExcludeResidues = True
-inExcludedResidue = ['Y','Y','Y','Y','Y','Y','Y','Y']
-inExcludedPosition = [1,2,3,4,6,7,8,9,10]
+inFixedResidue = ['R','G'] # ['R',['G','S']] # [['A','G','S']]
+inFixedPosition = [5,6]
+inExcludeResidues = False
+inExcludedResidue = ['']
+inExcludedPosition = []
 inMinimumSubstrateCount = 1
 inMinDeltaS = 0.6
 inPrintFixedSubs = True
@@ -33,7 +33,7 @@ inUseEnrichmentFactor = False
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inUseCodonProb = False # Use AA prob from inCodonSequence to calculate enrichment
 inAvgInitialProb = False
-inDropResidue = ['R'] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
+inDropResidue = ['R9'] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
 
 # Input 3: Making Figures
 inPlotEntropy = True
@@ -175,7 +175,7 @@ probInitial = ngs.calculateProbabilities(counts=countsInitial,
 
 
 # substratesInitial = None
-loadFilteredSubs = False
+loadUnfilteredSubs = False
 filePathFixedCountsFinal, filePathFixedSubsFinal = None, None
 substratesFinal, countsFinal, countsFinalTotal = None, None, None
 if inFixResidues:
@@ -204,7 +204,7 @@ if inFixResidues:
                   f'({cyan}{totalSubsFinal:,}{orange})\n')
             sys.exit()
     else:
-        loadFilteredSubs = True
+        loadUnfilteredSubs = True
 
         # Load: Substrates
         substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
@@ -224,7 +224,7 @@ else:
 
 # ================================== Evaluate The Data ===================================
 if inFixResidues:
-    if loadFilteredSubs:
+    if loadUnfilteredSubs:
         # Fix AA
         substratesFinal, countsFinalTotal = ngs.fixResidue(
             substrates=substratesFinal, fixedString=fixedSubSeq,
@@ -234,6 +234,15 @@ if inFixResidues:
         countsFinal, countsFinalTotal = ngs.countResidues(substrates=substratesFinal,
                                                           datasetType='Final Sort')
 
+        # Save the data
+        ngs.saveData(substrates=substratesFinal, counts=countsFinal)
+
+        # Filter counts matrix
+        if inDropResidue:
+            countsFinal = ngs.dropColumnsFromMatrix(countMatrix=countsFinal,
+                                                    datasetType='Final Sort',
+                                                    dropColumn=inDropResidue)
+
     if inEvaluateSubstrateEnrichment:
         substratesInitial, totalSubsInitial = ngs.loadUnfilteredSubs(loadInitial=True)
 
@@ -241,9 +250,6 @@ if inFixResidues:
             substrates=substratesInitial, fixedString=fixedSubSeq,
             printRankedSubs=inPrintFixedSubs, sortType='Initial Sort')
 
-# Save the data
-if inFixResidues:
-    ngs.saveData(substrates=substratesFinal, counts=countsFinal)
 
 # Display current sample size
 ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalTotal,
