@@ -22,9 +22,9 @@ from Bio.SeqRecord import SeqRecord
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location Information
-inFileName = ['Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L003_R1_001']
+inFileName = ['Mpro2-R4_S3_L002_R1_001']
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/path/{inEnzymeName}'
+inBasePath = f'/data/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
 inSavePath = os.path.join(inBasePath, 'Extracted Data')
 
@@ -38,7 +38,7 @@ inShowSampleSize = True # Include the sample size in your figures
 inFixResidues = True # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
-inNumberOfDatapoints = 10**6
+inNumberOfDatapoints = 10**3
 inSaveAsText = True # False: save as a larger FASTA file
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
@@ -129,14 +129,13 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, p
                                 if len(substrate) == len(inAAPositions) * 3:
                                     substrate = Seq.translate(substrate)
                                     if '*' not in substrate:
-                                        print(f'DNA: {DNA}\n'
+                                        print(f'\nDNA: {DNA}\n'
                                               f'QS: {QS}\n'
                                               f'Sub: {substrate}\n'
                                               f'QS Sub: {QSSub}\n')
                                         if any(score < 20 for score in QSSub):
-                                            print("Low quality base detected in "
-                                                  "substrate DNA.")
-                                            sys.exit()
+                                            continue
+
                                         if inFixResidues:
                                             selectAA = substrate[inFixedPosition[0] - 1]
                                             if selectAA in inFixedResidue:
