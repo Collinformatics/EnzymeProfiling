@@ -148,7 +148,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                             break
 
                     # Save the data as text files
-                    print('=============================== Save: Fasta Files '
+                    print('\n=============================== Save: Fasta Files '
                           '===============================')
                     numDatapoints = len(data)
                     print(f'Extracted datapoints:{red} {numDatapoints:,}'
