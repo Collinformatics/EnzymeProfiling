@@ -129,7 +129,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, p
                                 if len(substrate) == len(inAAPositions) * 3:
                                     substrate = Seq.translate(substrate)
                                     if '*' not in substrate:
-                                        print(f'\nDNA: {DNA}\n'
+                                        print(f'DNA: {DNA}\n'
                                               f'QS: {QS}\n'
                                               f'Sub: {substrate}\n'
                                               f'QS Sub: {QSSub}\n')
