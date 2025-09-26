@@ -38,7 +38,7 @@ inShowSampleSize = True # Include the sample size in your figures
 inFixResidues = True # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
-inNumberOfDatapoints = 10**3
+inNumberOfDatapoints = 10**5
 inSaveAsText = True # False: save as a larger FASTA file
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
@@ -66,7 +66,7 @@ pd.set_option('display.float_format', '{:,.3f}'.format)
 
 
 # =================================== Define Functions ===================================
-def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, printQS):
+def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
     # Define file locations
     fileLocations = []
     saveLocations = []
@@ -172,7 +172,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, p
                         if startSeq in DNA and endSeq in DNA:
                             indexStart = DNA.find(startSeq) + len(startSeq)
                             indexEnd = DNA.find(endSeq)
-                            substrate = DNA[indexStart:indexEnd].strip()  # Extract substrate DNA
+                            substrate = DNA[indexStart:indexEnd].strip()
                             if len(substrate) == len(inAAPositions) * 3:
                                 substrate = Seq.translate(substrate)
                                 if '*' not in substrate:
@@ -191,7 +191,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq, p
 
 
                     # Save the data as fasta files
-                    print('=============================== Save: Fasta Files '
+                    print('\n=============================== Save: Fasta Files '
                           '===============================')
                     numDatapoints = len(data)
                     print(f'Extracted datapoints:{red} {numDatapoints:,}'
@@ -225,9 +225,8 @@ def fixSubstrateSequence(fixAA, fixPosition):
 
 
 
-# ========================================= Run The Code =========================================
+# ===================================== Run The Code =====================================
 fixedSubSeq = fixSubstrateSequence(fixAA=inFixedResidue, fixPosition=inFixedPosition)
 
 fastaConversion(filePath=inFASTQPath, savePath=inSavePath, fileNames=inFileName,
-                fileType='fastq', startSeq=inStartSeqR1, endSeq=inEndSeqR1,
-                printQS=inPrintQualityScores)
+                fileType='fastq', startSeq=inStartSeqR1, endSeq=inEndSeqR1)
