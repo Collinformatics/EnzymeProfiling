@@ -22,7 +22,7 @@ from Bio.SeqRecord import SeqRecord
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location Information
-inFileName = ['Mpro2-I_S1_L002_R1_001','Mpro2-R4_S3_L002_R1_001']
+inFileName = ['Mpro2-R4_S3_L002_R1_001'] # ['Mpro2-I_S1_L002_R1_001']#
 inEnzymeName = inFileName[0].split('-')[0]
 inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
@@ -76,14 +76,12 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
         fileLocations.append(os.path.join(filePath, f'{fileName}.{fileType}'))
         if inFixResidues:
             saveLocations.append(os.path.join(
-                savePath,
-                f'{fileName}-Fixed {fixedSubSeq}-N Seqs.fasta'))
+                savePath, f'{fileName}-Fixed {fixedSubSeq}-N Seqs.fasta'))
             saveLocationsTxt.append(os.path.join(
-                savePath,
-                f'{fileName}-Fixed {fixedSubSeq}-N Seqs.txt'))
+                savePath, f'{fileName}-Fixed {fixedSubSeq}-N Seqs.txt'))
         else:
-            saveLocations.append(os.path.join(savePath, fileName, '.fasta'))
-            saveLocationsTxt.append(os.path.join(savePath, fileName, '.txt'))
+            saveLocations.append(os.path.join(savePath, f'{fileName}-N Seqs.fasta'))
+            saveLocationsTxt.append(os.path.join(savePath, f'{fileName}-N Seqs.txt'))
 
 
     # Evaluate: File path
@@ -128,13 +126,19 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                             if len(substrate) == len(inAAPositions) * 3:
                                 substrate = Seq.translate(substrate)
                                 if '*' not in substrate:
-                                    printN += 1
-                                    print(f'DNA: {DNA}\n'
-                                          f'QS: {QS}\n'
-                                          f'Sub: {substrate}\n'
-                                          f'QS Sub: {QSSub}\n')
-                                    if printN >= inPrintNSubs:
-                                        break
+                                    printData = True
+                                    if inFixResidues:
+                                        selectAA = substrate[inFixedPosition[0] - 1]
+                                        if selectAA not in inFixedResidue:
+                                            printData = False
+                                    if printData:
+                                        printN += 1
+                                        print(f'DNA: {DNA}\n'
+                                              f'QS: {QS}\n'
+                                              f'Sub: {substrate}\n'
+                                              f'QS Sub: {QSSub}\n')
+                                        if printN >= inPrintNSubs:
+                                            break
 
 
                 # Extract datapoints
@@ -178,6 +182,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                     if numDatapoints != 0:
                         savePath = saveLocationsTxt[indexPath]
                         savePath=savePath.replace('N Seqs', f'N {numDatapoints}')
+
                         with open(savePath, 'w') as fileSave:
                             for substrate in data:
                                 fileSave.write(f'{substrate}\n')
