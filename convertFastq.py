@@ -22,11 +22,11 @@ from Bio.SeqRecord import SeqRecord
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location Information
-inFileName = ['Mpro2-R4_S3_L002_R1_001']
+inFileName = ['Mpro2-I_S1_L002_R1_001','Mpro2-R4_S3_L002_R1_001']
 inEnzymeName = inFileName[0].split('-')[0]
-inBasePath = f'/data/{inEnzymeName}'
+inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
-inSavePath = os.path.join(inBasePath, 'Extracted Data')
+inSavePath = os.path.join(inBasePath, 'Data')
 
 # Input 2: Substrate Parameters
 inEnzymeName = inFileName[0].split('-')[0]
@@ -38,7 +38,8 @@ inShowSampleSize = True # Include the sample size in your figures
 inFixResidues = True # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
-inNumberOfDatapoints = 10**5
+inNumberOfDatapoints = 10**6
+inPrintNSubs = 10
 inSaveAsText = True # False: save as a larger FASTA file
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
@@ -111,6 +112,31 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                 dataLoaded = SeqIO.parse(file, fileType)
                 warnings.simplefilter('ignore', BiopythonWarning)
 
+                printN = 0
+                for index, datapoint in enumerate(dataLoaded):
+                    # Select full DNA seq
+                    DNA = str(datapoint.seq)
+                    QS = datapoint.letter_annotations['phred_quality']
+
+                    # Extract substrate DNA
+                    if startSeq in DNA and endSeq in DNA:
+                        indexStart = DNA.find(startSeq) + len(startSeq)
+                        indexEnd = DNA.find(endSeq)
+                        substrate = DNA[indexStart:indexEnd].strip()
+                        QSSub = QS[indexStart:indexEnd]
+                        if 'N' not in substrate:
+                            if len(substrate) == len(inAAPositions) * 3:
+                                substrate = Seq.translate(substrate)
+                                if '*' not in substrate:
+                                    printN += 1
+                                    print(f'DNA: {DNA}\n'
+                                          f'QS: {QS}\n'
+                                          f'Sub: {substrate}\n'
+                                          f'QS Sub: {QSSub}\n')
+                                    if printN >= inPrintNSubs:
+                                        break
+
+
                 # Extract datapoints
                 substrateCount = 0
                 if inSaveAsText:
@@ -129,10 +155,6 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                                 if len(substrate) == len(inAAPositions) * 3:
                                     substrate = Seq.translate(substrate)
                                     if '*' not in substrate:
-                                        print(f'DNA: {DNA}\n'
-                                              f'QS: {QS}\n'
-                                              f'Sub: {substrate}\n'
-                                              f'QS Sub: {QSSub}\n')
                                         if any(score < 20 for score in QSSub):
                                             continue
 
