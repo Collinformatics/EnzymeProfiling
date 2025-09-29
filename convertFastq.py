@@ -77,10 +77,10 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
         if inFixResidues:
             saveLocations.append(os.path.join(
                 savePath,
-                f'{fileName}-Fixed {fixedSubSeq}-N {inNumberOfDatapoints} _NSubs_.fasta'))
+                f'{fileName}-Fixed {fixedSubSeq}-N {inNumberOfDatapoints}-N Seqs.fasta'))
             saveLocationsTxt.append(os.path.join(
                 savePath,
-                f'{fileName}-Fixed {fixedSubSeq}-N {inNumberOfDatapoints} _NSubs_.txt'))
+                f'{fileName}-Fixed {fixedSubSeq}-N {inNumberOfDatapoints}N Seqs.txt'))
         else:
             saveLocations.append(os.path.join(savePath, fileName, '.fasta'))
             saveLocationsTxt.append(os.path.join(savePath, fileName, '.txt'))
@@ -177,7 +177,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                           f'{resetColor} substrates\n')
                     if numDatapoints != 0:
                         savePath = saveLocationsTxt[indexPath]
-                        savePath=savePath.replace('_NSubs_', f'{numDatapoints}')
+                        savePath=savePath.replace('N Seqs', f'N Seqs {numDatapoints}')
                         with open(savePath, 'w') as fileSave:
                             for substrate in data:
                                 fileSave.write(f'{substrate}\n')
@@ -221,6 +221,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                           f'{resetColor} substrates\n')
                     if numDatapoints != 0:
                         savePath = saveLocations[indexPath]
+                        savePath = savePath.replace('N Seqs', f'N Seqs {numDatapoints}')
                         with open(savePath, 'w') as fasta_file:
                             SeqIO.write(data, fasta_file, 'fasta')
 
