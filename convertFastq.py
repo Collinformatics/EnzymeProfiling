@@ -193,11 +193,10 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                         break
                 timeEnd = time.time()
                 timeRun = timeEnd - timeStart
-                print(f'Runtime: {red}{round(timeRun, 2):,}{resetColor} s\n\n')
+                print(f'Runtime: {round(timeRun, 2):,} s\n')
+
 
                 # Save the data as text files
-                print('=============================== Save: Fasta Files '
-                      '===============================')
                 numDatapoints = len(data)
                 print(f'Extracted datapoints:{red} {numDatapoints:,}'
                       f'{resetColor} substrates\n')
@@ -242,12 +241,10 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                         break
                 timeEnd = time.time()
                 timeRun = timeEnd-timeStart
-                print(f'Runtime: {red}{round(timeRun, 2):,}{resetColor} s\n\n')
+                print(f'Runtime: {round(timeRun, 2):,} s\n')
 
 
                 # Save the data as fasta files
-                print('=============================== Save: Fasta Files '
-                      '===============================')
                 numDatapoints = len(data)
                 print(f'Extracted datapoints:{red} {numDatapoints:,}'
                       f'{resetColor} substrates\n')
