@@ -39,11 +39,11 @@ inSubstrateLength = len(inAAPositions)
 inShowSampleSize = True # Include the sample size in your figures
 
 # Input 3: Define Variables Used To Extract The Substrates
-inScanRange = False
+inScanRange = True
 inFixResidues = False # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
-inNumberOfDatapoints = 5*10**7
+inNumberOfDatapoints = 5*10**6
 inPrintNSubs = 10
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
@@ -69,6 +69,7 @@ pd.set_option('display.width', 1000)
 pd.set_option('display.float_format', '{:,.3f}'.format)
 
 
+firstRound = True
 
 # =================================== Define Functions ===================================
 def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
@@ -89,33 +90,39 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
 
 
     # Evaluate: File path
-    gZipped = False
+    global firstRound
     for indexPath, path in enumerate(fileLocations):
-        print('=============================== Load: Fastq Files '
-              '===============================')
+        if firstRound:
+            print('=============================== Load: Fastq Files '
+                  '===============================')
+            print(f'Loading{purple} FASTQ{resetColor} file at:\n'
+                  f'     {path}\n\n')
         if not os.path.isfile(path):
             pathZipped = f'{path}.gz'
             if os.path.isfile(pathZipped):
-                gZipped = True
                 path = pathZipped
             else:
                 print(f'{red}ERROR: File location does not lead to a file\n'
                       f'     {path}\n'
                       f'     {pathZipped}')
                 sys.exit()
-        print(f'Loading{purple} FASTQ{resetColor} file at:\n'
-              f'     {path}\n\n')
-        print(f'Selecting {red}{inNumberOfDatapoints:,}{resetColor} substrates\n')
 
 
-        # Load data
-        data = []
-        if gZipped:
-            # Open the file
-            with (gzip.open(path, 'rt', encoding='utf-8') as file):
-                dataLoaded = SeqIO.parse(file, fileType)
+        # Open the file
+        openFn = gzip.open if path.endswith('.gz') else open  # Define open function
+        with openFn(path, 'rt') as file:  # 'rt' = read text mode
+            if '.fastq' in path or '.fq' in path:
+                dataLoaded = SeqIO.parse(file, 'fastq') # Load data
                 warnings.simplefilter('ignore', BiopythonWarning)
+            elif '.fasta' in path or '.fa' in path:
+                dataLoaded = SeqIO.parse(file, 'fasta')
+                warnings.simplefilter('ignore', BiopythonWarning)
+            else:
+                print(f'ERROR: Unrecognized file\n     {path}')
 
+            # Print data
+            if firstRound:
+                firstRound = False
                 printN = 0
                 for index, datapoint in enumerate(dataLoaded):
                     # Select full DNA seq
@@ -144,102 +151,106 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                                               f'Sub: {substrate}\n'
                                               f'QS Sub: {QSSub}\n')
                                         if printN >= inPrintNSubs:
+                                            print()
                                             break
 
+            # Extract datapoints
+            print('================================ Get Substrates '
+                  '=================================')
+            print(f'Selecting {red}{inNumberOfDatapoints:,}{resetColor} substrates\n')
+            data = []
+            substrateCount = 0
+            if inSaveAsText:
+                for index, datapoint in enumerate(dataLoaded):
+                    # Select full DNA seq
+                    DNA = str(datapoint.seq)
+                    QS = datapoint.letter_annotations['phred_quality']
 
-                # Extract datapoints
-                substrateCount = 0
-                if inSaveAsText:
-                    for index, datapoint in enumerate(dataLoaded):
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-                        QS = datapoint.letter_annotations['phred_quality']
-
-                        # Extract substrate DNA
-                        if startSeq in DNA and endSeq in DNA:
-                            indexStart = DNA.find(startSeq) + len(startSeq)
-                            indexEnd = DNA.find(endSeq)
-                            substrate = DNA[indexStart:indexEnd].strip()
-                            QSSub = QS[indexStart:indexEnd]
-                            if 'N' not in substrate:
-                                if len(substrate) == len(inAAPositions) * 3:
-                                    substrate = Seq.translate(substrate)
-                                    if '*' not in substrate:
-                                        if any(score < 20 for score in QSSub):
-                                            continue
-
-                                        if inFixResidues:
-                                            selectAA = substrate[inFixedPosition[0] - 1]
-                                            if selectAA in inFixedResidue:
-                                                substrateCount += 1
-                                                data.append(substrate)
-                                        else:
-                                            substrateCount += 1
-                                            data.append(substrate)
-                        if substrateCount == inNumberOfDatapoints:
-                            break
-
-                    # Save the data as text files
-                    print('\n=============================== Save: Fasta Files '
-                          '===============================')
-                    numDatapoints = len(data)
-                    print(f'Extracted datapoints:{red} {numDatapoints:,}'
-                          f'{resetColor} substrates\n')
-                    if numDatapoints != 0:
-                        savePath = saveLocationsTxt[indexPath]
-                        savePath=savePath.replace('N Seqs', f'N {numDatapoints}')
-
-                        with open(savePath, 'w') as fileSave:
-                            for substrate in data:
-                                fileSave.write(f'{substrate}\n')
-
-                        print(f'Saving a{yellow} Text{resetColor} file at:\n'
-                              f'     {savePath}\n\n')
-                    else:
-                        print(f'The data was not saved, no substrates were found\n\n')
-                else:
-                    for index, datapoint in enumerate(dataLoaded):
-                        # Select full DNA seq
-                        DNA = str(datapoint.seq)
-
-                        # Extract substrate DNA
-                        if startSeq in DNA and endSeq in DNA:
-                            indexStart = DNA.find(startSeq) + len(startSeq)
-                            indexEnd = DNA.find(endSeq)
-                            substrate = DNA[indexStart:indexEnd].strip()
+                    # Extract substrate DNA
+                    if startSeq in DNA and endSeq in DNA:
+                        indexStart = DNA.find(startSeq) + len(startSeq)
+                        indexEnd = DNA.find(endSeq)
+                        substrate = DNA[indexStart:indexEnd].strip()
+                        QSSub = QS[indexStart:indexEnd]
+                        if 'N' not in substrate:
                             if len(substrate) == len(inAAPositions) * 3:
                                 substrate = Seq.translate(substrate)
                                 if '*' not in substrate:
+                                    if any(score < 20 for score in QSSub):
+                                        continue
+
                                     if inFixResidues:
                                         selectAA = substrate[inFixedPosition[0] - 1]
                                         if selectAA in inFixedResidue:
                                             substrateCount += 1
-                                            data.append(SeqRecord(seq=substrate,
-                                                                  id=datapoint.id))
+                                            data.append(substrate)
                                     else:
+                                        substrateCount += 1
+                                        data.append(substrate)
+                    if substrateCount == inNumberOfDatapoints:
+                        break
+
+                # Save the data as text files
+                print('\n=============================== Save: Fasta Files '
+                      '===============================')
+                numDatapoints = len(data)
+                print(f'Extracted datapoints:{red} {numDatapoints:,}'
+                      f'{resetColor} substrates\n')
+                if numDatapoints != 0:
+                    savePath = saveLocationsTxt[indexPath]
+                    savePath=savePath.replace('N Seqs', f'N {numDatapoints}')
+
+                    with open(savePath, 'w') as fileSave:
+                        for substrate in data:
+                            fileSave.write(f'{substrate}\n')
+
+                    print(f'Saving a{yellow} Text{resetColor} file at:\n'
+                          f'     {savePath}\n\n')
+                else:
+                    print(f'The data was not saved, no substrates were found\n\n')
+            else:
+                for index, datapoint in enumerate(dataLoaded):
+                    # Select full DNA seq
+                    DNA = str(datapoint.seq)
+
+                    # Extract substrate DNA
+                    if startSeq in DNA and endSeq in DNA:
+                        indexStart = DNA.find(startSeq) + len(startSeq)
+                        indexEnd = DNA.find(endSeq)
+                        substrate = DNA[indexStart:indexEnd].strip()
+                        if len(substrate) == len(inAAPositions) * 3:
+                            substrate = Seq.translate(substrate)
+                            if '*' not in substrate:
+                                if inFixResidues:
+                                    selectAA = substrate[inFixedPosition[0] - 1]
+                                    if selectAA in inFixedResidue:
                                         substrateCount += 1
                                         data.append(SeqRecord(seq=substrate,
                                                               id=datapoint.id))
-                        if substrateCount == inNumberOfDatapoints:
-                            break
+                                else:
+                                    substrateCount += 1
+                                    data.append(SeqRecord(seq=substrate,
+                                                          id=datapoint.id))
+                    if substrateCount == inNumberOfDatapoints:
+                        break
 
 
-                    # Save the data as fasta files
-                    print('\n=============================== Save: Fasta Files '
-                          '===============================')
-                    numDatapoints = len(data)
-                    print(f'Extracted datapoints:{red} {numDatapoints:,}'
-                          f'{resetColor} substrates\n')
-                    if numDatapoints != 0:
-                        savePath = saveLocations[indexPath]
-                        savePath = savePath.replace('N Seqs', f'N {numDatapoints}')
-                        with open(savePath, 'w') as fasta_file:
-                            SeqIO.write(data, fasta_file, 'fasta')
+                # Save the data as fasta files
+                print('\n=============================== Save: Fasta Files '
+                      '===============================')
+                numDatapoints = len(data)
+                print(f'Extracted datapoints:{red} {numDatapoints:,}'
+                      f'{resetColor} substrates\n')
+                if numDatapoints != 0:
+                    savePath = saveLocations[indexPath]
+                    savePath = savePath.replace('N Seqs', f'N {numDatapoints}')
+                    with open(savePath, 'w') as fasta_file:
+                        SeqIO.write(data, fasta_file, 'fasta')
 
-                        print(f'Saving a{yellow} FASTA{resetColor} file at:\n'
-                              f'     {savePath}\n\n')
-                    else:
-                        print(f'The data was not saved, no substrates were found\n\n')
+                    print(f'Saving a{yellow} fasta{resetColor} file at:\n'
+                          f'     {savePath}\n\n')
+                else:
+                    print(f'The data was not saved, no substrates were found\n\n')
 
 
 
@@ -263,7 +274,7 @@ def fixSubstrateSequence(fixAA, fixPosition):
 # ===================================== Run The Code =====================================
 fixedSubSeq = fixSubstrateSequence(fixAA=inFixedResidue, fixPosition=inFixedPosition)
 
-
+# Convert file
 if inScanRange:
     exponent = math.floor(math.log10(inNumberOfDatapoints))
     print(f'Saving files with N substrates:')
