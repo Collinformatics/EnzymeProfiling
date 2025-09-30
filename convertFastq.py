@@ -1,7 +1,9 @@
 import gzip
+import math
 import os
 import pandas as pd
 import sys
+import time
 import warnings
 from Bio import SeqIO
 from Bio import BiopythonWarning
@@ -21,12 +23,14 @@ from Bio.SeqRecord import SeqRecord
 
 
 # ===================================== User Inputs ======================================
-# Input 1: File Location Information
-inFileName = ['Mpro2-R4_S3_L002_R1_001'] # ['Mpro2-I_S1_L002_R1_001']#
+# Input 1: File Parameters
+inFileName = ['Mpro2-I_S1_L002_R1_001', 'Mpro2-R4_S3_L002_R1_001']
+inFileName = [inFileName[0]]
 inEnzymeName = inFileName[0].split('-')[0]
 inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
 inSavePath = os.path.join(inBasePath, 'Data')
+inSaveAsText = True # False: save as a larger FASTA file
 
 # Input 2: Substrate Parameters
 inEnzymeName = inFileName[0].split('-')[0]
@@ -35,12 +39,12 @@ inSubstrateLength = len(inAAPositions)
 inShowSampleSize = True # Include the sample size in your figures
 
 # Input 3: Define Variables Used To Extract The Substrates
-inFixResidues = True # True: fix AAs in the substrate
+inScanRange = False
+inFixResidues = False # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
-inNumberOfDatapoints = 10**6
+inNumberOfDatapoints = 5*10**6
 inPrintNSubs = 10
-inSaveAsText = True # False: save as a larger FASTA file
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
 inStartSeqR2 = inStartSeqR1
@@ -101,6 +105,8 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                 sys.exit()
         print(f'Loading{purple} FASTQ{resetColor} file at:\n'
               f'     {path}\n\n')
+        print(f'Selecting {red}{inNumberOfDatapoints:,}{resetColor} substrates\n')
+
 
         # Load data
         data = []
@@ -257,5 +263,20 @@ def fixSubstrateSequence(fixAA, fixPosition):
 # ===================================== Run The Code =====================================
 fixedSubSeq = fixSubstrateSequence(fixAA=inFixedResidue, fixPosition=inFixedPosition)
 
-fastaConversion(filePath=inFASTQPath, savePath=inSavePath, fileNames=inFileName,
-                fileType='fastq', startSeq=inStartSeqR1, endSeq=inEndSeqR1)
+
+if inScanRange:
+    exponent = math.floor(math.log10(inNumberOfDatapoints))
+    print(f'Saving files with N substrates:')
+    for val in range(1, 10):
+        inNumberOfDatapoints = val * 10 ** exponent
+        print(f'     {red}{inNumberOfDatapoints:,}{resetColor}')
+    print('\n')
+    time.sleep(1)
+
+    for val in range(1, 10):
+        inNumberOfDatapoints = val*10**exponent
+        fastaConversion(filePath=inFASTQPath, savePath=inSavePath, fileNames=inFileName,
+                        fileType='fastq', startSeq=inStartSeqR1, endSeq=inEndSeqR1)
+else:
+    fastaConversion(filePath=inFASTQPath, savePath=inSavePath, fileNames=inFileName,
+                    fileType='fastq', startSeq=inStartSeqR1, endSeq=inEndSeqR1)
