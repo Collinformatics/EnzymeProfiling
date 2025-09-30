@@ -30,7 +30,7 @@ inEnzymeName = inFileName[0].split('-')[0]
 inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
 inSavePath = os.path.join(inBasePath, f'Data - {inFileName[0]}')
-inSaveAsText = False # False: save as a larger FASTA file
+inSaveAsText = True # False: save as a larger FASTA file
 
 # Input 2: Substrate Parameters
 inEnzymeName = inFileName[0].split('-')[0]
@@ -43,7 +43,7 @@ inScanRange = True
 inFixResidues = False # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
-inNumberOfDatapoints = 5*10**6
+inNumberOfDatapoints = 5*10**5
 inPrintNSubs = 10
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
@@ -157,10 +157,12 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
             # Extract datapoints
             print('================================ Get Substrates '
                   '=================================')
-            print(f'Selecting {red}{inNumberOfDatapoints:,}{resetColor} substrates\n')
+            print(f'Selecting {red}{inNumberOfDatapoints:,}{resetColor} substrates')
             data = []
             substrateCount = 0
+
             if inSaveAsText:
+                timeStart = time.time()
                 for index, datapoint in enumerate(dataLoaded):
                     # Select full DNA seq
                     DNA = str(datapoint.seq)
@@ -189,9 +191,12 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                                         data.append(substrate)
                     if substrateCount == inNumberOfDatapoints:
                         break
+                timeEnd = time.time()
+                timeRun = timeEnd - timeStart
+                print(f'Runtime: {red}{round(timeRun, 2):,}{resetColor} s\n\n')
 
                 # Save the data as text files
-                print('\n=============================== Save: Fasta Files '
+                print('=============================== Save: Fasta Files '
                       '===============================')
                 numDatapoints = len(data)
                 print(f'Extracted datapoints:{red} {numDatapoints:,}'
@@ -209,7 +214,9 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                 else:
                     print(f'The data was not saved, no substrates were found\n\n')
             else:
+                timeStart = time.time()
                 for index, datapoint in enumerate(dataLoaded):
+
                     # Select full DNA seq
                     DNA = str(datapoint.seq)
 
@@ -233,10 +240,13 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                                                           id=datapoint.id))
                     if substrateCount == inNumberOfDatapoints:
                         break
+                timeEnd = time.time()
+                timeRun = timeEnd-timeStart
+                print(f'Runtime: {red}{round(timeRun, 2):,}{resetColor} s\n\n')
 
 
                 # Save the data as fasta files
-                print('\n=============================== Save: Fasta Files '
+                print('=============================== Save: Fasta Files '
                       '===============================')
                 numDatapoints = len(data)
                 print(f'Extracted datapoints:{red} {numDatapoints:,}'
