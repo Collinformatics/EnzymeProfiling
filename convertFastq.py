@@ -25,12 +25,12 @@ from Bio.SeqRecord import SeqRecord
 # ===================================== User Inputs ======================================
 # Input 1: File Parameters
 inFileName = ['Mpro2-I_S1_L002_R1_001', 'Mpro2-R4_S3_L002_R1_001']
-inFileName = [inFileName[0]]
+inFileName = [inFileName[1]]
 inEnzymeName = inFileName[0].split('-')[0]
 inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
-inSavePath = os.path.join(inBasePath, 'Data')
-inSaveAsText = True # False: save as a larger FASTA file
+inSavePath = os.path.join(inBasePath, f'Data - {inFileName[0]}')
+inSaveAsText = False # False: save as a larger FASTA file
 
 # Input 2: Substrate Parameters
 inEnzymeName = inFileName[0].split('-')[0]
@@ -43,7 +43,7 @@ inScanRange = False
 inFixResidues = False # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
-inNumberOfDatapoints = 5*10**6
+inNumberOfDatapoints = 5*10**7
 inPrintNSubs = 10
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
