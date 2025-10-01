@@ -24,16 +24,19 @@ from Bio.SeqRecord import SeqRecord
 
 # ===================================== User Inputs ======================================
 # Input 1: File Parameters
-inFileName = ['Mpro2-I_S1_L002_R1_001', 'Mpro2-R4_S3_L002_R1_001']
-inFileName = [inFileName[1]]
-inEnzymeName = inFileName[0].split('-')[0]
+inFileName = [['Mpro2-I_S1_L002_R1_001', 'Mpro2-I_S1_L003_R1_001'],
+              'Mpro2-R4_S3_L002_R1_001']
+inFileName = inFileName[0]
+inEnzymeName = inFileName[0].split('-')[0] if isinstance(inFileName, list) \
+    else inFileName.split('-')[0]
 inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
-inSavePath = os.path.join(inBasePath, f'Data - {inFileName[0]}')
-inSaveAsText = True # False: save as a larger FASTA file
+inSavePath = os.path.join(inBasePath, f'Data - FromFastq')
+if not os.path.exists(inSavePath):
+    os.makedirs(inSavePath, exist_ok=True)
+inSaveAsText = False # False: save as a larger FASTA file
 
 # Input 2: Substrate Parameters
-inEnzymeName = inFileName[0].split('-')[0]
 inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
 inSubstrateLength = len(inAAPositions)
 inShowSampleSize = True # Include the sample size in your figures
@@ -55,13 +58,21 @@ inPrintQualityScores = False # QSs are "phred quality" scores
 
 # ======================================== Set Parameters ========================================
 # Colors:
+greyDark = '\033[38;2;144;144;144m'
 white = '\033[38;2;255;255;255m'
-red = '\033[91m'
-orange = '\033[38;2;247;151;31m'
-yellow = '\033[38;2;255;217;24m'
+purple = '\033[38;2;189;22;255m'
+magenta = '\033[38;2;255;0;128m'
+pink = '\033[38;2;255;0;242m'
+cyan = '\033[38;2;22;255;212m'
+blue = '\033[38;5;51m'
 green = '\033[38;2;5;232;49m'
-purple = '\033[38;2;230;0;255m'
+greenLight = '\033[38;2;204;255;188m'
+greenDark = '\033[38;2;30;121;13m'
+yellow = '\033[38;2;255;217;24m'
+orange = '\033[38;2;247;151;31m'
+red = '\033[91m'
 resetColor = '\033[0m'
+
 
 # Print options
 pd.set_option('display.max_columns', None)
@@ -69,7 +80,6 @@ pd.set_option('display.width', 1000)
 pd.set_option('display.float_format', '{:,.3f}'.format)
 
 
-firstRound = True
 
 # =================================== Define Functions ===================================
 def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
@@ -77,25 +87,41 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
     fileLocations = []
     saveLocations = []
     saveLocationsTxt = []
-    for fileName in fileNames:
-        fileLocations.append(os.path.join(filePath, f'{fileName}.{fileType}'))
-        if inFixResidues:
-            saveLocations.append(os.path.join(
-                savePath, f'{fileName}-Fixed {fixedSubSeq}-N Seqs.fasta'))
-            saveLocationsTxt.append(os.path.join(
-                savePath, f'{fileName}-Fixed {fixedSubSeq}-N Seqs.txt'))
-        else:
-            saveLocations.append(os.path.join(savePath, f'{fileName}-N Seqs.fasta'))
-            saveLocationsTxt.append(os.path.join(savePath, f'{fileName}-N Seqs.txt'))
+    files = []
+    if isinstance(fileNames, list):
+        fileTag = f'{" - ".join(fileNames)} - N Seqs'
+        for fileName in fileNames:
+            files.append(fileName)
+            fileLocations.append(os.path.join(filePath, f'{fileName}.{fileType}'))
+    else:
+        fileTag = f'{fileNames} - N Seqs'
+        files.append(fileNames)
+        fileLocations.append(os.path.join(filePath, f'{fileNames}.{fileType}'))
 
+    # Define save location
+    if inFixResidues:
+        saveLocations.append(os.path.join(
+            savePath, f'{fileTag}-Fixed {fixedSubSeq}.fasta'))
+        saveLocationsTxt.append(os.path.join(
+            savePath, f'{fileTag}-Fixed {fixedSubSeq}.txt'))
+    else:
+        saveLocations.append(os.path.join(savePath, f'{fileTag}.fasta'))
+        saveLocationsTxt.append(os.path.join(savePath, f'{fileTag}.txt'))
 
     # Evaluate: File path
     global firstRound
+    data = []
+    substrateCount = 0
     for indexPath, path in enumerate(fileLocations):
+        if substrateCount == inNumberOfDatapoints:
+            print(f'Ending loop: N = {red}{substrateCount}{resetColor}\n')
+            break
+
         if firstRound:
-            print('=============================== Load: Fastq Files '
+            print('\n=============================== Load: Fastq Files '
                   '===============================')
-            print(f'Loading{purple} FASTQ{resetColor} file at:\n'
+            print(f'Loading{purple} {files[indexPath]}{resetColor}\n'
+                  f'File path:\n'
                   f'     {path}\n\n')
         if not os.path.isfile(path):
             pathZipped = f'{path}.gz'
@@ -122,7 +148,6 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
 
             # Print data
             if firstRound:
-                firstRound = False
                 printN = 0
                 for index, datapoint in enumerate(dataLoaded):
                     # Select full DNA seq
@@ -148,7 +173,8 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                                         printN += 1
                                         print(f'DNA: {DNA}\n'
                                               f'QS: {QS}\n'
-                                              f'Sub: {substrate}\n'
+                                              f'Sub: {greenLight}{substrate}'
+                                              f'{resetColor}\n'
                                               f'QS Sub: {QSSub}\n')
                                         if printN >= inPrintNSubs:
                                             print()
@@ -158,8 +184,6 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
             print('================================ Get Substrates '
                   '=================================')
             print(f'Selecting {red}{inNumberOfDatapoints:,}{resetColor} substrates')
-            data = []
-            substrateCount = 0
 
             if inSaveAsText:
                 timeStart = time.time()
@@ -189,29 +213,10 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                                     else:
                                         substrateCount += 1
                                         data.append(substrate)
-                    if substrateCount == inNumberOfDatapoints:
-                        break
-                timeEnd = time.time()
-                timeRun = timeEnd - timeStart
-                print(f'Runtime: {round(timeRun, 2):,} s\n')
-
-
-                # Save the data as text files
-                numDatapoints = len(data)
-                print(f'Extracted datapoints:{red} {numDatapoints:,}'
-                      f'{resetColor} substrates\n')
-                if numDatapoints != 0:
-                    savePath = saveLocationsTxt[indexPath]
-                    savePath=savePath.replace('N Seqs', f'N {numDatapoints}')
-
-                    with open(savePath, 'w') as fileSave:
-                        for substrate in data:
-                            fileSave.write(f'{substrate}\n')
-
-                    print(f'Saving a{yellow} Text{resetColor} file at:\n'
-                          f'     {savePath}\n\n')
-                else:
-                    print(f'The data was not saved, no substrates were found\n\n')
+                                    if substrateCount == inNumberOfDatapoints:
+                                        print(f'Ending loop: N = {red}{substrateCount}'
+                                              f'{resetColor}\n')
+                                        break
             else:
                 timeStart = time.time()
                 for index, datapoint in enumerate(dataLoaded):
@@ -237,27 +242,46 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                                     substrateCount += 1
                                     data.append(SeqRecord(seq=substrate,
                                                           id=datapoint.id))
-                    if substrateCount == inNumberOfDatapoints:
-                        break
-                timeEnd = time.time()
-                timeRun = timeEnd-timeStart
-                print(f'Runtime: {round(timeRun, 2):,} s\n')
+                                if substrateCount == inNumberOfDatapoints:
+                                    print(f'Ending loop: N = {red}{substrateCount}'
+                                          f'{resetColor}\n')
+                                    break
+        timeEnd = time.time()
+        timeRun = timeEnd-timeStart
+        print(f'Runtime: {round(timeRun, 2):,} s\n')
+        print()
+    if firstRound:
+        firstRound = False
 
+    # Save the data
+    numDatapoints = len(data)
+    print(f'Extracted datapoints:{red} {numDatapoints:,}'
+          f'{resetColor} substrates\n')
+    if numDatapoints != 0:
+        if inSaveAsText:
+            print(f'Saving a{yellow} Text{resetColor} file at:\n'
+                  f'     {savePath}\n\n')
 
-                # Save the data as fasta files
-                numDatapoints = len(data)
-                print(f'Extracted datapoints:{red} {numDatapoints:,}'
-                      f'{resetColor} substrates\n')
-                if numDatapoints != 0:
-                    savePath = saveLocations[indexPath]
-                    savePath = savePath.replace('N Seqs', f'N {numDatapoints}')
-                    with open(savePath, 'w') as fasta_file:
-                        SeqIO.write(data, fasta_file, 'fasta')
+            # Save the data as text files
+            savePath = saveLocationsTxt[0]
+            savePath = savePath.replace('N Seqs', f'N {numDatapoints}')
+            with open(savePath, 'w') as fileSave:
+                for substrate in data:
+                    fileSave.write(f'{substrate}\n')
+        else:
+            print(f'Saving a{yellow} fasta{resetColor} file at:\n'
+                  f'     {savePath}\n\n')
 
-                    print(f'Saving a{yellow} fasta{resetColor} file at:\n'
-                          f'     {savePath}\n\n')
-                else:
-                    print(f'The data was not saved, no substrates were found\n\n')
+            # Save the data as fasta files
+            numDatapoints = len(data)
+            print(f'Extracted datapoints:{red} {numDatapoints:,}'
+                  f'{resetColor} substrates\n')
+            savePath = saveLocations[0]
+            savePath = savePath.replace('N Seqs', f'N {numDatapoints}')
+            with open(savePath, 'w') as fasta_file:
+                SeqIO.write(data, fasta_file, 'fasta')
+    else:
+        print(f'The data was not saved, no substrates were found\n\n')
 
 
 
@@ -282,13 +306,15 @@ def fixSubstrateSequence(fixAA, fixPosition):
 fixedSubSeq = fixSubstrateSequence(fixAA=inFixedResidue, fixPosition=inFixedPosition)
 
 # Convert file
+firstRound = True
+print('============================= Extracting Substrates =============================')
 if inScanRange:
     exponent = math.floor(math.log10(inNumberOfDatapoints))
     print(f'Saving files with N substrates:')
     for val in range(1, 10):
         inNumberOfDatapoints = val * 10 ** exponent
         print(f'     {red}{inNumberOfDatapoints:,}{resetColor}')
-    print('\n')
+    print('')
     time.sleep(1)
 
     for val in range(1, 10):
@@ -296,5 +322,7 @@ if inScanRange:
         fastaConversion(filePath=inFASTQPath, savePath=inSavePath, fileNames=inFileName,
                         fileType='fastq', startSeq=inStartSeqR1, endSeq=inEndSeqR1)
 else:
+    print(f'Saving file with N substrates:\n'
+          f'     {red}{inNumberOfDatapoints:,}{resetColor}\n')
     fastaConversion(filePath=inFASTQPath, savePath=inSavePath, fileNames=inFileName,
                     fileType='fastq', startSeq=inStartSeqR1, endSeq=inEndSeqR1)
