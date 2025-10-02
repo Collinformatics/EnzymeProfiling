@@ -11,22 +11,22 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'MMP7'
-inPathFolder = f'data/{inEnzymeName}'
+inEnzymeName = 'WNV'
+inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.75
+inMinDeltaS = 2.4
 inRefixMotif = True
-inFixedResidue = ['L','L']
-inFixedPosition = [5,7] # Fix only at 1 position in the substrate
+inFixedResidue = ['R','G']
+inFixedPosition = [5,6] # Fix only at 1 position in the substrate
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
-inManualEntropy = False
-inManualFrame = ['R2','R3','R4','R5']
+inManualEntropy = True
+inManualFrame = ['R4','R5','R3','R6']
 inFixFullMotifSeq = False
 inMinimumSubstrateCount = 1
 inSetMinimumESFixAA = 0
@@ -36,7 +36,7 @@ inCombineFixedMotifs = False
 inPredictSubstrateEnrichmentScores = False
 inDuplicateFigure = True
 inShowSampleSize = True
-inDropResidue = [] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
+inDropResidue = ['R9'] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
 
 # Input 3: Figures
 inPlotEntropy = True

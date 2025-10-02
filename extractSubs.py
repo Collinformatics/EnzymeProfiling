@@ -16,18 +16,18 @@ from functions import NGS
 
 
 # ===================================== User Inputs ======================================
-# Input 1: File Location 
-inFileName = ['VEEV-R4_S2_L001_R1_001', 'VEEV-R4_S2_L001_R2_001'] # Define file name(s)
+# Input 1: File Location
+inFileName = ['Src-F_S2_L002_R1_001', 'Src-F_S2_L002_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inPathFolder = f'/path/{inEnzymeName}'
+inPathFolder = f'/Enzymes/{inEnzymeName}'
 inPathDNASeqs = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder name
 inFileType = 'fastq' # Define the file type
 
 # Input 2: Saving The Data
-inSaveFileName = 'VEEV-R4_S2_L001' # Add this name to filePaths(enzyme) in functions.py
+inSaveFileName = 'Src-F_S2_L002' # Add this name to filePaths(enzyme) in functions.py
 
 # Input 3: Substrate Parameters
-inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8','R9','R10']
+inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8','R9']
 
 # Input 4: Substrate Recognition
 inPrintNumber = 10
@@ -37,13 +37,13 @@ inStartSeqR2 = inStartSeqR1
 inEndSeqR2 = inEndSeqR1
 
 # Input 5: Define Variables Used To Extract The Substrates
-inFixedLibrary = False
+inFixedLibrary = True
 inFixedResidue = ['Y']
 inFixedPosition = [5]
 
 # Input 6: Miscellaneous
 inAlertPath = '/path/Bells.mp3' # Play a sound to let you know the script is done
-inPrintQualityScores = False # Phred quality scores
+inPrintQualityScores = True # Phred quality scores
 
 
 

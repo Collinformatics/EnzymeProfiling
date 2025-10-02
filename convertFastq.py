@@ -29,7 +29,7 @@ inFileName = [['Mpro2-I_S1_L002_R1_001', 'Mpro2-I_S1_L003_R1_001'],
 inFileName = inFileName[0]
 inEnzymeName = inFileName[0].split('-')[0] if isinstance(inFileName, list) \
     else inFileName.split('-')[0]
-inBasePath = f'/Users/ca34522/Documents/Research/NGS/{inEnzymeName}'
+inBasePath = f'/Enzymes/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
 inSavePath = os.path.join(inBasePath, f'Data - FromFastq')
 if not os.path.exists(inSavePath):

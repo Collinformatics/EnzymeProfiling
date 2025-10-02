@@ -13,13 +13,13 @@ import sys
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
 inEnzymeName = 'WNV'
-inPathFolder = f'data/{inEnzymeName}'
+inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
-inFixResidues = True
+inFixResidues = False
 inFixedResidue = ['R','G'] # ['R',['G','S']] # [['A','G','S']]
 inFixedPosition = [5,6]
 inExcludeResidues = False
