@@ -25,16 +25,16 @@ from Bio.SeqRecord import SeqRecord
 # ===================================== User Inputs ======================================
 # Input 1: File Parameters
 inFileName = [['Mpro2-I_S1_L002_R1_001', 'Mpro2-I_S1_L003_R1_001'],
-              'Mpro2-R4_S3_L002_R1_001']
+              ['Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L003_R1_001']]
 inFileName = inFileName[0]
 inEnzymeName = inFileName[0].split('-')[0] if isinstance(inFileName, list) \
     else inFileName.split('-')[0]
-inBasePath = f'/Enzymes/{inEnzymeName}'
+inBasePath = f'/path/{inEnzymeName}'
 inFASTQPath = os.path.join(inBasePath, 'Fastq')
 inSavePath = os.path.join(inBasePath, f'Data - FromFastq')
 if not os.path.exists(inSavePath):
     os.makedirs(inSavePath, exist_ok=True)
-inSaveAsText = True # False: save as a larger FASTA file
+inSaveAsText = False # False: save as a larger FASTA file
 
 # Input 2: Substrate Parameters
 inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
@@ -46,7 +46,7 @@ inScanRange = True
 inFixResidues = False # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
-inNumberOfDatapoints = 5*10**6
+inNumberOfDatapoints = 10**6
 inPrintNSubs = 10
 inStartSeqR1 = 'AAAGGCAGT' # Define sequences that flank your substrate
 inEndSeqR1 = 'GGTGGAAGT'
@@ -281,7 +281,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
     if numDatapoints < inNumberOfDatapoints:
         print('====================================== End '
               '======================================')
-        print(f'{orange}The maximum number of substrates has been extracted '
+        print(f'{yellow}The maximum number of substrates has been extracted '
               f'from the file(s):{purple}')
         for file in fileNames:
             print(f'     {file}')
