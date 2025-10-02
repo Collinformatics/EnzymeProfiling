@@ -34,7 +34,7 @@ inFASTQPath = os.path.join(inBasePath, 'Fastq')
 inSavePath = os.path.join(inBasePath, f'Data - FromFastq')
 if not os.path.exists(inSavePath):
     os.makedirs(inSavePath, exist_ok=True)
-inSaveAsText = False # False: save as a larger FASTA file
+inSaveAsText = True # False: save as a larger FASTA file
 
 # Input 2: Substrate Parameters
 inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
@@ -256,27 +256,37 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
     numDatapoints = len(data)
     if numDatapoints != 0:
         if inSaveAsText:
-            # Save the data as text files
             savePath = saveLocationsTxt[0]
             savePath = savePath.replace('N Seqs', f'N {numDatapoints}')
             print(f'Saving a{yellow} Text{resetColor} file at: '
                   f'N = {red}{numDatapoints:,}{resetColor}\n'
                   f'     {savePath}\n\n')
+
+            # Write data in a text file
             with open(savePath, 'w') as fileSave:
-                for substrate in data:
-                    fileSave.write(f'{substrate}\n')
+                fileSave.write('\n'.join(data))
         else:
-            # Save the data as fasta files
             numDatapoints = len(data)
             savePath = saveLocations[0]
             savePath = savePath.replace('N Seqs', f'N {numDatapoints}')
             print(f'Saving a{yellow} fasta{resetColor} file at: '
                   f'N = {red}{numDatapoints:,}{resetColor}\n'
                   f'     {savePath}\n\n')
+
+            # Write data in a fasta file
             with open(savePath, 'w') as fasta_file:
                 SeqIO.write(data, fasta_file, 'fasta')
     else:
         print(f'The data was not saved, no substrates were found\n\n')
+    if numDatapoints < inNumberOfDatapoints:
+        print('====================================== End '
+              '======================================')
+        print(f'{orange}The maximum number of substrates has been extracted '
+              f'from the file(s):{purple}')
+        for file in fileNames:
+            print(f'     {file}')
+        print(f'{resetColor}\n')
+        sys.exit()
 
 
 
