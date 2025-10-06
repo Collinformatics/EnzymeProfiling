@@ -25,8 +25,10 @@ from Bio.SeqRecord import SeqRecord
 # ===================================== User Inputs ======================================
 # Input 1: File Parameters
 inFileName = [['Mpro2-I_S1_L002_R1_001', 'Mpro2-I_S1_L003_R1_001'],
-              ['Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L003_R1_001']]
-inFileName = inFileName[0]
+              ['Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L003_R1_001',
+               'Mpro2-R4_S3_L001_R1_001', 'Mpro2-R4_S3_L004_R1_001'],
+              'Mpro2-R4_S3_L002_R1_001']
+inFileName = inFileName[1]
 inEnzymeName = inFileName[0].split('-')[0] if isinstance(inFileName, list) \
     else inFileName.split('-')[0]
 inBasePath = f'/path/{inEnzymeName}'
@@ -34,7 +36,7 @@ inFASTQPath = os.path.join(inBasePath, 'Fastq')
 inSavePath = os.path.join(inBasePath, f'Data - FromFastq')
 if not os.path.exists(inSavePath):
     os.makedirs(inSavePath, exist_ok=True)
-inSaveAsText = False # False: save as a larger FASTA file
+inSaveAsText = True # False: save as a larger FASTA file
 
 # Input 2: Substrate Parameters
 inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
@@ -43,7 +45,7 @@ inShowSampleSize = True # Include the sample size in your figures
 
 # Input 3: Define Variables Used To Extract The Substrates
 inScanRange = True
-inFixResidues = False # True: fix AAs in the substrate
+inFixResidues = True # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
 inNumberOfDatapoints = 10**6
@@ -56,7 +58,7 @@ inPrintQualityScores = False # QSs are "phred quality" scores
 
 
 
-# ======================================== Set Parameters ========================================
+# ==================================== Set Parameters ====================================
 # Colors:
 greyDark = '\033[38;2;144;144;144m'
 white = '\033[38;2;255;255;255m'
@@ -72,7 +74,6 @@ yellow = '\033[38;2;255;217;24m'
 orange = '\033[38;2;247;151;31m'
 red = '\033[91m'
 resetColor = '\033[0m'
-
 
 # Print options
 pd.set_option('display.max_columns', None)
@@ -99,14 +100,18 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
         fileLocations.append(os.path.join(filePath, f'{fileNames}.{fileType}'))
 
     # Define save location
+    saveLocations.append(os.path.join(savePath, f'{fileTag}.fasta'))
+    saveLocationsTxt.append(os.path.join(savePath, f'{fileTag}.txt'))
     if inFixResidues:
-        saveLocations.append(os.path.join(
-            savePath, f'{fileTag}-Fixed {fixedSubSeq}.fasta'))
-        saveLocationsTxt.append(os.path.join(
-            savePath, f'{fileTag}-Fixed {fixedSubSeq}.txt'))
-    else:
-        saveLocations.append(os.path.join(savePath, f'{fileTag}.fasta'))
-        saveLocationsTxt.append(os.path.join(savePath, f'{fileTag}.txt'))
+        paths = []
+        pathsTxt = []
+        for index in range(len(saveLocations)):
+            paths.append(saveLocations[index].replace(
+                ' - N Seqs', f' - Fixed {fixedSubSeq} - N Seqs'))
+            pathsTxt.append(saveLocationsTxt[index].replace(
+                ' - N Seqs', f' - Fixed {fixedSubSeq} - N Seqs'))
+        saveLocations = paths
+        saveLocationsTxt = pathsTxt
 
     # Evaluate: File path
     global firstRound
@@ -283,8 +288,11 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
               '======================================')
         print(f'{yellow}The maximum number of substrates has been extracted '
               f'from the file(s):{purple}')
-        for file in fileNames:
-            print(f'     {file}')
+        if isinstance(fileNames, list):
+            for file in fileNames:
+                print(f'     {file}')
+        else:
+            print(f'     {fileNames}')
         print(f'{resetColor}\n')
         sys.exit()
 
