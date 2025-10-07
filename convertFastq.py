@@ -28,7 +28,7 @@ inFileName = [['Mpro2-I_S1_L002_R1_001', 'Mpro2-I_S1_L003_R1_001'],
               ['Mpro2-R4_S3_L002_R1_001', 'Mpro2-R4_S3_L003_R1_001',
                'Mpro2-R4_S3_L001_R1_001', 'Mpro2-R4_S3_L004_R1_001'],
               'Mpro2-R4_S3_L002_R1_001']
-inFileName = inFileName[1]
+inFileName = inFileName[0]
 inEnzymeName = inFileName[0].split('-')[0] if isinstance(inFileName, list) \
     else inFileName.split('-')[0]
 inBasePath = f'/path/{inEnzymeName}'
@@ -45,7 +45,7 @@ inShowSampleSize = True # Include the sample size in your figures
 
 # Input 3: Define Variables Used To Extract The Substrates
 inScanRange = True
-inFixResidues = True # True: fix AAs in the substrate
+inFixResidues = False # True: fix AAs in the substrate
 inFixedResidue = ['Q']
 inFixedPosition = [5]
 inNumberOfDatapoints = 10**6
@@ -89,29 +89,14 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
     saveLocations = []
     saveLocationsTxt = []
     files = []
+    loadedFiles = []
     if isinstance(fileNames, list):
-        fileTag = f'{" - ".join(fileNames)} - N Seqs'
         for fileName in fileNames:
             files.append(fileName)
             fileLocations.append(os.path.join(filePath, f'{fileName}.{fileType}'))
     else:
-        fileTag = f'{fileNames} - N Seqs'
         files.append(fileNames)
         fileLocations.append(os.path.join(filePath, f'{fileNames}.{fileType}'))
-
-    # Define save location
-    saveLocations.append(os.path.join(savePath, f'{fileTag}.fasta'))
-    saveLocationsTxt.append(os.path.join(savePath, f'{fileTag}.txt'))
-    if inFixResidues:
-        paths = []
-        pathsTxt = []
-        for index in range(len(saveLocations)):
-            paths.append(saveLocations[index].replace(
-                ' - N Seqs', f' - Fixed {fixedSubSeq} - N Seqs'))
-            pathsTxt.append(saveLocationsTxt[index].replace(
-                ' - N Seqs', f' - Fixed {fixedSubSeq} - N Seqs'))
-        saveLocations = paths
-        saveLocationsTxt = pathsTxt
 
     # Evaluate: File path
     global firstRound
@@ -119,13 +104,15 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
     substrateCount = 0
     initialFile = True
     for indexPath, path in enumerate(fileLocations):
+        fileName = files[indexPath]
+
         if substrateCount == inNumberOfDatapoints:
             break
 
         if firstRound:
             print('\n=============================== Load: Fastq Files '
                   '===============================')
-            print(f'Loading{purple} {files[indexPath]}{resetColor}\n'
+            print(f'Loading{purple} {fileName}{resetColor}\n'
                   f'File path:\n'
                   f'     {path}\n\n')
         if not os.path.isfile(path):
@@ -150,6 +137,7 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                 warnings.simplefilter('ignore', BiopythonWarning)
             else:
                 print(f'ERROR: Unrecognized file\n     {path}')
+            loadedFiles.append(fileName)
 
             # Print data
             if firstRound:
@@ -190,8 +178,9 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
                 print('================================ Get Substrates '
                       '=================================')
                 initialFile = False
+
             print(f'Selecting {red}{(inNumberOfDatapoints-substrateCount):,}{resetColor} '
-                  f'substrates from file: {purple}{files[indexPath]}{resetColor}')
+                  f'substrates from file: {purple}{fileName}{resetColor}')
 
             if inSaveAsText:
                 timeStart = time.time()
@@ -256,6 +245,25 @@ def fastaConversion(filePath, savePath, fileNames, fileType, startSeq, endSeq):
               f'Runtime: {round(timeRun, 2):,} s\n')
     if firstRound:
         firstRound = False
+
+
+    # Define save location
+    if len(loadedFiles) > 1:
+        fileTag = f'{" - ".join(loadedFiles)} - N Seqs'
+    else:
+        fileTag = f'{loadedFiles[0]} - N Seqs'
+    saveLocations.append(os.path.join(savePath, f'{fileTag}.fasta'))
+    saveLocationsTxt.append(os.path.join(savePath, f'{fileTag}.txt'))
+    if inFixResidues:
+        paths = []
+        pathsTxt = []
+        for index in range(len(saveLocations)):
+            paths.append(saveLocations[index].replace(
+                ' - N Seqs', f' - Fixed {fixedSubSeq} - N Seqs'))
+            pathsTxt.append(saveLocationsTxt[index].replace(
+                ' - N Seqs', f' - Fixed {fixedSubSeq} - N Seqs'))
+        saveLocations = paths
+        saveLocationsTxt = pathsTxt
 
     # Save the data
     numDatapoints = len(data)
