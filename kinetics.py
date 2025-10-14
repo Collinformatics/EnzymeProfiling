@@ -201,7 +201,7 @@ def processStandardCurve(psc, plotFig=False):
         plt.ylim(yMin, yMax)
         plt.grid(True)
         plt.plot(x, fitLine, color='black',
-                 label=f'{fit}\nR²: {round(rSquared, inRoundDec)}')
+                 label=f'{fit}\nR² = {round(rSquared, inRoundDec)}')
         plt.tight_layout()
         plt.legend(fontsize=12, prop={'weight': 'bold'})
         fig.canvas.mpl_connect('key_press_event', pressKey)
@@ -211,8 +211,6 @@ def processStandardCurve(psc, plotFig=False):
         if inSaveFigures:
             saveTag = f'PSC - N {N} - {inEnzymeName} {inDatasetLabel}'
             saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
-
-            print(f'Save: {saveLocation}\nExists: {os.path.exists(saveLocation)}')
             if os.path.exists(saveLocation):
                 print(f'{yellow}The figure was not saved\n\n'
                       f'File was already found at path:\n'
@@ -223,6 +221,16 @@ def processStandardCurve(psc, plotFig=False):
                 fig.savefig(saveLocation, dpi=inFigureResolution)
 
     return slope, N
+
+
+def formatValues(values):
+    newValues = []
+    for value in values:
+        if f'{value}'.endswith('.0'):
+            newValues.append(int(value))
+        else:
+            newValues.append(value)
+    return newValues
 
 
 
@@ -265,14 +273,37 @@ def processKinetics(slope, datasets, N, plotFig=False):
         x = x[mask]
         y = y[mask]
 
+
         if len(x) != 0:
+            # Evaluate: X axis
+            xMax = math.ceil(max(x))
+            magnitude = math.floor(math.log10(xMax))
+            unitX = 10 ** (magnitude - 1)
+            stepX = unitX * 5
+            # xMax = math.ceil(xMax / (10 * unit)) * (10 * unit)  # Jump to next clean boundary
+            # print(f'\nX Max: {maxValue}')
+            # if xMax <= maxValue:
+            #     xMax += 5 * unit
+            print(f'X Max: {xMax}\n'
+                  f'  Mag: {magnitude}\n'
+                  f' Unit: {unitX}\n'
+                  f' Step: {stepX}\n')
+            xMin = 0
+
             # Evaluate: Y axis
-            maxValue = math.ceil(max(y))
-            magnitude = math.floor(math.log10(maxValue))
+            yMax = math.ceil(max(y))
+            magnitude = math.floor(math.log10(yMax))
             unit = 10 ** (magnitude - 1)
-            yMax = math.ceil(maxValue / unit) * unit
-            yMax += 3 * unit  # Increase yMax
+            # yMax = math.ceil(maxValue / (10 * unit)) * (
+            #             10 * unit)  # Jump to next clean boundary
+            # if yMax <= maxValue:
+            #     yMax += 5 * unit
+            # print(f'Y Max: {maxValue}')
+            print(f'Y Max: {yMax}\n'
+                  f'  Mag: {magnitude}\n'
+                  f' Unit: {unit}\n')
             yMin = 0
+
 
             # Fit the datapoints
             slope, intercept = np.polyfit(x, y, 1) # Degree 1 polynomial = linear
@@ -289,7 +320,6 @@ def processKinetics(slope, datasets, N, plotFig=False):
             print(f'R² Value: {red}{round(rSquared, inRoundDec)}{resetColor}\n\n')
             fit += f'\nR² = {round(rSquared, inRoundDec)}'
 
-
             if plotFig:
                 # Scatter plot
                 fig, ax = plt.subplots(figsize=(9.5, 8))
@@ -301,6 +331,16 @@ def processKinetics(slope, datasets, N, plotFig=False):
                           fontsize=18, fontweight='bold')
                 plt.xlabel(f'Time', fontsize=16)
                 plt.ylabel(f'Product Concentration', fontsize=16)
+
+                # Format axes
+                xTicks = np.arange(xMin, xMax + stepX, stepX)
+                ax.set_xticks(xTicks)
+                plt.xlim(xMin, xMax)
+                ax.set_xticklabels(formatValues(xTicks))
+                plt.ylim(yMin, yMax)
+
+
+
                 plt.grid(True)
                 plt.plot(x, fitLine, label=fit, color='#F8971F')
                 plt.tight_layout()
@@ -613,15 +653,15 @@ def MichaelisMenten(velocity, N):
     # Plot the data
     fig, ax = plt.subplots(figsize=(9.5, 8))
     plt.scatter(substrateConc, v, color='#BF5700', edgecolors='black', linewidths=0.8)
-    plt.plot(xFit, yFit, color='#F8971F', label='Michaelis-Menten fit')
+    plt.plot(xFit, yFit, color='#F8971F', label=fit)
     plt.title(f'Michaelis-Menten\n{inEnzymeConc} {inEnzymeName}\n{inSubstrate}\n'
               f'Km = {round(Km, dec)} {inConcentrationUnit}\n'
-              f'Vmax = {round(vMax, dec)} {inConcentrationUnit}/min\n'
-              f'{fit}',
+              f'Vmax = {round(vMax, dec)} {inConcentrationUnit}/min',
               fontsize=18, fontweight='bold')
     plt.xlabel(f'[Substrate] ({inConcentrationUnit})', fontsize=16)
     plt.ylabel(f'Velocity ({inConcentrationUnit}/min)', fontsize=16)
     plt.tight_layout()
+    plt.legend(fontsize=12, prop={'weight': 'bold'})
     fig.canvas.mpl_connect('key_press_event', pressKey)
     plt.show()
 
