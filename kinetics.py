@@ -160,7 +160,7 @@ def processStandardCurve(psc, plotFig=False):
     maxValue = math.ceil(max(x))
     magnitude = math.floor(math.log10(maxValue))
     unit = 10 ** (magnitude - 1)
-    xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)  # Jump to next clean boundary
+    xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit) # Jump to next clean boundary
     if xMax <= maxValue:
         xMax += 5 * unit
     print(f'X Max: {xMax}\n')
