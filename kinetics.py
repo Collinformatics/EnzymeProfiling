@@ -6,26 +6,36 @@ import os
 import pandas as pd
 from sklearn.metrics import r2_score
 from scipy.optimize import curve_fit
-from scipy.signal import savgol_filter
 import sys
 
 
 
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2' # 'SAVLQSGFR-Raw data and analyzed data' #
-inFileName = 'Kinetics-100nM SVILQAPFR'
-inPathFolder = f'{inEnzymeName}/Kinetics2'
+inSubstrates = ['AVLQSGFR', 'SVILHAGFR' 'SVILQTGFR']
+inFileName = f'Kinetics-100nM {inSubstrates[0]}' #
+inPathFolder = f'Enzymes/{inEnzymeName}/Kinetics'
+# inPathFolder = f'Enzymes/{inEnzymeName}/Previous/Kinetics1'
 inSheetName = ['Product standard', 'Sub_Raw data']
-inSubstrate = inFileName.split('-')[1]
+inDatasetLabel = inFileName.split('-')[1]
+inEnzymeConc = inDatasetLabel.split(' ')[0]
+inSubstrate = inDatasetLabel.split(' ')[1]
 
 # Input 2: Process Data
-inBurstKinetics = True
+inBurstKinetics = False
+inBurstProduct = 0.12
 inConcentrationUnit = 'μM'
 inPlotAllFigs = True
 inStdCurveStartIndex = 0
-inConcCutoff = 15 # Max percentage of substrate concentration in rxn plot
+inConcCutoff = 10 # Max percentage of substrate concentration in rxn plot
 inMaxCovariance = 0.3
 
+# Saving the data
+inSaveFigures = True
+inFigureResolution = 300 # dpi
+
+# If product release is rate limiting what
+# Conc dependence of kinetics, [sub] is not relevant so it might make Km drop
 
 
 # =================================== Setup Parameters ===================================
@@ -45,6 +55,11 @@ yellow = '\033[38;2;255;217;24m'
 orange = '\033[38;2;247;151;31m'
 red = '\033[91m'
 resetColor = '\033[0m'
+
+# Verify directory paths
+pathFigures = os.path.join(inPathFolder, f'Figures')
+if not os.path.exists(pathFigures):
+    os.makedirs(pathFigures, exist_ok=True)
 
 
 
@@ -139,15 +154,26 @@ def processStandardCurve(psc, plotFig=False):
           f'{psc.iloc[inStdCurveStartIndex:, :]}\n')
     x = pd.to_numeric(psc.iloc[inStdCurveStartIndex+1:, 0], errors='raise')
     y = pd.to_numeric(psc.iloc[inStdCurveStartIndex+1:, 1], errors='raise')
+    N = len(x)  # Number of datapoints in the curve
+
+    # Evaluate: X axis
+    maxValue = math.ceil(max(x))
+    magnitude = math.floor(math.log10(maxValue))
+    unit = 10 ** (magnitude - 1)
+    xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)  # Jump to next clean boundary
+    if xMax <= maxValue:
+        xMax += 5 * unit
+    print(f'X Max: {xMax}\n')
+    xMin = 0
 
     # Evaluate: Y axis
     maxValue = math.ceil(max(y))
-    minValue = math.floor(min(y))
     magnitude = math.floor(math.log10(maxValue))
     unit = 10 ** (magnitude - 1)
-    yMax = math.ceil(maxValue / unit) * unit
-    yMax += 3 * unit  # Increase yMax
-    # yMin = math.floor(minValue / unit) * unit
+    yMax = math.ceil(maxValue / (10 * unit)) * (10 * unit) # Jump to next clean boundary
+    if yMax <= maxValue:
+        yMax += 5*unit
+    print(f'Y Max: {yMax}\n')
     yMin = 0
 
 
@@ -157,27 +183,51 @@ def processStandardCurve(psc, plotFig=False):
     fit = f'y = {slope:.3f}x + {intercept:.3f}'
     print(f'Fit: {red}{fit}{resetColor}\n\n')
 
+
+    # Calculate R² values
+    rSquared = r2_score(y, fitLine)
+    print(f'R² Value: {red}{round(rSquared, 3)}{resetColor}\n\n')
+
     if plotFig:
         # Scatter plot
         fig, ax = plt.subplots(figsize=(9.5, 8))
-        plt.scatter(x, y, color='#BF5700', marker='o')
-        plt.title(f'\nProduct Standard Curve\n{inEnzymeName}\n{inSubstrate}',
+        plt.scatter(x, y, color='#BF5700', marker='o',
+                    edgecolors='black', linewidths=0.8)
+        plt.title(f'\nProduct Standard Curve\n{inEnzymeConc} {inEnzymeName}\n'
+                  f'{inSubstrate}\nR²: {round(rSquared, 3)}',
                   fontsize=18, fontweight='bold')
         plt.xlabel(f'{psc.columns[0]} ({inConcentrationUnit})', fontsize=16)
         plt.ylabel(f'{psc.columns[1]}', fontsize=16)
+        plt.xlim(xMin, xMax)
         plt.ylim(yMin, yMax)
         plt.grid(True)
-        plt.plot(x, fitLine, color='black', label=fit)
+        plt.plot(x, fitLine, color='black',
+                 label=f'{fit}')
         plt.tight_layout()
         plt.legend(fontsize=12, prop={'weight': 'bold'})
         fig.canvas.mpl_connect('key_press_event', pressKey)
         plt.show()
 
-    return slope
+        # Save figure
+        if inSaveFigures:
+            saveTag = f'PSC - N {N} - {inEnzymeName} {inDatasetLabel}'
+            saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+
+            print(f'Save: {saveLocation}\nExists: {os.path.exists(saveLocation)}')
+            if os.path.exists(saveLocation):
+                print(f'{yellow}The figure was not saved\n\n'
+                      f'File was already found at path:\n'
+                      f'     {saveLocation}{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=inFigureResolution)
+
+    return slope, N
 
 
 
-def processKinetics(slope, datasets, plotFig=False):
+def processKinetics(slope, datasets, N, plotFig=False):
     print('=========================== Processing Kinetics Data '
           '============================')
     print(f'Slope: {red}{round(slope, 3)}{resetColor}\n')
@@ -205,8 +255,8 @@ def processKinetics(slope, datasets, plotFig=False):
                 conc = conc.replace(inConcentrationUnit, '')
                 conc = float(conc)
         cutoff = conc / inConcCutoff
-        print(f'Concentration: {red}{conc} {inConcentrationUnit}{resetColor}\n'
-              f'     Cutoff: {red}{cutoff} {inConcentrationUnit}{resetColor}\n')
+        print(f'Concentration: {purple}{conc} {inConcentrationUnit}{resetColor}\n'
+              f'     Cutoff: {red}{round(cutoff, 3)} {inConcentrationUnit}{resetColor}')
 
         # Filter datapoints
         x = pd.to_numeric(values.index, errors='coerce')
@@ -228,7 +278,7 @@ def processKinetics(slope, datasets, plotFig=False):
             slope, intercept = np.polyfit(x, y, 1) # Degree 1 polynomial = linear
             fitLine = slope * x + intercept
             fit = f'y = {slope:.3f}x + {intercept:.3f}'
-            print(f'Fit: {red}{fit}{resetColor}\n\n')
+            print(f'Fit: {red}{fit}{resetColor}\n')
             reactionSlopes[conc] = slope
 
             # Predictions
@@ -243,8 +293,9 @@ def processKinetics(slope, datasets, plotFig=False):
             if plotFig:
                 # Scatter plot
                 fig, ax = plt.subplots(figsize=(9.5, 8))
-                plt.scatter(x, y, color='#BF5700', marker='o')
-                plt.title(f'\n{inEnzymeName}\n{inSubstrate}\n'
+                plt.scatter(x, y, color='#BF5700', marker='o',
+                            edgecolors='black', linewidths=0.8)
+                plt.title(f'\n{inEnzymeConc} {inEnzymeName}\n{inSubstrate}\n'
                           f'Substrate Concentration: {conc} {inConcentrationUnit}\n'
                           f'Maximum Product Concentration: {round(cutoff, 2)}',
                           fontsize=18, fontweight='bold')
@@ -257,11 +308,26 @@ def processKinetics(slope, datasets, plotFig=False):
                 fig.canvas.mpl_connect('key_press_event', pressKey)
                 plt.show()
 
+                # Save figure
+                if inSaveFigures:
+                    saveTag = (f'Kinetics - {inEnzymeName} {inDatasetLabel} '
+                               f'{conc}{inConcentrationUnit} - PSC N {N}')
+                    saveTag = saveTag.replace('.','_')
+                    saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+                    if os.path.exists(saveLocation):
+                        print(f'{yellow}The figure was not saved\n\n'
+                              f'File was already found at path:\n'
+                              f'     {saveLocation}{resetColor}\n\n')
+                    else:
+                        print(f'Saving figure at path:\n'
+                              f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                        fig.savefig(saveLocation, dpi=inFigureResolution)
+
     return reactionSlopes
 
 
 
-def processKineticsBurst(slope, datasets, plotFig):
+def processKineticsBurst(slope, datasets, plotFig, N):
     print('======================== Processing Burst Kinetics Data '
           '=========================')
     print(f'Slope: {red}{round(slope, 3)}{resetColor}\n')
@@ -289,8 +355,8 @@ def processKineticsBurst(slope, datasets, plotFig):
                 conc = conc.replace(inConcentrationUnit, '')
                 conc = float(conc)
         cutoff = conc / inConcCutoff
-        print(f'Concentration: {red}{conc} {inConcentrationUnit}{resetColor}\n'
-              f'     Cutoff: {red}{cutoff} {inConcentrationUnit}{resetColor}\n')
+        print(f'Dataset: {purple}{conc} {inConcentrationUnit}{resetColor}\n'
+              f'Cutoff: {red}{round(cutoff, 3)} {inConcentrationUnit}{resetColor}')
 
         # Filter datapoints
         x = pd.to_numeric(values.index, errors='coerce')
@@ -299,36 +365,60 @@ def processKineticsBurst(slope, datasets, plotFig):
         x = x[mask]
         y = y[mask]
 
-        # print(f'Dataset: {purple}{conc} {inConcentrationUnit}{resetColor}')
 
         # Get datapoints
         x = np.array(x)
         y = np.array(y)
         print(f'     Number of datapoints:\n'
               f'          X, Y: {red}{len(x)}{resetColor}, {red}{len(y)}{resetColor}\n')
+        if len(x) == 0:
+            print()
+            continue
+
+        # # Fit the datapoints
+        # windowLenght = int(0.1 * len(x))
+        # if windowLenght % 2 == 0:
+        #     windowLenght += 1
+        # if windowLenght == 1:
+        #     windowLenght = 3
+        # print(f'     Window Length: {windowLenght}\n')
+        # try:
+        #     smoothedProduct = savgol_filter(y, window_length=windowLenght, polyorder=2)
+        #     rate = np.gradient(smoothedProduct, x)
+        #     threshold = 0.5 * np.max(rate)
+        #     burstEndIndex = np.where(rate < threshold)[0][0]
+        # except:
+        #     burstEndIndex = int(0.3 * len(rate))
+        # print(f'     Split Index: {red}{burstEndIndex}{resetColor}')
+
+        # Order the datasets
+        if x[0] > x[1]:
+            print(f'{yellow}The first x value is > the second\n'
+                  f'     X: {x[0]} > {x[1]}\n\n'
+                  f'The order of the datapoints has been reversed to prevent an error '
+                  f'while splitting the data.{resetColor}\n\n')
+            x = reversed(x)
+            y = reversed(y)
 
 
-        # Fit the datapoints
-        windowLenght = int(0.1 * len(x))
-        if windowLenght % 2 == 0:
-            windowLenght += 1
-        if windowLenght == 1:
-            windowLenght = 3
-        print(f'     Window Length: {windowLenght}\n')
-        try:
-            smoothedProduct = savgol_filter(y, window_length=windowLenght, polyorder=2)
-            rate = np.gradient(smoothedProduct, x)
-            threshold = 0.5 * np.max(rate)
-            burstEndIndex = np.where(rate < threshold)[0][0]
-        except:
-            burstEndIndex = int(0.3 * len(rate))
-        print(f'     Split Index: {red}{burstEndIndex}{resetColor}')
+        # Determine the split index
+        burstEndIndex = 0
+        yLimit = min(y) + inBurstProduct
+        for index, value in enumerate(y):
+            if value <= yLimit:
+                burstEndIndex = index + 1
+        if burstEndIndex < len(x):
+            print(f'     Burst Domain: {red}{inBurstProduct}{resetColor}\n'
+                  f'     Split Index: {red}{burstEndIndex}{resetColor}\n'
+                  f'     Burst Range: {pink}{round(y[burstEndIndex], 3)}{resetColor} - '
+                  f'{pink}{round(y[0], 3)} {inConcentrationUnit}{resetColor}\n')
+        else:
+            # Dont split the dataset
+            burstEndIndex = 0
 
         # Evaluate splitting
         if burstEndIndex == 0:
             # cutoff = conc / inConcCutoff
-            # print(f'Concentration: {red}{conc} {inConcentrationUnit}{resetColor}\n'
-            #       f'     Cutoff: {red}{cutoff} {inConcentrationUnit}{resetColor}\n')
             #
             # # Filter datapoints
             # mask = y <= cutoff
@@ -340,7 +430,7 @@ def processKineticsBurst(slope, datasets, plotFig):
             slope, intercept = np.polyfit(x, y, 1)  # Degree 1 polynomial = linear
             fitLine = slope * x + intercept
             fit = f'y = {slope:.3f}x + {intercept:.3f}'
-            print(f'     Fit: {red}{fit}{resetColor}\n')
+            print(f'     Fit: {red}{fit}{resetColor}')
             reactionSlopes[conc] = slope
 
             # Predictions
@@ -348,16 +438,17 @@ def processKineticsBurst(slope, datasets, plotFig):
 
             # Calculate R² values
             rSquared = r2_score(y, predictedY)
-            print(f'R² Value: {red}{round(rSquared, 3)}{resetColor}\n\n')
+            print(f'      R²: {red}{round(rSquared, 3)}{resetColor}\n\n')
             fit += f'\nR² = {round(rSquared, 3)}'
 
 
             if plotFig:
                 # Scatter plot
                 fig, ax = plt.subplots(figsize=(9.5, 8))
-                plt.scatter(x, y, color='#BF5700', marker='o')
+                plt.scatter(x, y, color='#BF5700', marker='o',
+                            edgecolors='black', linewidths=0.8)
                 plt.plot(x, fitLine, label=fit, color='#F8971F')
-                plt.title(f'\n{inEnzymeName}\n{inSubstrate}\n'
+                plt.title(f'\n{inEnzymeConc} {inEnzymeName}\n{inSubstrate}\n'
                           f'Substrate Concentration: {conc} {inConcentrationUnit}\n'
                           f'Maximum Product Concentration: '
                           f'{round(cutoff, 2)} {inConcentrationUnit}',
@@ -371,6 +462,21 @@ def processKineticsBurst(slope, datasets, plotFig):
                 plt.legend(fontsize=12, prop={'weight': 'bold'})
                 fig.canvas.mpl_connect('key_press_event', pressKey)
                 plt.show()
+
+                # Save figure
+                if inSaveFigures:
+                    saveTag = (f'Kinetics Burst - {inEnzymeName} {inDatasetLabel} '
+                               f'{conc}{inConcentrationUnit} - PSC N {N}')
+                    saveTag = saveTag.replace('.', '_')
+                    saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+                    if os.path.exists(saveLocation):
+                        print(f'{yellow}The figure was not saved\n\n'
+                              f'File was already found at path:\n'
+                              f'     {saveLocation}{resetColor}\n\n')
+                    else:
+                        print(f'Saving figure at path:\n'
+                              f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                        fig.savefig(saveLocation, dpi=inFigureResolution)
         else:
             # Phase 1: Burst
             timeBurst = x[:burstEndIndex]
@@ -394,8 +500,7 @@ def processKineticsBurst(slope, datasets, plotFig):
                 timeSteady, productSteady, 1) # Fit steady-state phase
             fit1 = f'y = {slope1:.3f}x + {intercept1:.3f}'
             fit2 = f'y = {slope2:.3f}x + {intercept2:.3f}'
-            print(f'     Fit 1: {red}{fit1}{resetColor}\n'
-                  f'     Fit 2: {red}{fit2}{resetColor}\n')
+
             reactionSlopes[conc] = slope1
             slopeRelease.append(slope2)
 
@@ -406,9 +511,10 @@ def processKineticsBurst(slope, datasets, plotFig):
             # Calculate R² values
             rSquared1 = r2_score(productBurst, predictedBurst)
             rSquared2 = r2_score(productSteady, predictedSteady)
-            print(f'R² Values:\n'
-                  f'     Fit 1: {red}{round(rSquared1, 3)}{resetColor}\n'
-                  f'     Fit 2: {red}{round(rSquared2, 3)}{resetColor}\n\n')
+            print(f'     Fit 1: {red}{fit1}{resetColor}\n'
+                  f'        R²: {red}{round(rSquared1, 3)}{resetColor}\n\n'
+                  f'     Fit 2: {red}{fit2}{resetColor}\n'
+                  f'        R²: {red}{round(rSquared2, 3)}{resetColor}\n\n')
             fit1 += f'\nR² = {round(rSquared1, 3)}'
             fit2 += f'\nR² = {round(rSquared2, 3)}'
 
@@ -416,12 +522,13 @@ def processKineticsBurst(slope, datasets, plotFig):
             if plotFig:
                 # Scatter plot
                 fig, ax = plt.subplots(figsize=(9.5, 8))
-                plt.scatter(x, y, color='#BF5700', marker='o')
+                plt.scatter(x, y, color='#BF5700', marker='o',
+                            edgecolors='black', linewidths=0.8)
                 plt.plot(timeBurst, slope1 * timeBurst + intercept1,
                          label=fit1, color='#F8971F') # Burst fit
                 plt.plot(timeSteady, slope2 * timeSteady + intercept2,
                          label=fit2, color='black') # Steady-state fit
-                plt.title(f'\n{inEnzymeName}\n{inSubstrate}\n'
+                plt.title(f'\n{inEnzymeConc} {inEnzymeName}\n{inSubstrate}\n'
                           f'Substrate Concentration: {conc} {inConcentrationUnit}\n'
                           f'Maximum Product Concentration: '
                           f'{round(cutoff, 2)} {inConcentrationUnit}',
@@ -436,6 +543,21 @@ def processKineticsBurst(slope, datasets, plotFig):
                 fig.canvas.mpl_connect('key_press_event', pressKey)
                 plt.show()
 
+                # Save figure
+                if inSaveFigures:
+                    saveTag = (f'Kinetics Burst - {inEnzymeName} {inDatasetLabel} '
+                               f'{conc}{inConcentrationUnit} - PSC N {N}')
+                    saveTag = saveTag.replace('.', '_')
+                    saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+                    if os.path.exists(saveLocation):
+                        print(f'{yellow}The figure was not saved\n\n'
+                              f'File was already found at path:\n'
+                              f'     {saveLocation}{resetColor}\n\n')
+                    else:
+                        print(f'Saving figure at path:\n'
+                              f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                        fig.savefig(saveLocation, dpi=inFigureResolution)
+
     # Evaluate: Release rate
     releaseAvg, releaseStDev = np.mean(slopeRelease), np.std(slopeRelease)
     print(f'Release Rate:\n'
@@ -448,7 +570,7 @@ def processKineticsBurst(slope, datasets, plotFig):
 
 
 
-def MichaelisMenten(velocity):
+def MichaelisMenten(velocity, N):
     print('=============================== Michaelis-Menten '
           '================================')
     dec = 2
@@ -481,16 +603,16 @@ def MichaelisMenten(velocity):
     rSquared = r2_score(v, predictedV)
     fit = f'R² = {rSquared:.3f}'
 
-    print(f'Dataset: {purple}{inEnzymeName} {inSubstrate}{resetColor}\n'
+    print(f'Dataset: {purple}{inEnzymeConc} {inEnzymeName} {inSubstrate}{resetColor}\n'
           f'     Km = {red}{Km:.3f}{resetColor}\n'
           f'     Vmax: {red}{vMax:.3f}{resetColor}\n'
-          f'     R² Value: {red}{rSquared:.3f}{resetColor}\n')
+          f'     R²: {red}{rSquared:.3f}{resetColor}\n')
 
     # Plot the data
     fig, ax = plt.subplots(figsize=(9.5, 8))
-    plt.scatter(substrateConc, v, color='#BF5700')
+    plt.scatter(substrateConc, v, color='#BF5700', edgecolors='black', linewidths=0.8)
     plt.plot(xFit, yFit, color='#F8971F', label='Michaelis-Menten fit')
-    plt.title(f'Michaelis-Menten\n{inEnzymeName}\n{inSubstrate}\n'
+    plt.title(f'Michaelis-Menten\n{inEnzymeConc} {inEnzymeName}\n{inSubstrate}\n'
               f'Km = {round(Km, dec)} {inConcentrationUnit}\n'
               f'Vmax = {round(vMax, dec)} {inConcentrationUnit}/min\n'
               f'{fit}',
@@ -501,19 +623,34 @@ def MichaelisMenten(velocity):
     fig.canvas.mpl_connect('key_press_event', pressKey)
     plt.show()
 
+    # Save figure
+    if inSaveFigures:
+        saveTag = f'MM - {inEnzymeName} {inDatasetLabel} - {inSubstrate} - PSC N {N}'
+        if inBurstKinetics:
+            saveTag = saveTag.replace('MM', 'MM - Burst')
+        saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+        if os.path.exists(saveLocation):
+            print(f'{yellow}The figure was not saved\n\n'
+                  f'File was already found at path:\n'
+                  f'     {saveLocation}{resetColor}\n\n')
+        else:
+            print(f'Saving figure at path:\n'
+                  f'     {greenDark}{saveLocation}{resetColor}\n\n')
+            fig.savefig(saveLocation, dpi=inFigureResolution)
+
 
 
 # ====================================== Load data =======================================
 # Load: Product Standard Curve
 prodStdCurve = loadExcel(sheetName=inSheetName[0], loadStandard=True)
-m = processStandardCurve(psc=prodStdCurve, plotFig=inPlotAllFigs)
+m, N= processStandardCurve(psc=prodStdCurve, plotFig=inPlotAllFigs)
 
 # Load: Kinetics Data
 fluorescence = loadExcel(sheetName=inSheetName[1])
 
 # Process kinetics
 if inBurstKinetics:
-    v = processKineticsBurst(slope=m, datasets=fluorescence, plotFig=inPlotAllFigs)
+    v = processKineticsBurst(slope=m, datasets=fluorescence, plotFig=inPlotAllFigs, N=N)
 else:
-    v = processKinetics(slope=m, datasets=fluorescence, plotFig=inPlotAllFigs)
-MichaelisMenten(velocity=v)
+    v = processKinetics(slope=m, datasets=fluorescence, plotFig=inPlotAllFigs, N=N)
+MichaelisMenten(velocity=v, N=N)
