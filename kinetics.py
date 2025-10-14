@@ -29,6 +29,7 @@ inPlotAllFigs = True
 inStdCurveStartIndex = 0
 inConcCutoff = 10 # Max percentage of substrate concentration in rxn plot
 inMaxCovariance = 0.3
+inRoundDec = 3
 
 # Saving the data
 inSaveFigures = True
@@ -163,7 +164,7 @@ def processStandardCurve(psc, plotFig=False):
     xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit) # Jump to next clean boundary
     if xMax <= maxValue:
         xMax += 5 * unit
-    print(f'X Max: {xMax}\n')
+    # print(f'X Max: {xMax}')
     xMin = 0
 
     # Evaluate: Y axis
@@ -173,20 +174,19 @@ def processStandardCurve(psc, plotFig=False):
     yMax = math.ceil(maxValue / (10 * unit)) * (10 * unit) # Jump to next clean boundary
     if yMax <= maxValue:
         yMax += 5*unit
-    print(f'Y Max: {yMax}\n')
+    # print(f'Y Max: {yMax}\n')
     yMin = 0
 
-
     # Fit the datapoints
-    slope, intercept = np.polyfit(x, y, 1)  # Degree 1 polynomial = linear
+    slope, intercept = np.polyfit(x, y, 1) # Degree 1 polynomial = linear
     fitLine = slope * x + intercept
     fit = f'y = {slope:.3f}x + {intercept:.3f}'
-    print(f'Fit: {red}{fit}{resetColor}\n\n')
-
+    print(f'Fit: {red}{fit}{resetColor}')
 
     # Calculate R² values
     rSquared = r2_score(y, fitLine)
-    print(f'R² Value: {red}{round(rSquared, 3)}{resetColor}\n\n')
+    print(f'R² Value: {red}{round(rSquared, inRoundDec)}{resetColor}\n\n')
+
 
     if plotFig:
         # Scatter plot
@@ -194,15 +194,14 @@ def processStandardCurve(psc, plotFig=False):
         plt.scatter(x, y, color='#BF5700', marker='o',
                     edgecolors='black', linewidths=0.8)
         plt.title(f'\nProduct Standard Curve\n{inEnzymeConc} {inEnzymeName}\n'
-                  f'{inSubstrate}\nR²: {round(rSquared, 3)}',
-                  fontsize=18, fontweight='bold')
+                  f'{inSubstrate}', fontsize=18, fontweight='bold')
         plt.xlabel(f'{psc.columns[0]} ({inConcentrationUnit})', fontsize=16)
         plt.ylabel(f'{psc.columns[1]}', fontsize=16)
         plt.xlim(xMin, xMax)
         plt.ylim(yMin, yMax)
         plt.grid(True)
         plt.plot(x, fitLine, color='black',
-                 label=f'{fit}')
+                 label=f'{fit}\nR²: {round(rSquared, inRoundDec)}')
         plt.tight_layout()
         plt.legend(fontsize=12, prop={'weight': 'bold'})
         fig.canvas.mpl_connect('key_press_event', pressKey)
@@ -230,7 +229,7 @@ def processStandardCurve(psc, plotFig=False):
 def processKinetics(slope, datasets, N, plotFig=False):
     print('=========================== Processing Kinetics Data '
           '============================')
-    print(f'Slope: {red}{round(slope, 3)}{resetColor}\n')
+    print(f'Slope: {red}{round(slope, inRoundDec)}{resetColor}\n')
 
     # Process florescence data
     print('Statistical analysis:')
@@ -256,7 +255,8 @@ def processKinetics(slope, datasets, N, plotFig=False):
                 conc = float(conc)
         cutoff = conc / inConcCutoff
         print(f'Concentration: {purple}{conc} {inConcentrationUnit}{resetColor}\n'
-              f'     Cutoff: {red}{round(cutoff, 3)} {inConcentrationUnit}{resetColor}')
+              f'     Cutoff: {red}{round(cutoff, inRoundDec)} {inConcentrationUnit}'
+              f'{resetColor}')
 
         # Filter datapoints
         x = pd.to_numeric(values.index, errors='coerce')
@@ -286,8 +286,8 @@ def processKinetics(slope, datasets, N, plotFig=False):
 
             # Calculate R² values
             rSquared = r2_score(y, predictedY)
-            print(f'R² Value: {red}{round(rSquared, 3)}{resetColor}\n\n')
-            fit += f'\nR² = {round(rSquared, 3)}'
+            print(f'R² Value: {red}{round(rSquared, inRoundDec)}{resetColor}\n\n')
+            fit += f'\nR² = {round(rSquared, inRoundDec)}'
 
 
             if plotFig:
@@ -330,7 +330,7 @@ def processKinetics(slope, datasets, N, plotFig=False):
 def processKineticsBurst(slope, datasets, plotFig, N):
     print('======================== Processing Burst Kinetics Data '
           '=========================')
-    print(f'Slope: {red}{round(slope, 3)}{resetColor}\n')
+    print(f'Slope: {red}{round(slope, inRoundDec)}{resetColor}\n')
     slopeRelease = []
 
     # Process florescence data
@@ -356,7 +356,8 @@ def processKineticsBurst(slope, datasets, plotFig, N):
                 conc = float(conc)
         cutoff = conc / inConcCutoff
         print(f'Dataset: {purple}{conc} {inConcentrationUnit}{resetColor}\n'
-              f'Cutoff: {red}{round(cutoff, 3)} {inConcentrationUnit}{resetColor}')
+              f'Cutoff: {red}{round(cutoff, inRoundDec)} {inConcentrationUnit}'
+              f'{resetColor}')
 
         # Filter datapoints
         x = pd.to_numeric(values.index, errors='coerce')
@@ -410,8 +411,9 @@ def processKineticsBurst(slope, datasets, plotFig, N):
         if burstEndIndex < len(x):
             print(f'     Burst Domain: {red}{inBurstProduct}{resetColor}\n'
                   f'     Split Index: {red}{burstEndIndex}{resetColor}\n'
-                  f'     Burst Range: {pink}{round(y[burstEndIndex], 3)}{resetColor} - '
-                  f'{pink}{round(y[0], 3)} {inConcentrationUnit}{resetColor}\n')
+                  f'     Burst Range: {pink}{round(y[burstEndIndex], inRoundDec)}'
+                  f'{resetColor} - {pink}{round(y[0], inRoundDec)} {inConcentrationUnit}'
+                  f'{resetColor}\n')
         else:
             # Dont split the dataset
             burstEndIndex = 0
@@ -438,8 +440,8 @@ def processKineticsBurst(slope, datasets, plotFig, N):
 
             # Calculate R² values
             rSquared = r2_score(y, predictedY)
-            print(f'      R²: {red}{round(rSquared, 3)}{resetColor}\n\n')
-            fit += f'\nR² = {round(rSquared, 3)}'
+            print(f'      R²: {red}{round(rSquared, inRoundDec)}{resetColor}\n\n')
+            fit += f'\nR² = {round(rSquared, inRoundDec)}'
 
 
             if plotFig:
@@ -512,11 +514,11 @@ def processKineticsBurst(slope, datasets, plotFig, N):
             rSquared1 = r2_score(productBurst, predictedBurst)
             rSquared2 = r2_score(productSteady, predictedSteady)
             print(f'     Fit 1: {red}{fit1}{resetColor}\n'
-                  f'        R²: {red}{round(rSquared1, 3)}{resetColor}\n\n'
+                  f'        R²: {red}{round(rSquared1, inRoundDec)}{resetColor}\n\n'
                   f'     Fit 2: {red}{fit2}{resetColor}\n'
-                  f'        R²: {red}{round(rSquared2, 3)}{resetColor}\n\n')
-            fit1 += f'\nR² = {round(rSquared1, 3)}'
-            fit2 += f'\nR² = {round(rSquared2, 3)}'
+                  f'        R²: {red}{round(rSquared2, inRoundDec)}{resetColor}\n\n')
+            fit1 += f'\nR² = {round(rSquared1, inRoundDec)}'
+            fit2 += f'\nR² = {round(rSquared2, inRoundDec)}'
 
 
             if plotFig:
