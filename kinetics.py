@@ -187,7 +187,8 @@ def processStandardCurve(psc, plotFig=False):
     rSquared = r2_score(y, fitLine)
     print(f'R² Value: {red}{round(rSquared, inRoundDec)}{resetColor}\n\n')
 
-
+    plotFig = False
+    print(f'{orange}WARNING: We are skipping the Std Curve Plot')
     if plotFig:
         # Scatter plot
         fig, ax = plt.subplots(figsize=(9.5, 8))
@@ -219,7 +220,7 @@ def processStandardCurve(psc, plotFig=False):
                 print(f'Saving figure at path:\n'
                       f'     {greenDark}{saveLocation}{resetColor}\n\n')
                 fig.savefig(saveLocation, dpi=inFigureResolution)
-
+    plotFig = True
     return slope, N
 
 
@@ -276,33 +277,51 @@ def processKinetics(slope, datasets, N, plotFig=False):
 
         if len(x) != 0:
             # Evaluate: X axis
-            xMax = math.ceil(max(x))
-            magnitude = math.floor(math.log10(xMax))
-            unitX = 10 ** (magnitude - 1)
-            stepX = unitX * 5
-            # xMax = math.ceil(xMax / (10 * unit)) * (10 * unit)  # Jump to next clean boundary
-            # print(f'\nX Max: {maxValue}')
-            # if xMax <= maxValue:
-            #     xMax += 5 * unit
-            print(f'X Max: {xMax}\n'
+            maxValue = math.ceil(max(x))
+            magnitude = math.floor(math.log10(maxValue))
+            unit = 10 ** (magnitude - 1)
+            stepX = unit * 5
+            xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
+            if magnitude == 0 and xMax - stepX > max(x):
+                xMax -= stepX
+            print(f'\n\nX: {x}\n'
+                  f'Max Value: {maxValue}\n'
+                  f'X Max: {xMax}\n'
                   f'  Mag: {magnitude}\n'
-                  f' Unit: {unitX}\n'
+                  f' Unit: {unit}\n'
                   f' Step: {stepX}\n')
             xMin = 0
 
             # Evaluate: Y axis
-            yMax = math.ceil(max(y))
-            magnitude = math.floor(math.log10(yMax))
+            maxValue = math.ceil(max(y))
+            magnitude = math.floor(math.log10(maxValue))
             unit = 10 ** (magnitude - 1)
-            # yMax = math.ceil(maxValue / (10 * unit)) * (
-            #             10 * unit)  # Jump to next clean boundary
-            # if yMax <= maxValue:
-            #     yMax += 5 * unit
-            # print(f'Y Max: {maxValue}')
-            print(f'Y Max: {yMax}\n'
-                  f'  Mag: {magnitude}\n'
-                  f' Unit: {unit}\n')
             yMin = 0
+            if magnitude == 0:
+                if maxValue > 1:
+                    # print(f'Conc (1): {conc}')
+                    stepY = unit * 5
+                    yMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
+                elif max(y) < 0.5:
+                    # print(f'Conc (2): {conc}')
+                    stepY = unit * 1
+                    yMax = math.ceil(max(y * 10))/10
+                else:
+                    # print(f'Conc (3): {conc}')
+                    stepY = unit
+                    yMax = maxValue + stepY
+                if yMax <= maxValue:
+                    yMax += stepY
+            else:
+                print(f'Conc (4): {conc}')
+                yMax = maxValue
+                stepY = yMax / 5
+            print(f'Y: {list(y)}\n'
+                  f'Max V: {maxValue}\n'
+                  f'Y Max: {yMax}\n'
+                  f'  Mag: {magnitude}\n'
+                  f' Unit: {unit}\n'
+                  f' Step: {stepY}\n')
 
 
             # Fit the datapoints
@@ -320,6 +339,7 @@ def processKinetics(slope, datasets, N, plotFig=False):
             print(f'R² Value: {red}{round(rSquared, inRoundDec)}{resetColor}\n\n')
             fit += f'\nR² = {round(rSquared, inRoundDec)}'
 
+
             if plotFig:
                 # Scatter plot
                 fig, ax = plt.subplots(figsize=(9.5, 8))
@@ -335,8 +355,10 @@ def processKinetics(slope, datasets, N, plotFig=False):
                 # Format axes
                 xTicks = np.arange(xMin, xMax + stepX, stepX)
                 ax.set_xticks(xTicks)
-                plt.xlim(xMin, xMax)
                 ax.set_xticklabels(formatValues(xTicks))
+                plt.xlim(xMin, xMax)
+                # ax.set_yticks(yTicks)
+                # ax.set_yticklabels(formatValues(yTicks))
                 plt.ylim(yMin, yMax)
 
 
