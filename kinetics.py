@@ -12,7 +12,7 @@ import sys
 
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2' # 'SAVLQSGFR-Raw data and analyzed data' #
-inSubstrates = ['AVLQSGFR', 'SVILHAGFR' 'SVILQTGFR']
+inSubstrates = ['AVLQSGFR', 'SVILHAGFR', 'SVILQTGFR']
 inFileName = f'Kinetics-100nM {inSubstrates[0]}' #
 inPathFolder = f'Enzymes/{inEnzymeName}/Kinetics'
 # inPathFolder = f'Enzymes/{inEnzymeName}/Previous/Kinetics1'
@@ -187,8 +187,8 @@ def processStandardCurve(psc, plotFig=False):
     rSquared = r2_score(y, fitLine)
     print(f'R² Value: {red}{round(rSquared, inRoundDec)}{resetColor}\n\n')
 
-    plotFig = False
-    print(f'{orange}WARNING: We are skipping the Std Curve Plot')
+    # plotFig = False
+    # print(f'{orange}WARNING: We are skipping the Std Curve Plot')
     if plotFig:
         # Scatter plot
         fig, ax = plt.subplots(figsize=(9.5, 8))
@@ -284,8 +284,7 @@ def processKinetics(slope, datasets, N, plotFig=False):
             xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
             if magnitude == 0 and xMax - stepX > max(x):
                 xMax -= stepX
-            print(f'\n\nX: {x}\n'
-                  f'Max Value: {maxValue}\n'
+            print(f'Max Value: {maxValue}\n'
                   f'X Max: {xMax}\n'
                   f'  Mag: {magnitude}\n'
                   f' Unit: {unit}\n'
