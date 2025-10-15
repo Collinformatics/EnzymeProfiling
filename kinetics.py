@@ -409,6 +409,8 @@ def processKineticsBurst(slope, datasets, plotFig, N):
     # Plot individual reactions
     reactionSlopes = {}
     for conc, values in datasets.items():
+        if conc >= 5:
+            continue
         print('======================================='
               '======================================')
         if isinstance(conc, str):
@@ -701,17 +703,18 @@ def setAxes(x, y, conc):
     magnitude = math.floor(math.log10(maxValue))
     unit = 10 ** (magnitude - 1)
     yMin = 0
+    print(f'{purple}')
     if magnitude == 0:
         if maxValue > 1:
-            # print(f'Conc (1): {conc}')
+            print(f'Conc (1): {conc}')
             stepY = unit * 5
             yMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
         elif max(y) < 0.5:
-            # print(f'Conc (2): {conc}')
+            print(f'Conc (2): {conc}')
             stepY = unit * 1
             yMax = math.ceil(max(y * 10)) / 10
         else:
-            # print(f'Conc (3): {conc}')
+            print(f'Conc (3): {conc}')
             stepY = unit
             yMax = maxValue + stepY
         if yMax <= maxValue:
@@ -720,12 +723,8 @@ def setAxes(x, y, conc):
         print(f'Conc (4): {conc}')
         yMax = maxValue
         stepY = yMax / 5
-    if maxValue <= 1.5:
-        print(f'Y: {y}')
-        print(f'1: {yMax - 0.2}\n'
-              f'2: {maxValue + 0.1}\n')
-        if yMax - 0.2 > maxValue + 0.1:
-            yMax -= 0.2
+    print(f'{resetColor}')
+
 
     # Inspect yMax
     if isinstance(yMax, float):
@@ -747,28 +746,43 @@ def setAxes(x, y, conc):
 
 
     def fitTicks(maximum, minimum):
-        # print('Setting Axis Ticks:')
-        # print(f'     Max: {maximum}\n'
-        #       f'     Min: {minimum}\n')
+        print('Setting Axis Ticks:')
+        print(f'     Max: {maximum}\n'
+              f'     Min: {minimum}\n')
         ticks = None
-        steps = [10, 6, 5, 4, 3, 2.5, 2, 1.5, 1, 0.5, 0.25]
+        steps = [10, 6, 5, 4, 3, 2.5, 2, 1.5, 1,
+                 0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.125]
 
         for step in steps:
-            if step > maximum / 2:
-                continue
-            # print(f'Step: {step}')
+            # if step > maximum / 2:
+            #     continue
             if maximum % step == 0:
                 ticks = np.arange(minimum, maximum + step, step)
                 # print(f'     Ticks ({step}): {ticks}\n\n')
                 break
+            print()
 
         return ticks
+
+    # Adjust yMax
+    if maxValue <= 1.5:
+        print(f'Y Values: {red}{y[-1]}{resetColor}{resetColor}\n'
+              f'   Y Max: {red}{yMax}{resetColor}\n'
+              f'   Max V: {red}{maxValue}{resetColor}\n')
+        print(f'1: {red}{yMax - 0.2}{resetColor}\n'
+              f'2: {red}{maxValue}{resetColor}\n')
+        maxConc = y[-1]
+        if yMax - 0.2 > maxValue:
+            print(f'{cyan}Reduce!{resetColor}')
+            yMax -= 0.1
+        print('\n')
 
 
     yTicks = fitTicks(yMax, yMin)
     while yTicks is None:
         yMax += 0.1
         yMax = round(yMax*10, 1) / 10
+        print(f'{orange}New Y: {yMax}{resetColor}')
         yTicks = fitTicks(yMax, yMin)
 
 
