@@ -8,7 +8,7 @@ from sklearn.metrics import r2_score
 from scipy.optimize import curve_fit
 import sys
 
-
+from sympy.codegen.ast import continue_
 
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2' # 'SAVLQSGFR-Raw data and analyzed data' #
@@ -22,7 +22,7 @@ inEnzymeConc = inDatasetLabel.split(' ')[0]
 inSubstrate = inDatasetLabel.split(' ')[1]
 
 # Input 2: Process Data
-inBurstKinetics = False
+inBurstKinetics = True
 inBurstProduct = 0.12
 inConcentrationUnit = 'μM'
 inPlotAllFigs = True
@@ -187,8 +187,8 @@ def processStandardCurve(psc, plotFig=False):
     rSquared = r2_score(y, fitLine)
     print(f'R² Value: {red}{round(rSquared, inRoundDec)}{resetColor}\n\n')
 
-    # plotFig = False
-    # print(f'{orange}WARNING: We are skipping the Std Curve Plot')
+    plotFig = False
+    print(f'{orange}WARNING: We are skipping the Std Curve Plot')
     if plotFig:
         # Scatter plot
         fig, ax = plt.subplots(figsize=(9.5, 8))
@@ -405,9 +405,12 @@ def processKineticsBurst(slope, datasets, plotFig, N):
         print(f'Substrate concentration: {purple}{conc}{resetColor}\n{data}\n\n')
 
 
+
     # Plot individual reactions
     reactionSlopes = {}
     for conc, values in datasets.items():
+        print('======================================='
+              '======================================')
         if isinstance(conc, str):
             if 'uM' in conc:
                 conc = conc.replace('uM', '')
@@ -418,7 +421,8 @@ def processKineticsBurst(slope, datasets, plotFig, N):
         cutoff = conc / inConcCutoff
         print(f'Dataset: {purple}{conc} {inConcentrationUnit}{resetColor}\n'
               f'Cutoff: {red}{round(cutoff, inRoundDec)} {inConcentrationUnit}'
-              f'{resetColor}')
+              f'{resetColor}'
+              f'\nConc Cutoff: {red}{inConcCutoff}{resetColor}')
 
         # Filter datapoints
         x = pd.to_numeric(values.index, errors='coerce')
@@ -427,31 +431,13 @@ def processKineticsBurst(slope, datasets, plotFig, N):
         x = x[mask]
         y = y[mask]
 
-
         # Get datapoints
         x = np.array(x)
         y = np.array(y)
-        print(f'     Number of datapoints:\n'
-              f'          X, Y: {red}{len(x)}{resetColor}, {red}{len(y)}{resetColor}\n')
+
         if len(x) == 0:
             print()
             continue
-
-        # # Fit the datapoints
-        # windowLenght = int(0.1 * len(x))
-        # if windowLenght % 2 == 0:
-        #     windowLenght += 1
-        # if windowLenght == 1:
-        #     windowLenght = 3
-        # print(f'     Window Length: {windowLenght}\n')
-        # try:
-        #     smoothedProduct = savgol_filter(y, window_length=windowLenght, polyorder=2)
-        #     rate = np.gradient(smoothedProduct, x)
-        #     threshold = 0.5 * np.max(rate)
-        #     burstEndIndex = np.where(rate < threshold)[0][0]
-        # except:
-        #     burstEndIndex = int(0.3 * len(rate))
-        # print(f'     Split Index: {red}{burstEndIndex}{resetColor}')
 
         # Order the datasets
         if x[0] > x[1]:
@@ -469,6 +455,11 @@ def processKineticsBurst(slope, datasets, plotFig, N):
         for index, value in enumerate(y):
             if value <= yLimit:
                 burstEndIndex = index + 1
+        if burstEndIndex == 1:
+            # Adjust index
+            print(f'     {yellow}Adjusting Burst Index: '
+                  f'{cyan}{burstEndIndex} -> {burstEndIndex + 1}{resetColor}')
+            burstEndIndex += 1
         if burstEndIndex < len(x):
             print(f'     Burst Domain: {red}{inBurstProduct}{resetColor}\n'
                   f'     Split Index: {red}{burstEndIndex}{resetColor}\n'
@@ -480,16 +471,55 @@ def processKineticsBurst(slope, datasets, plotFig, N):
             burstEndIndex = 0
 
         # Evaluate splitting
-        if burstEndIndex == 0:
-            # cutoff = conc / inConcCutoff
-            #
-            # # Filter datapoints
-            # mask = y <= cutoff
-            # x = x[mask]
-            # y = y[mask]
-            # print(f'X, Y: {len(x)}, {len(y)}\n')
+        if burstEndIndex == 0: # Dont split the dataset
+            # Evaluate: X axis
+            maxValue = math.ceil(max(x))
+            magnitude = math.floor(math.log10(maxValue))
+            unit = 10 ** (magnitude - 1)
+            stepX = unit * 5
+            xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
+            if magnitude == 0 and xMax - stepX > max(x):
+                xMax -= stepX
+            print(f'Max Value: {maxValue}\n'
+                  f'X Max: {xMax}\n'
+                  f'  Mag: {magnitude}\n'
+                  f' Unit: {unit}\n'
+                  f' Step: {stepX}\n')
+            xMin = 0
 
-            # Fit the line
+            # Evaluate: Y axis
+            maxValue = math.ceil(max(y))
+            magnitude = math.floor(math.log10(maxValue))
+            unit = 10 ** (magnitude - 1)
+            yMin = 0
+            if magnitude == 0:
+                if maxValue > 1:
+                    # print(f'Conc (1): {conc}')
+                    stepY = unit * 5
+                    yMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
+                elif max(y) < 0.5:
+                    # print(f'Conc (2): {conc}')
+                    stepY = unit * 1
+                    yMax = math.ceil(max(y * 10)) / 10
+                else:
+                    # print(f'Conc (3): {conc}')
+                    stepY = unit
+                    yMax = maxValue + stepY
+                if yMax <= maxValue:
+                    yMax += stepY
+            else:
+                print(f'Conc (4): {conc}')
+                yMax = maxValue
+                stepY = yMax / 5
+            print(f'Y: {list(y)}\n'
+                  f'Max V: {maxValue}\n'
+                  f'Y Max: {yMax}\n'
+                  f'  Mag: {magnitude}\n'
+                  f' Unit: {unit}\n'
+                  f' Step: {stepY}\n')
+
+
+            # Fit the datapoints
             slope, intercept = np.polyfit(x, y, 1)  # Degree 1 polynomial = linear
             fitLine = slope * x + intercept
             fit = f'y = {slope:.3f}x + {intercept:.3f}'
@@ -519,7 +549,16 @@ def processKineticsBurst(slope, datasets, plotFig, N):
                 plt.xlabel(f'Time (min)', fontsize=16)
                 plt.ylabel(f'Product Concentration ({inConcentrationUnit})',
                            fontsize=16)
-                # plt.ylim(yMin, yMax)
+
+                # Format axes
+                xTicks = np.arange(xMin, xMax + stepX, stepX)
+                ax.set_xticks(xTicks)
+                ax.set_xticklabels(formatValues(xTicks))
+                plt.xlim(xMin, xMax)
+                # ax.set_yticks(yTicks)
+                # ax.set_yticklabels(formatValues(yTicks))
+                plt.ylim(yMin, yMax)
+
                 plt.grid(True)
                 plt.tight_layout()
                 plt.legend(fontsize=12, prop={'weight': 'bold'})
@@ -548,15 +587,11 @@ def processKineticsBurst(slope, datasets, plotFig, N):
             # Phase 2: Steady-State
             timeSteady = x[burstEndIndex:]
             productSteady = y[burstEndIndex:]
-            print(f'     Dataset Size:\n'
-                  f'           Set 1: '
-                  f'{red}{len(timeBurst)}{resetColor}, '
-                  f'{red}{len(productBurst)}{resetColor}\n'
-                  f'           Set 2: '
-                  f'{red}{len(timeSteady)}{resetColor}, '
-                  f'{red}{len(productSteady)}{resetColor}\n')
 
-            # Fit the line
+            # Set axis
+            xMin, xMax, xTicks, yMin, yMax, yTicks = setAxes(x=x, y=y, conc=conc)
+
+            # Fit the datapoints
             slope1, intercept1 = np.polyfit(
                 timeBurst, productBurst, 1) # Fit burst phase
             slope2, intercept2 = np.polyfit(
@@ -574,13 +609,15 @@ def processKineticsBurst(slope, datasets, plotFig, N):
             # Calculate R² values
             rSquared1 = r2_score(productBurst, predictedBurst)
             rSquared2 = r2_score(productSteady, predictedSteady)
-            print(f'     Fit 1: {red}{fit1}{resetColor}\n'
-                  f'        R²: {red}{round(rSquared1, inRoundDec)}{resetColor}\n\n'
-                  f'     Fit 2: {red}{fit2}{resetColor}\n'
-                  f'        R²: {red}{round(rSquared2, inRoundDec)}{resetColor}\n\n')
+
             fit1 += f'\nR² = {round(rSquared1, inRoundDec)}'
             fit2 += f'\nR² = {round(rSquared2, inRoundDec)}'
-
+            print(f'Burst Domain:\n'
+                  f'     Length: {red}{len(timeBurst)}{resetColor}\n'
+                  f'         R²: {red}{round(rSquared1, inRoundDec)}{resetColor}\n\n'
+                  f'Steady Domain:\n'
+                  f'     Length: {red}{len(timeSteady)}{resetColor}\n'
+                  f'         R²: {red}{round(rSquared2, inRoundDec)}{resetColor}\n\n')
 
             if plotFig:
                 # Scatter plot
@@ -599,7 +636,15 @@ def processKineticsBurst(slope, datasets, plotFig, N):
                 plt.xlabel(f'Time (min)', fontsize=16)
                 plt.ylabel(f'Product Concentration ({inConcentrationUnit})',
                            fontsize=16)
-                # plt.ylim(yMin, yMax)
+
+                # Format axes
+                ax.set_xticks(xTicks)
+                ax.set_xticklabels(formatValues(xTicks))
+                plt.xlim(xMin, xMax)
+                # ax.set_yticks(yTicks)
+                # ax.set_yticklabels(formatValues(yTicks))
+                plt.ylim(yMin, yMax)
+
                 plt.grid(True, color='black')
                 plt.tight_layout()
                 plt.legend(fontsize=12, prop={'weight': 'bold'})
@@ -630,6 +675,111 @@ def processKineticsBurst(slope, datasets, plotFig, N):
           f'{resetColor}\n\n')
 
     return reactionSlopes
+
+
+
+def setAxes(x, y, conc):
+    # Evaluate: X axis
+    maxValue = math.ceil(max(x))
+    magnitude = math.floor(math.log10(maxValue))
+    unit = 10 ** (magnitude - 1)
+    stepX = unit * 5
+    xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
+    if magnitude == 0 and xMax - stepX > max(x):
+        xMax -= stepX
+    print(f'Max Value: {maxValue}\n'
+          f'X Max: {xMax}\n'
+          f'  Mag: {magnitude}\n'
+          f' Unit: {unit}\n'
+          f' Step: {stepX}\n')
+    xMin = 0
+    xTicks = np.arange(xMin, xMax + stepX, stepX)
+
+
+    # Evaluate: Y axis
+    maxValue = math.ceil(max(y))
+    magnitude = math.floor(math.log10(maxValue))
+    unit = 10 ** (magnitude - 1)
+    yMin = 0
+    if magnitude == 0:
+        if maxValue > 1:
+            # print(f'Conc (1): {conc}')
+            stepY = unit * 5
+            yMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
+        elif max(y) < 0.5:
+            # print(f'Conc (2): {conc}')
+            stepY = unit * 1
+            yMax = math.ceil(max(y * 10)) / 10
+        else:
+            # print(f'Conc (3): {conc}')
+            stepY = unit
+            yMax = maxValue + stepY
+        if yMax <= maxValue:
+            yMax += stepY
+    else:
+        print(f'Conc (4): {conc}')
+        yMax = maxValue
+        stepY = yMax / 5
+    if maxValue <= 1.5:
+        print(f'Y: {y}')
+        print(f'1: {yMax - 0.2}\n'
+              f'2: {maxValue + 0.1}\n')
+        if yMax - 0.2 > maxValue + 0.1:
+            yMax -= 0.2
+
+    # Inspect yMax
+    if isinstance(yMax, float):
+        if not f'{yMax}'.endswith('.0') and not f'{yMax}'.endswith('.5'):
+            num, dec = int(str(yMax).split('.')[0]), int(str(yMax).split('.')[1])
+            # print(f'Y Max: {yMax}\n'
+            #       f'  Num: {num}\n'
+            #       f'  Dec: {dec}')
+            # print(f'  dec % 2 == 0 {red}{dec % 2 == 0}{resetColor}\n'
+            #       f'  dec % 2 == 5 {red}{dec % 2 == 5}{resetColor}')
+            # Make the decimal be divisible by 2 or 5
+            while not dec % 2 == 0 and not dec % 5 == 0:
+                dec += 1
+                # print(f'Dec: {dec}')
+                # print(f'  dec % 2 == 0 {red}{dec % 2 == 0}{resetColor}\n'
+                #       f'  dec % 2 == 5 {red}{dec % 5 == 0}{resetColor}')
+                yMax = num + (dec / 10)
+                # print(f'New yMax: {yMax}')
+
+
+    def fitTicks(maximum, minimum):
+        # print('Setting Axis Ticks:')
+        # print(f'     Max: {maximum}\n'
+        #       f'     Min: {minimum}\n')
+        ticks = None
+        steps = [10, 6, 5, 4, 3, 2.5, 2, 1.5, 1, 0.5, 0.25]
+
+        for step in steps:
+            if step > maximum / 2:
+                continue
+            # print(f'Step: {step}')
+            if maximum % step == 0:
+                ticks = np.arange(minimum, maximum + step, step)
+                # print(f'     Ticks ({step}): {ticks}\n\n')
+                break
+
+        return ticks
+
+
+    yTicks = fitTicks(yMax, yMin)
+    while yTicks is None:
+        yMax += 0.1
+        yMax = round(yMax*10, 1) / 10
+        yTicks = fitTicks(yMax, yMin)
+
+
+    print(f'max(Y): {round(max(y), inRoundDec)}\n'
+          f'Max V: {maxValue}\n'
+          f'Y Max: {yMax}\n'
+          f'  Mag: {magnitude}\n'
+          f' Unit: {unit}\n'
+          f' Step: {stepY}\n')
+
+    return xMin, xMax, xTicks, yMin, yMax, yTicks
 
 
 
