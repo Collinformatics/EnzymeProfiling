@@ -8,13 +8,20 @@ from sklearn.metrics import r2_score
 from scipy.optimize import curve_fit
 import sys
 
-from sympy.codegen.ast import continue_
+
+
+# Mising Data: 'Kinetics-100nM SNILQAGFR'
 
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2' # 'SAVLQSGFR-Raw data and analyzed data' #
-inSubstrates = ['AVLQSGFR', 'SVILHAGFR', 'SVILQTGFR']
-inFileName = f'Kinetics-100nM {inSubstrates[0]}' #
-inPathFolder = f'Enzymes/{inEnzymeName}/Kinetics'
+inFileNames = [
+    'Kinetics-50nM SVPLQAGFR', 'Kinetics-100nM AVLQSGFR', 'Kinetics-100nM SAVLQSGFR',
+    'Kinetics-100nM SNILQAGFR', 'Kinetics-100nM SPILQAGFR', 'Kinetics-100nM SPIMQAGFR',
+    'Kinetics-100nM SVIHQAGFR', 'Kinetics-100nM SVILQAGFR', 'Kinetics-100nM SVILQTGFR',
+    'Kinetics-100nM SVIMQAGFR', 'Kinetics-100nM SVPLQAGFR'
+]
+inFileName = inFileNames[3]
+inPathFolder = f'Enzymes/{inEnzymeName}/Kinetics/Data'
 # inPathFolder = f'Enzymes/{inEnzymeName}/Previous/Kinetics1'
 inSheetName = ['Product standard', 'Sub_Raw data']
 inDatasetLabel = inFileName.split('-')[1]
@@ -22,7 +29,7 @@ inEnzymeConc = inDatasetLabel.split(' ')[0]
 inSubstrate = inDatasetLabel.split(' ')[1]
 
 # Input 2: Process Data
-inBurstKinetics = True
+inBurstKinetics = False
 inBurstProduct = 0.12
 inConcentrationUnit = 'μM'
 inPlotAllFigs = True
@@ -76,6 +83,14 @@ def pressKey(event):
 
 
 
+def inspectData(data):
+    hasNaN = data.isna().values.any()
+    if hasNaN:
+        print(f'{orange}ERROR: The dataset contains NaN values')
+        sys.exit()
+
+
+
 def loadExcel(sheetName='', loadStandard=False):
     print('=================================== Load Data '
           '===================================')
@@ -100,6 +115,7 @@ def loadExcel(sheetName='', loadStandard=False):
 
         print(f'Raw Data: {pink}{sheetName}{resetColor}\n{data}\n\n\n'
               f'Loaded Data: {pink}{sheetName}{resetColor}\n{dataFiltered}\n\n')
+        inspectData(data=dataFiltered)
     else:
         data = pd.read_excel(path, sheet_name=sheetName, header=None, index_col=[0])
         print(f'Raw Data: {pink}{sheetName}{resetColor}\n{data}\n\n')
@@ -140,7 +156,7 @@ def loadExcel(sheetName='', loadStandard=False):
         for conc, value in dataFiltered.items():
             print(f'Concentration: {purple}{conc} {inConcentrationUnit}{resetColor}\n'
                   f'{value}\n\n')
-        # sys.exit()
+            inspectData(data=value)
 
     return dataFiltered
 
@@ -187,8 +203,8 @@ def processStandardCurve(psc, plotFig=False):
     rSquared = r2_score(y, fitLine)
     print(f'R² Value: {red}{round(rSquared, inRoundDec)}{resetColor}\n\n')
 
-    plotFig = False
-    print(f'{orange}WARNING: We are skipping the Std Curve Plot')
+    # plotFig = False
+    # print(f'{orange}WARNING: We are skipping the Std Curve Plot')
     if plotFig:
         # Scatter plot
         fig, ax = plt.subplots(figsize=(9.5, 8))
@@ -472,55 +488,11 @@ def processKineticsBurst(slope, datasets, plotFig, N):
             # Dont split the dataset
             burstEndIndex = 0
 
+        # Set axis
+        xMin, xMax, xTicks, yMin, yMax, yTicks = setAxes(x=x, y=y, conc=conc)
+
         # Evaluate splitting
         if burstEndIndex == 0: # Dont split the dataset
-            # Evaluate: X axis
-            maxValue = math.ceil(max(x))
-            magnitude = math.floor(math.log10(maxValue))
-            unit = 10 ** (magnitude - 1)
-            stepX = unit * 5
-            xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
-            if magnitude == 0 and xMax - stepX > max(x):
-                xMax -= stepX
-            print(f'Max Value: {maxValue}\n'
-                  f'X Max: {xMax}\n'
-                  f'  Mag: {magnitude}\n'
-                  f' Unit: {unit}\n'
-                  f' Step: {stepX}\n')
-            xMin = 0
-
-            # Evaluate: Y axis
-            maxValue = math.ceil(max(y))
-            magnitude = math.floor(math.log10(maxValue))
-            unit = 10 ** (magnitude - 1)
-            yMin = 0
-            if magnitude == 0:
-                if maxValue > 1:
-                    # print(f'Conc (1): {conc}')
-                    stepY = unit * 5
-                    yMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
-                elif max(y) < 0.5:
-                    # print(f'Conc (2): {conc}')
-                    stepY = unit * 1
-                    yMax = math.ceil(max(y * 10)) / 10
-                else:
-                    # print(f'Conc (3): {conc}')
-                    stepY = unit
-                    yMax = maxValue + stepY
-                if yMax <= maxValue:
-                    yMax += stepY
-            else:
-                print(f'Conc (4): {conc}')
-                yMax = maxValue
-                stepY = yMax / 5
-            print(f'Y: {list(y)}\n'
-                  f'Max V: {maxValue}\n'
-                  f'Y Max: {yMax}\n'
-                  f'  Mag: {magnitude}\n'
-                  f' Unit: {unit}\n'
-                  f' Step: {stepY}\n')
-
-
             # Fit the datapoints
             slope, intercept = np.polyfit(x, y, 1)  # Degree 1 polynomial = linear
             fitLine = slope * x + intercept
@@ -553,12 +525,11 @@ def processKineticsBurst(slope, datasets, plotFig, N):
                            fontsize=16)
 
                 # Format axes
-                xTicks = np.arange(xMin, xMax + stepX, stepX)
                 ax.set_xticks(xTicks)
                 ax.set_xticklabels(formatValues(xTicks))
                 plt.xlim(xMin, xMax)
-                # ax.set_yticks(yTicks)
-                # ax.set_yticklabels(formatValues(yTicks))
+                ax.set_yticks(yTicks)
+                ax.set_yticklabels(formatValues(yTicks))
                 plt.ylim(yMin, yMax)
 
                 plt.grid(True)
@@ -589,9 +560,6 @@ def processKineticsBurst(slope, datasets, plotFig, N):
             # Phase 2: Steady-State
             timeSteady = x[burstEndIndex:]
             productSteady = y[burstEndIndex:]
-
-            # Set axis
-            xMin, xMax, xTicks, yMin, yMax, yTicks = setAxes(x=x, y=y, conc=conc)
 
             # Fit the datapoints
             slope1, intercept1 = np.polyfit(
@@ -751,14 +719,18 @@ def setAxes(x, y, conc):
               f'     Min: {minimum}\n')
         ticks = None
         steps = [10, 6, 5, 4, 3, 2.5, 2, 1.5, 1,
-                 0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.125]
+                 0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.125, 0.075, 0.05]
 
         for step in steps:
-            # if step > maximum / 2:
-            #     continue
+            if step > maximum / 2:
+                continue
             if maximum % step == 0:
                 ticks = np.arange(minimum, maximum + step, step)
-                # print(f'     Ticks ({step}): {ticks}\n\n')
+                print(f'L({step}): {len(ticks)}')
+                if len(ticks) <= 2:
+                    print(f'Skip: {ticks}')
+                    continue
+                print(f'Ticks ({step}): {ticks}\n\n')
                 break
             print()
 
@@ -766,17 +738,17 @@ def setAxes(x, y, conc):
 
     # Adjust yMax
     if maxValue <= 1.5:
+        maxConc = y[-1]
         print(f'Y Values: {red}{y[-1]}{resetColor}{resetColor}\n'
               f'   Y Max: {red}{yMax}{resetColor}\n'
-              f'   Max V: {red}{maxValue}{resetColor}\n')
+              f'   Max V: {red}{maxValue}{resetColor}\n'
+              f'Max Conc: {red}{maxConc}{resetColor}\n')
         print(f'1: {red}{yMax - 0.2}{resetColor}\n'
-              f'2: {red}{maxValue}{resetColor}\n')
-        maxConc = y[-1]
-        if yMax - 0.2 > maxValue:
-            print(f'{cyan}Reduce!{resetColor}')
-            yMax -= 0.1
-        print('\n')
+              f'2: {red}{maxConc}{resetColor}\n')
 
+        while yMax - 0.15 > maxConc:
+            yMax -= 0.1
+            print(f'{cyan}Reduce!{resetColor}\nY New: {yMax}\n')
 
     yTicks = fitTicks(yMax, yMin)
     while yTicks is None:
@@ -868,12 +840,14 @@ def MichaelisMenten(velocity, N):
 
 
 # ====================================== Load data =======================================
-# Load: Product Standard Curve
+# Load Data
 prodStdCurve = loadExcel(sheetName=inSheetName[0], loadStandard=True)
-m, N= processStandardCurve(psc=prodStdCurve, plotFig=inPlotAllFigs)
-
-# Load: Kinetics Data
 fluorescence = loadExcel(sheetName=inSheetName[1])
+
+sys.exit()
+
+# Calculate: Product Standard Curve
+m, N= processStandardCurve(psc=prodStdCurve, plotFig=inPlotAllFigs)
 
 # Process kinetics
 if inBurstKinetics:
