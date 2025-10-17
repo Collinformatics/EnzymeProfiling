@@ -19,7 +19,7 @@ inFileNames = ['Kinetics-100nM AVLQSGFR', 'Kinetics-100nM SVILHAGFR',
                'Kinetics-100nM SNILQAGFR', 'Kinetics-100nM SPILQAGFR',
                'Kinetics-100nM SPIMQAGFR', 'Kinetics-100nM SVILQAPFR',
                'Kinetics-100nM SVIMQAGFR', 'Kinetics-100nM SVILQAGFR']
-inFileName = inFileNames[9]
+inFileName = inFileNames[0]
 inPathFolder = f'Enzymes/{inEnzymeName}/Kinetics'
 inPathData = os.path.join(inPathFolder, 'Data')
 inPathFigures = os.path.join(inPathFolder, 'Figures')
@@ -29,14 +29,16 @@ inEnzymeConc = inDatasetLabel.split(' ')[0]
 inSubstrate = inDatasetLabel.split(' ')[1]
 
 # Input 2: Process Data
-inBurstKinetics = True
+inBurstKinetics = False
 inBurstProduct = 0.12
 inConcentrationUnit = 'μM'
 inPlotAllFigs = True
 inStdCurveStartIndex = 0
-inConcCutoff = 10 # Max percentage of substrate concentration in rxn plot
+inConcCutoff = 5 # Max percentage of substrate concentration in rxn plot
 inMaxCovariance = 0.3
 inRoundDec = 3
+inDropHighSubConcDatapoints = True
+inMaxSubstrateConc = 50
 
 # Saving the data
 inSaveFigures = True
@@ -767,6 +769,18 @@ def MichaelisMenten(velocity, N):
     print('=============================== Michaelis-Menten '
           '================================')
     dec = 2
+    print(f'Vel:\n{velocity}\n\n'
+          f'N: {N}\n')
+
+    # Drop high substrate concentration datapoints
+    if inDropHighSubConcDatapoints:
+        subset = {}
+        for conc, act in velocity.items():
+            if conc < inMaxSubstrateConc:
+                subset[conc] = act
+        velocity = subset
+
+    # Convert dtype
     substrateConc = list(velocity.keys())
 
 
