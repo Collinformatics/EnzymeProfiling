@@ -10,26 +10,26 @@ import sys
 
 
 
-# Mising Data: 'Kinetics-100nM SNILQAGFR'
+# Mising Data: Kinetics-100nM SNILQAGFR, Kinetics-100nM SVILQAPFR
 
 # Input 1: Select Dataset
 inEnzymeName = 'Mpro2' # 'SAVLQSGFR-Raw data and analyzed data' #
-inFileNames = [
-    'Kinetics-50nM SVPLQAGFR', 'Kinetics-100nM AVLQSGFR', 'Kinetics-100nM SAVLQSGFR',
-    'Kinetics-100nM SNILQAGFR', 'Kinetics-100nM SPILQAGFR', 'Kinetics-100nM SPIMQAGFR',
-    'Kinetics-100nM SVIHQAGFR', 'Kinetics-100nM SVILQAGFR', 'Kinetics-100nM SVILQTGFR',
-    'Kinetics-100nM SVIMQAGFR', 'Kinetics-100nM SVPLQAGFR'
-]
-inFileName = inFileNames[3]
-inPathFolder = f'Enzymes/{inEnzymeName}/Kinetics/Data'
-# inPathFolder = f'Enzymes/{inEnzymeName}/Previous/Kinetics1'
+inFileNames = ['Kinetics-100nM AVLQSGFR', 'Kinetics-100nM SVILHAGFR',
+               'Kinetics-100nM SVILQTGFR', 'Kinetics-50nM SVPLQAGFR',
+               'Kinetics-100nM SNILQAGFR', 'Kinetics-100nM SPILQAGFR',
+               'Kinetics-100nM SPIMQAGFR', 'Kinetics-100nM SVILQAPFR',
+               'Kinetics-100nM SVIMQAGFR', 'Kinetics-100nM SVILQAGFR']
+inFileName = inFileNames[9]
+inPathFolder = f'Enzymes/{inEnzymeName}/Kinetics'
+inPathData = os.path.join(inPathFolder, 'Data')
+inPathFigures = os.path.join(inPathFolder, 'Figures')
 inSheetName = ['Product standard', 'Sub_Raw data']
 inDatasetLabel = inFileName.split('-')[1]
 inEnzymeConc = inDatasetLabel.split(' ')[0]
 inSubstrate = inDatasetLabel.split(' ')[1]
 
 # Input 2: Process Data
-inBurstKinetics = False
+inBurstKinetics = True
 inBurstProduct = 0.12
 inConcentrationUnit = 'μM'
 inPlotAllFigs = True
@@ -65,9 +65,10 @@ red = '\033[91m'
 resetColor = '\033[0m'
 
 # Verify directory paths
-pathFigures = os.path.join(inPathFolder, f'Figures')
-if not os.path.exists(pathFigures):
-    os.makedirs(pathFigures, exist_ok=True)
+if not os.path.exists(inPathData):
+    os.makedirs(inPathData, exist_ok=True)
+if not os.path.exists(inPathFigures):
+    os.makedirs(inPathFigures, exist_ok=True)
 
 
 
@@ -86,7 +87,7 @@ def pressKey(event):
 def inspectData(data):
     hasNaN = data.isna().values.any()
     if hasNaN:
-        print(f'{orange}ERROR: The dataset contains NaN values')
+        print(f'{orange}ERROR: The dataset contains NaN values\n')
         sys.exit()
 
 
@@ -95,7 +96,7 @@ def loadExcel(sheetName='', loadStandard=False):
     print('=================================== Load Data '
           '===================================')
     print(f'Loading excel sheet: {pink}{sheetName}{resetColor}')
-    path = os.path.join(inPathFolder, inFileName)
+    path = os.path.join(inPathData, inFileName)
     if '.xlsx' not in path:
         path += '.xlsx'
     print(f'Loading file at path:\n     {greenDark}{path}{resetColor}\n\n')
@@ -227,7 +228,7 @@ def processStandardCurve(psc, plotFig=False):
         # Save figure
         if inSaveFigures:
             saveTag = f'PSC - N {N} - {inEnzymeName} {inDatasetLabel}'
-            saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+            saveLocation = os.path.join(inPathFigures, f'{saveTag}.png')
             if os.path.exists(saveLocation):
                 print(f'{yellow}The figure was not saved\n\n'
                       f'File was already found at path:\n'
@@ -300,8 +301,8 @@ def processKinetics(slope, datasets, N, plotFig=False):
             xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
             if magnitude == 0 and xMax - stepX > max(x):
                 xMax -= stepX
-            print(f'Max Value: {maxValue}\n'
-                  f'X Max: {xMax}\n'
+            print(f'Max Value: {red}{maxValue}{resetColor}\n'
+                  f'X Max: {red}{xMax}{resetColor}\n'
                   f'  Mag: {magnitude}\n'
                   f' Unit: {unit}\n'
                   f' Step: {stepX}\n')
@@ -319,7 +320,7 @@ def processKinetics(slope, datasets, N, plotFig=False):
                     yMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
                 elif max(y) < 0.5:
                     # print(f'Conc (2): {conc}')
-                    stepY = unit * 1
+                    stepY = 0.05
                     yMax = math.ceil(max(y * 10))/10
                 else:
                     # print(f'Conc (3): {conc}')
@@ -331,9 +332,9 @@ def processKinetics(slope, datasets, N, plotFig=False):
                 print(f'Conc (4): {conc}')
                 yMax = maxValue
                 stepY = yMax / 5
-            print(f'Y: {list(y)}\n'
-                  f'Max V: {maxValue}\n'
-                  f'Y Max: {yMax}\n'
+            print(f'Y: {yellow}{list(y)}{resetColor}\n'
+                  f'Max V: {red}{maxValue}{resetColor}\n'
+                  f'Y Max: {red}{yMax}{resetColor}\n'
                   f'  Mag: {magnitude}\n'
                   f' Unit: {unit}\n'
                   f' Step: {stepY}\n')
@@ -362,8 +363,8 @@ def processKinetics(slope, datasets, N, plotFig=False):
                             edgecolors='black', linewidths=0.8)
                 plt.title(f'\n{inEnzymeConc} {inEnzymeName}\n{inSubstrate}\n'
                           f'Substrate Concentration: {conc} {inConcentrationUnit}\n'
-                          f'Maximum Product Concentration: {round(cutoff, 2)}',
-                          fontsize=18, fontweight='bold')
+                          f'Maximum Product Concentration: {round(cutoff, 2)} '
+                          f'{inConcentrationUnit}', fontsize=18, fontweight='bold')
                 plt.xlabel(f'Time', fontsize=16)
                 plt.ylabel(f'Product Concentration', fontsize=16)
 
@@ -390,7 +391,7 @@ def processKinetics(slope, datasets, N, plotFig=False):
                     saveTag = (f'Kinetics - {inEnzymeName} {inDatasetLabel} '
                                f'{conc}{inConcentrationUnit} - PSC N {N}')
                     saveTag = saveTag.replace('.','_')
-                    saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+                    saveLocation = os.path.join(inPathFigures, f'{saveTag}.png')
                     if os.path.exists(saveLocation):
                         print(f'{yellow}The figure was not saved\n\n'
                               f'File was already found at path:\n'
@@ -425,8 +426,8 @@ def processKineticsBurst(slope, datasets, plotFig, N):
     # Plot individual reactions
     reactionSlopes = {}
     for conc, values in datasets.items():
-        if conc >= 5:
-            continue
+        # if conc >= 5:
+        #     continue
         print('======================================='
               '======================================')
         if isinstance(conc, str):
@@ -543,7 +544,7 @@ def processKineticsBurst(slope, datasets, plotFig, N):
                     saveTag = (f'Kinetics Burst - {inEnzymeName} {inDatasetLabel} '
                                f'{conc}{inConcentrationUnit} - PSC N {N}')
                     saveTag = saveTag.replace('.', '_')
-                    saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+                    saveLocation = os.path.join(inPathFigures, f'{saveTag}.png')
                     if os.path.exists(saveLocation):
                         print(f'{yellow}The figure was not saved\n\n'
                               f'File was already found at path:\n'
@@ -626,7 +627,7 @@ def processKineticsBurst(slope, datasets, plotFig, N):
                     saveTag = (f'Kinetics Burst - {inEnzymeName} {inDatasetLabel} '
                                f'{conc}{inConcentrationUnit} - PSC N {N}')
                     saveTag = saveTag.replace('.', '_')
-                    saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+                    saveLocation = os.path.join(inPathFigures, f'{saveTag}.png')
                     if os.path.exists(saveLocation):
                         print(f'{yellow}The figure was not saved\n\n'
                               f'File was already found at path:\n'
@@ -648,7 +649,7 @@ def processKineticsBurst(slope, datasets, plotFig, N):
 
 
 
-def setAxes(x, y, conc):
+def setAxes(x, y, conc=None):
     # Evaluate: X axis
     maxValue = math.ceil(max(x))
     magnitude = math.floor(math.log10(maxValue))
@@ -657,11 +658,6 @@ def setAxes(x, y, conc):
     xMax = math.ceil(maxValue / (10 * unit)) * (10 * unit)
     if magnitude == 0 and xMax - stepX > max(x):
         xMax -= stepX
-    print(f'Max Value: {maxValue}\n'
-          f'X Max: {xMax}\n'
-          f'  Mag: {magnitude}\n'
-          f' Unit: {unit}\n'
-          f' Step: {stepX}\n')
     xMin = 0
     xTicks = np.arange(xMin, xMax + stepX, stepX)
 
@@ -714,9 +710,9 @@ def setAxes(x, y, conc):
 
 
     def fitTicks(maximum, minimum):
-        print('Setting Axis Ticks:')
-        print(f'     Max: {maximum}\n'
-              f'     Min: {minimum}\n')
+        # print(f'Setting Axis Ticks:\n'
+        #       f'     Max: {maximum}\n'
+        #       f'     Min: {minimum}\n')
         ticks = None
         steps = [10, 6, 5, 4, 3, 2.5, 2, 1.5, 1,
                  0.8, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.15, 0.125, 0.075, 0.05]
@@ -726,13 +722,13 @@ def setAxes(x, y, conc):
                 continue
             if maximum % step == 0:
                 ticks = np.arange(minimum, maximum + step, step)
-                print(f'L({step}): {len(ticks)}')
+                # print(f'L({step}): {len(ticks)}')
                 if len(ticks) <= 2:
-                    print(f'Skip: {ticks}')
+                    # print(f'Skip: {ticks}')
                     continue
                 print(f'Ticks ({step}): {ticks}\n\n')
                 break
-            print()
+        print()
 
         return ticks
 
@@ -756,8 +752,6 @@ def setAxes(x, y, conc):
         yMax = round(yMax*10, 1) / 10
         print(f'{orange}New Y: {yMax}{resetColor}')
         yTicks = fitTicks(yMax, yMin)
-
-
     print(f'max(Y): {round(max(y), inRoundDec)}\n'
           f'Max V: {maxValue}\n'
           f'Y Max: {yMax}\n'
@@ -807,6 +801,7 @@ def MichaelisMenten(velocity, N):
           f'     Vmax: {red}{vMax:.3f}{resetColor}\n'
           f'     R²: {red}{rSquared:.3f}{resetColor}\n')
 
+
     # Plot the data
     fig, ax = plt.subplots(figsize=(9.5, 8))
     plt.scatter(substrateConc, v, color='#BF5700', edgecolors='black', linewidths=0.8)
@@ -817,6 +812,15 @@ def MichaelisMenten(velocity, N):
               fontsize=18, fontweight='bold')
     plt.xlabel(f'[Substrate] ({inConcentrationUnit})', fontsize=16)
     plt.ylabel(f'Velocity ({inConcentrationUnit}/min)', fontsize=16)
+
+    # # Format axes
+    # ax.set_xticks(xTicks)
+    # ax.set_xticklabels(formatValues(xTicks))
+    # plt.xlim(xMin, xMax)
+    # ax.set_yticks(yTicks)
+    # ax.set_yticklabels(formatValues(yTicks))
+    # plt.ylim(yMin, yMax)
+
     plt.tight_layout()
     plt.legend(fontsize=12, prop={'weight': 'bold'})
     fig.canvas.mpl_connect('key_press_event', pressKey)
@@ -827,7 +831,7 @@ def MichaelisMenten(velocity, N):
         saveTag = f'MM - {inEnzymeName} {inDatasetLabel} - {inSubstrate} - PSC N {N}'
         if inBurstKinetics:
             saveTag = saveTag.replace('MM', 'MM - Burst')
-        saveLocation = os.path.join(pathFigures, f'{saveTag}.png')
+        saveLocation = os.path.join(inPathFigures, f'{saveTag}.png')
         if os.path.exists(saveLocation):
             print(f'{yellow}The figure was not saved\n\n'
                   f'File was already found at path:\n'
@@ -843,8 +847,6 @@ def MichaelisMenten(velocity, N):
 # Load Data
 prodStdCurve = loadExcel(sheetName=inSheetName[0], loadStandard=True)
 fluorescence = loadExcel(sheetName=inSheetName[1])
-
-sys.exit()
 
 # Calculate: Product Standard Curve
 m, N= processStandardCurve(psc=prodStdCurve, plotFig=inPlotAllFigs)
