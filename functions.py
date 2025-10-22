@@ -5921,8 +5921,10 @@ class NGS:
         xMax, xMin = max(x), min(x)
         yMax, yMin = max(y), min(y)
         print(f'Boundaries:\n'
-              f'     X: {red}{xMax:,}{resetColor} - {red}{xMin:,}{resetColor}\n'
-              f'     Y: {red}{yMax:,}{resetColor} - {red}{yMin:,}{resetColor}\n\n')
+              f'     X: {red}{round(xMax, self.roundVal):,}{resetColor} - '
+              f'{red}{round(xMin, self.roundVal):,}{resetColor}\n'
+              f'     Y: {red}{round(yMax, self.roundVal):,}{resetColor} - '
+              f'{red}{round(yMin, self.roundVal):,}{resetColor}\n\n')
         lowerLim = -10000
 
         fig, ax = plt.subplots(figsize=self.figSize)

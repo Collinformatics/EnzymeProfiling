@@ -18,7 +18,7 @@ inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\'','P3\''] # ,'P4\''
+inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\'','P3\'','P4\''] #
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
 # inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7']
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
@@ -26,7 +26,7 @@ inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
-inFixedPosition = [4,5]
+inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
@@ -94,13 +94,16 @@ inIncludeSubCountsESM = True
 inPlotEntropyPCAPopulations = False
 
 # Input 11: Predict Activity
-inPredictActivity = False
+inPredictActivity = True
 inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
                        'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
 
-# Input 12: Printing The Data
+# Input 12: Codon Enrichment
+inPredictCodonsEnrichment = False
+
+# Input 13: Printing The Data
 inPrintLoadedSubs = True
 inPrintSampleSize = True
 inPrintCounts = True
@@ -110,7 +113,7 @@ inPrintEntropy = True
 inPrintMotifData = True
 inPrintNumber = 10
 
-# Input 13: Evaluate Known Substrates
+# Input 14: Evaluate Known Substrates
 inNormalizePredictions = True
 inYMaxPred = 1.05
 inYMinPred, inYMinPredScaled, inYMinPredAI = 0, 0, -0.25
@@ -157,14 +160,14 @@ inDatapointColor = []
 for _ in inSubsPredict:
     inDatapointColor.append(inBarColor)
 
-# Input 14: Evaluate Binned Substrates
+# Input 15: Evaluate Binned Substrates
 inPlotEnrichedSubstrateFrame = False
 inPrintLoadedFrames = True
 inPlotBinnedSubNumber = 30
 inPlotBinnedSubProb = True
 inPlotBinnedSubYMax = 0.07
 
-# Input 15: Predict Binned Substrate Enrichment
+# Input 16: Predict Binned Substrate Enrichment
 inEvaluatePredictions = False
 inPrintPredictions = False
 inBottomParam = 0.16
@@ -570,8 +573,8 @@ def predictSubstrateEnrichment(substratesEnriched, matrix, matrixType):
             xValues_normalized = []
             print(f'Normalize the x-values:\n'
                   f'     Initial Boundaries:\n'
-                  f'          X Max: {x_max}\n'
-                  f'          X Min: {x_min}\n')
+                  f'          X Max: {round(x_max, ngs.roundVal)}\n'
+                  f'          X Min: {resetColor(x_min, ngs.roundVal)}\n')
 
             # Make sure that there are no negative values
             if x_min < 0:
@@ -835,14 +838,16 @@ countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initi
 # Calculate: Initial sort probabilities
 if inUseCodonProb:
     # Evaluate: Degenerate codon probabilities
-    probInitialAvg = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+    rfInitialAvg = ngs.calculateProbCodon(codonSeq=inCodonSequence)
 else:
-    if len(labelAAPos) == len(inMotifPositions):
-        probInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
-                                         fileType='Initial Sort')
-    else:
-        probInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
-                                         fileType='Initial Sort', calcAvg=True)
+    rfInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+                                   fileType='Initial Sort', calcAvg=True)
+    # if len(labelAAPos) == len(inMotifPositions):
+    #     rfInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+    #                                    fileType='Initial Sort')
+    # else:
+    #     rfInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+    #                                    fileType='Initial Sort', calcAvg=True)
 
 
 
@@ -874,23 +879,24 @@ if inPlotStats:
         motifLabel=inMotifPositions, motifIndex=motifFramePos, returnList=True)
 
     # Evaluate statistics
-    ngs.fixedMotifStats(countsList=countsMotifs, initialRF=probInitialAvg,
-                        motifFrame=inMotifPositions, datasetTag=ngs.datasetTag)
+    if len(countsMotifs) > 1:
+        ngs.fixedMotifStats(countsList=countsMotifs, initialRF=rfInitialAvg,
+                            motifFrame=inMotifPositions, datasetTag=ngs.datasetTag)
 else:
     countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
         motifLabel=inMotifPositions, motifIndex=motifFramePos)
 
 # Calculate: RF
-probCombinedReleasedMotif = ngs.calculateProbabilitiesCM(
+rfCombinedReleasedMotif = ngs.calculateRFCombinedMotif(
     countsCombinedMotifs=countsRelCombined)
 
 # Calculate: Positional entropy
-ngs.calculateEntropy(rf=probCombinedReleasedMotif,
+ngs.calculateEntropy(rf=rfCombinedReleasedMotif,
                      combinedMotifs=combinedMotifs,
                      releasedCounts=True)
 
 # Calculate enrichment scores
-ngs.calculateEnrichment(rfInitial=probInitialAvg, rfFinal=probCombinedReleasedMotif,
+ngs.calculateEnrichment(rfInitial=rfInitialAvg, rfFinal=rfCombinedReleasedMotif,
                         combinedMotifs=combinedMotifs, releasedCounts=True)
 
 
@@ -900,12 +906,12 @@ if inPredictActivity:
                                predModel=ngs.datasetTag, predLabel=inPredictionTag,
                                releasedCounts=True)
 
+if inPredictCodonsEnrichment:
 # Evaluate codon
-probInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
-                                 fileType='Initial Sort', calcAvg=True)
-probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
-# ngs.codonPredictions(codon=inCodonSequence, codonProb=probInitialAvg, substrates=motifs)
-ngs.codonPredictions(codon=inCodonSequence, codonProb=probCodon, substrates=motifs)
+    rfInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+                                     fileType='Initial Sort', calcAvg=True)
+    probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+    ngs.codonPredictions(codon=inCodonSequence, codonProb=probCodon, substrates=motifs)
 
 sys.exit()
 
@@ -923,7 +929,7 @@ probMotif = ngs.calculateRF(counts=motifCountsFinal, N=motifsCountsTotal,
 ngs.calculateEntropy(probability=probMotif, combinedMotifs=combinedMotifs)
 
 # Calculate: AA Enrichment
-ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probMotif,
+ngs.calculateEnrichment(probInitial=rfInitialAvg, probFinal=probMotif,
                         combinedMotifs=combinedMotifs)
 
 ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
