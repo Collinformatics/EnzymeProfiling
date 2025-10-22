@@ -863,7 +863,7 @@ class NGS:
         print('============================== Define: File Paths '
               '===============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
-        tags = [[] for _ in range(len(self.fixedAA))]
+        self.motifTags = []
         paths = []
 
         # Define: Dataset
@@ -876,26 +876,39 @@ class NGS:
             dataset = 'fixedMotifCountsRel'
 
         # Define: File tags
-        for index, AA in enumerate(self.fixedAA):
-            if isinstance(AA, list):
-                AA = f'[{','.join(AA)}]'
-            position = self.fixedPos[index]
-            if isinstance(position, int):
-                tag = f'{AA}@R{position}'
-                tags[index].append(tag)
-            else:
-                if len(position) > 1:
-                    for pos in position:
-                        tag = f'{AA}@R{pos}'
-                        tags[index].append(tag)
-                else:
-                    tag = f'{AA}@R{position[0]}'
+        if len(self.fixedAA) == len(self.fixedPos):
+            tags = [[] for _ in range(len(self.fixedAA))]
+            for index, AA in enumerate(self.fixedAA):
+                if isinstance(AA, list):
+                    AA = f'[{','.join(AA)}]'
+                position = self.fixedPos[index]
+                if isinstance(position, int):
+                    tag = f'{AA}@R{position}'
                     tags[index].append(tag)
+                else:
+                    if len(position) > 1:
+                        for pos in position:
+                            tag = f'{AA}@R{pos}'
+                            tags[index].append(tag)
+                    else:
+                        print(4)
+                        tag = f'{AA}@R{position[0]}'
+                        tags[index].append(tag)
 
-        # Define: Motif tags
-        self.motifTags = []
-        for combo in zip(*tags):
-            self.motifTags.append(" ".join(combo))
+            # Define: Motif tags
+            for combo in zip(*tags):
+                self.motifTags.append(" ".join(combo))
+        else:
+            self.motifTags = []
+            if len(self.fixedAA) == 1:
+                AA = self.fixedAA[0]
+                for pos in self.fixedPos:
+                    tag = f'{AA}@R{pos}'
+                    self.motifTags.append(tag)
+            else:
+                print(f'{orange}ERROR: Unable to handle this condition')
+                sys.exit(1)
+
 
         # Exclude residues
         excludeTag = None
@@ -922,7 +935,6 @@ class NGS:
         for path in paths:
             print(f'     {path}')
         print(f'{resetColor}\n')
-        # sys.exit()
 
         return paths
 
@@ -1193,7 +1205,7 @@ class NGS:
         for index, pathFixedMotifRelCounts in enumerate(paths):
             # Look for the file
             if os.path.exists(pathFixedMotifRelCounts):
-                print(f'Loading ({index}):  {greenLightB}Released Counts\n{greenDark}'
+                print(f'Loading ({index}): {greenLightB}Released Counts\n{greenDark}'
                       f'     {pathFixedMotifRelCounts}{resetColor}\n')
 
                 # Load file
@@ -1570,7 +1582,7 @@ class NGS:
             self.titleWordsCombined = self.titleWordsCombined.replace('Combined ', '')
 
 
-    def calculateProbabilitiesCM(self, countsCombinedMotifs):
+    def calculateRFCombinedMotif(self, countsCombinedMotifs):
         print('====================== Calculate: Fixed Motif Probability '
               '=======================')
         # Sum each column
@@ -1578,17 +1590,17 @@ class NGS:
         columnSums = pd.DataFrame(columnSums, index=countsCombinedMotifs.columns,
                                   columns=['Sum'])
 
-        prob = pd.DataFrame(0.0, index=countsCombinedMotifs.index,
+        rf = pd.DataFrame(0.0, index=countsCombinedMotifs.index,
                             columns=countsCombinedMotifs.columns)
 
         # Calculate: Residue Probability
         for position in countsCombinedMotifs.columns:
-            prob.loc[:, position] = (countsCombinedMotifs.loc[:, position] /
+            rf.loc[:, position] = (countsCombinedMotifs.loc[:, position] /
                                      columnSums.loc[position, 'Sum'])
         print(f'Dataset: {purple}{self.datasetTag}\n'
-              f'{green}{prob}{resetColor}\n\n')
+              f'{green}{rf}{resetColor}\n\n')
 
-        return prob
+        return rf
 
 
 
@@ -1663,7 +1675,7 @@ class NGS:
 
 
 
-    def calculateProbabilities(self, counts, N, fileType, calcAvg=False):
+    def calculateRF(self, counts, N, fileType, calcAvg=False):
         print('======================== Calculate: Residue Probability '
               '=========================')
         if self.filterSubs and 'initial' not in fileType.lower():
@@ -1673,15 +1685,15 @@ class NGS:
             print(f'Dataset: {purple}{self.enzymeName} - {fileType}{resetColor}\n')
 
         # Calculate: Probability
-        prob = counts / N
-        print(f'{np.round(prob, 4)}\n\n')
+        rf = counts / N
+        print(f'{np.round(rf, 4)}\n\n')
 
         if calcAvg:
-            probAvg = np.sum(prob, axis=1) / len(prob.columns)
-            prob = pd.DataFrame(probAvg, index=probAvg.index, columns=['Average RF'])
-            print(f'{np.round(prob, 4)}\n\n')
+            rfAvg = np.sum(rf, axis=1) / len(rf.columns)
+            rf = pd.DataFrame(rfAvg, index=rfAvg.index, columns=['Average RF'])
+            print(f'{np.round(rf, 4)}\n\n')
 
-        return prob
+        return rf
 
 
 
@@ -2372,7 +2384,7 @@ class NGS:
                     totalPos += value
             columnTotals.append(totalPos)
         yMax = max(columnTotals)
-        print(f'Y Max: {yMax}\n')
+        print(f'Y Max: {round(yMax, self.roundVal)}\n')
 
         # Adjust values
         for column in heights.columns:
@@ -2851,6 +2863,7 @@ class NGS:
     def fixedMotifStats(self, countsList, initialRF, motifFrame, datasetTag):
         print('================== Statistical Evaluation: Fixed Motif Counts '
               '===================')
+        print(f'Count Lists: {len(countsList)}\n{countsList}\n\n')
         print(f'Evaluate: {purple}{datasetTag}{resetColor}\n')
         countsFrameTotal = pd.DataFrame(0, index=range(0, len(self.fixedPos)),
                                         columns=motifFrame)
@@ -5079,11 +5092,7 @@ class NGS:
                   combinedMotifs=False, releasedCounts=False):
         print('========================= Plot: Statistical Evaluation '
               '==========================')
-        # self.datasetTag = 'Reading Frames AAAAAAAAAAAAAAAAAAAAAAAAAA'
         print(f'{dataType}: {purple}{self.datasetTag}{resetColor}\n{data}\n\n')
-        print(f'Dataset Tag Len: {red}{len(
-            self.datasetTag.replace('[', '').replace(']', '').replace('-', ''))}'
-              f'{resetColor}\n\n')
 
         # Set figure title
         if totalCounts is not None and self.showSampleSize:

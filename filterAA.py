@@ -168,10 +168,8 @@ countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initi
                                                    dropColumn=inDropResidue)
 
 # Calculate: Initial sort probabilities
-probInitial = ngs.calculateProbabilities(counts=countsInitial,
-                                         N=countsInitialTotal,
-                                         fileType='Initial Sort',
-                                         calcAvg=inAvgInitialProb)
+probInitial = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+                              fileType='Initial Sort', calcAvg=inAvgInitialProb)
 
 
 # substratesInitial = None
@@ -256,8 +254,8 @@ ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalTotal,
                      NFinalUnique=len(substratesFinal.keys()))
 
 # Calculate: RF
-probFinal = ngs.calculateProbabilities(counts=countsFinal, N=countsFinalTotal,
-                                       fileType='Final Sort')
+probFinal = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
+                            fileType='Final Sort')
 
 # Calculate: Positional entropy
 entropy = ngs.calculateEntropy(rf=probFinal)

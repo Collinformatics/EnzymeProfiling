@@ -18,7 +18,7 @@ inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\'','P3\'','P4\'']
+inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\'','P3\''] # ,'P4\''
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
 # inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7']
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
@@ -26,7 +26,7 @@ inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
-inFixedPosition = [4]
+inFixedPosition = [4,5]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
@@ -838,14 +838,11 @@ if inUseCodonProb:
     probInitialAvg = ngs.calculateProbCodon(codonSeq=inCodonSequence)
 else:
     if len(labelAAPos) == len(inMotifPositions):
-        probInitialAvg = ngs.calculateProbabilities(counts=countsInitial,
-                                                    N=countsInitialTotal,
-                                                    fileType='Initial Sort')
+        probInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+                                         fileType='Initial Sort')
     else:
-        probInitialAvg = ngs.calculateProbabilities(counts=countsInitial,
-                                                    N=countsInitialTotal,
-                                                    fileType='Initial Sort',
-                                                    calcAvg=True)
+        probInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+                                         fileType='Initial Sort', calcAvg=True)
 
 
 
@@ -897,8 +894,6 @@ ngs.calculateEnrichment(rfInitial=probInitialAvg, rfFinal=probCombinedReleasedMo
                         combinedMotifs=combinedMotifs, releasedCounts=True)
 
 
-sys.exit()
-
 # Predict substrate activity
 if inPredictActivity:
     ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
@@ -906,10 +901,8 @@ if inPredictActivity:
                                releasedCounts=True)
 
 # Evaluate codon
-probInitialAvg = ngs.calculateProbabilities(counts=countsInitial,
-                                            N=countsInitialTotal,
-                                            fileType='Initial Sort',
-                                            calcAvg=True)
+probInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+                                 fileType='Initial Sort', calcAvg=True)
 probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
 # ngs.codonPredictions(codon=inCodonSequence, codonProb=probInitialAvg, substrates=motifs)
 ngs.codonPredictions(codon=inCodonSequence, codonProb=probCodon, substrates=motifs)
@@ -923,8 +916,8 @@ motifCountsFinal, motifsCountsTotal = ngs.countResidues(substrates=motifs,
                                                         datasetType='Final Sort')
 
 # Calculate: RF
-probMotif = ngs.calculateProbabilities(counts=motifCountsFinal, N=motifsCountsTotal,
-                                       fileType='Final Sort')
+probMotif = ngs.calculateRF(counts=motifCountsFinal, N=motifsCountsTotal,
+                            fileType='Final Sort')
 
 # Calculate: Positional entropy
 ngs.calculateEntropy(probability=probMotif, combinedMotifs=combinedMotifs)

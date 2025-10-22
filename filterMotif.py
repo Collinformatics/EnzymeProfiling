@@ -439,9 +439,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                          NFinalUnique=len(substratesFinalFixed.keys()))
 
     # Calculate RF
-    rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
-                                                N=countsFinalFixedTotal,
-                                                fileType=sortType)
+    rfFinalFixed = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
+                                   fileType=sortType)
 
     # Calculate: Entropy
     ngs.calculateEntropy(rf=rfFinalFixed,
@@ -536,9 +535,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                              NFinalUnique=len(substratesFinalFixed.keys()))
 
         # Calculate: RF
-        rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
-                                                    N=countsFinalFixedTotal,
-                                                    fileType=f'Fixed Final Sort')
+        rfFinalFixed = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
+                                       fileType=f'Fixed Final Sort')
 
         # Calculate enrichment scores
         ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfFinalFixed,
@@ -612,9 +610,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                              NFinalUnique=len(substratesFinalFixed.keys()))
 
         # Calculate: RF
-        rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
-                                                    N=countsFinalFixedTotal,
-                                                    fileType='Fixed Final Sort')
+        rfFinalFixed = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
+                                       fileType='Fixed Final Sort')
 
         # Calculate enrichment scores
         ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfFinalFixed,
@@ -667,9 +664,8 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                              NFinalUnique=len(substratesFinalFixed.keys()))
 
         # Calculate: RF
-        rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
-                                                    N=countsFinalFixedTotal,
-                                                    fileType='Fixed Final Sort')
+        rfFinalFixed = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
+                                       fileType='Fixed Final Sort')
 
         # Calculate enrichment scores
         ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfFinalFixed,
@@ -816,8 +812,8 @@ inDatasetTag = f'Motif {fixedSubSeq}'
 inFigureTitle = f'{inEnzymeName}: {inDatasetTag}'
 
 # Calculate RF
-rfInitial = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
-                                         fileType='Initial Sort')
+rfInitial = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+                            fileType='Initial Sort')
 
 # Define: File paths
 (filePathFixedMotifSubs,
@@ -871,9 +867,9 @@ if (os.path.exists(filePathFixedMotifSubs) and
                              NFinalUnique=len(substratesFinalFixed.keys()))
 
     # Calculate: RF
-    rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
-                                                N=countsFinalFixedTotal,
-                                                fileType='Fixed Final Sort')
+    rfFinalFixed = ngs.calculateRF(counts=countsFinalFixed, N=countsFinalFixedTotal,
+                                   fileType='Fixed Final Sort')
+
     # Calculate: Positional entropy
     ngs.calculateEntropy(rf=rfFinalFixed,
                          fixFullFrame=inFixFullMotifSeq)
