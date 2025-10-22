@@ -11,17 +11,17 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'WNV'
+inEnzymeName = 'Mpro2'
 inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
 inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 2.4
+inMinDeltaS = 0.6
 inRefixMotif = True
-inFixedResidue = ['R','G']
-inFixedPosition = [5,6] # Fix only at 1 position in the substrate
+inFixedResidue = ['Q']
+inFixedPosition = [4] # Fix only at 1 position in the substrate
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
@@ -36,7 +36,7 @@ inCombineFixedMotifs = False
 inPredictSubstrateEnrichmentScores = False
 inDuplicateFigure = True
 inShowSampleSize = True
-inDropResidue = ['R9'] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
+inDropResidue = [] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
 
 # Input 3: Figures
 inPlotEntropy = True
@@ -439,12 +439,12 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                          NFinalUnique=len(substratesFinalFixed.keys()))
 
     # Calculate RF
-    probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
+    rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
                                                 N=countsFinalFixedTotal,
                                                 fileType=sortType)
 
     # Calculate: Entropy
-    ngs.calculateEntropy(probability=probFinalFixed,
+    ngs.calculateEntropy(rf=rfFinalFixed,
                          fixFullFrame=inFixFullMotifSeq)
 
     # Overwrite substrate frame
@@ -455,7 +455,7 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
 
     # Calculate enrichment scores
-    ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
+    ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfFinalFixed)
 
     # Save the data
     if inSaveData:
@@ -536,12 +536,12 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                              NFinalUnique=len(substratesFinalFixed.keys()))
 
         # Calculate: RF
-        probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
+        rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
                                                     N=countsFinalFixedTotal,
                                                     fileType=f'Fixed Final Sort')
 
         # Calculate enrichment scores
-        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed,
+        ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfFinalFixed,
                                 posFilter=position)
 
         # Save the data
@@ -612,12 +612,12 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                              NFinalUnique=len(substratesFinalFixed.keys()))
 
         # Calculate: RF
-        probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
+        rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
                                                     N=countsFinalFixedTotal,
                                                     fileType='Fixed Final Sort')
 
         # Calculate enrichment scores
-        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed,
+        ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfFinalFixed,
                                 posFilter=position, relFilter=True)
 
         # Save the data
@@ -667,12 +667,12 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
                              NFinalUnique=len(substratesFinalFixed.keys()))
 
         # Calculate: RF
-        probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
+        rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
                                                     N=countsFinalFixedTotal,
                                                     fileType='Fixed Final Sort')
 
         # Calculate enrichment scores
-        ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed,
+        ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfFinalFixed,
                                 posFilter=position)
 
         # Save the data
@@ -801,7 +801,7 @@ def releaseCounts(substrates, countsFiltered, keepResidues, keepPositions, sortT
           f'{releasedRF}\n\n')
 
     # Calculate enrichment scores
-    ngs.calculateEnrichment(probInitial=probInitial, probFinal=releasedRF,
+    ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=releasedRF,
                             releasedCounts=True, releasedIteration=indexRel)
 
     return countsReleased, releasedRF
@@ -816,7 +816,7 @@ inDatasetTag = f'Motif {fixedSubSeq}'
 inFigureTitle = f'{inEnzymeName}: {inDatasetTag}'
 
 # Calculate RF
-probInitial = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
+rfInitial = ngs.calculateProbabilities(counts=countsInitial, N=countsInitialTotal,
                                          fileType='Initial Sort')
 
 # Define: File paths
@@ -871,15 +871,15 @@ if (os.path.exists(filePathFixedMotifSubs) and
                              NFinalUnique=len(substratesFinalFixed.keys()))
 
     # Calculate: RF
-    probFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
+    rfFinalFixed = ngs.calculateProbabilities(counts=countsFinalFixed,
                                                 N=countsFinalFixedTotal,
                                                 fileType='Fixed Final Sort')
     # Calculate: Positional entropy
-    ngs.calculateEntropy(probability=probFinalFixed,
+    ngs.calculateEntropy(rf=rfFinalFixed,
                          fixFullFrame=inFixFullMotifSeq)
 
     # Calculate enrichment scores
-    ngs.calculateEnrichment(probInitial=probInitial, probFinal=probFinalFixed)
+    ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfFinalFixed)
 
     # Extract motif
     finalSubsMotif = ngs.getMotif(substrates=substratesFinalFixed)

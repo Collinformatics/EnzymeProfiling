@@ -12,21 +12,21 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'WNV'
+inEnzymeName = 'Mpro2'
 inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-inMotifPositions = ['P2','P1','P1\'','P2\'','P3\'']
+inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\'','P3\'','P4\'']
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
 # inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7']
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
-inFixedResidue = ['R','G']
-inFixedPosition = [[2,3,5], [3,4,6]]
+inFixedResidue = ['Q']
+inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
@@ -877,7 +877,7 @@ if inPlotStats:
         motifLabel=inMotifPositions, motifIndex=motifFramePos, returnList=True)
 
     # Evaluate statistics
-    ngs.fixedMotifStats(countsList=countsMotifs, initialProb=probInitialAvg,
+    ngs.fixedMotifStats(countsList=countsMotifs, initialRF=probInitialAvg,
                         motifFrame=inMotifPositions, datasetTag=ngs.datasetTag)
 else:
     countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
@@ -888,12 +888,12 @@ probCombinedReleasedMotif = ngs.calculateProbabilitiesCM(
     countsCombinedMotifs=countsRelCombined)
 
 # Calculate: Positional entropy
-ngs.calculateEntropy(probability=probCombinedReleasedMotif,
+ngs.calculateEntropy(rf=probCombinedReleasedMotif,
                      combinedMotifs=combinedMotifs,
                      releasedCounts=True)
 
 # Calculate enrichment scores
-ngs.calculateEnrichment(probInitial=probInitialAvg, probFinal=probCombinedReleasedMotif,
+ngs.calculateEnrichment(rfInitial=probInitialAvg, rfFinal=probCombinedReleasedMotif,
                         combinedMotifs=combinedMotifs, releasedCounts=True)
 
 

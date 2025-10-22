@@ -49,6 +49,7 @@ pd.set_option('display.float_format', '{:,.5f}'.format)
 
 # Colors: Console
 greyDark = '\033[38;2;144;144;144m'
+white = '\033[38;2;255;255;255m'
 purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
 pink = '\033[38;2;255;0;242m'
@@ -879,9 +880,16 @@ class NGS:
             if isinstance(AA, list):
                 AA = f'[{','.join(AA)}]'
             position = self.fixedPos[index]
-            if len(position) > 1:
-                for pos in position:
-                    tag = f'{AA}@R{pos}'
+            if isinstance(position, int):
+                tag = f'{AA}@R{position}'
+                tags[index].append(tag)
+            else:
+                if len(position) > 1:
+                    for pos in position:
+                        tag = f'{AA}@R{pos}'
+                        tags[index].append(tag)
+                else:
+                    tag = f'{AA}@R{position[0]}'
                     tags[index].append(tag)
 
         # Define: Motif tags
@@ -1917,7 +1925,7 @@ class NGS:
                     # print(f'Pos:\n'
                     #       f'     {pos1}\n'
                     #       f'     {pos2}\n\n')
-                    if isinstance(pos1, int) and isinstance(pos2, index):
+                    if isinstance(pos1, int) and isinstance(pos2, int):
                         if pos1 == pos2 - 1 or pos1 == pos2 + 1:
                             continue
                         else:
@@ -1927,13 +1935,16 @@ class NGS:
                                             pos1[indexPos] == pos1[indexPos + 1] + 1):
                                         continue
                     elif isinstance(pos1, list) or isinstance(pos2, list):
-                        # Evaluate combined frames with multiple fixed positons
                         multiCombinedFrames = True
+                        continue
+                        # Evaluate combined frames with multiple fixed positons
+                        print(f'Pos1: {pos1}')
                         if isinstance(pos1, list):
                             for indexPos, posA in enumerate(pos1[:-1]):
                                 posB = pos1[indexPos + 1]
                                 if posB - posA != 1:
                                     continuous = False
+                                    print(1)
                                     break
                         else:
                             for indexPos, posA in enumerate(pos2[:-1]):
@@ -2285,39 +2296,39 @@ class NGS:
 
 
 
-    def calculateEnrichment(self, probInitial, probFinal,
+    def calculateEnrichment(self, rfInitial, rfFinal,
                             releasedCounts=False, combinedMotifs=False,
                             posFilter=False, relFilter=False, releasedIteration=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
         print(f'Enrichment Scores:\n'
-              f'     {magenta}log₂(prob FinalAA / prob InitialAA){resetColor}\n\n')
-        print(f'Prob Final:\n{probFinal}\n\n')
+              f'     {magenta}log₂(RF FinalAA / RF InitialAA){resetColor}\n\n')
+        print(f'Prob Final:\n{rfFinal}\n\n')
         # Calculate: Enrichment scores
-        if len(probInitial.columns) == 1:
-            matrix = pd.DataFrame(0.0, index=probFinal.index,
-                                  columns=probFinal.columns)
-            for position in probFinal.columns:
-                matrix.loc[:, position] = np.log2(probFinal.loc[:, position] /
-                                                  probInitial.iloc[:, 0])
+        if len(rfInitial.columns) == 1:
+            matrix = pd.DataFrame(0.0, index=rfFinal.index,
+                                  columns=rfFinal.columns)
+            for position in rfFinal.columns:
+                matrix.loc[:, position] = np.log2(rfFinal.loc[:, position] /
+                                                  rfInitial.iloc[:, 0])
         else:
-            if len(probInitial.columns) != len(probFinal.columns):
+            if len(rfInitial.columns) != len(rfFinal.columns):
                 print(f'{orange}ERROR: The number of columns in the Initial Sort '
-                      f'({cyan}{len(probInitial.columns)}{orange}) needs to equal to the '
+                      f'({cyan}{len(rfInitial.columns)}{orange}) needs to equal to the '
                       f'number of columns in the Final Sort '
-                      f'({cyan}{len(probFinal.columns)}{orange})\n'
-                      f'     Initial: {cyan}{probInitial.columns}{orange}\n'
-                      f'       Final: {cyan}{probFinal.columns}\n\n')
+                      f'({cyan}{len(rfFinal.columns)}{orange})\n'
+                      f'     Initial: {cyan}{rfInitial.columns}{orange}\n'
+                      f'       Final: {cyan}{rfFinal.columns}\n\n')
                 sys.exit(1)
 
-            probInitial.columns = probFinal.columns
-            matrix = np.log2(probFinal / probInitial)
-            # matrix = probFinal
+            rfInitial.columns = rfFinal.columns
+            matrix = np.log2(rfFinal / rfInitial)
+            # matrix = rfFinal
         if releasedCounts:
             print(f'Enrichment Score: {purple}Released Counts{resetColor}\n'
                   f'{matrix.round(self.roundVal)}\n\n')
-            print(f'Prob Initial:\n{probInitial}\n\n'
-                  f'Prob Final:\n{probFinal}\n\n')
+            print(f'Prob Initial:\n{rfInitial}\n\n'
+                  f'Prob Final:\n{rfFinal}\n\n')
         else:
             print(f'Enrichment Score: {purple}{self.datasetTag}{resetColor}\n'
                   f'{matrix.round(self.roundVal)}\n\n')
@@ -2400,7 +2411,7 @@ class NGS:
 
         # Calculate & Plot: Weblogo
         if self.plotFigWebLogo:
-            self.calculateWeblogo(probability=probFinal, releasedCounts=releasedCounts,
+            self.calculateWeblogo(probability=rfFinal, releasedCounts=releasedCounts,
                                   combinedMotifs=combinedMotifs)
 
         return self.eMap
@@ -2598,13 +2609,14 @@ class NGS:
             columnTotals[1].append(totalNeg)
         yMax = max(columnTotals[0])
         yMin = min(columnTotals[1])
+        yMin = min(columnTotals[1])
 
         # Manually set yMin
         inSetYMin = False
-        # inSetYMin = True
+        inSetYMin = True
         if inSetYMin:
             # yMin = -yMax/2
-            yMin = -29.716
+            yMin = -52.731
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -2836,19 +2848,19 @@ class NGS:
 
 
 
-    def fixedMotifStats(self, countsList, initialProb, motifFrame, datasetTag):
+    def fixedMotifStats(self, countsList, initialRF, motifFrame, datasetTag):
         print('================== Statistical Evaluation: Fixed Motif Counts '
               '===================')
         print(f'Evaluate: {purple}{datasetTag}{resetColor}\n')
         countsFrameTotal = pd.DataFrame(0, index=range(0, len(self.fixedPos)),
                                         columns=motifFrame)
-        frameProb = pd.DataFrame(0.0, index=initialProb.index,
+        frameRF = pd.DataFrame(0.0, index=initialRF.index,
                                  columns=motifFrame)
-        frameES = frameProb.copy()
+        frameES = frameRF.copy()
         frameESList = []
 
         for index, countsFrame in enumerate(countsList):
-            countsFrame = pd.DataFrame(countsFrame, index=initialProb.index,
+            countsFrame = pd.DataFrame(countsFrame, index=initialRF.index,
                                        columns=motifFrame)
 
             # Format values to have commas
@@ -2862,12 +2874,12 @@ class NGS:
                 countsFrameTotal.loc[index, column] = countsFrame[column].sum()
 
                 # Calculate: RF
-                frameProb.loc[:, column] = (countsFrame.loc[:, column] /
+                frameRF.loc[:, column] = (countsFrame.loc[:, column] /
                                             countsFrameTotal.loc[index, column])
 
                 # Calculate: ES
                 frameES.loc[:, column] = np.log2(
-                    frameProb.loc[:, column] / initialProb['Average RF'])
+                    frameRF.loc[:, column] / initialRF['Average RF'])
 
             print(f'Enrichment Score: {purple}{self.motifTags[index]}\n'
                   f'{greenLight}{frameES}{resetColor}\n\n')
@@ -4106,7 +4118,7 @@ class NGS:
         # Define headers
         headersInitial = ['Initial Subs', 'Counts']
         headersFinal = ['Final Subs', 'Counts']
-        headersEnriched = ['Enriched Subs', 'log₂(probFinal / probInitial)']
+        headersEnriched = ['Enriched Subs', 'log₂(RF Final / RF Initial)']
         # headerWidth = {1: 14.6,
         #                4: 14.6,
         #                7: 14.6,
@@ -4646,18 +4658,18 @@ class NGS:
 
 
 
-    def calculateEntropy(self, probability, fixFullFrame=None, combinedMotifs=False,
+    def calculateEntropy(self, rf, fixFullFrame=None, combinedMotifs=False,
                          releasedCounts=False):
         print('============================== Calculate: Entropy '
               '===============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
               f'Unique Substrates: {red}{self.nSubsFinalUniqueSeqs:,}{resetColor}\n')
 
-        self.entropy = pd.DataFrame(0.0, index=probability.columns, columns=['ΔS'])
-        self.entropyMax = np.log2(len(probability.index))
-        for indexColumn in probability.columns:
+        self.entropy = pd.DataFrame(0.0, index=rf.columns, columns=['ΔS'])
+        self.entropyMax = np.log2(len(rf.index))
+        for indexColumn in rf.columns:
             S = 0
-            for indexRow, probRatio in probability.iterrows():
+            for indexRow, probRatio in rf.iterrows():
                 prob = probRatio[indexColumn]
                 if prob == 0:
                     continue
@@ -4849,7 +4861,7 @@ class NGS:
         tickStepSize = 0.05
 
 
-        def plotFig(probability, sortType):
+        def plotFig(rf, sortType):
             print('======================= Plot: AA Probability Distribution '
                   '=======================')
             if codonType == datasetTag:
@@ -4858,7 +4870,7 @@ class NGS:
             else:
                 print(f'Plotting Probability Distribution:'
                       f' {purple}{self.enzymeName} {sortType}{resetColor}')
-            print(f'{probability}\n')
+            print(f'{rf}\n')
 
             if sortType == 'Initial Sort':
                 title = f'Unsorted {self.enzymeName} Library'
@@ -4890,7 +4902,7 @@ class NGS:
             midPoint = (numPos - 1) / 2 * widthBar
             xTicks = indices + midPoint
             ax.set_xticks(xTicks)
-            ax.set_xticklabels(probability.index, rotation=0, ha='center',
+            ax.set_xticklabels(rf.index, rotation=0, ha='center',
                                fontsize=self.labelSizeTicks)
 
             # Set y-ticks
@@ -4903,13 +4915,13 @@ class NGS:
                 tick.tick1line.set_markeredgewidth(self.lineThickness)
 
             # Set the edge color
-            for index, AA in enumerate(probability.index):
+            for index, AA in enumerate(rf.index):
                 xPos = indices[index] + np.arange(numPos) * widthBar
                 if AA == 'F' or AA == 'W' or AA == 'Y': # AA == 'N' or AA == 'Q' or
-                    ax.bar(xPos, probability.loc[AA], widthBar, label=AA,
+                    ax.bar(xPos, rf.loc[AA], widthBar, label=AA,
                            color=self.colorsAA[AA], edgecolor='dimgray')
                 else:
-                    ax.bar(xPos, probability.loc[AA], widthBar, label=AA,
+                    ax.bar(xPos, rf.loc[AA], widthBar, label=AA,
                            color=self.colorsAA[AA], edgecolor='black')
 
             # Set the edge thickness
@@ -4950,12 +4962,12 @@ class NGS:
 
         # Plot the data
         if plotInitial and not skipInitial:
-            plotFig(probability=probInitial, sortType='Initial Sort')
+            plotFig(rf=probInitial, sortType='Initial Sort')
         if plotFinal:
             if codonType == datasetTag:
-                plotFig(probability=probFinal, sortType=datasetTag)
+                plotFig(rf=probFinal, sortType=datasetTag)
             else:
-                plotFig(probability=probFinal, sortType='Final Sort')
+                plotFig(rf=probFinal, sortType='Final Sort')
 
 
 

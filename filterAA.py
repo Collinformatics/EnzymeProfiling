@@ -12,16 +12,16 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'WNV'
+inEnzymeName = 'Mpro2'
 inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
-inFixResidues = False
-inFixedResidue = ['R','G'] # ['R',['G','S']] # [['A','G','S']]
-inFixedPosition = [5,6]
+inFixResidues = True
+inFixedResidue = ['L','Q'] # ['R',['G','S']] # [['A','G','S']]
+inFixedPosition = [4,5]
 inExcludeResidues = False
 inExcludedResidue = ['']
 inExcludedPosition = []
@@ -260,17 +260,17 @@ probFinal = ngs.calculateProbabilities(counts=countsFinal, N=countsFinalTotal,
                                        fileType='Final Sort')
 
 # Calculate: Positional entropy
-entropy = ngs.calculateEntropy(probability=probFinal)
+entropy = ngs.calculateEntropy(rf=probFinal)
 
 # Calculate: Enrichment scores
 if inUseCodonProb:
     # Evaluate: Degenerate codon probabilities
     probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
-    enrichmentScores = ngs.calculateEnrichment(probInitial=probCodon,
-                                               probFinal=probFinal)
+    enrichmentScores = ngs.calculateEnrichment(rfInitial=probCodon,
+                                               rfFinal=probFinal)
 else:
-    enrichmentScores = ngs.calculateEnrichment(probInitial=probInitial,
-                                               probFinal=probFinal)
+    enrichmentScores = ngs.calculateEnrichment(rfInitial=probInitial,
+                                               rfFinal=probFinal)
 
 # Scan for partial AA sequences
 if inScanForSequences:
