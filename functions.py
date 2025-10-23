@@ -155,6 +155,51 @@ def pressKey(event):
         os.execl(python, python, *sys.argv)
 
 
+x = [2.0, 1.0, 0.8001, 0.60, 0.4001, 0.2, 0.0, -0.2, -0.4, -0.6, -0.8, -1.0, -2.0]
+def formatAxisTicks(ticks):
+    print(f'Ticks:')
+    for tick in ticks:
+        print(f'Tick: {tick}')
+    print('\n\n')
+
+    # Convert .0 decimals to integers
+    newTicks = []
+    for tick in ticks:
+        print(f'Val: {tick}')
+
+        if not isinstance(tick, int) and tick % 1 == 0 or tick % 2 == 0:
+            print(f'  {tick} % 2 = {tick % 2}, {tick} % 2 == 0 = {tick % 2 == 0}')
+            print(f'  {tick} % 1 = {tick % 1}, {tick} % 1 == 0 = {tick % 1 == 0}')
+            x = int(tick)
+            print(f'  New: {x}')
+            newTicks.append(x)
+        else:
+            print(f' Val: {tick}')
+            roundVal = False
+            val = str(tick).replace('0.', '')
+            for idx, e in enumerate(val):
+                if e == '0':
+                    # print(idx, e)
+                    tick = round(tick, idx+1)
+                    print(f'Tick: {tick}\n')
+                    newTicks.append(tick)
+                    roundVal = True
+                    break
+            if not roundVal:
+                newTicks.append(tick)
+        print()
+
+    print(f'Ticks')
+    for tick in ticks:
+        print(tick)
+    print('\n\n')
+    print(f'\nTicks: {ticks}\n')
+    print(f'  New: {newTicks}')
+
+    return newTicks
+
+x = formatAxisTicks(x)
+
 
 def includeCommas(x):
     return f'{x:,}'
@@ -3055,7 +3100,18 @@ class NGS:
         unit = 10 ** (magnitude - 1)
         yMax = math.ceil(maxValue / unit) * unit
         yMax += 3 * unit # Increase yMax
-        yMin = 0
+        if min(y) < 0:
+            minValue = math.floor(min(y))
+            magnitude = math.floor(math.log10(abs(minValue)))
+            unit = 10 ** (magnitude - 1)
+            yMin = math.floor(minValue / unit) * unit
+            while yMin > min(y):
+                yMin -= unit  # Decrease yMin
+        else:
+            yMin = 0
+        # print(f'\nY Axis:\n'
+        #       f'  Max: {yMax}\n'
+        #       f'  Min: {yMin}\n')
 
 
         # # Calculate: Decay constant
@@ -3118,7 +3174,7 @@ class NGS:
             if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 title = title.replace(self.datasetTag,
                                       f'Combined {self.datasetTag}')
-        print(f'pred: {predType}\n\n')
+        print(f'Prediction Type: {predType}\n\n')
         # if (limitNBars
         #         and predType is not None
         #         and predType.lower() != 'chosen'
@@ -3131,17 +3187,29 @@ class NGS:
 
 
         # Set: y ticks
+        plotYTicks = True
         if max(y) == 1.0:
             yMax = 1.0
-            step = 0.2
-            yTicks = np.arange(0, yMax + step, step)
+            if yMin == 0:
+                yTicks = np.linspace(yMin, yMax, 6)
+            else:
+                plotYTicks = False
+                dist = yMax - yMin
+                vals = [0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55]
+                for val in vals:
+                    ratio = dist/val
+                    if ratio == int(ratio) and ratio < 10:
+                        plotYTicks = True
+                        yTicks = np.arange(yMin, yMax + val, val)
+                        break
             yMax += 0.1
         else:
             step = yMax / 10
-            yTicks = np.arange(0, yMax + step, step)
+            yTicks = np.arange(yMin, yMax + step, step)
         plt.ylim(yMin, yMax)
         plt.xticks(rotation=90, ha='center')
-        plt.yticks(yTicks)
+        if plotYTicks:
+            plt.yticks(yTicks)
 
 
         # Set tick parameters
@@ -5797,7 +5865,7 @@ class NGS:
 
 
     def predictActivityHeatmap(self, predSubstrates, predModel, predLabel,
-                               releasedCounts=False):
+                               releasedCounts=False, rankScores=True):
         print('=========================== Predict Substrate Activity '
               '==========================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -5821,45 +5889,49 @@ class NGS:
                       f'          Substrate: {cyan}{substrate}\n\n')
                 sys.exit(1)
 
+        print(f'Prediction Matrix:\n{eMap}\n\n')
+
         # Predict activity
         activityScores = {}
-        firstSub = True
         addES = 0
         for substrate in predSubstrates:
             score = 0
+            # print(f'Substrate: {pink}{substrate}{resetColor}')
             for index in range(sublen):
                 AA = substrate[index]
                 pos = eMap.columns[index]
-
-                # if index >= 5: # <--------------------------------------------------------
-                #     if firstSub:
-                #         firstSub = False
-                #         print(f'Stopping at index: '
-                #               f'{yellow}{eMap.columns[index]}{resetColor}\n\n')
-                #     break
-                # if firstSub:
-                #     print(f'Scoring Pos: {greenLight}{pos}{resetColor}')
-
-                # self.entropy.loc[pos, 'ΔS']
                 ES = eMap.loc[AA, pos]
+                # print(f'AA ({index}): {AA}\n'
+                #       f'  ES: {ES}')
                 # if abs(ES) >= 0.5:
                 if ES < 0:
                     ES *= 5
                 addES += 1
                 score += ES
             activityScores[substrate] = score
-        activityScores = dict(sorted(activityScores.items(),
-                                   key=lambda x: x[1], reverse=True))
+            # print(f'Score: {score}\n')
+        if rankScores:
+            activityScores = dict(sorted(activityScores.items(),
+                                         key=lambda x: x[1], reverse=True))
+
+
+        print(f'Predicted Activity:')
+        for index, (substrate, ES) in enumerate(activityScores.items()):
+            print(f'     {pink} {substrate}{resetColor}, '
+                  f'ES:{red} {ES:.3f}{resetColor}')
+        print()
+
         maxActivity = max(activityScores.values())
         for substrate, score in activityScores.items():
             activityScores[substrate] = score / maxActivity
 
-        print(f'Predicted Relative Activity:')
+
+        print(f'Predicted Normalized Activity: '
+              f'(Max Score: {red}{round(maxActivity, self.roundVal)}{resetColor})')
         for index, (substrate, ES) in enumerate(activityScores.items()):
             print(f'     {pink} {substrate}{resetColor}, '
                   f'ES:{red} {ES:.3f}{resetColor}')
         print('\n')
-        print(f'Added ESs: {red}{addES}{resetColor}')
 
         self.plotMotifEnrichment(motifs=activityScores, limitNBars=True,
                                  predActivity=True, predType=predLabel)

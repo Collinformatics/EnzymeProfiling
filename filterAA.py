@@ -20,8 +20,8 @@ inSetFigureTimer = False
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
 inFixResidues = True
-inFixedResidue = ['L','Q'] # ['R',['G','S']] # [['A','G','S']]
-inFixedPosition = [4,5]
+inFixedResidue = ['Q'] # ['R',['G','S']] # [['A','G','S']]
+inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['']
 inExcludedPosition = []
@@ -48,9 +48,9 @@ if inPlotOnlyWords:
     # inPlotEntropy = False
     # inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
-    inPlotLogo = True
+    # inPlotLogo = False
     inPlotWeblogo = False
-    # inPlotMotifEnrichment = False
+    inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
 inPlotWordCloud = False # <--------------------
@@ -96,11 +96,21 @@ inPlotEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
 
 # Input 11: Predict Activity
-inPredictActivity = False
+inPredictActivity = True
 inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
                        'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
+# inPredictionTag = 'Substrates'
+# inPredictSubstrates = ['AVLQSGFR', 'VILQAGFR', 'VILQAPFR', 'LVLQSNDL',
+#                        'ATLQGLMI', 'TVLQAAML', 'VSLQSTYK', 'VSLQGAEL']
+# inPredictionTag = 'FP14-18'
+# inPredictSubstrates = ['AVLQSGFR', 'TVLQAAMH', 'VLLQGCVH',
+#                        'WVLQAKLL', 'AILQCMLG', 'VLLQGVVH']
+# inPredictionTag = 'FP19-23'
+# inPredictSubstrates = ['AVLQSGFR', 'CILQAVFH', 'VVLQAVMH',
+#                        'SILQCVLM', 'VMLQAVFH', 'PLLQAILM']
+inRankScores = False
 
 # Input 12: Optimal Substrates
 inEvaluateOS = False
@@ -335,8 +345,9 @@ if inPlotPCA:
 
 # Predict substrate activity
 if inPredictActivity:
-    ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
-                               predModel=ngs.datasetTag, predLabel=inPredictionTag)
+    ngs.predictActivityHeatmap(
+        predSubstrates=inPredictSubstrates, predModel=ngs.datasetTag,
+        predLabel=inPredictionTag, rankScores=inRankScores)
 
 
 

@@ -47,9 +47,9 @@ inPlotMotifEnrichmentNBars = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
-    # inPlotEnrichmentMap = False
+    inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
-    # inPlotLogo = False
+    inPlotLogo = False
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotWordCloud = True
@@ -99,6 +99,17 @@ inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
                        'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
+# inPredictionTag = 'Substrates'
+# inPredictSubstrates = ['AVLQSGFR', 'VILQAGFR', 'VILQAPFR', 'LVLQSNDL',
+#                        'ATLQGLMI', 'TVLQAAML', 'VSLQSTYK', 'VSLQGAEL']
+# inPredictionTag = 'FP14-18'
+# inPredictSubstrates = ['AVLQSGFR', 'TVLQAAMH', 'VLLQGCVH',
+#                        'WVLQAKLL', 'AILQCMLG', 'VLLQGVVH']
+# inPredictionTag = 'FP19-23'
+# inPredictSubstrates = ['AVLQSGFR', 'CILQAVFH', 'VVLQAVMH',
+#                        'SILQCVLM', 'VMLQAVFH', 'PLLQAILM']
+inRankScores = False
+
 
 # Input 12: Codon Enrichment
 inPredictCodonsEnrichment = False
@@ -904,7 +915,7 @@ ngs.calculateEnrichment(rfInitial=rfInitialAvg, rfFinal=rfCombinedReleasedMotif,
 if inPredictActivity:
     ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
                                predModel=ngs.datasetTag, predLabel=inPredictionTag,
-                               releasedCounts=True)
+                               releasedCounts=True, rankScores=inRankScores)
 
 if inPredictCodonsEnrichment:
 # Evaluate codon
