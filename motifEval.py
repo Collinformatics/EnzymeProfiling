@@ -112,7 +112,7 @@ inPredictionTag = 'Heatmap Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VILQSGFR', 'VILQSPFR', 'VILHSGFR', 'VIMQSGFR',
                        'VPLQSGFR', 'NILQSGFR', 'VILQTGFR', 'PILQSGFR', 'PIMQSGFR']
 inRankScores = False
-inScalePredMatrix = True # Scale EM by ΔS
+inScalePredMatrix = False # Scale EM by ΔS
 
 
 # Input 12: Codon Enrichment
