@@ -450,3 +450,4 @@ if inPlotPositionalProbDist:
 if inPlotPosProb:
     ngs.compairRF(probInitial=probInitial, probFinal=probFinal, selectAA=inCompairAA)
     ngs.boxPlotRF(probInitial=probInitial, probFinal=probFinal, selectAA=inCompairAA)
+
