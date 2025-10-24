@@ -3055,7 +3055,8 @@ class NGS:
 
     def plotMotifEnrichment(self, motifs, barColor='#CC5500', barWidth=0.65,
                             clusterNumPCA=None, combinedMotifs=False, limitNBars=False,
-                            predActivity=False, predModel=None, predType=None):
+                            predActivity=False, predModel=None, predType=None,
+                            scaleEMap=False):
         NSubs = len(motifs.keys())
         if predActivity:
             if predType.lower() == 'custom':
@@ -3174,6 +3175,9 @@ class NGS:
             if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 title = title.replace(self.datasetTag,
                                       f'Combined {self.datasetTag}')
+        if scaleEMap:
+            title = title.replace(self.datasetTag, f'Scaled {self.datasetTag}')
+
         print(f'Prediction Type: {predType}\n\n')
         # if (limitNBars
         #         and predType is not None
@@ -3269,7 +3273,11 @@ class NGS:
                     figLabel = figLabel.replace(
                         'Motif Enrichment',
                         f'Motif Enrichment - PCA {clusterNumPCA}')
-            figLabel = figLabel.replace('MinCounts', f'{scoreType} - MinCounts')
+            figLabel = figLabel.replace('MinCounts',
+                                        f'{scoreType} - MinCounts')
+            if scaleEMap:
+                figLabel = figLabel.replace(self.datasetTag,
+                                            f'Scaled {self.datasetTag}')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure
@@ -5865,7 +5873,7 @@ class NGS:
 
 
     def predictActivityHeatmap(self, predSubstrates, predModel, predLabel,
-                               releasedCounts=False, rankScores=True):
+                               releasedCounts=False, rankScores=True, scaleEMap=False):
         print('=========================== Predict Substrate Activity '
               '==========================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -5878,6 +5886,11 @@ class NGS:
             eMap = self.eMapReleased
         else:
             eMap = self.eMap
+        if scaleEMap:
+            print(f'Scaling Prediction matrix\nEntropy:\n{self.entropy}\n\n')
+            for column in eMap.columns:
+                eMap.loc[:, column] = eMap.loc[:, column] * self.entropy.loc[column, 'ΔS']
+
 
         # Make sure the eMap has the correct number of columns to evaluate the substrates
         for substrate in predSubstrates:
@@ -5932,9 +5945,11 @@ class NGS:
             print(f'     {pink} {substrate}{resetColor}, '
                   f'ES:{red} {ES:.3f}{resetColor}')
         print('\n')
+        # sys.exit()
 
         self.plotMotifEnrichment(motifs=activityScores, limitNBars=True,
-                                 predActivity=True, predType=predLabel)
+                                 predActivity=True, predType=predLabel,
+                                 scaleEMap=scaleEMap)
 
 
 

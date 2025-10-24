@@ -110,7 +110,11 @@ inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
 # inPredictionTag = 'FP19-23'
 # inPredictSubstrates = ['AVLQSGFR', 'CILQAVFH', 'VVLQAVMH',
 #                        'SILQCVLM', 'VMLQAVFH', 'PLLQAILM']
+inPredictionTag = 'Heatmap Substrates'
+inPredictSubstrates = ['AVLQSGFR', 'VILQSGFR', 'VILQSPFR', 'VILHSGFR', 'VIMQSGFR',
+                       'VPLQSGFR', 'NILQSGFR', 'VILQTGFR', 'PILQSGFR', 'PIMQSGFR']
 inRankScores = False
+inScalePredMatrix = False # Scale EM by ΔS
 
 # Input 12: Optimal Substrates
 inEvaluateOS = False
@@ -347,7 +351,7 @@ if inPlotPCA:
 if inPredictActivity:
     ngs.predictActivityHeatmap(
         predSubstrates=inPredictSubstrates, predModel=ngs.datasetTag,
-        predLabel=inPredictionTag, rankScores=inRankScores)
+        predLabel=inPredictionTag, rankScores=inRankScores, scaleEMap=inScalePredMatrix)
 
 
 

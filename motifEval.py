@@ -99,16 +99,20 @@ inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
                        'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
-# inPredictionTag = 'Substrates'
-# inPredictSubstrates = ['AVLQSGFR', 'VILQAGFR', 'VILQAPFR', 'LVLQSNDL',
-#                        'ATLQGLMI', 'TVLQAAML', 'VSLQSTYK', 'VSLQGAEL']
+inPredictionTag = 'Substrates'
+inPredictSubstrates = ['AVLQSGFR', 'VILQAGFR', 'VILQAPFR', 'LVLQSNDL',
+                       'ATLQGLMI', 'TVLQAAML', 'VSLQSTYK', 'VSLQGAEL']
 # inPredictionTag = 'FP14-18'
 # inPredictSubstrates = ['AVLQSGFR', 'TVLQAAMH', 'VLLQGCVH',
 #                        'WVLQAKLL', 'AILQCMLG', 'VLLQGVVH']
 # inPredictionTag = 'FP19-23'
 # inPredictSubstrates = ['AVLQSGFR', 'CILQAVFH', 'VVLQAVMH',
 #                        'SILQCVLM', 'VMLQAVFH', 'PLLQAILM']
+inPredictionTag = 'Heatmap Substrates'
+inPredictSubstrates = ['AVLQSGFR', 'VILQSGFR', 'VILQSPFR', 'VILHSGFR', 'VIMQSGFR',
+                       'VPLQSGFR', 'NILQSGFR', 'VILQTGFR', 'PILQSGFR', 'PIMQSGFR']
 inRankScores = False
+inScalePredMatrix = True # Scale EM by ΔS
 
 
 # Input 12: Codon Enrichment
@@ -915,7 +919,8 @@ ngs.calculateEnrichment(rfInitial=rfInitialAvg, rfFinal=rfCombinedReleasedMotif,
 if inPredictActivity:
     ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
                                predModel=ngs.datasetTag, predLabel=inPredictionTag,
-                               releasedCounts=True, rankScores=inRankScores)
+                               releasedCounts=True, rankScores=inRankScores,
+                               scaleEMap=inScalePredMatrix)
 
 if inPredictCodonsEnrichment:
 # Evaluate codon
