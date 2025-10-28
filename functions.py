@@ -5923,6 +5923,7 @@ class NGS:
                 score += ES
             activityScores[substrate] = score
             # print(f'Score: {score}\n')
+
         if rankScores:
             activityScores = dict(sorted(activityScores.items(),
                                          key=lambda x: x[1], reverse=True))
@@ -5944,8 +5945,18 @@ class NGS:
         for index, (substrate, ES) in enumerate(activityScores.items()):
             print(f'     {pink} {substrate}{resetColor}, '
                   f'ES:{red} {ES:.3f}{resetColor}')
-        print('\n')
-        # sys.exit()
+        print('')
+
+
+        if not rankScores:
+            rankedScores = dict(sorted(activityScores.items(),
+                                 key=lambda x: x[1], reverse=True))
+            print(f'Ranked Predicted Activity:')
+            for index, (substrate, ES) in enumerate(rankedScores.items()):
+                print(f'     {pink} {substrate}{resetColor}, '
+                      f'ES:{red} {ES:.3f}{resetColor}')
+            print('')
+        print()
 
         self.plotMotifEnrichment(motifs=activityScores, limitNBars=True,
                                  predActivity=True, predType=predLabel,
