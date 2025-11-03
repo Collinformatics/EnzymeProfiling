@@ -12,27 +12,28 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'ELN'
 inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\'','P3\'','P4\''] #
+inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\''] #
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
 # inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7']
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
-inFixedResidue = ['Q']
-inFixedPosition = [4]
+inFixedResidue = [['C','I','V']]
+inFixedPosition = [4,5,6]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
 inMinimumSubstrateCount = 1
 inCodonSequence = 'NNS' # Baseline probs of degenerate codons (can be N, S, or K)
 inUseCodonProb = False # Use AA prob from inCodonSequence to calculate enrichment
+inAvgInitialProb = True
 
 # Input 4: Figures
 # inPlotPCA = False # PCA plot of an individual fixed frame
@@ -79,6 +80,7 @@ inShowWeblogoYTicks = True
 inAddHorizontalLines = False
 inPlotNegativeWeblogoMotif = False
 inBigLettersOnTop = False
+inLimitYAxis = True
 
 # Input 8: Motif Enrichment
 inPlotNBars = 50
@@ -94,7 +96,7 @@ inIncludeSubCountsESM = True
 inPlotEntropyPCAPopulations = False
 
 # Input 11: Predict Activity
-inPredictActivity = True
+inPredictActivity = False
 inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
@@ -108,9 +110,9 @@ inPredictSubstrates = ['AVLQSGFR', 'VILQAGFR', 'VILQAPFR', 'LVLQSNDL',
 # inPredictionTag = 'FP19-23'
 # inPredictSubstrates = ['AVLQSGFR', 'CILQAVFH', 'VVLQAVMH',
 #                        'SILQCVLM', 'VMLQAVFH', 'PLLQAILM']
-inPredictionTag = 'Heatmap Substrates'
-inPredictSubstrates = ['AVLQSGFR', 'VILQSGFR', 'VILQSPFR', 'VILHSGFR', 'VIMQSGFR',
-                       'VPLQSGFR', 'NILQSGFR', 'VILQTGFR', 'PILQSGFR', 'PIMQSGFR']
+# inPredictionTag = 'Heatmap Substrates'
+# inPredictSubstrates = ['AVLQSGFR', 'VILQSGFR', 'VILQSPFR', 'VILHSGFR', 'VIMQSGFR',
+#                        'VPLQSGFR', 'NILQSGFR', 'VILQTGFR', 'PILQSGFR', 'PIMQSGFR']
 inRankScores = False
 inScalePredMatrix = False # Scale EM by ΔS
 
@@ -241,11 +243,12 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           minEntropy=None, figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
           xAxisLabelsMotif=inMotifPositions, printNumber=inPrintNumber,
-          showNValues=inShowSampleSize, bigAAonTop=inBigLettersOnTop, findMotif=False,
-          folderPath=inPathFolder, filesInit=filesInitial, filesFinal=filesFinal,
-          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
-          plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
-          plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
+          showNValues=inShowSampleSize, bigAAonTop=inBigLettersOnTop,
+          limitYAxis=inLimitYAxis, findMotif=False, folderPath=inPathFolder,
+          filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
+          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
+          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
+          plotFigMotifEnrich=inPlotMotifEnrichment,
           plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotFigPCA=inPlotPCA,
@@ -853,15 +856,15 @@ countsInitial, countsInitialTotal = ngs.loadCounts(filter=False, fileType='Initi
 # Calculate: Initial sort probabilities
 if inUseCodonProb:
     # Evaluate: Degenerate codon probabilities
-    rfInitialAvg = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+    rfInitial = ngs.calculateProbCodon(codonSeq=inCodonSequence)
 else:
-    rfInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
-                                   fileType='Initial Sort', calcAvg=True)
+    rfInitial = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+                                fileType='Initial Sort', calcAvg=inAvgInitialProb)
     # if len(labelAAPos) == len(inMotifPositions):
-    #     rfInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+    #     rfInitial = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
     #                                    fileType='Initial Sort')
     # else:
-    #     rfInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+    #     rfInitial = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
     #                                    fileType='Initial Sort', calcAvg=True)
 
 
@@ -895,7 +898,7 @@ if inPlotStats:
 
     # Evaluate statistics
     if len(countsMotifs) > 1:
-        ngs.fixedMotifStats(countsList=countsMotifs, initialRF=rfInitialAvg,
+        ngs.fixedMotifStats(countsList=countsMotifs, initialRF=rfInitial,
                             motifFrame=inMotifPositions, datasetTag=ngs.datasetTag)
 else:
     countsRelCombined, countsRelCombinedTotal = ngs.loadMotifCounts(
@@ -911,7 +914,7 @@ ngs.calculateEntropy(rf=rfCombinedReleasedMotif,
                      releasedCounts=True)
 
 # Calculate enrichment scores
-ngs.calculateEnrichment(rfInitial=rfInitialAvg, rfFinal=rfCombinedReleasedMotif,
+ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfCombinedReleasedMotif,
                         combinedMotifs=combinedMotifs, releasedCounts=True)
 
 
@@ -924,7 +927,7 @@ if inPredictActivity:
 
 if inPredictCodonsEnrichment:
 # Evaluate codon
-    rfInitialAvg = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
+    rfInitial = ngs.calculateRF(counts=countsInitial, N=countsInitialTotal,
                                      fileType='Initial Sort', calcAvg=True)
     probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
     ngs.codonPredictions(codon=inCodonSequence, codonProb=probCodon, substrates=motifs)
@@ -945,7 +948,7 @@ probMotif = ngs.calculateRF(counts=motifCountsFinal, N=motifsCountsTotal,
 ngs.calculateEntropy(probability=probMotif, combinedMotifs=combinedMotifs)
 
 # Calculate: AA Enrichment
-ngs.calculateEnrichment(probInitial=rfInitialAvg, probFinal=probMotif,
+ngs.calculateEnrichment(probInitial=rfInitial, probFinal=probMotif,
                         combinedMotifs=combinedMotifs)
 
 ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,

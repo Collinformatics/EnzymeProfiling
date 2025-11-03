@@ -17,17 +17,17 @@ from functions import NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location
-inFileName = ['Src-F_S2_L002_R1_001', 'Src-F_S2_L002_R2_001'] # Define file name(s)
+inFileName = ['ELN-I_S1_L001_R1_001', 'ELN-I_S1_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
 inPathFolder = f'{inEnzymeName}'
 inPathDNASeqs = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder name
 inFileType = 'fastq' # Define the file type
 
 # Input 2: Saving The Data
-inSaveFileName = 'Src-F_S2_L002' # Add this name to filePaths(enzyme) in functions.py
+inSaveFileName = 'ELN-I_S1_L001' # Add this name to filePaths(enzyme) in functions.py
 
 # Input 3: Substrate Parameters
-inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8','R9']
+inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
 
 # Input 4: Substrate Recognition
 inPrintNumber = 10
@@ -37,7 +37,7 @@ inStartSeqR2 = inStartSeqR1
 inEndSeqR2 = inEndSeqR1
 
 # Input 5: Define Variables Used To Extract The Substrates
-inFixedLibrary = True
+inFixedLibrary = False
 inFixedResidue = ['Y']
 inFixedPosition = [5]
 
@@ -53,10 +53,10 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedPosition=inFixedPosition, excludeAAs=None, excludeAA=None,
           excludePosition=None, minCounts=0, minEntropy=None, figEMSquares=False,
           xAxisLabels=inAAPositions, printNumber=inPrintNumber, showNValues=True,
-          bigAAonTop=False, findMotif=False, folderPath=inPathFolder, filesInit=None,
-          filesFinal=None, plotPosS=False, plotFigEM=False, plotFigEMScaled=False,
-          plotFigLogo=False, plotFigWebLogo=False, plotFigWords=False,
-          wordLimit=False, wordsTotal=False, plotFigBars=False,
+          bigAAonTop=False, limitYAxis=False, findMotif=False, folderPath=inPathFolder,
+          filesInit=None, filesFinal=None, plotPosS=False, plotFigEM=False,
+          plotFigEMScaled=False, plotFigLogo=False, plotFigWebLogo=False,
+          plotFigWords=False, wordLimit=False, wordsTotal=False, plotFigBars=False,
           NSubBars=False, plotFigPCA=False, numPCs=False, NSubsPCA=False,
           plotSuffixTree=False, saveFigures=False, setFigureTimer=None, expressDNA=True)
 
@@ -134,4 +134,3 @@ ngs.extractionEfficiency(files=inFileName)
 
 # Plot the data
 ngs.plotCounts(countedData=counts, totalCounts=totalSubs, fileName=inSaveFileName)
-

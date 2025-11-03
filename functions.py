@@ -210,10 +210,10 @@ class NGS:
     def __init__(self, enzymeName, substrateLength, filterSubs, fixedAA, fixedPosition,
                  excludeAAs, excludeAA, excludePosition, minCounts, minEntropy,
                  figEMSquares, xAxisLabels, printNumber, showNValues, bigAAonTop,
-                 findMotif, folderPath, filesInit, filesFinal, plotPosS, plotFigEM,
-                 plotFigEMScaled, plotFigLogo, plotFigWebLogo, plotFigWords, wordLimit,
-                 wordsTotal, plotFigBars, NSubBars, plotFigPCA, numPCs, NSubsPCA,
-                 plotSuffixTree, saveFigures, setFigureTimer, expressDNA=False,
+                 limitYAxis, findMotif, folderPath, filesInit, filesFinal, plotPosS,
+                 plotFigEM, plotFigEMScaled, plotFigLogo, plotFigWebLogo, plotFigWords,
+                 wordLimit, wordsTotal, plotFigBars, NSubBars, plotFigPCA, numPCs,
+                 NSubsPCA, plotSuffixTree, saveFigures, setFigureTimer, expressDNA=False,
                  useEF=False, xAxisLabelsMotif=None, motifFilter=False,
                  plotFigMotifEnrich=False, plotFigMotifEnrichSelect=False):
         # Parameters: Dataset
@@ -297,6 +297,7 @@ class NGS:
         self.nSubsInitial = 0
         self.nSubsFinal = 0
         self.bigAAonTop = bigAAonTop
+        self.limitYAxis = limitYAxis
         self.findMotif = findMotif
         self.motifFilter = motifFilter
         self.initialize = True # filterMotif.py: Set to False after NGS.calculateEntropy()
@@ -2130,7 +2131,7 @@ class NGS:
         if self.initialize:
             self.datasetTagMotif = self.datasetTag
             self.initialize = False
-        print(f'Dataset Tag: {purple}{self.datasetTag}{resetColor}\n\n')
+        #print(f'Dataset Tag: {purple}{self.datasetTag}{resetColor}\n\n')
 
         return self.datasetTag
 
@@ -2373,8 +2374,9 @@ class NGS:
         print('========================== Calculate: Enrichment Score '
               '==========================')
         print(f'Enrichment Scores:\n'
-              f'     {magenta}log₂(RF FinalAA / RF InitialAA){resetColor}\n\n')
-        print(f'Prob Final:\n{rfFinal}\n\n')
+              f'     {magenta}log₂(RF FinalAA / RF InitialAA){resetColor}\n')
+        print(f'RF Final:\n{rfFinal}\n\n'
+              f'RF Initial:\n{rfInitial}\n\n')
         # Calculate: Enrichment scores
         if len(rfInitial.columns) == 1:
             matrix = pd.DataFrame(0.0, index=rfFinal.index,
@@ -2443,7 +2445,6 @@ class NGS:
                     totalPos += value
             columnTotals.append(totalPos)
         yMax = max(columnTotals)
-        print(f'Y Max: {round(yMax, self.roundVal)}\n')
 
         # Adjust values
         for column in heights.columns:
@@ -2662,7 +2663,7 @@ class NGS:
                 print(f'Releasing Filter: {magenta}{posFilter}{resetColor}')
             else:
                 print(f'Applying Filter: {magenta}{posFilter}{resetColor}')
-        print(f'\n\nResidue heights:\n'
+        print(f'\nResidue heights:\n'
               f'{self.heights}\n')
 
 
@@ -2680,14 +2681,15 @@ class NGS:
             columnTotals[1].append(totalNeg)
         yMax = max(columnTotals[0])
         yMin = min(columnTotals[1])
-        yMin = min(columnTotals[1])
 
-        # Manually set yMin
-        inSetYMin = False
-        # inSetYMin = True
-        if inSetYMin:
-            # yMin = -yMax/2
-            yMin = -52.731
+        # Adjust yMin to fit the largest negative AA
+        if self.limitYAxis:
+            yMin = 0
+            for col in self.heights.columns:
+                for row in self.heights.index:
+                    if self.heights.loc[row, col] < yMin:
+                        yMin = self.heights.loc[row, col]
+
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
 
@@ -2774,7 +2776,7 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Logo'
-            if inSetYMin:
+            if self.limitYAxis:
                 datasetType += ' yMin'
             self.saveFigure(fig=fig, figType=datasetType,  seqLen=len(data.columns),
                             combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)

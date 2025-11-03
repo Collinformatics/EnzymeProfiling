@@ -11,21 +11,21 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'ELN'
 inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveData = True
 inSaveFigures = True
-inSetFigureTimer = True
+inSetFigureTimer = False
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.6
+inMinDeltaS = 0.45
 inRefixMotif = True
-inFixedResidue = ['Q']
-inFixedPosition = [4] # Fix only at 1 position in the substrate
+inFixedResidue = [['C','I','V']]
+inFixedPosition = [3] # Fix only at 1 position in the substrate
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
-inManualEntropy = True
+inManualEntropy = False
 inManualFrame = ['R4','R5','R3','R6']
 inFixFullMotifSeq = False
 inMinimumSubstrateCount = 1
@@ -59,12 +59,8 @@ inShowEnrichmentScores = True
 inShowEnrichmentAsSquares = False
 
 # Input 6: Plot Sequence Motif
-inNormLetters = False  # Normalize fixed letter heights
-inPlotWeblogoMotif = False
-inShowWeblogoYTicks = True
-inAddHorizontalLines = False
-inPlotNegativeWeblogoMotif = False
 inBigLettersOnTop = False
+inLimitYAxis = False
 
 # Input 8: Substrate Enrichment
 inBinSubstrates = False
@@ -140,8 +136,8 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           minEntropy=inMinDeltaS, figEMSquares=inShowEnrichmentAsSquares,
           xAxisLabels=labelAAPos, printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          bigAAonTop=inBigLettersOnTop, findMotif=True, folderPath=inPathFolder,
-          filesInit=filesInitial, filesFinal=filesFinal,
+          bigAAonTop=inBigLettersOnTop, limitYAxis=inLimitYAxis, findMotif=True,
+          folderPath=inPathFolder, filesInit=filesInitial, filesFinal=filesFinal,
           plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigWords=False,

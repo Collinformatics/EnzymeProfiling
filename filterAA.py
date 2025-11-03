@@ -20,8 +20,8 @@ inSetFigureTimer = False
 # Input 2: Computational Parameters
 inPlotOnlyWords = True
 inFixResidues = True
-inFixedResidue = ['Q'] # ['R',['G','S']] # [['A','G','S']]
-inFixedPosition = [4]
+inFixedResidue = ['L','Q'] # ['R',['G','S']] # [['A','G','S']]
+inFixedPosition = [3,4]
 inExcludeResidues = False
 inExcludedResidue = ['']
 inExcludedPosition = []
@@ -45,10 +45,10 @@ inPlotMotifEnrichment = True
 inPlotMotifEnrichmentNBars = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
-    # inPlotEntropy = False
-    # inPlotEnrichmentMap = False
+    inPlotEntropy = False
+    inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
-    # inPlotLogo = False
+    inPlotLogo = False
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotMotifEnrichmentNBars = False
@@ -70,10 +70,8 @@ inShowEnrichmentAsSquares = False
 inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
 
 # Input 7: Plot Sequence Motif
-inNormLetters = True # Equal letter heights fixed for fixed AAs
-inShowWeblogoYTicks = True
-inAddHorizontalLines = False
 inBigLettersOnTop = False
+inLimitYAxis = False
 
 # Input 8: Word Cloud
 inLimitWords = True
@@ -160,11 +158,12 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           minEntropy=inMinDeltaS, figEMSquares=inShowEnrichmentAsSquares,
           xAxisLabels=labelAAPos, printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          bigAAonTop=inBigLettersOnTop, findMotif=False, folderPath=inPathFolder,
-          filesInit=filesInitial, filesFinal=filesFinal, useEF=inUseEnrichmentFactor,
-          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
-          plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
-          plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
+          bigAAonTop=inBigLettersOnTop, limitYAxis=inLimitYAxis, findMotif=False,
+          folderPath=inPathFolder, filesInit=filesInitial, filesFinal=filesFinal,
+          useEF=inUseEnrichmentFactor, plotPosS=inPlotEntropy,
+          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
+          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
+          plotFigMotifEnrich=inPlotMotifEnrichment,
           plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud,  wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotFigPCA=inPlotPCA,
