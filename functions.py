@@ -198,7 +198,7 @@ def formatAxisTicks(ticks):
 
     return newTicks
 
-x = formatAxisTicks(x)
+# x = formatAxisTicks(x)
 
 
 def includeCommas(x):
@@ -2087,11 +2087,22 @@ class NGS:
                     self.datasetTag = '_'.join(fixResidueList)
                 else:
                     # Fix residues
-                    for index in range(len(self.fixedAA)):
-                        fixResidueList.append(
-                            f' {self.fixedAA[index]}@R'
-                            f'{self.fixedPos[index]}'.replace(' ', ''))
-    
+
+                    try:
+                        for index in range(len(self.fixedAA)):
+                            fixResidueList.append(
+                                f' {self.fixedAA[index]}@R'
+                                f'{self.fixedPos[index]}'.replace(' ', ''))
+                    except Exception as exc:
+                        print(f'{orange}ERROR: {exc}\n')
+                        print(f'Does the length of Fixed AA '
+                              f'({cyan}{len(self.fixedAA)}{orange}) '
+                              f'match the length of Fixed Pos '
+                              f'({cyan}{len(self.fixedPos)}{orange})\n'
+                              f'Fixed AA: {cyan}{self.fixedAA}{orange}\n'
+                              f'Fixed Pos : {cyan}{self.fixedPos}{orange}\n')
+                        sys.exit()
+
                     self.datasetTag = ' '.join(fixResidueList)
                     self.datasetTag = self.datasetTag.replace("_", ' ')
 
@@ -2670,7 +2681,7 @@ class NGS:
 
         # Manually set yMin
         inSetYMin = False
-        inSetYMin = True
+        # inSetYMin = True
         if inSetYMin:
             # yMin = -yMax/2
             yMin = -52.731
