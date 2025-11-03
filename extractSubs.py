@@ -19,7 +19,7 @@ from functions import NGS
 # Input 1: File Location
 inFileName = ['Src-F_S2_L002_R1_001', 'Src-F_S2_L002_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inPathFolder = f'/path/{inEnzymeName}'
+inPathFolder = f'{inEnzymeName}'
 inPathDNASeqs = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder name
 inFileType = 'fastq' # Define the file type
 
@@ -134,3 +134,4 @@ ngs.extractionEfficiency(files=inFileName)
 
 # Plot the data
 ngs.plotCounts(countedData=counts, totalCounts=totalSubs, fileName=inSaveFileName)
+
