@@ -946,7 +946,10 @@ class NGS:
         else:
             self.motifTags = []
             if len(self.fixedAA) == 1:
-                AA = self.fixedAA[0]
+                if len(self.fixedAA[0]) == 1:
+                    AA = self.fixedAA[0]
+                else:
+                    AA = f'[{','.join(self.fixedAA[0])}]'
                 for pos in self.fixedPos:
                     tag = f'{AA}@R{pos}'
                     self.motifTags.append(tag)
