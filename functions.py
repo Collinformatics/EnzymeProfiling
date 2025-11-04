@@ -3194,7 +3194,7 @@ class NGS:
         if scaleEMap:
             title = title.replace(self.datasetTag, f'Scaled {self.datasetTag}')
 
-        print(f'Prediction Type: {predType}\n\n')
+        # print(f'Prediction Type: {predType}\n\n')
         # if (limitNBars
         #         and predType is not None
         #         and predType.lower() != 'chosen'
@@ -3468,6 +3468,7 @@ class NGS:
 
             # ============================================================================
 
+
             # Sort input sequences
             subsFinal = dict(sorted(subsFinal.items(),
                                     key=lambda x: x[1], reverse=True))
@@ -3485,39 +3486,45 @@ class NGS:
 
 
             # Evaluate: Motif enrichment
-            for substrate, count in subsFinal.items():
-                totalCountsFinal += count
-                if substrate in subsInit.keys():
-                    # Limit subInit length to match frame extraction zones
-                    countInit = subsInit[substrate]
-                else:
-                    totalMissingSubs += 1
-                    countInit = 1
-                    totalCountsFinal += 1
-                totalCountsInit += countInit
-                # if countInit == 1:
-                #     totalCountsInitAdj += countInit
-                ratios[substrate] = count / countInit
+            print(f'Use EF: {self.useEF}')
+            if self.useEF:
+                for substrate, count in subsFinal.items():
+                    totalCountsFinal += count
+                    if substrate in subsInit.keys():
+                        # Limit subInit length to match frame extraction zones
+                        countInit = subsInit[substrate]
+                    else:
+                        totalMissingSubs += 1
+                        countInit = 1
+                        totalCountsFinal += 1
+                    totalCountsInit += countInit
+                    # if countInit == 1:
+                    #     totalCountsInitAdj += countInit
+                    ratios[substrate] = count / countInit
 
-            # Sort collected substrates and add to the list
-            ratios = dict(sorted(ratios.items(), key=lambda x: x[1], reverse=True))
+                # Sort collected substrates and add to the list
+                ratios = dict(sorted(ratios.items(), key=lambda x: x[1], reverse=True))
 
-            iteration = 0
-            print('Enrichment Ratios:')
-            for substrate, ratio in ratios.items():
-                # if int(ratio) != subsFinal[substrate]:
-                iteration += 1
-                print(f'     {pink}{substrate}{resetColor}, '
-                      f'ER: {red}{round(ratio, 1):,}{resetColor}')
-                if iteration >= self.printNumber:
-                    print('')
-                    break
-
-            print(f'Total substrates in the final sort: '
+                iteration = 0
+                print('Enrichment Ratios:')
+                for substrate, ratio in ratios.items():
+                    # if int(ratio) != subsFinal[substrate]:
+                    iteration += 1
+                    print(f'     {pink}{substrate}{resetColor}, '
+                          f'ER: {red}{round(ratio, 1):,}{resetColor}')
+                    if iteration >= self.printNumber:
+                        print('')
+                        break
+            else:
+                for substrate in subsFinal.keys():
+                    if substrate not in subsInit.keys():
+                        totalMissingSubs += 1
+            print(f'Dataset Evaluation:\n'
+                  f'    Total substrates in the Final Sort: '
                   f'{red}{totalUniqueSubsFinal:,}{resetColor}\n'
-                  f'Final substrates missing in the initial sort: '
+                  f'    Final Sort substrates missing in the Initial Sort: '
                   f'{red}{totalMissingSubs:,}{resetColor}\n'
-                  f'Percentage of unaccounted final substrates: {yellow}'
+                  f'    Percentage of unaccounted Final Sort substrates: {yellow}'
                   f'{round(100*(totalMissingSubs / 
                                 totalUniqueSubsFinal), self.roundVal)} %'
                   f'{resetColor}')
@@ -3537,6 +3544,11 @@ class NGS:
             # Sort collected substrates and add to the list
             motifEnrichment = dict(sorted(motifEnrichment.items(),
                                           key=lambda x: x[1], reverse=True))
+
+        # Select data
+        if not self.useEF:
+            # Use counts, not enrichment factor
+            motifEnrichment = motifs
 
         iteration = 0
         if predActivity:
@@ -3564,10 +3576,6 @@ class NGS:
                     break
             print('\n')
 
-        # Select data
-        if not self.useEF:
-            # Use counts, not enrichment factor
-            motifEnrichment = motifs
 
         # Plot: Motif enrichment
         if predActivity and self.plotFigMotifEnrich:
@@ -3589,12 +3597,11 @@ class NGS:
         return motifEnrichment
 
 
-
     def decayRate(self, y):
         print('========================= Calculate: Exponential Decay '
               '==========================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n')
-        
+
         # Set: xValues 
         x = np.arange(0, len(y))
         smoothx = np.linspace(x[0], x[-1], 20)

@@ -12,20 +12,20 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'ELN'
+inEnzymeName = 'Mpro2'
 inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\''] #
+inMotifPositions = ['P4','P3','P2','P1','P1\''] # ,'P2\''
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
 # inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7']
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
-inFixedResidue = [['C','I','V']]
+inFixedResidue = ['Q']
 inFixedPosition = [4,5,6]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
@@ -52,9 +52,9 @@ if inPlotOnlyWords:
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
-    inPlotMotifEnrichment = False
-    inPlotWordCloud = True
-inPlotStats = True
+    #inPlotMotifEnrichment = False
+    #inPlotWordCloud = True
+inPlotStats = False
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
@@ -932,8 +932,6 @@ if inPredictCodonsEnrichment:
     probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
     ngs.codonPredictions(codon=inCodonSequence, codonProb=probCodon, substrates=motifs)
 
-sys.exit()
-
 
 # # Evaluate: Motif Sequences
 # Count fixed substrates
@@ -941,14 +939,14 @@ motifCountsFinal, motifsCountsTotal = ngs.countResidues(substrates=motifs,
                                                         datasetType='Final Sort')
 
 # Calculate: RF
-probMotif = ngs.calculateRF(counts=motifCountsFinal, N=motifsCountsTotal,
+rfMotif = ngs.calculateRF(counts=motifCountsFinal, N=motifsCountsTotal,
                             fileType='Final Sort')
 
 # Calculate: Positional entropy
-ngs.calculateEntropy(probability=probMotif, combinedMotifs=combinedMotifs)
+ngs.calculateEntropy(rf=rfMotif, combinedMotifs=combinedMotifs)
 
 # Calculate: AA Enrichment
-ngs.calculateEnrichment(probInitial=rfInitial, probFinal=probMotif,
+ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfMotif,
                         combinedMotifs=combinedMotifs)
 
 ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
