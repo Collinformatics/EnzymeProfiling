@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.widgets import RectangleSelector
+from setuptools.command.rotate import rotate
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import numpy as np
@@ -3030,7 +3031,7 @@ class NGS:
         if self.plotFigBars:
             self.plotBarGraph(substrates=motifs, dataType='Counts',
                               combinedMotifs=combinedMotifs, subsInit=subsInit)
-            self.plotBarGraph(substrates=motifs, dataType='Probability',
+            self.plotBarGraph(substrates=motifs, dataType='Relative Frequency',
                               combinedMotifs=combinedMotifs)
 
         # PCA
@@ -3286,8 +3287,7 @@ class NGS:
                     figLabel = figLabel.replace(self.datasetTag,
                                                 f'Combined {self.datasetTag}')
                 if clusterNumPCA is not None:
-                    figLabel = figLabel.replace(
-                        'Motif Enrichment',
+                    figLabel = figLabel.replace('Motif Enrichment',
                         f'Motif Enrichment - PCA {clusterNumPCA}')
             figLabel = figLabel.replace('MinCounts',
                                         f'{scoreType} - MinCounts')
@@ -3624,13 +3624,14 @@ class NGS:
         print('================================ Plot: Bar Graph '
               '================================')
         print(f'Collecting the top {red}{self.NSubBars}{resetColor} substrates\n')
-        xValues = []
-        yValues = []
+        x = []
+        y = []
 
         print(f'Substrates:')
         iteration = 0
         for substrate, count in substrates.items():
-            print(f'     {blue}{substrate}{resetColor}, Counts: {red}{count}{resetColor}')
+            print(f'     {blue}{substrate}{resetColor}, '
+                  f'Counts: {red}{count:,}{resetColor}')
             iteration += 1
             if iteration >= self.printNumber:
                 print()
@@ -3646,35 +3647,42 @@ class NGS:
         if 'counts' in dataType.lower():
             # Evaluate: Substrates
             for substrate, count in substrates.items():
-                xValues.append(str(substrate))
-                yValues.append(count)
+                x.append(str(substrate))
+                y.append(count)
                 iteration += 1
                 if iteration == self.NSubBars:
                     break
 
             # Evaluate: Y axis
-            maxValue = math.ceil(max(yValues))
+            maxValue = math.ceil(max(y))
             magnitude = math.floor(math.log10(maxValue))
-            unit = 10**(magnitude-1)
+            unit = 10 ** (magnitude - 1)
             yMax = math.ceil(maxValue / unit) * unit
-            if yMax < max(yValues):
-                increaseValue = unit / 2
-                while yMax < max(yValues):
-                    print(f'Increase yMax by:{yellow} {increaseValue}{resetColor}')
-                    yMax += increaseValue
-                print('\n')
-            yMin = 0 # math.floor(min(yValues) / unit) * unit - spacer
-        elif 'probability' in dataType.lower():
+            yMax += 3 * unit  # Increase yMax
+            if min(y) < 0:
+                minValue = math.floor(min(y))
+                magnitude = math.floor(math.log10(abs(minValue)))
+                unit = 10 ** (magnitude - 1)
+                yMin = math.floor(minValue / unit) * unit
+                while yMin > min(y):
+                    yMin -= unit  # Decrease yMin
+            else:
+                yMin = 0
+            # print(f'\nY Axis:\n'
+            #       f'  Max: {yMax}\n'
+            #       f'  Min: {yMin}\n')
+
+        elif 'relative frequency' in dataType.lower():
             # Evaluate: Substrates
             for substrate, count in substrates.items():
-                xValues.append(str(substrate))
-                yValues.append(count / countsTotal)
+                x.append(str(substrate))
+                y.append(count / countsTotal)
                 iteration += 1
                 if iteration == self.NSubBars:
                     break
 
             # Evaluate: Y axis
-            maxValue = max(yValues)
+            maxValue = max(y)
             magnitude = math.floor(math.log10(maxValue))
             adjustedMax = maxValue * 10**abs(magnitude)
             yMax = math.ceil(adjustedMax) * 10**magnitude
@@ -3686,17 +3694,17 @@ class NGS:
         else:
             # Evaluate: Substrates
             for substrate, count in substrates.items():
-                xValues.append(str(substrate))
-                yValues.append(count)
+                x.append(str(substrate))
+                y.append(count)
                 iteration += 1
                 if iteration == self.NSubBars:
                     break
 
             # Evaluate: Y axis
             spacer = 0.2
-            yMax = math.ceil(max(yValues)) + spacer
-            yMin = math.floor(min(yValues))
-        NSubs = len(xValues)
+            yMax = math.ceil(max(y)) + spacer
+            yMin = math.floor(min(y))
+        NSubs = len(x)
         print(f'Number of plotted sequences: {red}{NSubs}{resetColor}\n\n')
 
         # Define: Figure title
@@ -3707,18 +3715,50 @@ class NGS:
             title = (f'{self.enzymeName}\n{self.datasetTag}\n'
                      f'Top {NSubs} Substrates')
 
+
         # Plot the data
         fig, ax = plt.subplots(figsize=self.figSize)
-        bars = plt.bar(xValues, yValues, color=barColor, width=barWidth)
+        bars = plt.bar(x, y, color=barColor, width=barWidth)
         plt.ylabel(dataType, fontsize=self.labelSizeAxis)
         plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.axhline(y=0, color='black', linewidth=self.lineThickness)
         plt.ylim(yMin, yMax)
         # plt.subplots_adjust(top=0.873, bottom=0.12, left=0.101, right=0.979)
 
+        # Determine x values
+        xTicks = np.arange(0, NSubs)
+        ax.set_xticks(xTicks)
+        ax.set_xticklabels(x, rotation=90, ha='center')
+        ax.set_xlim(left=xTicks[0] - barWidth, right=xTicks[-1] + barWidth)
+
+        # Set: y ticks
+        plotYTicks = True
+        if max(y) == 1.0:
+            yMax = 1.0
+            if yMin == 0:
+                yTicks = np.linspace(yMin, yMax, 6)
+            else:
+                plotYTicks = False
+                dist = yMax - yMin
+                vals = [0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55]
+                for val in vals:
+                    ratio = dist / val
+                    if ratio == int(ratio) and ratio < 10:
+                        plotYTicks = True
+                        yTicks = np.arange(yMin, yMax + val, val)
+                        break
+            yMax += 0.1
+        else:
+            step = yMax / 10
+            yTicks = np.arange(yMin, yMax + step, step)
+        plt.ylim(yMin, yMax)
+        plt.xticks(rotation=90, ha='center')
+        if plotYTicks:
+            plt.yticks(yTicks)
+
         # Set the edge color
         for bar in bars:
-            bar.set_edgecolor('#CC5500')
+            bar.set_edgecolor('black')
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,

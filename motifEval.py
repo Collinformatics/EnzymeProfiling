@@ -52,8 +52,8 @@ if inPlotOnlyWords:
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
-    #inPlotMotifEnrichment = False
-    #inPlotWordCloud = True
+    inPlotMotifEnrichment = False
+    inPlotWordCloud = True
 inPlotStats = False
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
