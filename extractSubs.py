@@ -53,12 +53,12 @@ ngs = NGS(enzymeName=inEnzymeName, substrateLength=len(inAAPositions),
           fixedPosition=inFixedPosition, excludeAAs=None, excludeAA=None,
           excludePosition=None, minCounts=0, minEntropy=None, figEMSquares=False,
           xAxisLabels=inAAPositions, printNumber=inPrintNumber, showNValues=True,
-          bigAAonTop=False, limitYAxis=False, findMotif=False, folderPath=inPathFolder,
-          filesInit=None, filesFinal=None, plotPosS=False, plotFigEM=False,
-          plotFigEMScaled=False, plotFigLogo=False, plotFigWebLogo=False,
-          plotFigWords=False, wordLimit=False, wordsTotal=False, plotFigBars=False,
-          NSubBars=False, plotFigPCA=False, numPCs=False, NSubsPCA=False,
-          plotSuffixTree=False, saveFigures=False, setFigureTimer=None, expressDNA=True)
+          bigAAonTop=False, findMotif=False, folderPath=inPathFolder, filesInit=None,
+          filesFinal=None, plotPosS=False, plotFigEM=False, plotFigEMScaled=False,
+          plotFigLogo=False, plotFigWebLogo=False, plotFigWords=False, wordLimit=False,
+          wordsTotal=False, plotFigBars=False, NSubBars=False, plotFigPCA=False,
+          numPCs=False, NSubsPCA=False, plotSuffixTree=False, saveFigures=False,
+          setFigureTimer=None, expressDNA=True)
 
 
 

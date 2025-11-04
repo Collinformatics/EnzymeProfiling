@@ -136,15 +136,13 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           excludePosition=inExcludedPosition, minCounts=inMinimumSubstrateCount,
           minEntropy=inMinDeltaS, figEMSquares=inShowEnrichmentAsSquares,
           xAxisLabels=labelAAPos, printNumber=inPrintNumber, showNValues=inShowSampleSize,
-          bigAAonTop=inBigLettersOnTop, limitYAxis=inLimitYAxis, findMotif=True,
-          folderPath=inPathFolder, filesInit=filesInitial, filesFinal=filesFinal,
-          plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
-          plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
-          plotFigWebLogo=inPlotWeblogo, plotFigWords=False,
-          wordLimit=None, wordsTotal=None,
-          plotFigBars=False, NSubBars=None, plotFigPCA=False,
-          numPCs=None, NSubsPCA=None, plotSuffixTree=False, motifFilter=True,
-          saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
+          bigAAonTop=inBigLettersOnTop, findMotif=True, folderPath=inPathFolder,
+          filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
+          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
+          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo, plotFigWords=False,
+          wordLimit=None, wordsTotal=None, plotFigBars=False, NSubBars=None,
+          plotFigPCA=False, numPCs=None, NSubsPCA=None, plotSuffixTree=False,
+          motifFilter=True, saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
 

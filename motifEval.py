@@ -18,7 +18,7 @@ inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-inMotifPositions = ['P4','P3','P2','P1','P1\''] # ,'P2\''
+inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\''] #
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
 # inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7']
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
@@ -46,13 +46,13 @@ inPlotWeblogo = True
 inPlotMotifEnrichment = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
-    inPlotEntropy = False
-    inPlotEnrichmentMap = False
+    #inPlotEntropy = False
+    #inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
-    inPlotLogo = False
+    #inPlotLogo = False
     inPlotWeblogo = False
-    #inPlotMotifEnrichment = False
-    #inPlotWordCloud = True
+    inPlotMotifEnrichment = False
+    inPlotWordCloud = True
 inPlotStats = False
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
@@ -79,7 +79,6 @@ inShowWeblogoYTicks = True
 inAddHorizontalLines = False
 inPlotNegativeWeblogoMotif = False
 inBigLettersOnTop = False
-inLimitYAxis = True
 
 # Input 8: Motif Enrichment
 inPlotNBars = 50
@@ -243,11 +242,10 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           minEntropy=None, figEMSquares=inShowEnrichmentAsSquares, xAxisLabels=labelAAPos,
           xAxisLabelsMotif=inMotifPositions, printNumber=inPrintNumber,
           showNValues=inShowSampleSize, bigAAonTop=inBigLettersOnTop,
-          limitYAxis=inLimitYAxis, findMotif=False, folderPath=inPathFolder,
-          filesInit=filesInitial, filesFinal=filesFinal, plotPosS=inPlotEntropy,
-          plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
-          plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
-          plotFigMotifEnrich=inPlotMotifEnrichment,
+          findMotif=False, folderPath=inPathFolder, filesInit=filesInitial,
+          filesFinal=filesFinal, plotPosS=inPlotEntropy, plotFigEM=inPlotEnrichmentMap,
+          plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
+          plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotFigPCA=inPlotPCA,
           numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
@@ -931,6 +929,11 @@ if inPredictCodonsEnrichment:
     ngs.codonPredictions(codon=inCodonSequence, codonProb=probCodon, substrates=motifs)
 
 
+ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
+                      motifs=motifs, subLabel=inMotifPositions,
+                      combinedMotifs=combinedMotifs)
+sys.exit()
+
 # # Evaluate: Motif Sequences
 # Count fixed substrates
 motifCountsFinal, motifsCountsTotal = ngs.countResidues(substrates=motifs,
@@ -947,9 +950,6 @@ ngs.calculateEntropy(rf=rfMotif, combinedMotifs=combinedMotifs)
 ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfMotif,
                         combinedMotifs=combinedMotifs)
 
-ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
-                      motifs=motifs, subLabel=inMotifPositions,
-                      combinedMotifs=combinedMotifs)
 sys.exit()
 
 # Set flag

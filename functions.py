@@ -211,10 +211,10 @@ class NGS:
     def __init__(self, enzymeName, substrateLength, filterSubs, fixedAA, fixedPosition,
                  excludeAAs, excludeAA, excludePosition, minCounts, minEntropy,
                  figEMSquares, xAxisLabels, printNumber, showNValues, bigAAonTop,
-                 limitYAxis, findMotif, folderPath, filesInit, filesFinal, plotPosS,
-                 plotFigEM, plotFigEMScaled, plotFigLogo, plotFigWebLogo, plotFigWords,
-                 wordLimit, wordsTotal, plotFigBars, NSubBars, plotFigPCA, numPCs,
-                 NSubsPCA, plotSuffixTree, saveFigures, setFigureTimer, expressDNA=False,
+                 findMotif, folderPath, filesInit, filesFinal, plotPosS, plotFigEM,
+                 plotFigEMScaled, plotFigLogo, plotFigWebLogo, plotFigWords, wordLimit,
+                 wordsTotal, plotFigBars, NSubBars, plotFigPCA, numPCs, NSubsPCA,
+                 plotSuffixTree, saveFigures, setFigureTimer, expressDNA=False,
                  useEF=False, xAxisLabelsMotif=None, motifFilter=False,
                  plotFigMotifEnrich=False):
         # Parameters: Dataset
@@ -297,7 +297,6 @@ class NGS:
         self.nSubsInitial = 0
         self.nSubsFinal = 0
         self.bigAAonTop = bigAAonTop
-        self.limitYAxis = limitYAxis
         self.findMotif = findMotif
         self.motifFilter = motifFilter
         self.initialize = True # filterMotif.py: Set to False after NGS.calculateEntropy()
@@ -2666,6 +2665,17 @@ class NGS:
         print(f'\nResidue heights:\n'
               f'{self.heights}\n')
 
+        # Set local parameters
+        if self.bigAAonTop:
+            stackOrder = 'big_on_top'
+        else:
+            stackOrder = 'small_on_top'
+
+        # Set: Figure borders
+        if self.showSampleSize:
+            figBorders = [0.852, 0.075, 0.164, 0.938]
+        else:
+            figBorders = [0.852, 0.075, 0.164, 0.938]
 
         # Calculate: Max and min
         columnTotals = [[], []]
@@ -2681,6 +2691,92 @@ class NGS:
             columnTotals[1].append(totalNeg)
         yMax = max(columnTotals[0])
         yMin = min(columnTotals[1])
+        print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+              f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n')
+
+        # Rename columns for logomaker script
+        data = self.heights.copy()
+        data.columns = range(len(data.columns))
+
+
+        def plotLogo(limitYAxis=False):
+            # Plot the sequence motif
+            fig, ax = plt.subplots(figsize=self.figSize)
+            motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=self.colorsAA,
+                                   width=0.95, stack_order=stackOrder)
+            motif.ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+            plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
+                                left=figBorders[2], right=figBorders[3])
+
+            # Set tick parameters
+            ax.tick_params(axis='both', which='major', length=self.tickLength,
+                           labelsize=self.labelSizeTicks)
+
+            # Set borders
+            motif.style_spines(visible=False)
+            motif.style_spines(spines=['left', 'bottom'], visible=True)
+            for spine in motif.ax.spines.values():
+                spine.set_linewidth(self.lineThickness)
+
+            # Set x-ticks
+            motif.ax.set_xticks([pos for pos in range(len(self.heights.columns))])
+            motif.ax.set_xticklabels(self.heights.columns, fontsize=self.labelSizeTicks,
+                                     rotation=0, ha='center')
+
+            # Set y-ticks
+            yTicks = [yMin, 0, yMax]
+            yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}'
+                           for tick in yTicks]
+            motif.ax.set_yticks(yTicks)
+            motif.ax.set_yticklabels(yTickLabels, fontsize=self.labelSizeTicks)
+            motif.ax.set_ylim(yMin, yMax)
+
+            # Set tick width
+            for tick in motif.ax.xaxis.get_major_ticks():
+                tick.tick1line.set_markeredgewidth(self.lineThickness)
+            for tick in motif.ax.yaxis.get_major_ticks():
+                tick.tick1line.set_markeredgewidth(self.lineThickness)
+
+            # Label the axes
+            motif.ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
+            motif.ax.set_ylabel('Scaled Enrichment', fontsize=self.labelSizeAxis)
+
+            # Set horizontal line
+            motif.ax.axhline(y=0, color='black', linestyle='-',
+                             linewidth=self.lineThickness)
+
+            # Evaluate dataset for fixed residues
+            spacer = np.diff(motif.ax.get_xticks())  # Find the space between each tick
+            spacer = spacer[0] / 2
+
+            # Use the spacer to set a gray background to fixed residues
+            for index, position in enumerate(self.xAxisLabels):
+                if position in self.fixedPos:
+                    # Plot gray boxes on each side of the xtick
+                    motif.ax.axvspan(index - spacer, index + spacer,
+                                     facecolor='darkgrey', alpha=0.2)
+
+            fig.canvas.mpl_connect('key_press_event', pressKey)
+            if self.setFigureTimer:
+                plt.ion()
+                plt.show()
+                plt.pause(self.figureTimerDuration)
+                plt.close(fig)
+                plt.ioff()
+            else:
+                plt.show()
+
+            # Save the figure
+            if self.saveFigures:
+                datasetType = 'Logo'
+                if limitYAxis:
+                    datasetType += ' yMin'
+                self.saveFigure(
+                    fig=fig, figType=datasetType, seqLen=len(data.columns),
+                    combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
+
+        # Plot figure
+        plotLogo()
 
         # Adjust yMin to fit the largest negative AA
         if self.limitYAxis:
@@ -2690,98 +2786,10 @@ class NGS:
                     if self.heights.loc[row, col] < yMin:
                         yMin = self.heights.loc[row, col]
 
-        print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
-              f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n\n')
+            print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+                  f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n')
 
-        # Rename columns for logomaker script
-        data = self.heights.copy()
-        data.columns = range(len(data.columns))
-
-        # Set local parameters
-        if self.bigAAonTop:
-            stackOrder = 'big_on_top'
-        else:
-            stackOrder = 'small_on_top'
-
-        # Set: Figure borders
-        if self.showSampleSize:
-            figBorders = [0.852, 0.075, 0.164, 0.938]
-        else:
-            figBorders = [0.852, 0.075, 0.164, 0.938]
-
-        # Plot the sequence motif
-        fig, ax = plt.subplots(figsize=self.figSize)
-        motif = logomaker.Logo(data.transpose(), ax=ax, color_scheme=self.colorsAA,
-                               width=0.95, stack_order=stackOrder)
-        motif.ax.set_title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-        plt.subplots_adjust(top=figBorders[0], bottom=figBorders[1],
-                            left=figBorders[2], right=figBorders[3])
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks)
-
-        # Set borders
-        motif.style_spines(visible=False)
-        motif.style_spines(spines=['left', 'bottom'], visible=True)
-        for spine in motif.ax.spines.values():
-            spine.set_linewidth(self.lineThickness)
-
-        # Set x-ticks
-        motif.ax.set_xticks([pos for pos in range(len(self.heights.columns))])
-        motif.ax.set_xticklabels(self.heights.columns, fontsize=self.labelSizeTicks,
-                                 rotation=0, ha='center')
-
-        # Set y-ticks
-        yTicks = [yMin, 0, yMax]
-        yTickLabels = [f'{tick:.2f}' if tick != 0 else f'{int(tick)}' for tick in yTicks]
-        motif.ax.set_yticks(yTicks)
-        motif.ax.set_yticklabels(yTickLabels, fontsize=self.labelSizeTicks)
-        motif.ax.set_ylim(yMin, yMax)
-
-        # Set tick width
-        for tick in motif.ax.xaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness)
-        for tick in motif.ax.yaxis.get_major_ticks():
-            tick.tick1line.set_markeredgewidth(self.lineThickness)
-
-        # Label the axes
-        motif.ax.set_xlabel('Substrate Position', fontsize=self.labelSizeAxis)
-        motif.ax.set_ylabel('Scaled Enrichment', fontsize=self.labelSizeAxis)
-
-        # Set horizontal line
-        motif.ax.axhline(y=0, color='black', linestyle='-', linewidth=self.lineThickness)
-
-        # Evaluate dataset for fixed residues
-        spacer = np.diff(motif.ax.get_xticks()) # Find the space between each tick
-        spacer = spacer[0] / 2
-
-        # Use the spacer to set a gray background to fixed residues
-        for index, position in enumerate(self.xAxisLabels):
-            if position in self.fixedPos:
-                # Plot gray boxes on each side of the xtick
-                motif.ax.axvspan(index - spacer, index + spacer,
-                                 facecolor='darkgrey', alpha=0.2)
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        if self.setFigureTimer:
-            plt.ion()
-            plt.show()
-            plt.pause(self.figureTimerDuration)
-            plt.close(fig)
-            plt.ioff()
-        else:
-            plt.show()
-
-        # Save the figure
-        if self.saveFigures:
-            datasetType = 'Logo'
-            if self.limitYAxis:
-                datasetType += ' yMin'
-            self.saveFigure(fig=fig, figType=datasetType,  seqLen=len(data.columns),
-                            combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
-
-
+            plotLogo(limitYAxis=True)
 
     def calculateWeblogo(self, probability, combinedMotifs=False, releasedCounts=False):
         print('============================= Calculate: Weblogo '
