@@ -42,7 +42,6 @@ inPlotEnrichmentMapScaled = False
 inPlotLogo = True
 inPlotWeblogo = True
 inPlotMotifEnrichment = True
-inPlotMotifEnrichmentNBars = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
@@ -51,7 +50,6 @@ if inPlotOnlyWords:
     inPlotLogo = False
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
-    inPlotMotifEnrichmentNBars = False
     inPlotWordCloud = True
 inPlotWordCloud = False # <--------------------
 inPlotBarGraphs = False
@@ -149,6 +147,8 @@ resetColor = '\033[0m'
 # Load: Dataset labels
 enzymeName, filesInitial, filesFinal, labelAAPos = getFileNames(enzyme=inEnzymeName)
 
+inPlotMotifEnrichmentNBars = True
+
 
 
 # =================================== Initialize Class ===================================
@@ -163,11 +163,10 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           useEF=inUseEnrichmentFactor, plotPosS=inPlotEntropy,
           plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
           plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
-          plotFigMotifEnrich=inPlotMotifEnrichment,
-          plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
-          plotFigWords=inPlotWordCloud,  wordLimit=inLimitWords, wordsTotal=inTotalWords,
-          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotFigPCA=inPlotPCA,
-          numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
+          plotFigMotifEnrich=inPlotMotifEnrichment, plotFigWords=inPlotWordCloud,
+          wordLimit=inLimitWords, wordsTotal=inTotalWords, plotFigBars=inPlotBarGraphs,
+          NSubBars=inNSequences, plotFigPCA=inPlotPCA, numPCs=inNumberOfPCs,
+          NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 

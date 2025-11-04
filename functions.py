@@ -216,7 +216,7 @@ class NGS:
                  wordLimit, wordsTotal, plotFigBars, NSubBars, plotFigPCA, numPCs,
                  NSubsPCA, plotSuffixTree, saveFigures, setFigureTimer, expressDNA=False,
                  useEF=False, xAxisLabelsMotif=None, motifFilter=False,
-                 plotFigMotifEnrich=False, plotFigMotifEnrichSelect=False):
+                 plotFigMotifEnrich=False):
         # Parameters: Dataset
         self.enzymeName = enzymeName
         self.filterSubs = filterSubs
@@ -257,7 +257,6 @@ class NGS:
         self.plotFigLogo = plotFigLogo
         self.plotFigWebLogo = plotFigWebLogo
         self.plotFigMotifEnrich = plotFigMotifEnrich
-        self.plotFigMotifEnrichSelect = plotFigMotifEnrichSelect
         self.plotFigWords = plotFigWords
         self.wordsLimit = wordLimit
         self.wordsTotal = wordsTotal
@@ -3048,15 +3047,16 @@ class NGS:
                 NClusterAdj = NCluster + 1
 
                 # Plot: Motif enrichment for this selected cluster
-                # if self.plotFigMotifEnrich:
-                self.plotMotifEnrichment(motifs=motifCluster,
-                                         combinedMotifs=combinedMotifs,
-                                         clusterNumPCA=NClusterAdj)
-                # if self.plotFigMotifEnrichSelect:
-                self.plotMotifEnrichment(motifs=motifCluster,
-                                         combinedMotifs=combinedMotifs,
-                                         clusterNumPCA=NClusterAdj,
-                                         limitNBars=True)
+                if self.plotFigMotifEnrich:
+                    self.plotMotifEnrichment(motifs=motifCluster,
+                                             combinedMotifs=combinedMotifs,
+                                             clusterNumPCA=NClusterAdj)
+
+                    # Limit the number of substrates
+                    self.plotMotifEnrichment(motifs=motifCluster,
+                                             combinedMotifs=combinedMotifs,
+                                             clusterNumPCA=NClusterAdj,
+                                             limitNBars=True)
 
                 # Plot: Work cloud
                 self.plotWordCloud(substrates=motifCluster, clusterNumPCA=NClusterAdj,
@@ -3588,11 +3588,6 @@ class NGS:
                 self.plotMotifEnrichment(
                     motifs=motifEnrichment, combinedMotifs=combinedMotifs,
                     predActivity=predActivity, predModel=predModel, predType=predType)
-            if self.plotFigMotifEnrichSelect:
-                self.plotMotifEnrichment(
-                    motifs=motifEnrichment, combinedMotifs=combinedMotifs,
-                    limitNBars=True, predActivity=predActivity, predModel=predModel,
-                    predType=predType)
 
         return motifEnrichment
 
@@ -3784,6 +3779,8 @@ class NGS:
             else:
                 figLabel = (f'{self.enzymeName} - Bars - {dataType} - N {NSubs} - '
                             f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+            if 'relative frequency' in dataType.lower():
+                figLabel = figLabel.replace(dataType, 'RF')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
             # Save figure

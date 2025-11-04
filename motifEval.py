@@ -44,7 +44,6 @@ inPlotEnrichmentMapScaled = False
 inPlotLogo = True
 inPlotWeblogo = True
 inPlotMotifEnrichment = True
-inPlotMotifEnrichmentNBars = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
     inPlotEntropy = False
@@ -52,8 +51,8 @@ if inPlotOnlyWords:
     inPlotEnrichmentMapScaled = False
     inPlotLogo = False
     inPlotWeblogo = False
-    inPlotMotifEnrichment = False
-    inPlotWordCloud = True
+    #inPlotMotifEnrichment = False
+    #inPlotWordCloud = True
 inPlotStats = False
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
@@ -249,7 +248,6 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotFigEM=inPlotEnrichmentMap, plotFigEMScaled=inPlotEnrichmentMapScaled,
           plotFigLogo=inPlotLogo, plotFigWebLogo=inPlotWeblogo,
           plotFigMotifEnrich=inPlotMotifEnrichment,
-          plotFigMotifEnrichSelect=inPlotMotifEnrichmentNBars,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
           plotFigBars=inPlotBarGraphs, NSubBars=inPlotNBars, plotFigPCA=inPlotPCA,
           numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
