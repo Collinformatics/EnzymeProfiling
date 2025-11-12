@@ -2369,7 +2369,7 @@ class NGS:
 
     def calculateEnrichment(self, rfInitial, rfFinal,
                             releasedCounts=False, combinedMotifs=False,
-                            posFilter=False, relFilter=False, releasedIteration=False):
+                            posFilter=False, relFilter=False, relIteration=False):
         print('========================== Calculate: Enrichment Score '
               '==========================')
         print(f'Enrichment Scores:\n'
@@ -2465,32 +2465,37 @@ class NGS:
                                       releasedCounts=releasedCounts,
                                       combinedMotifs=combinedMotifs,
                                       posFilter=posFilter,
-                                      relFilter=relFilter)
+                                      relFilter=relFilter,
+                                      relIteration=relIteration)
         if self.plotFigEMScaled:
             self.plotEnrichmentScores(dataType='Scaled Enrichment',
                                       releasedCounts=releasedCounts,
                                       combinedMotifs=combinedMotifs,
                                       posFilter=posFilter,
-                                      relFilter=relFilter)
+                                      relFilter=relFilter,
+                                      relIteration=relIteration)
 
         # Plot: Enrichment Logo
         if self.plotFigLogo:
             self.plotEnrichmentLogo(releasedCounts=releasedCounts,
                                     combinedMotifs=combinedMotifs,
                                     posFilter=posFilter,
-                                    relFilter=relFilter)
+                                    relFilter=relFilter,
+                                    relIteration=relIteration)
 
         # Calculate & Plot: Weblogo
         if self.plotFigWebLogo:
-            self.calculateWeblogo(probability=rfFinal, releasedCounts=releasedCounts,
-                                  combinedMotifs=combinedMotifs)
+            self.calculateWeblogo(probability=rfFinal,
+                                  releasedCounts=releasedCounts,
+                                  combinedMotifs=combinedMotifs,
+                                  relIteration=relIteration)
 
         return self.eMap
 
 
 
     def plotEnrichmentScores(self, dataType, combinedMotifs=False, releasedCounts=False,
-                             posFilter=False, relFilter=False):
+                             posFilter=False, relFilter=False, relIteration=False):
         print('============================ Plot: Enrichment Score '
               '=============================')
         # Select: Dataset
@@ -2629,13 +2634,15 @@ class NGS:
                 print(f'{orange}ERROR: What do I do with this dataset type -'
                       f'{cyan} {dataType}{resetColor}\n')
                 sys.exit(1)
+            if not isinstance(relIteration, bool):
+                datasetType += f' {relIteration}'
             self.saveFigure(fig=fig, figType=datasetType, seqLen=len(xTicks),
                             combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
 
 
     def plotEnrichmentLogo(self, combinedMotifs=False, releasedCounts=False,
-                           posFilter=False, relFilter=False):
+                           posFilter=False, relFilter=False, relIteration=False):
         print('============================= Plot: Enrichment Logo '
               '=============================')
         # Define: Figure title
@@ -2771,12 +2778,14 @@ class NGS:
                 datasetType = 'Logo'
                 if limitYAxis:
                     datasetType += ' yMin'
+                if not isinstance(relIteration, bool):
+                    datasetType += f' {relIteration}'
                 self.saveFigure(
                     fig=fig, figType=datasetType, seqLen=len(data.columns),
                     combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)
 
         # Plot figure
-        plotLogo()
+        plotLogo() # Full y-axis
 
         # Adjust yMin to fit the largest negative AA
         yMin = 0
@@ -2784,11 +2793,11 @@ class NGS:
             for row in self.heights.index:
                 if self.heights.loc[row, col] < yMin:
                     yMin = self.heights.loc[row, col]
-
         print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n')
+        plotLogo(limitYAxis=True) # Limited y-axis
 
-        plotLogo(limitYAxis=True)
+
 
     def calculateWeblogo(self, probability, combinedMotifs=False, releasedCounts=False):
         print('============================= Calculate: Weblogo '
@@ -2810,7 +2819,7 @@ class NGS:
 
 
 
-    def plotWeblogo(self, combinedMotifs=False, releasedCounts=False):
+    def plotWeblogo(self, combinedMotifs=False, releasedCounts=False, relIteration=False):
         print('================================= Plot: Weblogo '
               '=================================')
         if self.motifFilter:
@@ -2922,6 +2931,8 @@ class NGS:
         # Save the figure
         if self.saveFigures:
             datasetType = 'Weblogo'
+            if not isinstance(relIteration, bool):
+                datasetType += f' {relIteration}'
             self.saveFigure(
                 fig=fig, figType=datasetType, seqLen=len(self.weblogo.columns),
                 combinedMotifs=combinedMotifs, releasedCounts=releasedCounts)

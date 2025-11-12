@@ -11,17 +11,17 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'ELN'
+inEnzymeName = 'Mpro2'
 inPathFolder = f'Enzymes/{inEnzymeName}'
-inSaveData = True
+inSaveData = False
 inSaveFigures = True
-inSetFigureTimer = False
+inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 0.45
+inMinDeltaS = 0.6
 inRefixMotif = True
-inFixedResidue = [['C','I','V']]
-inFixedPosition = [3] # Fix only at 1 position in the substrate
+inFixedResidue = ['Q']
+inFixedPosition = [5] # Fix only at 1 position in the substrate
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
@@ -39,14 +39,20 @@ inShowSampleSize = True
 inDropResidue = [] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
 
 # Input 3: Figures
+inPlotOnlyWords = True
 inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = True
 inPlotLogo = True
-inPlotEntropy = True
-inPlotEnrichmentMap = True
-inPlotEnrichmentMapScaled = False
-inPlotLogo = True
+inPlotWordCloud = True
+if inPlotOnlyWords:
+    #inPlotEntropy = False
+    #inPlotEnrichmentMap = False
+    inPlotEnrichmentMapScaled = False
+    inPlotLogo = False
+    inPlotWeblogo = False
+    inPlotMotifEnrichment = False
+    inPlotWordCloud = True
 inPlotWeblogo = False
 inPlotUnscaledScatter = False
 inPlotScaledScatter = False
@@ -711,14 +717,42 @@ def releaseCounts(substrates, countsFiltered, keepResidues, keepPositions, sortT
                               columns=ngs.eMap.columns)
 
 
-    def populateMatrix(counts, popPosition):
+    def populateMatrix(counts, popPosition, idxRel):
         # Record counts at released position
         print('======================== Populate Released Count Matrix '
               '=========================')
         print(f'Populate Position: {magenta}{popPosition}{resetColor}\n'
               f'Dataset: {purple}{ngs.datasetTag}{resetColor}\n')
-        countsReleased.loc[:, popPosition] = counts.loc[:, popPosition]
-        print(f'Released Counts:\n{countsReleased}\n\n')
+        if isinstance(popPosition, list):
+            for pos in popPosition:
+                countsReleased.loc[:, pos] = counts.loc[:, pos]
+                N = sum(counts.loc[:, pos])
+                countsTotal.loc[pos, 'Total Counts'] = N
+
+                # Calculate RF
+                releasedRF.loc[:, pos] = (countsReleased.loc[:, pos] /
+                                               countsTotal.loc[pos, 'Total Counts'])
+        else:
+            countsReleased.loc[:, popPosition] = counts.loc[:, popPosition]
+            N = sum(counts.loc[:, popPosition])
+            countsTotal.loc[popPosition, 'Total Counts'] = N
+
+            # Calculate RF
+            releasedRF.loc[:, popPosition] = (
+                    countsReleased.loc[:, popPosition] /
+                    countsTotal.loc[popPosition, 'Total Counts']
+            )
+
+        print(f'Released Counts: {purple}Released counts{resetColor}\n'
+              f'{countsReleased}\n\n'
+              f'Total Counts: {purple}Released counts{resetColor}'
+              f'\n{countsTotal}\n\n'
+              f'Relative Frequency: {purple}Released counts{resetColor}\n'
+              f'{releasedRF}\n\n')
+
+        # Calculate enrichment scores
+        ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=releasedRF,
+                                releasedCounts=True, relIteration=idxRel)
 
 
     # Determine which residues will be released
@@ -770,29 +804,16 @@ def releaseCounts(substrates, countsFiltered, keepResidues, keepPositions, sortT
             ngs.saveData(substrates=substratesFinalFixed, counts=countsFinalFixed)
 
         # Record counts
-        populateMatrix(counts=countsFinalFixed, popPosition=position)
+        populateMatrix(counts=countsFinalFixed, popPosition=position, idxRel=indexRel)
 
     # Populate remaining columns
+    fillPos = []
     for position in countsReleased.columns:
         if position not in populatedPositions:
-            populateMatrix(counts=countsFiltered, popPosition=position)
-
-    # Calculate N values
-    for position in countsReleased.columns:
-        N = sum(countsReleased.loc[:, position])
-        countsTotal.loc[position, 'Total Counts'] = N
-    print(f'{countsTotal}\n\n')
-
-    # Calculate RF
-    for position in countsReleased.columns:
-        releasedRF.loc[:, position] = (countsReleased.loc[:, position] /
-                                       countsTotal.loc[position, 'Total Counts'])
-    print(f'Relative Frequency: {purple}Released counts{resetColor}\n'
-          f'{releasedRF}\n\n')
-
-    # Calculate enrichment scores
-    ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=releasedRF,
-                            releasedCounts=True, releasedIteration=indexRel)
+            fillPos.append(position)
+    populateMatrix(counts=countsFiltered,
+                   popPosition=fillPos,
+                   idxRel=len(populatedPositions))
 
     return countsReleased, releasedRF
 
