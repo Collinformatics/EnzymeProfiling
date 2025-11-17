@@ -2299,7 +2299,7 @@ class NGS:
 
         # Sort the frame
         self.subFrame = subFrame.sort_values(by='ΔS', ascending=False).copy()
-        print(f'Reading Frame :\n'
+        print(f'Reading Frame:\n'
               f'{blue}{subFrame}{resetColor}\n\n'
               f'Ranked Motif Frame:\n'
               f'{blue}{self.subFrame}{resetColor}\n\n')
