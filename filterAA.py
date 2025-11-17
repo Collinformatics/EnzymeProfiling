@@ -18,8 +18,7 @@ inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
-inPlotOnlyWords = True
-inFixResidues = True
+inFixResidues = False
 inFixedResidue = ['L','Q'] # ['R',['G','S']] # [['A','G','S']]
 inFixedPosition = [3,4]
 inExcludeResidues = False
@@ -36,6 +35,7 @@ inAvgInitialProb = False
 inDropResidue = ['R9'] # To drop: inDropResidue = ['R9'], For nothing: inDropResidue = []
 
 # Input 3: Making Figures
+inPlotOnlyWords = True
 inPlotEntropy = True
 inPlotEnrichmentMap = True
 inPlotEnrichmentMapScaled = False
@@ -54,6 +54,7 @@ if inPlotOnlyWords:
 inPlotWordCloud = False # <--------------------
 inPlotBarGraphs = False
 inPlotPCA = False
+inPredictActivity = False
 inPlotSuffixTree = True
 inPlotCounts = False
 inPlotAADistribution = False
@@ -92,7 +93,6 @@ inPlotEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
 
 # Input 11: Predict Activity
-inPredictActivity = True
 inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',

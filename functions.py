@@ -5024,7 +5024,7 @@ class NGS:
                 while yMax < maxY:
                     yMax += tickStepSize
             yMax = round(yMax, 1)
-        yMax = 0.15
+        #yMax = 0.15
         tickStepSize = 0.05
 
 
@@ -5050,7 +5050,7 @@ class NGS:
                     title = f'Sorted {self.enzymeName} Library - {datasetTag}'
 
             fig, ax = plt.subplots(figsize=self.figSize)
-            plt.ylabel('Probability', fontsize=self.labelSizeAxis)
+            plt.ylabel('Relative Frequency', fontsize=self.labelSizeAxis)
             plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
             plt.subplots_adjust(top=0.926, bottom=0.068, left=0.102, right=0.979)
 
