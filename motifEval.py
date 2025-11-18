@@ -18,7 +18,7 @@ inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\''] #
+inMotifPositions = ['P4','P3','P2','P1','P1\''] # ,'P2\''
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
 # inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7']
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
@@ -46,10 +46,10 @@ inPlotWeblogo = True
 inPlotMotifEnrichment = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
-    #inPlotEntropy = False
-    #inPlotEnrichmentMap = False
+    inPlotEntropy = False
+    inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
-    #inPlotLogo = False
+    inPlotLogo = False
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotWordCloud = True

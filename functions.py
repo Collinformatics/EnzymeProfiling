@@ -3718,7 +3718,7 @@ class NGS:
             yMax = math.ceil(max(y)) + spacer
             yMin = math.floor(min(y))
         NSubs = len(x)
-        print(f'Number of plotted sequences: {red}{NSubs}{resetColor}\n\n')
+        print(f'Number of plotted sequences: {red}{NSubs:,}{resetColor}\n\n')
 
         # Define: Figure title
         if combinedMotifs and len(self.motifIndexExtracted) > 1:
@@ -3789,14 +3789,20 @@ class NGS:
 
         # Save the figure
         if self.saveFigures:
-            # Define: Save location
-            if combinedMotifs:
-                figLabel = (f'{self.enzymeName} - Bars - {dataType} - N {NSubs} - '
-                            f'Combined {self.datasetTag} - MinCounts {self.minSubCount}.'
-                            f'png')
+            if self.motifLen == None:
+                seqLength = len(self.xAxisLabels)
             else:
-                figLabel = (f'{self.enzymeName} - Bars - {dataType} - N {NSubs} - '
-                            f'{self.datasetTag} - MinCounts {self.minSubCount}.png')
+                seqLength = self.motifLen
+
+            # Define: Save location
+            if combinedMotifs: # {len(xTicks)} AA -
+                figLabel = (f'{self.enzymeName} - Bars - {dataType} - '
+                            f'{seqLength} AA - N {NSubs} - Combined {self.datasetTag} - '
+                            f'MinCounts {self.minSubCount}.png')
+            else:
+                figLabel = (f'{self.enzymeName} - Bars - {dataType} - '
+                            f'{seqLength} AA - N {NSubs} - {self.datasetTag} - '
+                            f'MinCounts {self.minSubCount}.png')
             if 'relative frequency' in dataType.lower():
                 figLabel = figLabel.replace(dataType, 'RF')
             saveLocation = os.path.join(self.pathSaveFigs, figLabel)
@@ -4953,7 +4959,7 @@ class NGS:
             # Define: Save location
             if self.filterSubs:
                 figLabel = (f'{self.enzymeName} - Entropy - '
-                            f'{self.datasetTag} - {len(xTicks)} AA - '
+                            f'{self.datasetTag} - '
                             f'MinCounts {self.minSubCount}.png')
             else:
                 figLabel = (f'{self.enzymeName} - Entropy - '
@@ -5359,19 +5365,6 @@ class NGS:
                 break
         print('')
 
-        # Define: Figure title
-        if predActivity:
-            title = f'{self.enzymeName}\n{predModel}'
-        else:
-            if combinedMotifs and len(self.motifIndexExtracted) > 1:
-                title = self.titleWordsCombined
-            elif combinedMotifs:
-                title = self.titleWordsCombined
-                title = title.replace('Combined ', '')
-            else:
-                title = self.titleWords
-
-
         # Limit the number of words
         if self.wordsLimit:
             print(f'Selecting: {red}{self.wordsTotal}{resetColor} words')
@@ -5385,6 +5378,20 @@ class NGS:
             substrates = subs
         totalWords = len(substrates)
         print(f'Plotting: {red}{totalWords:,}{resetColor} words\n\n')
+
+        # Define: Figure title
+        if predActivity:
+            title = f'{self.enzymeName}\n{predModel}'
+        else:
+            if combinedMotifs and len(self.motifIndexExtracted) > 1:
+                title = self.titleWordsCombined
+            elif combinedMotifs:
+                title = self.titleWordsCombined
+                title = title.replace('Combined ', '')
+            else:
+                title = self.titleWords
+            title += f'\nTop {totalWords} Substrates'
+
 
         # Create word cloud
         cmap = self.createCustomColorMap(colorType='Word Cloud')
