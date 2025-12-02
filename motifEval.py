@@ -12,20 +12,20 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'ELN'
 inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Experimental Parameters
-inMotifPositions = ['P4','P3','P2','P1','P1\''] # ,'P2\''
+inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\''] #
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
 # inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7']
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
-inFixedResidue = ['Q']
+inFixedResidue = ['C', 'I', 'V']
 inFixedPosition = [4,5,6]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']

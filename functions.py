@@ -2793,7 +2793,8 @@ class NGS:
             for row in self.heights.index:
                 if self.heights.loc[row, col] < yMin:
                     yMin = self.heights.loc[row, col]
-        print(f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
+        print(f'Adjusting Y Min:\n'
+              f'y Max: {red}{np.round(yMax, 4)}{resetColor}\n'
               f'y Min: {red}{np.round(yMin, 4)}{resetColor}\n')
         plotLogo(limitYAxis=True) # Limited y-axis
 
