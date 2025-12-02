@@ -13,20 +13,20 @@ import sys
 # Input 1: Select Dataset
 inEnzymeName = 'ELN'
 inPathFolder = f'Enzymes/{inEnzymeName}'
-inSaveData = False
+inSaveData = True
 inSaveFigures = True
-inSetFigureTimer = False
+inSetFigureTimer = True
 
 # Input 2: Computational Parameters
-inMinDeltaS = 1
+inMinDeltaS = 0.44
 inRefixMotif = True
 inFixedResidue = [['C', 'I', 'V']]
-inFixedPosition = [4]
+inFixedPosition = [6]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
 inManualEntropy = False
-inManualFrame = ['R4','R3','R5','R2']
+inManualFrame = ['R6','R8','R5','R7']
 inFixFullMotifSeq = False
 inMinimumSubstrateCount = 1
 inSetMinimumESFixAA = 0
@@ -444,14 +444,9 @@ def fixFrame(substrates, fixRes, fixPos, sortType, datasetTag):
 
     # Calculate: Entropy
     ngs.calculateEntropy(rf=rfFinalFixed,
-                         fixFullFrame=inFixFullMotifSeq)
-
-    # Overwrite substrate frame
-    if inManualEntropy:
-        ngs.subFrame = pd.DataFrame(1, index=inManualFrame, columns=['ΔS'])
-        print(f'{pink}Ranked Substrate Frame{resetColor}:{yellow} User Defined\n'
-              f'{cyan}{ngs.subFrame}{resetColor}\n\n')
-
+                         fixFullFrame=inFixFullMotifSeq,
+                         manualEntropy=inManualEntropy,
+                         manualFrame=inManualFrame)
 
     # Calculate enrichment scores
     ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfFinalFixed)

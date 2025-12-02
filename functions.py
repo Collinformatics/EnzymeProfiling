@@ -4833,7 +4833,7 @@ class NGS:
 
 
     def calculateEntropy(self, rf, fixFullFrame=None, combinedMotifs=False,
-                         releasedCounts=False):
+                         releasedCounts=False, manualEntropy=False, manualFrame=None):
         print('============================== Calculate: Entropy '
               '===============================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
@@ -4853,8 +4853,16 @@ class NGS:
         print(f'{self.entropy}\n\nMax Entropy: {self.entropyMax.round(6)}\n\n')
 
         # Identify motif frame
-        if fixFullFrame is not None:
-            self.identifyMotif(fixFullFrame=fixFullFrame)
+        if not manualEntropy:
+            if fixFullFrame is not None:
+                self.identifyMotif(fixFullFrame=fixFullFrame)
+        else:
+            print('================================ Identify Motif '
+                  '=================================')
+            print(f'Selecting a {yellow}user defined motif{resetColor}')
+            self.subFrame = pd.DataFrame(1, index=manualFrame, columns=['ΔS'])
+            print(f'Ranked Substrate Frame:\n'
+                  f'{blue}{self.subFrame}{resetColor}\n\n')
 
         if self.plotFigEntropy:
             self.plotEntropy(entropy=self.entropy, combinedMotifs=combinedMotifs,

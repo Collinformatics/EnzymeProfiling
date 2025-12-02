@@ -25,7 +25,7 @@ inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
-inFixedResidue = ['C', 'I', 'V']
+inFixedResidue = [['C', 'I', 'V']]
 inFixedPosition = [4,5,6]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
@@ -53,7 +53,7 @@ if inPlotOnlyWords:
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotWordCloud = True
-inPlotStats = False
+inPlotStats = True
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
