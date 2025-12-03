@@ -397,7 +397,7 @@ class NGS:
                 # Orange
                 colors = ['white','white','#FF76FA','#FF50F9','#FF00F2',
                           '#CA00DF','#BD16FF']
-        elif colorType == 'stdev':
+        elif colorType == 'standard deviation':
             colors = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
         elif colorType == 'word cloud':
             # ,'#F2A900','#2E8B57','black'
@@ -409,7 +409,7 @@ class NGS:
                       'lightcoral','red','firebrick','darkred']
         else:
             print(f'{orange}ERROR: Cannot create colormap. '
-                  f'Unrecognized colorType parameter: {colorType}{resetColor}\n')
+                  f'Unrecognized colorType parameter: {cyan}{colorType}{resetColor}\n')
             sys.exit(1)
 
         # Create colormap
@@ -3008,7 +3008,7 @@ class NGS:
 
 
         # Plot: Standard deviation
-        self.plotStats(data=frameESStDev, totalCounts=None, dataType='StDev',
+        self.plotStats(data=frameESStDev, totalCounts=None, dataType='Standard Deviation',
                        combinedMotifs=True)
 
 
@@ -5265,15 +5265,15 @@ class NGS:
 
         # Set figure title
         if totalCounts is not None and self.showSampleSize:
-            title = f'{self.enzymeName}\n{self.datasetTag}\nAverage ES\nN={totalCounts:,}'
+            title = f'{self.enzymeName}\n{self.datasetTag}\n{dataType}\nN={totalCounts:,}'
         else:
             if combinedMotifs:
-                title = f'\n{self.enzymeName}\nCombined {self.datasetTag}\nAverage ES'
+                title = f'\n{self.enzymeName}\nCombined {self.datasetTag}\n{dataType}'
                 if len(self.datasetTag.replace('[', '').replace(
                         ']', '').replace('-', '')) > 40:
                     title = title.replace('Frames ', 'Frames\n')
             else:
-                title = f'\n{self.enzymeName}\n{self.datasetTag}\nAverage ES'
+                title = f'\n{self.enzymeName}\n{self.datasetTag}\n{dataType}'
 
 
         # Create heatmap
