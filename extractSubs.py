@@ -17,14 +17,14 @@ from functions import NGS
 
 # ===================================== User Inputs ======================================
 # Input 1: File Location
-inFileName = ['ELN-I_S1_L001_R1_001', 'ELN-I_S1_L001_R2_001'] # Define file name(s)
+inFileName = ['Mpro2-Initial_S3_L001_R1_001', 'Mpro2-Initial_S3_L001_R2_001'] # Define file name(s)
 inEnzymeName = inFileName[0].split('-')[0]
-inPathFolder = f'{inEnzymeName}'
-inPathDNASeqs = os.path.join(inPathFolder, 'Fastq') # Define the fastq folder name
+inPathFolder = f'Enzymes/{inEnzymeName}'
+inPathDNASeqs = os.path.join(inPathFolder, 'Fastq-LQNNS') # Define the fastq folder name
 inFileType = 'fastq' # Define the file type
 
 # Input 2: Saving The Data
-inSaveFileName = 'ELN-I_S1_L001' # Add this name to filePaths(enzyme) in functions.py
+inSaveFileName = 'Mpro2-LQ-Initial_S3_L001' # Add this name to filePaths(enzyme) in functions.py
 
 # Input 3: Substrate Parameters
 inAAPositions = ['R1','R2','R3','R4','R5','R6','R7','R8']
@@ -37,9 +37,9 @@ inStartSeqR2 = inStartSeqR1
 inEndSeqR2 = inEndSeqR1
 
 # Input 5: Define Variables Used To Extract The Substrates
-inFixedLibrary = False
-inFixedResidue = ['Y']
-inFixedPosition = [5]
+inFixedLibrary = True
+inFixedResidue = ['L', 'Q']
+inFixedPosition = [3,4]
 
 # Input 6: Miscellaneous
 inAlertPath = '/path/Bells.mp3' # Play a sound to let you know the script is done

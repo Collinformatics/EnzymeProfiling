@@ -593,18 +593,23 @@ class NGS:
                         if any(score < self.minQS for score in QS):
                             return
 
-                        if len(self.fixedAA[0]) == 1:
-                            if substrate[self.fixedPos[0] - 1] in self.fixedAA:
-                                if substrate in subSequence:
-                                    subSequence[substrate] += 1
-                                else:
-                                    subSequence[substrate] = 1
-                        else:
-                            if substrate[self.fixedPos[0] - 1] in self.fixedAA[0]:
-                                if substrate in subSequence:
-                                    subSequence[substrate] += 1
-                                else:
-                                    subSequence[substrate] = 1
+                        # Fix AAs
+                        keep = True
+                        for idx, AA in enumerate(self.fixedAA):
+                            if isinstance(AA, list):
+                                if substrate[self.fixedPos[idx] - 1] not in AA:
+                                    keep = False
+                                    break
+                            else:
+                                if substrate[self.fixedPos[idx] - 1] != AA:
+                                    keep = False
+                                    break
+                        if keep:
+                            if substrate in subSequence:
+                                subSequence[substrate] += 1
+                            else:
+                                subSequence[substrate] = 1
+
 
 
         def evaluateDNAQuality(throwaway, read):
@@ -1478,12 +1483,12 @@ class NGS:
         # Define: Save path
         filePathCountsReleased = None
         if self.expressDNA:
-            folder = os.path.join('data', self.enzymeName, 'Data')
+            folder = os.path.join(self.pathFolder, 'Data')
 
             if not os.path.exists(folder):
                 os.makedirs(folder, exist_ok=True)
 
-            self.pathSaveFigs = os.path.join('data', self.enzymeName, 'Figures')
+            self.pathSaveFigs = os.path.join(self.pathFolder, 'Figures')
 
             filePathSubs = os.path.join(folder, f'substrates_{saveTag}')
             filePathCounts = os.path.join(folder, f'counts_{saveTag}')
