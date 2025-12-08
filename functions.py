@@ -5500,6 +5500,44 @@ class NGS:
 
 
 
+    def findSequence(self, substrates, sequence, sortType, combinedMotifs=False):
+        print('================================= Find Sequence '
+              '=================================')
+        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f'   Sort: {purple}{sortType}{resetColor}')
+        totalSubstrates = 0
+        totalHits = 0
+        hits = {}
+        for substrate, count in substrates.items():
+            totalSubstrates += count
+            if sequence in substrate:
+                totalHits += count
+                hits[substrate] = count
+        print(f'Unique Sequences: {red}{len(substrates.keys()):,}{resetColor}\n'
+              f' Total Sequences: {red}{totalSubstrates:,}{resetColor}\n')
+
+        # Find matches
+        print(f'Finding Sequence: {purple}{sequence}{resetColor}')
+        if len(hits.keys()) > 0:
+            print(f'Hits:')
+            for index, (substrate, count) in enumerate(hits.items()):
+                print(f'  {pink}{substrate}{resetColor}, {red}{count:,}{resetColor}')
+                if index >= self.printNumber:
+                    break
+        else:
+            print(f'Hits: {red}{totalHits}{resetColor}')
+        print(f'Unique Sequences: {red}{len(hits.keys()):,}{resetColor}\n'
+              f'   Total Matches: {red}{totalHits:,}{resetColor}\n')
+        hitsPercent = (totalHits / totalSubstrates) * 100
+        print(f'Substrates with {purple}{sequence}{resetColor}: '
+              f'{red}{totalHits:,}{resetColor} / {red}{totalSubstrates:,}{resetColor} = '
+              f'{red}{round(hitsPercent,self.roundVal)} %{resetColor}')
+
+        if self.plotFigWords:
+            self.plotWordCloud(substrates=hits, combinedMotifs=combinedMotifs)
+
+
+
     def extractMotif(self, substrates, motifFrame, frameIndicies, datasetTag):
         print('================================= Extract Motif '
               '=================================')
