@@ -1667,7 +1667,7 @@ class NGS:
     def calculateProbCodon(self, codonSeq):
         print('======================= Calculate: Residue Probabilities '
               '========================')
-        print(f'Possible codons for {codonSeq}:')
+        print(f'Possible codons for: {codonSeq}')
         nucleotides = ['A', 'C', 'G', 'T']
         S = ['C', 'G']
         K = ['G', 'T']
@@ -2473,9 +2473,10 @@ class NGS:
         for column in heights.columns:
             if heights.loc[:, column].isna().any():
                 nValues = heights[column].notna().sum()
-                print(f'Number non NaN values: {nValues}\n')
+                print(f'Number non NaN values in {column}: {nValues}')
                 heights.loc[heights[column].notna(), column] = yMax / nValues
                 heights.loc[:, column] = heights.loc[:, column].fillna(0)
+        print()
 
         heights = heights.replace([np.inf, -np.inf], 0)
         self.heights = heights
