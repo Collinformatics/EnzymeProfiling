@@ -5531,7 +5531,7 @@ class NGS:
         hitsPercent = (totalHits / totalSubstrates) * 100
         print(f'Substrates with {purple}{sequence}{resetColor}: '
               f'{red}{totalHits:,}{resetColor} / {red}{totalSubstrates:,}{resetColor} = '
-              f'{red}{round(hitsPercent,self.roundVal)} %{resetColor}')
+              f'{red}{round(hitsPercent,self.roundVal)} %{resetColor}\n\n')
 
         if self.plotFigWords:
             self.plotWordCloud(substrates=hits, combinedMotifs=combinedMotifs)

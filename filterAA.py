@@ -12,15 +12,15 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'Mpro2'
+inEnzymeName = 'Mpro2-LQ'
 inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inFixResidues = False
-inFixedResidue = ['L','Q'] # ['R',['G','S']] # [['A','G','S']]
-inFixedPosition = [3,4]
+inFixedResidue = ['V'] # ['C', 'I', 'V'] ['R',['G','S']] # [['A','G','S']]
+inFixedPosition = [1]
 inExcludeResidues = False
 inExcludedResidue = ['']
 inExcludedPosition = []
@@ -52,7 +52,6 @@ if inPlotOnlyWords:
     inPlotMotifEnrichment = False
     inPlotWordCloud = True
 inPlotWordCloud = False # <--------------------
-inPlotBarGraphs = False
 inPlotPCA = False
 inPredictActivity = False
 inPlotSuffixTree = True
@@ -62,6 +61,8 @@ inPlotPositionalProbDist = False # For understanding shannon entropy
 
 # Input 4: Inspecting The data
 inPrintNumber = 10
+inFindSequences = True
+inFindSeq = 'LQT'
 
 # Input 6: Plot Heatmap
 inShowEnrichmentScores = True
@@ -164,7 +165,7 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
-          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotFigPCA=inPlotPCA,
+          plotFigBars=False, NSubBars=inNSequences, plotFigPCA=inPlotPCA,
           numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
@@ -219,11 +220,11 @@ if inFixResidues:
         substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
 else:
     # Load: Substrates
-    substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
-
-    # # Load: Substrates
-    # (substratesInitial, totalSubsInitial,
-    #  substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs()
+    if inFindSequences:
+        (substratesInitial, totalSubsInitial,
+         substratesFinal, totalSubsFinal) = ngs.loadUnfilteredSubs()
+    else:
+        substratesFinal, totalSubsFinal = ngs.loadUnfilteredSubs(loadFinal=True)
 
     # Load: Counts
     countsFinal, countsFinalTotal = ngs.loadCounts(fileType='Final Sort', filter=False,
@@ -350,6 +351,18 @@ if inPredictActivity:
         predSubstrates=inPredictSubstrates, predModel=ngs.datasetTag,
         predLabel=inPredictionTag, rankScores=inRankScores, scaleEMap=inScalePredMatrix)
 
+
+# Find sequences
+if inFindSequences:
+    ngs.findSequence(substrates=substratesInitial,
+                     sequence=inFindSeq,
+                     sortType='Initial Sort')
+
+    ngs.findSequence(substrates=substratesFinal,
+                     sequence=inFindSeq,
+                     sortType='Final Sort')
+
+sys.exit()
 
 
 # ========================================================================================
