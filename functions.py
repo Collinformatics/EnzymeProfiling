@@ -101,6 +101,13 @@ def getFileNames(enzyme):
         inFileNamesFinalSort = ['Mpro2-R4_S3_L001', 'Mpro2-R4_S3_L002',
                                 'Mpro2-R4_S3_L003', 'Mpro2-R4_S3_L004']
         inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
+    elif enzyme.lower() == 'mpro2-lq':
+        enzyme = f'SARS-CoV-2 M{'ᵖʳᵒ'} LQ-NNS'
+        inFileNamesInitialSort = ['Mpro2-LQ-Initial_S3_L001', 'Mpro2-LQ-Initial_S3_L002',
+                                  'Mpro2-LQ-Initial_S3_L003', 'Mpro2-LQ-Initial_S3_L004']
+        inFileNamesFinalSort = ['Mpro2-LQ-R5_S4_L001', 'Mpro2-LQ-R5_S4_L002',
+                                'Mpro2-LQ-R5_S4_L003', 'Mpro2-LQ-R5_S4_L004']
+        inAAPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
     elif enzyme.lower() == 'mmp7':
         enzyme = 'Matrix Metalloproteinase-7'
         inFileNamesInitialSort = ['MMP7-I_S3_L001', 'MMP7-I_S3_L002']
@@ -1683,25 +1690,37 @@ class NGS:
             'F': ['TTT', 'TTC'],
             'P': ['CCT', 'CCC', 'CCA', 'CCG'],
             'S': ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
-            'T': ['ACT', 'ACC', 'ACA', 'ACG'],
+            'T': ['ACT', 'ACC', 'ACA', 'ACG'], # Count occurrences
             'W': ['TGG'],
             'Y': ['TAT', 'TAC'],
             'V': ['GTT', 'GTC', 'GTA', 'GTG']
         }
 
+        codonsRes = {aa: [] for aa in codonsAA.keys()}
+
         # Initialize a list to store all possible combinations
         codons = []
+        codonToAA = {codon: aa for aa, codons in codonsAA.items() for codon in codons}
 
         # Generate all possible combinations
         for combination in product(nucleotides, repeat=len(codonSeq)):
             # Check if the combination satisfies the conditions
             if all((c == 'N') or (c == 'S' and s in S) or (c == 'K' and s in K)
                    for c, s in zip(codonSeq, combination)):
-                codons.append(''.join(combination))
+                codon = ''.join(combination)
+                if codon in codonToAA.keys():
+                    AA = codonToAA[codon]
+                codons.append(codon)
+                codonsRes[AA].append(codon)
 
         # Print: All possible codon combinations
         for index, codon in enumerate(codons, 1):
             print(f'Codon {index}: {codon}')
+        print('')
+
+        print('Available Codons:')
+        for AA, cod in codonsRes.items():
+            print(f'     {AA}: {", ".join(cod)}')
         print('')
 
         # Count the possible codon combinations for each AA
