@@ -5504,6 +5504,7 @@ class NGS:
         print('================================= Find Sequence '
               '=================================')
         print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+              f' Enzyme: {purple}{self.enzymeName}{resetColor}\n'
               f'   Sort: {purple}{sortType}{resetColor}')
         totalSubstrates = 0
         totalHits = 0
@@ -5519,9 +5520,11 @@ class NGS:
         # Find matches
         print(f'Finding Sequence: {purple}{sequence}{resetColor}')
         if len(hits.keys()) > 0:
+            color = pink
             print(f'Hits:')
             for index, (substrate, count) in enumerate(hits.items()):
-                print(f'  {pink}{substrate}{resetColor}, {red}{count:,}{resetColor}')
+                sub = substrate.replace(sequence, f'{blue}{sequence}{color}')
+                print(f'  {color}{sub}{resetColor}, {red}{count:,}{resetColor}')
                 if index >= self.printNumber:
                     break
         else:
