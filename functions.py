@@ -5488,7 +5488,7 @@ class NGS:
               f' Total Sequences: {red}{totalSubstrates:,}{resetColor}\n')
 
         # Find matches
-        print(f'Finding Sequence: {purple}{sequence}{resetColor}')
+        print(f'Finding Sequence: {purple}{", ".join(sequence)}{resetColor}')
         if len(hits.keys()) > 0:
             color = pink
             print(f'Hits:')
@@ -5510,7 +5510,7 @@ class NGS:
         print(f'Unique Sequences: {red}{len(hits.keys()):,}{resetColor}\n'
               f'   Total Matches: {red}{totalHits:,}{resetColor}\n')
         hitsPercent = (totalHits / totalSubstrates) * 100
-        print(f'Substrates with {purple}{sequence}{resetColor}: '
+        print(f'Substrates with {purple}{", ".join(sequence)}{resetColor}: '
               f'{red}{totalHits:,}{resetColor} / {red}{totalSubstrates:,}{resetColor} = '
               f'{red}{round(hitsPercent,self.roundVal)} %{resetColor}\n\n')
 
