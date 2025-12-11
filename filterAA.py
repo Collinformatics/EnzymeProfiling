@@ -19,8 +19,8 @@ inSetFigureTimer = False
 
 # Input 2: Computational Parameters
 inFixResidues = False
-inFixedResidue = ['V'] # ['C', 'I', 'V'] ['R',['G','S']] # [['A','G','S']]
-inFixedPosition = [1]
+inFixedResidue = ['L','Q'] # ['C', 'I', 'V'] ['R',['G','S']] # [['A','G','S']]
+inFixedPosition = [6,7]
 inExcludeResidues = False
 inExcludedResidue = ['']
 inExcludedPosition = []
@@ -44,47 +44,43 @@ inPlotWeblogo = True
 inPlotMotifEnrichment = True
 inPlotWordCloud = True
 if inPlotOnlyWords:
-    inPlotEntropy = False
-    inPlotEnrichmentMap = False
+    #inPlotEntropy = False
+    #inPlotEnrichmentMap = False
     inPlotEnrichmentMapScaled = False
-    inPlotLogo = False
+    #inPlotLogo = False
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotWordCloud = True
-inPlotWordCloud = False # <--------------------
+# inPlotWordCloud = False # <--------------------
+inPlotAADistribution = False
+inPlotBarGraphs = True
 inPlotPCA = False
 inPredictActivity = False
-inPlotSuffixTree = True
 inPlotCounts = False
-inPlotAADistribution = False
 inPlotPositionalProbDist = False # For understanding shannon entropy
 
 # Input 4: Inspecting The data
 inPrintNumber = 10
 inFindSequences = True
-inFindSeq = 'LQT'
+inFindSeq = ['LQS','LQA']
 
-# Input 6: Plot Heatmap
+# Input 5: Plot Heatmap
 inShowEnrichmentScores = True
 inShowEnrichmentAsSquares = False
 inYLabelEnrichmentMap = 2 # 0 for full Residue name, 1 for 3-letter code, 2 for 1 letter
 
-# Input 7: Plot Sequence Motif
+# Input 6: Plot Sequence Motif
 inBigLettersOnTop = False
 inLimitYAxis = False
 
-# Input 8: Word Cloud
+# Input 7: Word Cloud
 inLimitWords = True
 inTotalWords = 50
 
-# Input 9: Bar Graphs
+# Input 8: Bar Graphs
 inNSequences = 50
 
-# Input 10: Scan For AA Sequences
-inScanForSequences = False
-inFindSequences = ['KRGG', 'RRGG']
-
-# Input 10: PCA
+# Input 9: PCA
 inPCAMotif = False
 inNumberOfPCs = 2
 inTotalSubsPCA = 10000
@@ -93,7 +89,7 @@ inExtractPopulations = False
 inPlotEntropyPCAPopulations = False
 inAdjustZeroCounts = False # Prevent counts of 0 in PCA EM & Motif
 
-# Input 11: Predict Activity
+# Input 10: Predict Activity
 inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
@@ -113,17 +109,17 @@ inPredictSubstrates = ['AVLQSGFR', 'VILQSGFR', 'VILQSPFR', 'VILHSGFR', 'VIMQSGFR
 inRankScores = False
 inScalePredMatrix = False # Scale EM by ΔS
 
-# Input 12: Optimal Substrates
+# Input 11: Optimal Substrates
 inEvaluateOS = False
 inPrintOSNumber = 10
 inMaxResidueCount = 4
 
-# Input 13: Evaluate Substrate Enrichment
+# Input 12: Evaluate Substrate Enrichment
 inEvaluateSubstrateEnrichment = False # ============= Fix: Load Initial Subs =============
 inSaveEnrichedSubstrates = False
 inNumberOfSavedSubstrates = 10**6
 
-# Input 14: Evaluate Positional Preferences
+# Input 13: Evaluate Positional Preferences
 inPlotPosProb = False # Plot RF distributions of a given AA
 inCompairAA = 'L' # Select AA of interest (different A than inFixedResidue)
 
@@ -165,8 +161,8 @@ ngs = NGS(enzymeName=enzymeName, substrateLength=len(labelAAPos),
           plotFigEMScaled=inPlotEnrichmentMapScaled, plotFigLogo=inPlotLogo,
           plotFigWebLogo=inPlotWeblogo, plotFigMotifEnrich=inPlotMotifEnrichment,
           plotFigWords=inPlotWordCloud, wordLimit=inLimitWords, wordsTotal=inTotalWords,
-          plotFigBars=False, NSubBars=inNSequences, plotFigPCA=inPlotPCA,
-          numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=inPlotSuffixTree,
+          plotFigBars=inPlotBarGraphs, NSubBars=inNSequences, plotFigPCA=inPlotPCA,
+          numPCs=inNumberOfPCs, NSubsPCA=inTotalSubsPCA, plotSuffixTree=False,
           saveFigures=inSaveFigures, setFigureTimer=inSetFigureTimer)
 
 
@@ -269,6 +265,19 @@ ngs.recordSampleSize(NInitial=countsInitialTotal, NFinal=countsFinalTotal,
 probFinal = ngs.calculateRF(counts=countsFinal, N=countsFinalTotal,
                             fileType='Final Sort')
 
+if inPlotAADistribution:
+    # Plot: AA probabilities in initial and final sorts
+    ngs.plotLibraryProbDist(probInitial=probInitial, probFinal=probFinal,
+                            codonType=inCodonSequence, datasetTag=fixedSubSeq)
+
+    # Evaluate: Degenerate codon probabilities
+    probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
+
+    # Plot: Codon probabilities
+    ngs.plotLibraryProbDist(probInitial=probFinal, probFinal=probCodon,
+                            codonType=inCodonSequence, datasetTag=inCodonSequence,
+                            skipInitial=True)
+
 # Calculate: Positional entropy
 entropy = ngs.calculateEntropy(rf=probFinal)
 
@@ -281,12 +290,6 @@ if inUseCodonProb:
 else:
     enrichmentScores = ngs.calculateEnrichment(rfInitial=probInitial,
                                                rfFinal=probFinal)
-
-# Scan for partial AA sequences
-if inScanForSequences:
-    ngs.scanForSequence(seqsScan=inFindSequences, substrates=substratesFinal,
-                        datasetType='Final Sort')
-
 
 # Evaluate: Sequences
 if inUseEnrichmentFactor:
@@ -351,18 +354,24 @@ if inPredictActivity:
         predSubstrates=inPredictSubstrates, predModel=ngs.datasetTag,
         predLabel=inPredictionTag, rankScores=inRankScores, scaleEMap=inScalePredMatrix)
 
+# Plot: Word cloud
+if inPlotWordCloud and not inUseEnrichmentFactor:
+    ngs.plotWordCloud(substrates=substratesFinal)
+
+# Plot: Bar graphs
+if inPlotBarGraphs and not inUseEnrichmentFactor:
+    ngs.plotBarGraph(substrates=substratesFinal, dataType='Counts')
+    ngs.plotBarGraph(substrates=substratesFinal, dataType='Relative Frequency')
 
 # Find sequences
 if inFindSequences:
     ngs.findSequence(substrates=substratesInitial,
                      sequence=inFindSeq,
                      sortType='Initial Sort')
-
+    #sys.exit()
     ngs.findSequence(substrates=substratesFinal,
                      sequence=inFindSeq,
                      sortType='Final Sort')
-
-sys.exit()
 
 
 # ========================================================================================
@@ -435,23 +444,10 @@ if inEvaluateSubstrateEnrichment:
                                 NSubs=inNumberOfSavedSubstrates,
                                 saveData=inSaveEnrichedSubstrates)
 
-
-if inPlotAADistribution:
-    # Plot: AA probabilities in initial and final sorts
-    ngs.plotLibraryProbDist(probInitial=probInitial, probFinal=probFinal,
-                            codonType=inCodonSequence, datasetTag=fixedSubSeq)
-
-    # Evaluate: Degenerate codon probabilities
-    probCodon = ngs.calculateProbCodon(codonSeq=inCodonSequence)
-
-    # Plot: Codon probabilities
-    ngs.plotLibraryProbDist(probInitial=probFinal, probFinal=probCodon,
-                            codonType=inCodonSequence, datasetTag=inCodonSequence,
-                            skipInitial=True)
-
 if inPlotCounts:
     # Plot the data
-    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal)
+    ngs.plotCounts(countedData=countsFinal, totalCounts=countsFinalTotal,
+                   fileName=ngs.datasetTag)
 
 if inPlotPositionalProbDist:
     ngs.plotPositionalProbDist(probability=probFinal, entropyScores=entropy,

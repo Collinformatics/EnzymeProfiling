@@ -817,9 +817,11 @@ class NGS:
                     sys.exit(1)
 
         # Count the occurrences of each residue
+        totalSubs = 0
         if countMotif:
             # Count the AAs
             for substrate, counts in substrates.items():
+                totalSubs += counts
                 indicesResidue = [self.letters.index(AA) for AA in substrate]
                 for position, indexResidue in enumerate(indicesResidue):
                     countedData.iloc[indexResidue, position] += counts
@@ -831,6 +833,7 @@ class NGS:
         else:
             # Count the AAs
             for substrate, counts in substrates.items():
+                totalSubs += counts
                 indicesResidue = [self.letters.index(AA) for AA in substrate]
                 for position, indexResidue in enumerate(indicesResidue):
                     countedData.iloc[indexResidue, position] += counts
@@ -850,7 +853,7 @@ class NGS:
 
 
         # Sanity Check: Do the sums of each column match the total number of substrates?
-        totalSubs = sum(countedData.iloc[:, 0])
+        #totalSubs = sum(countedData.iloc[:, 0])
         for indexColumn in countedData.columns:
             columnSum = sum(countedData.loc[:, indexColumn])
             if columnSum != totalSubs:
@@ -1766,52 +1769,6 @@ class NGS:
             print(f'{np.round(rf, 4)}\n\n')
 
         return rf
-
-
-
-    def scanForSequence(self, seqsScan, substrates, datasetType):
-        print('======================= Scanning For Substrate Sequences '
-              '========================')
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f'File Type: {purple}{datasetType}{resetColor}\n')
-
-        # Evaluate sample size
-        totalCounts = sum(substrates.values())
-        print(f'Total Substrates: {red}{totalCounts:,}{resetColor}\n')
-
-        print(f'Collecting substrates with:{blue}')
-        for sequence in seqsScan:
-            print(f'     {sequence}')
-        print(f'{resetColor}')
-
-        # Collect substrates with sequences of interest
-        collectedSubs = {}
-        totalCollected = 0
-        for substrate, count in substrates.items():
-            for sequence in seqsScan:
-                if sequence in substrate:
-                    totalCollected += count
-                    if sequence in collectedSubs.keys():
-                        collectedSubs[substrate] += count
-                    else:
-                        collectedSubs[substrate] = count
-        collectedSubs = dict(sorted(collectedSubs.items(),
-                                    key=lambda x: x[1], reverse=True))
-
-        print(f'Collected Substrates:')
-        for index, (substrate, count) in enumerate(collectedSubs.items()):
-            print(f'     {greenLight}{substrate}{resetColor}: Counts {red}{count:,}')
-            if index >= 10:
-                break
-
-        print(f'{resetColor}\n'
-              f'Total collected substrates: {red}{totalCollected:,}{resetColor}\n'
-              f'Total unique substrates: {red}{len(collectedSubs.keys()):,}'
-              f'{resetColor}\n\n'
-              f'Percent collected: {red}{totalCollected:,}{resetColor} / '
-              f'{red}{totalCounts:,}{resetColor} = '
-              f' {red}{round((totalCollected/totalCounts),3)*100} %'
-              f'{resetColor}')
 
 
 
@@ -3049,7 +3006,7 @@ class NGS:
                     subsInit=subsInit, subsFinal=subsFinal, motifs=predictions,
                     predActivity=predActivity, predModel=predModel, predType=predType)
 
-                # Plot: Work cloud
+                # Plot: Word cloud
                 self.plotWordCloud(substrates=motifES, combinedMotifs=combinedMotifs,
                                    predActivity=predActivity, predModel=predModel)
 
@@ -3060,7 +3017,7 @@ class NGS:
                 subsInit=subsInit, subsFinal=subsFinal, motifs=motifs,
                 predActivity=predActivity, predModel=predModel)
 
-        # Plot: Work cloud
+        # Plot: Word cloud
         if self.plotFigWords:
             self.plotWordCloud(substrates=motifES, combinedMotifs=combinedMotifs)
 
@@ -3102,7 +3059,7 @@ class NGS:
                                              clusterNumPCA=NClusterAdj,
                                              limitNBars=True)
 
-                # Plot: Work cloud
+                # Plot: Word cloud
                 self.plotWordCloud(substrates=motifCluster, clusterNumPCA=NClusterAdj,
                                    combinedMotifs=combinedMotifs)
 
@@ -4685,7 +4642,7 @@ class NGS:
         #                showYTicks=False, addHorizontalLines=inAddHorizontalLines,
         #                motifFilter=False, duplicateFigure=False, saveTag=datasetTag)
 
-        # Plot: Work cloud
+        # Plot: Word cloud
         self.plotWordCloud(substrates=substrates)
 
 
@@ -5503,17 +5460,30 @@ class NGS:
     def findSequence(self, substrates, sequence, sortType, combinedMotifs=False):
         print('================================= Find Sequence '
               '=================================')
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
-              f' Enzyme: {purple}{self.enzymeName}{resetColor}\n'
-              f'   Sort: {purple}{sortType}{resetColor}')
+        if 'initial' in sortType.lower():
+            print(f'Dataset: {purple}Unfiltered{resetColor}\n'
+                  f' Enzyme: {purple}{self.enzymeName}{resetColor}\n'
+                  f'   Sort: {purple}{sortType}{resetColor}')
+        else:
+            print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+                  f' Enzyme: {purple}{self.enzymeName}{resetColor}\n'
+                  f'   Sort: {purple}{sortType}{resetColor}')
         totalSubstrates = 0
         totalHits = 0
         hits = {}
-        for substrate, count in substrates.items():
-            totalSubstrates += count
-            if sequence in substrate:
-                totalHits += count
-                hits[substrate] = count
+        if isinstance(sequence, str):
+            for substrate, count in substrates.items():
+                totalSubstrates += count
+                if sequence in substrate:
+                    totalHits += count
+                    hits[substrate] = count
+        else:
+            for substrate, count in substrates.items():
+                totalSubstrates += count
+                for seq in sequence:
+                    if seq in substrate:
+                        totalHits += count
+                        hits[substrate] = count
         print(f'Unique Sequences: {red}{len(substrates.keys()):,}{resetColor}\n'
               f' Total Sequences: {red}{totalSubstrates:,}{resetColor}\n')
 
@@ -5522,11 +5492,19 @@ class NGS:
         if len(hits.keys()) > 0:
             color = pink
             print(f'Hits:')
-            for index, (substrate, count) in enumerate(hits.items()):
-                sub = substrate.replace(sequence, f'{blue}{sequence}{color}')
-                print(f'  {color}{sub}{resetColor}, {red}{count:,}{resetColor}')
-                if index >= self.printNumber:
-                    break
+            if isinstance(sequence, str):
+                for index, (substrate, count) in enumerate(hits.items()):
+                    substrate = substrate.replace(sequence, f'{blue}{sequence}{color}')
+                    print(f'  {color}{substrate}{resetColor}, {red}{count:,}{resetColor}')
+                    if index >= self.printNumber:
+                        break
+            else:
+                for index, (substrate, count) in enumerate(hits.items()):
+                    for seq in sequence:
+                        substrate = substrate.replace(seq, f'{blue}{seq}{color}')
+                    print(f'  {color}{substrate}{resetColor}, {red}{count:,}{resetColor}')
+                    if index >= self.printNumber:
+                        break
         else:
             print(f'Hits: {red}{totalHits}{resetColor}')
         print(f'Unique Sequences: {red}{len(hits.keys()):,}{resetColor}\n'
@@ -5535,9 +5513,6 @@ class NGS:
         print(f'Substrates with {purple}{sequence}{resetColor}: '
               f'{red}{totalHits:,}{resetColor} / {red}{totalSubstrates:,}{resetColor} = '
               f'{red}{round(hitsPercent,self.roundVal)} %{resetColor}\n\n')
-
-        if self.plotFigWords:
-            self.plotWordCloud(substrates=hits, combinedMotifs=combinedMotifs)
 
 
 
