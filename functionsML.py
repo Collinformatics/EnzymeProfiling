@@ -735,7 +735,8 @@ class RandomForestRegressorXGB:
             runtimeTotal = round((end - startTraining) / 60, self.roundVal)
             rate = round(totalParamCombos / runtimeTotal, self.roundVal)
             print(f'Training Completed\n')
-            for tag, params in self.bestParams.items():
+            for tag in self.models.items():
+                params = self.bestParams[tag]
                 print(f'Subset: {pink}{tag}{resetColor}\n'
                       f'Best Hyperparameters: {greenLight}{params}{resetColor}\n'
                       f'Accuracy:\n{blue}{self.modelAccuracy[tag]}{resetColor}\n')
@@ -926,6 +927,10 @@ class PredictActivity:
         self.subsPercentSelectBottom = subsPercentSelectBottom
         self.maxTrainingScore = maxTrainingScore
         self.subsTrainN = len(self.subsTrain.keys())
+        for index, (sub, count) in enumerate(self.subsTrain.items()):
+            print(index, sub, count)
+        print(f'\nN = {self.subsTrainN}')
+
         self.subsPred = subsPred
         self.subsPredN = len(subsPred)
         self.subsPredChosen = subsPredChosen
@@ -975,7 +980,7 @@ class PredictActivity:
                 self.subsetTagLow: accuracyDF.copy(),
             }
         self.concatESM = concatESM
-        self.layersESM = layersESM
+        self.layersESM = layersESM # [0] if len(layersESM) == 1 else layersESM
         self.layersESMTag = f'ESM L{self.layersESM}'.replace(', ', ',')
         self.embeddingsPathTrain = []
         self.embeddingsPathPred = []
@@ -997,15 +1002,17 @@ class PredictActivity:
         else:
             scoreType = 'Counts'
         self.embeddingsTagTrain = (
-            f'Embeddings - {self.layersESMTag} {self.sizeESM} - Batch '
+            f'Embeddings - {self.layersESMTag} - Batch '
             f'{self.batchSize} - {self.enzymeName} - {self.datasetTag} - {scoreType} - '
             f'MinCounts {self.minSubCount} - N {self.subsTrainN} - '
             f'{self.subsLen} AA')
         self.embeddingsTagPred = (
-            f'Embeddings - {self.layersESM} {self.sizeESM} - Batch '
+            f'Embeddings - {self.layersESMTag} - Batch '
             f'{self.batchSize} - {self.enzymeName} -  Predictions - '
             f'Min ES {self.minES} - {scoreType} - MinCounts {self.minSubCount} - '
             f'N {self.subsPredN} - {self.subsLen} AA')
+        print(f'Tag: Train\n     {self.embeddingsTagTrain}\n\n'
+              f'Tag: Pred\n     {self.embeddingsTagPred}\n\n')
         if (self.concatESM
                 and isinstance(self.layersESM, list)
                 and len(self.layersESM) > 1):
@@ -1015,14 +1022,20 @@ class PredictActivity:
                 self.embeddingsPathTrain.append(
                     os.path.join(self.pathEmbeddings, filePath))
         else:
+            print('Here')
             self.concatESM = False
-            if isinstance(self.layersESM, int):
-                self.layersESM = [self.layersESM]
-            filePath = f'{self.embeddingsTagTrain.replace(
-            'ESM', f'ESM L{self.layersESM[0]}')}.csv'
+            print(f'Path:\n     {self.embeddingsTagTrain}\n')
+            if len(layersESM) == 1:
+                print('A')
+            # if isinstance(self.layersESM, int):
+                # self.layersESM = [self.layersESM]
+                self.embeddingsTagTrain = f'{self.embeddingsTagTrain.replace(
+                f'ESM L{self.layersESM}', f'ESM L{self.layersESM[0]}')}.csv'
+            print(f'New:\n     {self.embeddingsTagTrain}')
             self.embeddingsPathTrain.append(
-                    os.path.join(self.pathEmbeddings, filePath))
-
+                    os.path.join(self.pathEmbeddings, self.embeddingsTagTrain))
+        print(f'{self.layersESM}')
+        sys.exit()
         for layer in self.layersESM:
             filePath = f'{self.embeddingsTagPred.replace(
                 f'{self.layersESMTag}', f'ESM L{layer}')}.csv'
@@ -1225,9 +1238,9 @@ class PredictActivity:
             if any(layer > layersESMMax for layer in layersESM):
                 return None
 
-
             # Get: Batch tensor
             batchConverter = alphabet.get_batch_converter()
+
 
             # # Step 3: Convert substrates to ESM model format and generate Embeddings
             try:
@@ -1362,6 +1375,7 @@ class PredictActivity:
             # Load: ESM Embeddings
             genEmbeddings = False
             for index, pathEmbeddings in enumerate(filePaths):
+                print(f'ESM Path: {pathEmbeddings}')
                 if not os.path.exists(pathEmbeddings):
                     genEmbeddings = True
                     layer = self.layersESM[index]
