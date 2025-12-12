@@ -12,7 +12,7 @@ import sys
 
 # ===================================== User Inputs ======================================
 # Input 1: Select Dataset
-inEnzymeName = 'ELN'
+inEnzymeName = 'Mpro2'
 inPathFolder = f'Enzymes/{inEnzymeName}'
 inSaveFigures = True
 inSetFigureTimer = False
@@ -25,8 +25,8 @@ inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
-inFixedResidue = [['C', 'I', 'V']]
-inFixedPosition = [4,5,6]
+inFixedResidue = ['Q']
+inFixedPosition = [4]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
@@ -53,7 +53,7 @@ if inPlotOnlyWords:
     inPlotWeblogo = False
     inPlotMotifEnrichment = False
     inPlotWordCloud = True
-inPlotStats = True
+inPlotStats = False
 inPlotBarGraphs = True
 inPlotPCA = False # PCA plot of the combined set of motifs
 inPlotSuffixTree = True
@@ -67,6 +67,9 @@ inShowSampleSize = True # Include the sample size in your figures
 
 # Input 5: Processing The Data
 inPrintNumber = 10
+inFindSequences = True
+inFindSeq = ['LVLQSNDL','ATLQGLMI','TVLQAAML','VSLQSTYK','VSLQGAEL',
+             'VVLQSATE','ASLQALCV','CRLQGQMR','SWLQADIH','CMLQAATC']
 
 # Input 6: Plot Heatmap
 inShowEnrichmentScores = True
@@ -108,12 +111,11 @@ inPredictSubstrates = ['AVLQSGFR', 'VILQAGFR', 'VILQAPFR', 'LVLQSNDL',
 # inPredictionTag = 'FP19-23'
 # inPredictSubstrates = ['AVLQSGFR', 'CILQAVFH', 'VVLQAVMH',
 #                        'SILQCVLM', 'VMLQAVFH', 'PLLQAILM']
-# inPredictionTag = 'Heatmap Substrates'
-# inPredictSubstrates = ['AVLQSGFR', 'VILQSGFR', 'VILQSPFR', 'VILHSGFR', 'VIMQSGFR',
-#                        'VPLQSGFR', 'NILQSGFR', 'VILQTGFR', 'PILQSGFR', 'PIMQSGFR']
+inPredictionTag = 'Heatmap Substrates'
+inPredictSubstrates = ['AVLQSG', 'VILQSG', 'VILQTG', 'VILQSP',
+                       'VILHSG', 'VIMQSG', 'VPLQSG', 'NILQSG']
 inRankScores = False
 inScalePredMatrix = False # Scale EM by ΔS
-
 
 # Input 12: Codon Enrichment
 inPredictCodonsEnrichment = False
@@ -913,6 +915,15 @@ ngs.calculateEntropy(rf=rfCombinedReleasedMotif,
 ngs.calculateEnrichment(rfInitial=rfInitial, rfFinal=rfCombinedReleasedMotif,
                         combinedMotifs=combinedMotifs, releasedCounts=True)
 
+# Find sequences
+if inFindSequences:
+    ngs.findSequence(substrates=substratesInitial, sequence=inFindSeq,
+                     sortType='Initial Sort')
+    ngs.findSequence(substrates=substratesFiltered, sequence=inFindSeq,
+                     sortType='Final Sort')
+
+sys.exit()
+
 
 # Predict substrate activity
 if inPredictActivity:
@@ -932,7 +943,7 @@ if inPredictCodonsEnrichment:
 ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
                       motifs=motifs, subLabel=inMotifPositions,
                       combinedMotifs=combinedMotifs)
-sys.exit()
+
 
 # # Evaluate: Motif Sequences
 # Count fixed substrates

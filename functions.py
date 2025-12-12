@@ -5471,6 +5471,7 @@ class NGS:
         totalSubstrates = 0
         totalHits = 0
         hits = {}
+        useStr = True
         if isinstance(sequence, str):
             for substrate, count in substrates.items():
                 totalSubstrates += count
@@ -5478,6 +5479,7 @@ class NGS:
                     totalHits += count
                     hits[substrate] = count
         else:
+            useStr = False
             for substrate, count in substrates.items():
                 totalSubstrates += count
                 for seq in sequence:
@@ -5488,11 +5490,14 @@ class NGS:
               f' Total Sequences: {red}{totalSubstrates:,}{resetColor}\n')
 
         # Find matches
-        print(f'Finding Sequence: {purple}{", ".join(sequence)}{resetColor}')
+        if useStr:
+            print(f'Finding Sequence: {purple}{sequence}{resetColor}')
+        else:
+            print(f'Finding Sequence: {purple}{", ".join(sequence)}{resetColor}')
         if len(hits.keys()) > 0:
             color = pink
             print(f'Hits:')
-            if isinstance(sequence, str):
+            if useStr:
                 for index, (substrate, count) in enumerate(hits.items()):
                     substrate = substrate.replace(sequence, f'{blue}{sequence}{color}')
                     print(f'  {color}{substrate}{resetColor}, {red}{count:,}{resetColor}')
@@ -5510,9 +5515,9 @@ class NGS:
         print(f'Unique Sequences: {red}{len(hits.keys()):,}{resetColor}\n'
               f'   Total Matches: {red}{totalHits:,}{resetColor}\n')
         hitsPercent = (totalHits / totalSubstrates) * 100
-        print(f'Substrates with {purple}{", ".join(sequence)}{resetColor}: '
-              f'{red}{totalHits:,}{resetColor} / {red}{totalSubstrates:,}{resetColor} = '
-              f'{red}{round(hitsPercent,self.roundVal)} %{resetColor}\n\n')
+        print(f'Hit Population: {red}{totalHits:,}{resetColor} / {red}{totalSubstrates:,}'
+              f'{resetColor} = {red}{round(hitsPercent,self.roundVal)} %'
+              f'{resetColor}\n\n')
 
 
 
