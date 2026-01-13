@@ -447,6 +447,16 @@ class NGS:
 
 
 
+    @staticmethod
+    def zScore(dist, AA):
+        x = dist.loc[AA]
+        dist = np.asarray(dist)
+        mu = dist.mean()
+        sigma = dist.std(ddof=0) # population std
+        return (x - mu) / sigma
+
+
+
     def loadAndTranslate(self, filePath, fileName, fileType, fixedSubs,
                          startSeq, endSeq, printQS, forwardRead):
         if forwardRead is None:
@@ -6012,11 +6022,11 @@ class NGS:
 
 
 
-    def predictActivityHeatmap(self, predSubstrates, predModel, predLabel,
+    def predictActivityHeatmap(self, predSubstrates, predModel, predLabel, RF,
                                releasedCounts=False, rankScores=True, scaleEMap=False):
         print('=========================== Predict Substrate Activity '
               '==========================')
-        print(f'Dataset: {purple}{self.datasetTag}{resetColor}\n'
+        print(f'Dataset: {purple}{predModel}{resetColor}\n'
               f'Evaluating {red}{len(predSubstrates):,}{resetColor} '
               f'Substrate Sequences\n')
         sublen = len(next(iter(predSubstrates)))
@@ -6026,6 +6036,7 @@ class NGS:
             eMap = self.eMapReleased
         else:
             eMap = self.eMap
+        # eMap = RF # ====================================================================
         if scaleEMap:
             print(f'Scaling Prediction matrix\nEntropy:\n{self.entropy}\n\n')
             for column in eMap.columns:
@@ -6041,31 +6052,71 @@ class NGS:
                       f'     Enrichment Map: {cyan}{eMap.columns}{orange}\n'
                       f'          Substrate: {cyan}{substrate}\n\n')
                 sys.exit(1)
-
         print(f'Prediction Matrix:\n{eMap}\n\n')
+        print(f'Relative Frequency:\n{RF}\n\n')
 
         # Predict activity
         activityScores = {}
         addES = 0
         for substrate in predSubstrates:
+            print(f'Sub: {pink}{substrate}{resetColor}')
             score = 0
-            # print(f'Substrate: {pink}{substrate}{resetColor}')
-            for index in range(sublen):
-                AA = substrate[index]
-                pos = eMap.columns[index]
-                ES = eMap.loc[AA, pos]
-                # print(f'AA ({index}): {AA}\n'
-                #       f'  ES: {ES}')
-                # if abs(ES) >= 0.5:
-                if 1 == 1: # Scale ES
-                    print(f'ES ({AA}): {red}{ES}{resetColor}')
-                    ES -= abs(ES) if ES < 0 else ES
-                    # ES -= 2 ** abs(ES) if ES < 0 else 0
-                    print(f'* ES ({AA}): {red}{ES}{resetColor}\n')
-                addES += 1
-                score += ES
+            x = 0
+            temp = 'VILQSG'
+            if x == 1:
+                for index in range(sublen):
+                    AA = substrate[index]
+                    pos = eMap.columns[index]
+                    ES = eMap.loc[AA, pos]
+                    values = eMap.loc[:, pos]
+                    z = self.zScore(values, AA=AA)
+                    if temp[index] != AA:
+                        print(f'* Z ({blue}{AA}{resetColor}): '
+                              f'{blue}{z:.{self.roundVal}}{resetColor}, '
+                              f'ES: {blue}{ES:.{self.roundVal}}{resetColor}')
+                    else:
+                        print(f'* Z ({AA}): {z:.{self.roundVal}}, ES: {ES:.{self.roundVal}}')
+                    v = z * ES
+                    print(f'    Scaled: {v:.{self.roundVal}}')
+                    score += z * ES
+            else:
+                for index in range(sublen):
+                    AA = substrate[index]
+                    pos = eMap.columns[index]
+                    ES = eMap.loc[AA, pos] # * self.entropy.iloc[index, 0]
+                    rf = RF.loc[AA, pos]
+                    # print(f'AA ({index}): {AA}\n'
+                    #       f'  ES: {ES}')
+                    # if abs(ES) >= 0.5:
+                    if 1 == 2: # Scale ES
+                        print(f'ES ({AA}): {red}{ES}{resetColor}')
+                        ES -= abs(ES) if ES < 0 else ES
+                        # ES -= 2 ** abs(ES) if ES < 0 else 0
+                        print(f'* ES ({AA}): {red}{ES}{resetColor}\n')
+                    if temp[index] != AA:
+                        print(f'* RF ({blue}{AA}{resetColor}): '
+                              f'{blue}{rf:.{self.roundVal}}{resetColor}, '
+                              f'ES: {blue}{ES:.{self.roundVal}}{resetColor}')
+                    else:
+                        print(f'* RF ({AA}): {rf:.{self.roundVal}}, '
+                              f'ES: {ES:.{self.roundVal}}')
+                    addES += 1
+
+                    # Scale
+                    if ES < 0:
+                        values = RF.loc[:, pos]
+                        inv = self.zScore(values, AA=AA)
+                        inv = abs(inv)
+                        inv = np.log2(1 / rf)
+                        #inv = 1 / rf
+                        scale = ES * inv
+                        print(f'     Inv: {red}{inv:.3}{resetColor}\n'
+                              f'  Scaled: {red}{scale:.3}{resetColor}')
+                        score += scale
+                    else:
+                        score += ES
             activityScores[substrate] = score # + 2.6
-            # print(f'Score: {score}\n')
+            print(f'Score: {red}{score:.{self.roundVal}}{resetColor}\n')
 
         if rankScores:
             activityScores = dict(sorted(activityScores.items(),
@@ -6095,8 +6146,11 @@ class NGS:
 
         # Calculate: Activity levels
         for substrate, score in activityScores.items():
-            activityScores[substrate] = 10 ** (score / maxActivity) # + abs(maxActivity)
-
+            x = 1
+            if x == 1:
+                activityScores[substrate] = 10 ** (score / maxActivity) # + abs(maxActivity)
+            else:
+                activityScores[substrate] = score / maxActivity
         print(f'Predicted Normalized Activity:')
         for index, (substrate, ES) in enumerate(activityScores.items()):
             print(f'     {pink} {substrate}{resetColor}, '
@@ -6199,4 +6253,3 @@ class NGS:
         fig.canvas.mpl_connect('key_press_event', pressKey)
 
         plt.show()
-
