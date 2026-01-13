@@ -6057,31 +6057,47 @@ class NGS:
                 # print(f'AA ({index}): {AA}\n'
                 #       f'  ES: {ES}')
                 # if abs(ES) >= 0.5:
-                if ES < 0:
-                    ES *= 5
+                if 1 == 1: # Scale ES
+                    print(f'ES ({AA}): {red}{ES}{resetColor}')
+                    ES -= abs(ES) if ES < 0 else ES
+                    # ES -= 2 ** abs(ES) if ES < 0 else 0
+                    print(f'* ES ({AA}): {red}{ES}{resetColor}\n')
                 addES += 1
                 score += ES
-            activityScores[substrate] = score
+            activityScores[substrate] = score # + 2.6
             # print(f'Score: {score}\n')
 
         if rankScores:
             activityScores = dict(sorted(activityScores.items(),
                                          key=lambda x: x[1], reverse=True))
 
-
-        print(f'Predicted Activity:')
+        maxActivity = max(activityScores.values())
+        print(f'Predicted Activity: '
+              f'(Max Score: {red}{round(maxActivity, self.roundVal)}{resetColor})')
         for index, (substrate, ES) in enumerate(activityScores.items()):
             print(f'     {pink} {substrate}{resetColor}, '
                   f'ES:{red} {ES:.3f}{resetColor}')
         print()
 
-        maxActivity = max(activityScores.values())
+        # Adjust values
+
+        if 1 == 2:
+            minActivity = abs(min(activityScores.values()))
+            print(f'Increased Activity Scores:')
+            print(f'* Set min value to 0: {red}{minActivity:.3f}{resetColor}')
+            for substrate, score in activityScores.items():
+                score = score + minActivity
+                activityScores[substrate] = score
+                print(f'     {pink} {substrate}{resetColor}, '
+                      f'ES:{red} {score:.3f}{resetColor}')
+            maxActivity = max(activityScores.values())
+            print(f'New max value: {red}{maxActivity:.3f}{resetColor}\n')
+
+        # Calculate: Activity levels
         for substrate, score in activityScores.items():
-            activityScores[substrate] = score / maxActivity
+            activityScores[substrate] = 10 ** (score / maxActivity) # + abs(maxActivity)
 
-
-        print(f'Predicted Normalized Activity: '
-              f'(Max Score: {red}{round(maxActivity, self.roundVal)}{resetColor})')
+        print(f'Predicted Normalized Activity:')
         for index, (substrate, ES) in enumerate(activityScores.items()):
             print(f'     {pink} {substrate}{resetColor}, '
                   f'ES:{red} {ES:.3f}{resetColor}')
