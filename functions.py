@@ -6102,9 +6102,11 @@ class NGS:
         dec = self.roundVal - 1
         print(f'Predicted Activity: '
               f'(Max Score: {red}{maxActivity:.{dec}e}{resetColor})')
-        for substrate, activity in activityPred.items():
-            print(f'     {pink} {substrate}{resetColor}, '
-                  f'ES:{red} {activity:.{dec}e}{resetColor}')
+        for index, (substrate, activity) in enumerate(activityPred.items(), start=1):
+            print(f'    {pink}{substrate}{resetColor}, '
+                  f'Score: {red}{activity:.{dec}e}{resetColor}')
+            if index == self.printNumber:
+                break
         print()
 
         # Normalize values
@@ -6113,24 +6115,33 @@ class NGS:
             activityPred[substrate] = activity / maxActivity
             activityExp[substrate] = activityExp[substrate] / maxExpActivity
         print(f'Predicted Normalized Activity:')
-        for substrate, ES in activityPred.items():
-            print(f'     {pink} {substrate}{resetColor}, '
-                  f'Score: {red}{ES:,.{self.roundVal}f}{resetColor}')
+        for index, (substrate, activity) in enumerate(activityPred.items(), start=1):
+            print(f'    {pink}{substrate}{resetColor}, '
+                  f'Score: {red}{activity:,.{self.roundVal}f}{resetColor}')
+            if index == self.printNumber:
+                break
         print('')
 
+        # Rank activity scores
         rankedActivity = dict(sorted(activityPred.items(),
                                    key=lambda x: x[1], reverse=True))
         print(f'Ranked Predicted Activity:')
-        for substrate, activity in rankedActivity.items():
-            print(f'     {pink} {substrate}{resetColor}, '
+        for index, (substrate, activity) in enumerate(rankedActivity.items(), start=1):
+            print(f'    {pink}{substrate}{resetColor}, '
                   f'Score: {red}{activity:,.{self.roundVal}f}{resetColor}')
+            if index == self.printNumber:
+                break
         print('')
 
+        # Compair predictions
         print(f'Predicted Vs Experimental Activity:')
-        for substrate, activity in rankedActivity.items():
-            print(f'     {pink} {substrate}{resetColor}, '
-                  f'Score: {red}{activity:,.{self.roundVal}f}{resetColor} - '
+        for index, (substrate, activity) in enumerate(activityPred.items(), start=1):
+            print(f'    {pink}{substrate}{resetColor}, '
+                  f'Pred: {red}{activity:,.{self.roundVal}f}{resetColor}\n'
+                  f'{" " * len(substrate)}       Exp: '
                   f'{red}{activityExp[substrate]:,.{self.roundVal}f}{resetColor}')
+            if index == self.printNumber:
+                break
         print('')
 
 
