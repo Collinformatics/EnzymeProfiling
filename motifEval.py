@@ -897,6 +897,12 @@ if inFindSequences:
 
 # Predict substrate activity
 if inPredictActivity:
+    ngs.predictActivity(predSubstrates=inPredictSubstrates,
+                        predModel=ngs.datasetTag, predLabel=inPredictionTag,
+                        RF=rfCombinedReleasedMotif,
+                        releasedCounts=True, rankScores=inRankScores,
+                        scaleEMap=inScalePredMatrix)
+    sys.exit()
     ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
                                predModel=ngs.datasetTag, predLabel=inPredictionTag,
                                RF=rfCombinedReleasedMotif,

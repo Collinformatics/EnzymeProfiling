@@ -4883,6 +4883,32 @@ class NGS:
 
 
 
+    def dirichletDist(self, finalRF, initialRF):
+        print('============================ Dirichlet Distribution '
+              '=============================')
+        print(f'Relative Frequency: {purple}Initial{resetColor}\n{initialRF}\n')
+        print(f'Relative Frequency: {purple}Final{resetColor}\n{finalRF}\n\n')
+
+        # Calculate: RF ratios
+        ratio = pd.DataFrame(0.0, index=finalRF.index, columns=finalRF.columns)
+        for col in ratio.columns:
+            if len(initialRF.columns) == 1:
+                ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.iloc[:, 0]
+            else:
+                ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.loc[:, col]
+        print(f'RF Ratios:\n{round(ratio, self.roundVal)}\n\n')
+
+        # Calculate: Ratio probability
+        prob = pd.DataFrame(0.0, index=finalRF.index, columns=finalRF.columns)
+        for col in prob.columns:
+            for AA in prob.index:
+                prob.loc[AA, col] = ratio.loc[AA, col] / sum(ratio.loc[:, col])
+        print(f'Probability:\n{round(prob, self.roundVal)}\n\n')
+
+        return prob
+
+
+
     def plotEntropy(self, entropy, combinedMotifs=False, releasedCounts=False):
         if self.filterSubs:
             title = f'\n\n{self.enzymeName}\n{self.datasetTag}'
