@@ -26,7 +26,7 @@ inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 # Input 3: Computational Parameters
 inPlotOnlyWords = True
 inFixedResidue = ['Q']
-inFixedPosition = [4]
+inFixedPosition = [4,5,6]
 inExcludeResidues = False
 inExcludedResidue = ['A','A']
 inExcludedPosition = [9,10]
@@ -67,9 +67,8 @@ inShowSampleSize = True # Include the sample size in your figures
 
 # Input 5: Processing The Data
 inPrintNumber = 10
-inFindSequences = True
-inFindSeq = ['LVLQSNDL','ATLQGLMI','TVLQAAML','VSLQSTYK','VSLQGAEL',
-             'VVLQSATE','ASLQALCV','CRLQGQMR','SWLQADIH','CMLQAATC']
+inFindSequences = False
+inFindSeq = 'LVLQA'
 
 # Input 6: Plot Heatmap
 inShowEnrichmentScores = True
@@ -97,25 +96,17 @@ inIncludeSubCountsESM = True
 inPlotEntropyPCAPopulations = False
 
 # Input 11: Predict Activity
-inPredictActivity = False
+inPredictActivity = True
 inPredictionTag = 'pp1a/b Substrates'
 inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
                        'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
                        'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
-inPredictionTag = 'Substrates'
-inPredictSubstrates = ['AVLQSGFR', 'VILQAGFR', 'VILQAPFR', 'LVLQSNDL',
-                       'ATLQGLMI', 'TVLQAAML', 'VSLQSTYK', 'VSLQGAEL']
-# inPredictionTag = 'FP14-18'
-# inPredictSubstrates = ['AVLQSGFR', 'TVLQAAMH', 'VLLQGCVH',
-#                        'WVLQAKLL', 'AILQCMLG', 'VLLQGVVH']
-# inPredictionTag = 'FP19-23'
-# inPredictSubstrates = ['AVLQSGFR', 'CILQAVFH', 'VVLQAVMH',
-#                        'SILQCVLM', 'VMLQAVFH', 'PLLQAILM']
 inPredictionTag = 'Heatmap Substrates'
 inPredictSubstrates = ['AVLQSG', 'VILQSG', 'VILQTG', 'VILQSP',
                        'VILHSG', 'VIMQSG', 'VPLQSG', 'NILQSG']
 inRankScores = False
 inScalePredMatrix = False # Scale EM by ΔS
+
 
 # Input 12: Codon Enrichment
 inPredictCodonsEnrichment = False
@@ -138,19 +129,6 @@ inYTickMinPred, inYTickMinScaled, inYTickMinAI = inYMinPred, inYMinPredScaled, -
 inSubsPredict = ['VVLQSGFR', 'VVLQSPFR', 'VYLQSGFR', 'VVLQAGFR', 'VVMQSGFR',
                  'IVLQSGFR', 'VVLHSGFR', 'VGLQSGFR', 'VVLMSGFR', 'VVVQSGFR',
                  'VVLQIGFR', 'VVGQSGFR', 'KVLQSGFR', 'VVLQNGFR', 'VVLYSGFR']
-# inSubsPredict = ['VVLQSGFR', 'VVMQSGFR', 'VVVQSGFR', 'VVGQSGFR', 'VVLHSGFR', 'VVLMSGFR',
-#                'VVLYSGFR', 'IVLQSGFR', 'KVLQSGFR', 'VYLQSGFR', 'VGLQSGFR', 'VVLQAGFR',
-#                'VVLQNGFR', 'VVLQIGFR', 'VVLQSPFR']
-               # 'AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS', 'VKLQNNEL', 'VRLQAGNA',
-               # 'PMLQSADA', 'TVLQAVGA', 'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA',
-               # 'VTFQGKFK', 'PLMQSADA', 'PKLQASQA']
-# lenSubsTotal = len(inSubsPredict)
-# inSubsManual = ['VVLQSGFR', 'VVMQSGFR', 'VVVQSGFR', 'VVGQSGFR', 'VVLHSGFR', 'VVLMSGFR',
-#                 'VVLYSGFR', 'IVLQSGFR', 'KVLQSGFR', 'VYLQSGFR', 'VGLQSGFR', 'VVLQAGFR',
-#                 'VVLQNGFR', 'VVLQIGFR', 'VVLQSPFR'] # Double: VVLQSPFR
-# inSubsCovid = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS', 'VKLQNNEL', 'VRLQAGNA',
-#                'PMLQSADA', 'TVLQAVGA', 'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
-# inSubsSARS = ['VTFQGKFK', 'PLMQSADA', 'PKLQASQA']
 # inSubsPredict = inSubsManual
 # inDatapointColor = ['#CC5500', '#CC5500', '#CC5500', '#CC5500', '#CC5500', '#CC5500',
 #                     '#CC5500', '#CC5500', '#CC5500', '#CC5500', '#CC5500', '#CC5500',
@@ -158,14 +136,6 @@ inSubsPredict = ['VVLQSGFR', 'VVLQSPFR', 'VYLQSGFR', 'VVLQAGFR', 'VVMQSGFR',
 #                     'black', 'black', 'black', 'black', 'black', 'black',
 #                     'black', 'black', 'black', 'black', 'black',
 #                     '#F79620', '#F79620', '#F79620']
-# inSubsPredict = ['VLLQCV', 'SRLQAS', 'VTLQSY', 'PILQSG', 'GWVQLH', 'GCILHA',
-#                  'SRLQSG', 'VLLQCV', 'SVLQGF', 'TSLQAG', 'ALMQSG', 'VLLQAT'
-#                  'VRLQSS', 'TILQGA', 'TFLQCR', 'SRLQAS', 'LVLQAH', 'SLLQGM'
-#                  'VTLQSY', 'PILQSG', 'GWVQLH', 'VVLQAS']
-# inSubsPredict = ['CKLQCL', 'SWLQSG', 'AMLQCH', 'VRLQNK', 'LKLQAC', 'PILQST',
-#                  'VDLQAW', 'SILQVM', 'CNLQCL', 'FVLQCL', 'VRLQGW', 'LLLQAA',
-#                  'GVLQAV', 'GVLQSH', 'QILQIE', 'VELQGA', 'IVLQCM', 'CRLQSG',
-#                  'SKLQGV']
 inSubsPredictStartIndex = 0
 inKnownTarget = ['nsp4/5', 'nsp5/6', 'nsp6/7', 'nsp7/8', 'nsp8/9', 'nsp9/10',
                  'nsp10/12', 'nsp12/13', 'nsp13/14', 'nsp14/15', 'nsp15/16']
@@ -215,6 +185,7 @@ purple = '\033[38;2;189;22;255m'
 magenta = '\033[38;2;255;0;128m'
 pink = '\033[38;2;255;0;242m'
 cyan = '\033[38;2;22;255;212m'
+blue = '\033[38;5;51m'
 green = '\033[38;2;5;232;49m'
 greenLight = '\033[38;2;204;255;188m'
 greenDark = '\033[38;2;30;121;13m'
@@ -922,15 +893,17 @@ if inFindSequences:
     ngs.findSequence(substrates=substratesFiltered, sequence=inFindSeq,
                      sortType='Final Sort')
 
-sys.exit()
 
 
 # Predict substrate activity
 if inPredictActivity:
     ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
                                predModel=ngs.datasetTag, predLabel=inPredictionTag,
+                               RF=rfCombinedReleasedMotif,
                                releasedCounts=True, rankScores=inRankScores,
                                scaleEMap=inScalePredMatrix)
+
+sys.exit()
 
 if inPredictCodonsEnrichment:
 # Evaluate codon

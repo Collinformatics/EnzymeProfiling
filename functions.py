@@ -6,8 +6,8 @@ from Bio import BiopythonWarning
 import esm
 import gzip
 from itertools import combinations, product
-import math
 import logomaker
+import math
 import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Normalize
@@ -2371,9 +2371,18 @@ class NGS:
         if len(rfInitial.columns) == 1:
             matrix = pd.DataFrame(0.0, index=rfFinal.index,
                                   columns=rfFinal.columns)
-            for position in rfFinal.columns:
-                matrix.loc[:, position] = np.log2(rfFinal.loc[:, position] /
-                                                  rfInitial.iloc[:, 0])
+            ln = True
+            if ln:
+                print(f'Using {purple}Natural Logarithmic{resetColor} Matrix')
+                for position in rfFinal.columns: ##
+                    # for AA in rfFinal.index:
+                    matrix.loc[:, position] = np.log(
+                        rfFinal.loc[:, position] / rfInitial.iloc[:, 0]
+                    )
+            else:
+                for position in rfFinal.columns:
+                    matrix.loc[:, position] = np.log2(rfFinal.loc[:, position] /
+                                                      rfInitial.iloc[:, 0])
         else:
             if len(rfInitial.columns) != len(rfFinal.columns):
                 print(f'{orange}ERROR: The number of columns in the Initial Sort '
@@ -3125,7 +3134,7 @@ class NGS:
 
         # Evaluate: Y axis
         maxValue = math.ceil(max(y))
-        magnitude = math.floor(math.log10(maxValue))
+        magnitude = math.floor(math.log10(abs(maxValue)))
         unit = 10 ** (magnitude - 1)
         yMax = math.ceil(maxValue / unit) * unit
         yMax += 3 * unit # Increase yMax
@@ -3160,6 +3169,7 @@ class NGS:
             # Set the edge color
             for bar in bars:
                 bar.set_edgecolor('black')
+                bar.set_linewidth(self.lineThickness)
         else:
             bars = plt.bar(x, y, color=barColor, width=barWidth)
 
@@ -3176,6 +3186,7 @@ class NGS:
             # Set the edge color
             for bar in bars:
                 bar.set_edgecolor(barColor)
+                bar.set_linewidth(self.lineThickness)
 
         # Define: Figure title
         if self.useEF:
@@ -3193,6 +3204,7 @@ class NGS:
                 title = (f'{self.enzymeName}\n{predModel}\n'
                              f'{NSubs:,} {predType} Sequences')
             yLabel = 'Predicted Activity'
+            yLabel = '∆G (J / mol)'
         else:
             if clusterNumPCA is not None:
                 title = (f'{self.enzymeName}\n{self.datasetTag}\n'
@@ -3221,10 +3233,13 @@ class NGS:
         # Set: y ticks
         plotYTicks = True
         if max(y) == 1.0:
+            print(1)
             yMax = 1.0
             if yMin == 0:
+                print(11)
                 yTicks = np.linspace(yMin, yMax, 6)
             else:
+                print(111)
                 plotYTicks = False
                 dist = yMax - yMin
                 vals = [0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55]
@@ -3236,8 +3251,11 @@ class NGS:
                         break
             yMax += 0.1
         else:
-            step = yMax / 10
+            yMax = 0
+            step = abs((yMax - yMin) / 10)
+            print(f'Step: {step}\nY Min: {yMin}\nY Max: {yMax}\n')
             yTicks = np.arange(yMin, yMax + step, step)
+            print(f'yTicks: {yTicks}')
         plt.ylim(yMin, yMax)
         plt.xticks(rotation=90, ha='center')
         if plotYTicks:
@@ -3765,6 +3783,7 @@ class NGS:
         # Set the edge color
         for bar in bars:
             bar.set_edgecolor('black')
+            bar.set_linewidth(lineThickness)
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -6103,7 +6122,8 @@ class NGS:
                     addES += 1
 
                     # Scale
-                    if ES < 0:
+                    if 1 == 2:
+                    #if ES < 0:
                         values = RF.loc[:, pos]
                         inv = self.zScore(values, AA=AA)
                         inv = abs(inv)
@@ -6130,31 +6150,22 @@ class NGS:
                   f'ES:{red} {ES:.3f}{resetColor}')
         print()
 
-        # Adjust values
-
-        if 1 == 2:
-            minActivity = abs(min(activityScores.values()))
-            print(f'Increased Activity Scores:')
-            print(f'* Set min value to 0: {red}{minActivity:.3f}{resetColor}')
-            for substrate, score in activityScores.items():
-                score = score + minActivity
-                activityScores[substrate] = score
-                print(f'     {pink} {substrate}{resetColor}, '
-                      f'ES:{red} {score:.3f}{resetColor}')
-            maxActivity = max(activityScores.values())
-            print(f'New max value: {red}{maxActivity:.3f}{resetColor}\n')
-
         # Calculate: Activity levels
         for substrate, score in activityScores.items():
-            x = 1
+            x = 2
             if x == 1:
-                activityScores[substrate] = 10 ** (score / maxActivity) # + abs(maxActivity)
+                activityScores[substrate] = 10 ** (score / maxActivity)
+            elif x > 1:
+                R = 8.3145 # J / mol*K
+                T = 298.15 # K
+                activityScores[substrate] = score * -R * T
+                #activityScores[substrate] = math.exp(score / (R * T))
             else:
                 activityScores[substrate] = score / maxActivity
         print(f'Predicted Normalized Activity:')
-        for index, (substrate, ES) in enumerate(activityScores.items()):
+        for substrate, ES in activityScores.items():
             print(f'     {pink} {substrate}{resetColor}, '
-                  f'ES:{red} {ES:.3f}{resetColor}')
+                  f'ES:{red} {ES:,.3f}{resetColor}')
         print('')
 
 
@@ -6164,7 +6175,7 @@ class NGS:
             print(f'Ranked Predicted Activity:')
             for index, (substrate, ES) in enumerate(rankedScores.items()):
                 print(f'     {pink} {substrate}{resetColor}, '
-                      f'ES:{red} {ES:.3f}{resetColor}')
+                      f'ES:{red} {ES:,.3f}{resetColor}')
             print('')
         print()
 
