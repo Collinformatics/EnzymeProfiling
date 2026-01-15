@@ -104,6 +104,16 @@ inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
 inPredictionTag = 'Heatmap Substrates'
 inPredictSubstrates = ['AVLQSG', 'VILQSG', 'VILQTG', 'VILQSP',
                        'VILHSG', 'VIMQSG', 'VPLQSG', 'NILQSG']
+inSubstrateActivity = {
+    'AVLQSG': 60,
+    'VILQSG': 70,
+    'VILQTG': 6,
+    'VILQSP': 0,
+    'VILHSG': 15,
+    'VIMQSG': 50,
+    'VPLQSG': 0,
+    'NILQSG': 6,
+}
 inRankScores = False
 inScalePredMatrix = False # Scale EM by ΔS
 
@@ -129,20 +139,13 @@ inYTickMinPred, inYTickMinScaled, inYTickMinAI = inYMinPred, inYMinPredScaled, -
 inSubsPredict = ['VVLQSGFR', 'VVLQSPFR', 'VYLQSGFR', 'VVLQAGFR', 'VVMQSGFR',
                  'IVLQSGFR', 'VVLHSGFR', 'VGLQSGFR', 'VVLMSGFR', 'VVVQSGFR',
                  'VVLQIGFR', 'VVGQSGFR', 'KVLQSGFR', 'VVLQNGFR', 'VVLYSGFR']
-# inSubsPredict = inSubsManual
-# inDatapointColor = ['#CC5500', '#CC5500', '#CC5500', '#CC5500', '#CC5500', '#CC5500',
-#                     '#CC5500', '#CC5500', '#CC5500', '#CC5500', '#CC5500', '#CC5500',
-#                     '#CC5500', '#CC5500', '#CC5500',
-#                     'black', 'black', 'black', 'black', 'black', 'black',
-#                     'black', 'black', 'black', 'black', 'black',
-#                     '#F79620', '#F79620', '#F79620']
 inSubsPredictStartIndex = 0
 inKnownTarget = ['nsp4/5', 'nsp5/6', 'nsp6/7', 'nsp7/8', 'nsp8/9', 'nsp9/10',
                  'nsp10/12', 'nsp12/13', 'nsp13/14', 'nsp14/15', 'nsp15/16']
 inBarWidth = 0.75
-inBarColor = '#CC5500'
+inBarColor = '#BF5700'
 inEdgeColor = 'black'
-inEdgeColorOrange = '#F79620'
+inEdgeColorOrange = '#F8971F'
 inDatapointColor = []
 for _ in inSubsPredict:
     inDatapointColor.append(inBarColor)
@@ -158,7 +161,7 @@ inPlotBinnedSubYMax = 0.07
 inEvaluatePredictions = False
 inPrintPredictions = False
 inBottomParam = 0.16
-inPredictionDatapointColor = '#CC5500'
+inPredictionDatapointColor = '#BF5700'
 inMiniumSubstrateScoreLimit = False
 inMiniumSubstrateScore = -55
 inNormalizeValues = False
@@ -897,17 +900,17 @@ if inFindSequences:
 
 # Predict substrate activity
 if inPredictActivity:
-    ngs.predictActivity(predSubstrates=inPredictSubstrates,
+    ngs.predictActivity(activityExp=inSubstrateActivity,
+                        finalRF=rfCombinedReleasedMotif, initialRF=rfInitial,
                         predModel=ngs.datasetTag, predLabel=inPredictionTag,
-                        RF=rfCombinedReleasedMotif,
-                        releasedCounts=True, rankScores=inRankScores,
-                        scaleEMap=inScalePredMatrix)
-    sys.exit()
-    ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
-                               predModel=ngs.datasetTag, predLabel=inPredictionTag,
-                               RF=rfCombinedReleasedMotif,
-                               releasedCounts=True, rankScores=inRankScores,
-                               scaleEMap=inScalePredMatrix)
+                        releasedCounts=True)
+
+    if not inPredictActivity:
+        ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
+                                   predModel=ngs.datasetTag, predLabel=inPredictionTag,
+                                   RF=rfCombinedReleasedMotif,
+                                   releasedCounts=True, rankScores=inRankScores,
+                                   scaleEMap=inScalePredMatrix)
 
 sys.exit()
 

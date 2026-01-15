@@ -2371,7 +2371,7 @@ class NGS:
         if len(rfInitial.columns) == 1:
             matrix = pd.DataFrame(0.0, index=rfFinal.index,
                                   columns=rfFinal.columns)
-            ln = True
+            ln = False
             if ln:
                 print(f'Using {purple}Natural Logarithmic{resetColor} Matrix')
                 for position in rfFinal.columns: ##
@@ -4883,32 +4883,6 @@ class NGS:
 
 
 
-    def dirichletDist(self, finalRF, initialRF):
-        print('============================ Dirichlet Distribution '
-              '=============================')
-        print(f'Relative Frequency: {purple}Initial{resetColor}\n{initialRF}\n')
-        print(f'Relative Frequency: {purple}Final{resetColor}\n{finalRF}\n\n')
-
-        # Calculate: RF ratios
-        ratio = pd.DataFrame(0.0, index=finalRF.index, columns=finalRF.columns)
-        for col in ratio.columns:
-            if len(initialRF.columns) == 1:
-                ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.iloc[:, 0]
-            else:
-                ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.loc[:, col]
-        print(f'RF Ratios:\n{round(ratio, self.roundVal)}\n\n')
-
-        # Calculate: Ratio probability
-        prob = pd.DataFrame(0.0, index=finalRF.index, columns=finalRF.columns)
-        for col in prob.columns:
-            for AA in prob.index:
-                prob.loc[AA, col] = ratio.loc[AA, col] / sum(ratio.loc[:, col])
-        print(f'Probability:\n{round(prob, self.roundVal)}\n\n')
-
-        return prob
-
-
-
     def plotEntropy(self, entropy, combinedMotifs=False, releasedCounts=False):
         if self.filterSubs:
             title = f'\n\n{self.enzymeName}\n{self.datasetTag}'
@@ -6064,6 +6038,126 @@ class NGS:
             collectedSubs[substrate] = substratesFiltered.loc[substrate, 'Activity']
 
         return collectedSubs
+
+
+
+    def dirichletDist(self, finalRF, initialRF, pHeader=True):
+        if pHeader:
+            print('============================ Dirichlet Distribution '
+                  '=============================')
+        else:
+            print('Dirichlet Distribution:')
+        print(f'Relative Frequency: {purple}Initial{resetColor}\n{initialRF}\n')
+        print(f'Relative Frequency: {purple}Final{resetColor}\n{finalRF}\n\n')
+
+        # Calculate: RF ratios
+        ratio = pd.DataFrame(0.0, index=finalRF.index, columns=finalRF.columns)
+        for col in ratio.columns:
+            if len(initialRF.columns) == 1:
+                ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.iloc[:, 0]
+            else:
+                ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.loc[:, col]
+        ratio = ratio.replace([-np.inf, np.inf], 0.0) # Remove inf values
+        print(f'RF Ratios:\n{round(ratio, self.roundVal)}\n\n')
+
+
+        # Calculate: Ratio probability
+        prob = pd.DataFrame(0.0, index=finalRF.index, columns=finalRF.columns)
+        for col in prob.columns:
+            for AA in prob.index:
+                prob.loc[AA, col] = ratio.loc[AA, col] / sum(ratio.loc[:, col])
+        print(f'Probability:\n{round(prob, self.roundVal)}\n\n')
+
+        return prob
+
+
+
+    def predictActivity(self, activityExp, finalRF, initialRF, predModel, predLabel,
+                        releasedCounts=False):
+        print('============================ Predict Substrate Activity '
+              '=============================')
+        N = len(activityExp.keys())
+        print(f'Dataset: {purple}{predModel}{resetColor}\n'
+              f'Evaluating {predLabel}: N={red}{N:,}{resetColor} Substrate Sequences\n')
+
+        # Get prediction matrix
+        matrix = self.dirichletDist(finalRF=finalRF, initialRF=initialRF, pHeader=False)
+
+        # Calculate: Activity
+        activityPred = {} ##
+        sublen = len(next(iter(activityExp)))
+        for substrate in activityExp.keys():
+            score = 0
+            for index in range(sublen):
+                # Evaluate substrate
+                AA = substrate[index]
+                pos = matrix.columns[index]
+                value = matrix.loc[AA, pos]
+                if score == 0:
+                    score = value
+                else:
+                    score *= value
+            activityPred[substrate] = score
+        maxActivity = max(activityPred.values())
+        dec = self.roundVal - 1
+        print(f'Predicted Activity: '
+              f'(Max Score: {red}{maxActivity:.{dec}e}{resetColor})')
+        for substrate, activity in activityPred.items():
+            print(f'     {pink} {substrate}{resetColor}, '
+                  f'ES:{red} {activity:.{dec}e}{resetColor}')
+        print()
+
+        # Normalize values
+        maxExpActivity = max(activityExp.values())
+        for substrate, activity in activityPred.items():
+            activityPred[substrate] = activity / maxActivity
+            activityExp[substrate] = activityExp[substrate] / maxExpActivity
+        print(f'Predicted Normalized Activity:')
+        for substrate, ES in activityPred.items():
+            print(f'     {pink} {substrate}{resetColor}, '
+                  f'Score: {red}{ES:,.{self.roundVal}f}{resetColor}')
+        print('')
+
+        rankedActivity = dict(sorted(activityPred.items(),
+                                   key=lambda x: x[1], reverse=True))
+        print(f'Ranked Predicted Activity:')
+        for substrate, activity in rankedActivity.items():
+            print(f'     {pink} {substrate}{resetColor}, '
+                  f'Score: {red}{activity:,.{self.roundVal}f}{resetColor}')
+        print('')
+
+        print(f'Predicted Vs Experimental Activity:')
+        for substrate, activity in rankedActivity.items():
+            print(f'     {pink} {substrate}{resetColor}, '
+                  f'Score: {red}{activity:,.{self.roundVal}f}{resetColor} - '
+                  f'{red}{activityExp[substrate]:,.{self.roundVal}f}{resetColor}')
+        print('')
+
+
+        # Plot data
+        labels = list(activityPred.keys())
+        predVals = [activityPred[k] for k in labels]
+        expVals = [activityExp[k] for k in labels]
+
+        x = np.arange(len(labels))
+        width = 0.35  # bar width
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        ax.bar(x - width / 2, predVals, width, label='Predicted',
+               color='#F8971F', edgecolor='black', linewidth=self.lineThickness)
+        ax.bar(x + width / 2, expVals, width, label='Experimental',
+               color='#BF5700', edgecolor='black', linewidth=self.lineThickness)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=90)
+        ax.set_ylabel('Normalized Activity')
+        ax.set_title('Predicted vs Experimental Activity')
+        ax.legend()
+
+        fig.canvas.mpl_connect('key_press_event', pressKey)
+        plt.tight_layout()
+        plt.show()
 
 
 
