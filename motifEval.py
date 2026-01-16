@@ -144,9 +144,9 @@ inSubsPredictStartIndex = 0
 inKnownTarget = ['nsp4/5', 'nsp5/6', 'nsp6/7', 'nsp7/8', 'nsp8/9', 'nsp9/10',
                  'nsp10/12', 'nsp12/13', 'nsp13/14', 'nsp14/15', 'nsp15/16']
 inBarWidth = 0.75
-inBarColor = '#BF5700'
+inBarColor = '#BF5700' # Burnt orange
 inEdgeColor = 'black'
-inEdgeColorOrange = '#F8971F'
+inEdgeColorOrange = '#F8971F' # Orange
 inDatapointColor = []
 for _ in inSubsPredict:
     inDatapointColor.append(inBarColor)

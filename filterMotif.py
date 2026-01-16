@@ -71,7 +71,7 @@ inLimitYAxis = False
 # Input 8: Substrate Enrichment
 inBinSubstrates = False
 inSaveEnrichedSubs = False
-inPredictionDatapointColor = '#CC5500'
+inPredictionDatapointColor = '#BF5700'
 inSetAxisLimits = False
 
 # Input 8: Predict Optimal substrates
@@ -79,7 +79,7 @@ inSetMinimumES = True
 inPrintES = True
 inPlotSubsetOfSubstrates = True
 inShowKLDivergenceProb = False
-inDatapointColor = '#CC5500'
+inDatapointColor = '#BF5700'
 inPlotSubstrateText = False
 inMiniumSubstrateScoreLimit = False
 inMiniumSubstrateScore = -55

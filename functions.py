@@ -408,9 +408,9 @@ class NGS:
             colors = ['white','white','#FF76FA','#FF50F9','#FF00F2','#CA00DF','#BD16FF']
         elif colorType == 'word cloud':
             # ,'#F2A900','#2E8B57','black'
-            colors = ['#CC5500','#CC5500','#F79620','#FAA338',
+            colors = ['#BF5700','#BF5700','#F8971F','#FAA338',
                       '#00C01E','#1D680D','#003000','black']
-            # colors = ['#008631','#39E75F','#CC5500','#F79620','black']
+            # colors = ['#008631','#39E75F','#BF5700','#F8971F','black']
         elif colorType == 'em':
             colors = ['navy','royalblue','dodgerblue','lightskyblue','white','white',
                       'lightcoral','red','firebrick','darkred']
@@ -3090,7 +3090,7 @@ class NGS:
 
 
 
-    def plotMotifEnrichment(self, motifs, barColor='#CC5500', barWidth=0.65,
+    def plotMotifEnrichment(self, motifs, barColor='#BF5700', barWidth=0.65,
                             clusterNumPCA=None, combinedMotifs=False, limitNBars=False,
                             predActivity=False, predModel=None, predType=None,
                             scaleEMap=False):
@@ -3394,7 +3394,7 @@ class NGS:
 
 
 
-    def plotScatter(self, valuesExp, valuesPred, matrixType, color='#CC5500'):
+    def plotScatter(self, valuesExp, valuesPred, matrixType, color='#BF5700'):
         x, y = valuesExp.values(), valuesPred.values()
 
         # Normalize predicted values
@@ -3637,7 +3637,7 @@ class NGS:
 
 
 
-    def plotBarGraph(self, substrates, dataType, barColor='#CC5500', barWidth=0.75,
+    def plotBarGraph(self, substrates, dataType, barColor='#BF5700', barWidth=0.75,
                      combinedMotifs=False, subsInit=False, plotAllSubs=False):
         print('================================ Plot: Bar Graph '
               '================================')
@@ -4012,14 +4012,14 @@ class NGS:
                                            horizontalalignment='center',
                                            verticalalignment='center',
                                            fontsize=25,
-                                           color='#F79620',
+                                           color='#F8971F',
                                            fontweight='bold')
                             text.set_path_effects(
                                 [path_effects.Stroke(linewidth=2, foreground='black'),
                                  path_effects.Normal()])
                 plt.draw()
             plt.scatter(dataPCA[components[0]], dataPCA[components[1]],
-                        c='#CC5500', edgecolor='black')
+                        c='#BF5700', edgecolor='black')
             plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
             plt.xlabel(f'Principal Component {components[0][-1]} '
                        f'({np.round(varRatio[0], self.roundVal)} %)',
