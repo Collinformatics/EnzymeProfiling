@@ -6073,7 +6073,7 @@ class NGS:
 
 
     def predictActivity(self, activityExp, finalRF, initialRF, predModel, predLabel,
-                        releasedCounts=False):
+                        releasedCounts=False, plotBars=True):
         print('============================ Predict Substrate Activity '
               '=============================')
         N = len(activityExp.keys())
@@ -6145,29 +6145,62 @@ class NGS:
         print('')
 
 
-        # Plot data
-        labels = list(activityPred.keys())
-        predVals = [activityPred[k] for k in labels]
-        expVals = [activityExp[k] for k in labels]
+        if plotBars:
+            # Plot data
+            labels = list(activityPred.keys())
+            predVals = [activityPred[k] for k in labels]
+            expVals = [activityExp[k] for k in labels]
 
-        x = np.arange(len(labels))
-        width = 0.35  # bar width
+            x = np.arange(len(labels))
+            width = 0.35  # bar width
 
-        fig, ax = plt.subplots(figsize=(12, 6))
+            fig, ax = plt.subplots(figsize=self.figSize)
 
-        ax.bar(x - width / 2, predVals, width, label='Predicted',
-               color='#F8971F', edgecolor='black', linewidth=self.lineThickness)
-        ax.bar(x + width / 2, expVals, width, label='Experimental',
-               color='#BF5700', edgecolor='black', linewidth=self.lineThickness)
+            ax.bar(x - width / 2, predVals, width, label='Predicted',
+                   color='#F8971F', edgecolor='black', linewidth=self.lineThickness)
+            ax.bar(x + width / 2, expVals, width, label='Experimental',
+                   color='#BF5700', edgecolor='black', linewidth=self.lineThickness)
+            plt.title(f'{self.enzymeName} Activity\n{self.datasetTag}',
+                      fontsize=self.labelSizeTitle, fontweight='bold')
+            ax.set_ylabel('Normalized Activity', fontsize=self.labelSizeAxis)
+            ax.legend(edgecolor='black', fontsize=self.labelSizeTicks)
 
-        ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=90)
-        ax.set_ylabel('Normalized Activity')
-        ax.set_title('Predicted vs Experimental Activity')
-        ax.legend()
+            # Set xticks
+            ax.set_xticks(x)
+            ax.set_xticklabels(labels, rotation=45)
+
+            #Set tick parameters
+            ax.tick_params(axis='both', which='major', length=self.tickLength,
+                           labelsize=self.labelSizeTicks)
+
+            fig.canvas.mpl_connect('key_press_event', pressKey)
+            plt.tight_layout()
+            plt.show()
+
+
+        # Plot normalized activity scores as a scatter plot
+        x = list(activityExp.values())
+        y = list(activityPred.values())
+        ticks = [0, 0.2, 0.4, 0.6, 0.8, 1]
+
+        fig, ax = plt.subplots(figsize=self.figSize)
+        plt.scatter(x, y, color='#BF5700', edgecolor='black')
+        plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
+        plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
+        plt.title(f'{self.enzymeName} Activity\n{self.datasetTag}',
+                  fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.grid(True, linestyle='-', color='black')
+        plt.xlim(-0.05, 1.05)
+        plt.xticks(ticks)
+        plt.ylim(-0.05, 1.05)
+        plt.yticks(ticks)
+
+        # Set tick parameters
+        ax.tick_params(axis='both', which='major', length=self.tickLength,
+                       labelsize=self.labelSizeTicks)
 
         fig.canvas.mpl_connect('key_press_event', pressKey)
-        plt.tight_layout()
+
         plt.show()
 
 
