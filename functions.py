@@ -3204,7 +3204,6 @@ class NGS:
                 title = (f'{self.enzymeName}\n{predModel}\n'
                              f'{NSubs:,} {predType} Sequences')
             yLabel = 'Predicted Activity'
-            yLabel = '∆G (J / mol)'
         else:
             if clusterNumPCA is not None:
                 title = (f'{self.enzymeName}\n{self.datasetTag}\n'
@@ -3232,14 +3231,12 @@ class NGS:
 
         # Set: y ticks
         plotYTicks = True
+        yTicks = []
         if max(y) == 1.0:
-            print(1)
             yMax = 1.0
             if yMin == 0:
-                print(11)
                 yTicks = np.linspace(yMin, yMax, 6)
             else:
-                print(111)
                 plotYTicks = False
                 dist = yMax - yMin
                 vals = [0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55]
@@ -3251,11 +3248,8 @@ class NGS:
                         break
             yMax += 0.1
         else:
-            yMax = 0
             step = abs((yMax - yMin) / 10)
-            print(f'Step: {step}\nY Min: {yMin}\nY Max: {yMax}\n')
             yTicks = np.arange(yMin, yMax + step, step)
-            print(f'yTicks: {yTicks}')
         plt.ylim(yMin, yMax)
         plt.xticks(rotation=90, ha='center')
         if plotYTicks:
@@ -3644,13 +3638,14 @@ class NGS:
 
 
     def plotBarGraph(self, substrates, dataType, barColor='#CC5500', barWidth=0.75,
-                     combinedMotifs=False, subsInit=False):
+                     combinedMotifs=False, subsInit=False, plotAllSubs=False):
         print('================================ Plot: Bar Graph '
               '================================')
+        if plotAllSubs:
+            limitNSubs = len(substrates.keys())
+        else:
+            limitNSubs = self.NSubBars
         print(f'Collecting the top {red}{self.NSubBars}{resetColor} substrates\n')
-        x = []
-        y = []
-
         print(f'Substrates:')
         iteration = 0
         for substrate, count in substrates.items():
@@ -3662,19 +3657,20 @@ class NGS:
                 break
 
         # Collect substrates
+        x = []
+        y = []
         iteration = 0
         countsTotal = 0
         for count in substrates.values():
             countsTotal += count
         print(f'Total Substrates: {red}{countsTotal:,}{resetColor}')
-
         if 'counts' in dataType.lower():
             # Evaluate: Substrates
             for substrate, count in substrates.items():
                 x.append(str(substrate))
                 y.append(count)
                 iteration += 1
-                if iteration == self.NSubBars:
+                if iteration == limitNSubs:
                     break
 
             # Evaluate: Y axis
@@ -3702,7 +3698,7 @@ class NGS:
                 x.append(str(substrate))
                 y.append(count / countsTotal)
                 iteration += 1
-                if iteration == self.NSubBars:
+                if iteration == limitNSubs:
                     break
 
             # Evaluate: Y axis
@@ -3721,7 +3717,7 @@ class NGS:
                 x.append(str(substrate))
                 y.append(count)
                 iteration += 1
-                if iteration == self.NSubBars:
+                if iteration == limitNSubs:
                     break
 
             # Evaluate: Y axis
@@ -3757,6 +3753,7 @@ class NGS:
 
         # Set: y ticks
         plotYTicks = True
+        yTicks = []
         if max(y) == 1.0:
             yMax = 1.0
             if yMin == 0:
@@ -3783,7 +3780,7 @@ class NGS:
         # Set the edge color
         for bar in bars:
             bar.set_edgecolor('black')
-            bar.set_linewidth(lineThickness)
+            bar.set_linewidth(self.lineThickness)
 
         # Set tick parameters
         ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -6073,7 +6070,8 @@ class NGS:
 
 
     def predictActivity(self, activityExp, finalRF, initialRF, predModel, predLabel,
-                        releasedCounts=False, plotBars=True):
+                        combinedMotifs=False, releasedCounts=False,
+                        plotBars=True, barWidth=0.35):
         print('============================ Predict Substrate Activity '
               '=============================')
         N = len(activityExp.keys())
@@ -6146,28 +6144,31 @@ class NGS:
 
 
         if plotBars:
-            # Plot data
+            # Plot bar graph
             labels = list(activityPred.keys())
             predVals = [activityPred[k] for k in labels]
             expVals = [activityExp[k] for k in labels]
+            xTicks = np.arange(len(labels))
 
-            x = np.arange(len(labels))
-            width = 0.35  # bar width
+            # Set title
+            # title = f'{self.enzymeName} Activity\n{self.datasetTag}'
+            title = f'{self.enzymeName}\n{self.datasetTag}'
+            if combinedMotifs and len(self.motifIndexExtracted) > 1:
+                title = title.replace(self.datasetTag,
+                                      f'Combined {self.datasetTag}')
 
             fig, ax = plt.subplots(figsize=self.figSize)
-
-            ax.bar(x - width / 2, predVals, width, label='Predicted',
+            ax.bar(xTicks - barWidth / 2, predVals, barWidth, label='Predicted',
                    color='#F8971F', edgecolor='black', linewidth=self.lineThickness)
-            ax.bar(x + width / 2, expVals, width, label='Experimental',
+            ax.bar(xTicks + barWidth / 2, expVals, barWidth, label='Experimental',
                    color='#BF5700', edgecolor='black', linewidth=self.lineThickness)
-            plt.title(f'{self.enzymeName} Activity\n{self.datasetTag}',
-                      fontsize=self.labelSizeTitle, fontweight='bold')
+            plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
             ax.set_ylabel('Normalized Activity', fontsize=self.labelSizeAxis)
             ax.legend(edgecolor='black', fontsize=self.labelSizeTicks)
 
             # Set xticks
-            ax.set_xticks(x)
-            ax.set_xticklabels(labels, rotation=45)
+            ax.set_xticks(xTicks)
+            ax.set_xticklabels(labels, rotation=0)
 
             #Set tick parameters
             ax.tick_params(axis='both', which='major', length=self.tickLength,
@@ -6177,6 +6178,33 @@ class NGS:
             plt.tight_layout()
             plt.show()
 
+            # Save the Figure
+            if self.saveFigures:
+                # Define: Save location
+                figLabel = (f'{self.enzymeName} - Pred Activity - Bar Graph - '
+                            f'{predLabel} - {predModel} - {sublen} AA - Plot {N} - '
+                            f'MinCounts {self.minSubCount}.png')
+                if len(self.motifIndexExtracted) > 1:
+                    figLabel = figLabel.replace('Reading Frame',
+                                                'Combined Reading Frame')
+                saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+                # Save figure
+                if os.path.exists(saveLocation):
+                    print(f'{yellow}The figure was not saved\n\n'
+                          f'File was already found at path:\n'
+                          f'     {saveLocation}{resetColor}\n\n')
+                else:
+                    print(f'Saving figure at path:\n'
+                          f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                    fig.savefig(saveLocation, dpi=self.figureResolution)
+
+        # Set title
+        #title = f'{self.enzymeName} Activity\n{self.datasetTag}'
+        title = f'{self.enzymeName}\n{self.datasetTag}'
+        if combinedMotifs and len(self.motifIndexExtracted) > 1:
+            title = title.replace(self.datasetTag,
+                                  f'Combined {self.datasetTag}')
 
         # Plot normalized activity scores as a scatter plot
         x = list(activityExp.values())
@@ -6187,12 +6215,11 @@ class NGS:
         plt.scatter(x, y, color='#BF5700', edgecolor='black')
         plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
         plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
-        plt.title(f'{self.enzymeName} Activity\n{self.datasetTag}',
-                  fontsize=self.labelSizeTitle, fontweight='bold')
+        plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
         plt.grid(True, linestyle='-', color='black')
-        plt.xlim(-0.05, 1.05)
+        plt.xlim(-0.03, 1.03)
         plt.xticks(ticks)
-        plt.ylim(-0.05, 1.05)
+        plt.ylim(-0.03, 1.03)
         plt.yticks(ticks)
 
         # Set tick parameters
@@ -6200,8 +6227,29 @@ class NGS:
                        labelsize=self.labelSizeTicks)
 
         fig.canvas.mpl_connect('key_press_event', pressKey)
-
+        plt.tight_layout()
         plt.show()
+
+        # Save the Figure
+        if self.saveFigures:
+            # Define: Save location
+            figLabel = (f'{self.enzymeName} - Pred Activity - Scatter Plot - '
+                        f'{predLabel} - {predModel} - {sublen} AA - Plot {N} - '
+                        f'MinCounts {self.minSubCount}.png')
+            if len(self.motifIndexExtracted) > 1:
+                figLabel = figLabel.replace('Reading Frame',
+                                            'Combined Reading Frame')
+            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+            # Save figure
+            if os.path.exists(saveLocation):
+                print(f'{yellow}The figure was not saved\n\n'
+                      f'File was already found at path:\n'
+                      f'     {saveLocation}{resetColor}\n\n')
+            else:
+                print(f'Saving figure at path:\n'
+                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                fig.savefig(saveLocation, dpi=self.figureResolution)
 
 
 

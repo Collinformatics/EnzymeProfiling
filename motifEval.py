@@ -114,6 +114,7 @@ inSubstrateActivity = {
     'VPLQSG': 0,
     'NILQSG': 6,
 }
+inEMapStartIndex = 0 # Sub: ACDEFGHI, if idx = 0 start at A
 inRankScores = False
 inScalePredMatrix = False # Scale EM by ΔS
 
@@ -903,7 +904,14 @@ if inPredictActivity:
     ngs.predictActivity(activityExp=inSubstrateActivity,
                         finalRF=rfCombinedReleasedMotif, initialRF=rfInitial,
                         predModel=ngs.datasetTag, predLabel=inPredictionTag,
-                        releasedCounts=True)
+                        combinedMotifs=combinedMotifs, releasedCounts=True)
+
+
+    if not inPredictActivity:
+        ngs.predictActivity(activityExp=motifs,
+                            finalRF=rfCombinedReleasedMotif, initialRF=rfInitial,
+                            predModel=ngs.datasetTag, predLabel='Experimental Motifs',
+                            releasedCounts=True, plotBars=False)
 
     if not inPredictActivity:
         ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
@@ -912,7 +920,7 @@ if inPredictActivity:
                                    releasedCounts=True, rankScores=inRankScores,
                                    scaleEMap=inScalePredMatrix)
 
-sys.exit()
+# sys.exit()
 
 if inPredictCodonsEnrichment:
 # Evaluate codon
@@ -925,7 +933,7 @@ if inPredictCodonsEnrichment:
 ngs.processSubstrates(subsInit=substratesInitial, subsFinal=substratesFiltered,
                       motifs=motifs, subLabel=inMotifPositions,
                       combinedMotifs=combinedMotifs)
-
+sys.exit()
 
 # # Evaluate: Motif Sequences
 # Count fixed substrates
