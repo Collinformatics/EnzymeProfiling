@@ -6044,8 +6044,8 @@ class NGS:
                   '=============================')
         else:
             print('Dirichlet Distribution:')
-        print(f'Relative Frequency: {purple}Initial{resetColor}\n{initialRF}\n')
-        print(f'Relative Frequency: {purple}Final{resetColor}\n{finalRF}\n\n')
+        print(f'Relative Frequency: {purple}Final{resetColor}\n{finalRF}\n')
+        print(f'Relative Frequency: {purple}Initial{resetColor}\n{initialRF}\n\n')
 
         # Calculate: RF ratios
         ratio = pd.DataFrame(0.0, index=finalRF.index, columns=finalRF.columns)
@@ -6070,13 +6070,13 @@ class NGS:
 
 
     def predictActivity(self, activityExp, finalRF, initialRF, predModel, predLabel,
-                        combinedMotifs=False, releasedCounts=False,
-                        plotBars=True, barWidth=0.35):
+                        combinedMotifs=False, plotBars=True, barWidth=0.35):
         print('============================ Predict Substrate Activity '
               '=============================')
         N = len(activityExp.keys())
         print(f'Dataset: {purple}{predModel}{resetColor}\n'
-              f'Evaluating {predLabel}: N={red}{N:,}{resetColor} Substrate Sequences\n')
+              f'Evaluating: {purple}{predLabel}{resetColor}\n'
+              f'N Substrate Sequences: {red}{N:,}{resetColor}\n')
 
         # Get prediction matrix
         matrix = self.dirichletDist(finalRF=finalRF, initialRF=initialRF, pHeader=False)

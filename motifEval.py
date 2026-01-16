@@ -105,14 +105,14 @@ inPredictionTag = 'Heatmap Substrates'
 inPredictSubstrates = ['AVLQSG', 'VILQSG', 'VILQTG', 'VILQSP',
                        'VILHSG', 'VIMQSG', 'VPLQSG', 'NILQSG']
 inSubstrateActivity = {
-    'AVLQSG': 60,
-    'VILQSG': 70,
-    'VILQTG': 6,
-    'VILQSP': 0,
-    'VILHSG': 15,
-    'VIMQSG': 50,
-    'VPLQSG': 0,
-    'NILQSG': 6,
+    'AVLQSG': 67.1,# 60,
+    'VILQSG': 79.9,# 70,
+    'VILQTG': 20.2,# 6,
+    'VILQSP': 0,# 0,
+    'VILHSG': 20.9,# 15,
+    'VIMQSG': 63.6,# 50,
+    'VPLQSG': 0,# 0,
+    'NILQSG': 15.4,# 6,
 }
 inEMapStartIndex = 0 # Sub: ACDEFGHI, if idx = 0 start at A
 inRankScores = False
@@ -904,14 +904,13 @@ if inPredictActivity:
     ngs.predictActivity(activityExp=inSubstrateActivity,
                         finalRF=rfCombinedReleasedMotif, initialRF=rfInitial,
                         predModel=ngs.datasetTag, predLabel=inPredictionTag,
-                        combinedMotifs=combinedMotifs, releasedCounts=True)
-
+                        combinedMotifs=combinedMotifs)
 
     if not inPredictActivity:
         ngs.predictActivity(activityExp=motifs,
                             finalRF=rfCombinedReleasedMotif, initialRF=rfInitial,
                             predModel=ngs.datasetTag, predLabel='Experimental Motifs',
-                            releasedCounts=True, plotBars=False)
+                            combinedMotifs=combinedMotifs, plotBars=False)
 
     if not inPredictActivity:
         ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
@@ -920,7 +919,7 @@ if inPredictActivity:
                                    releasedCounts=True, rankScores=inRankScores,
                                    scaleEMap=inScalePredMatrix)
 
-# sys.exit()
+sys.exit()
 
 if inPredictCodonsEnrichment:
 # Evaluate codon
