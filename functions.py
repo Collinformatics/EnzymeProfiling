@@ -44,10 +44,6 @@ defaultResidues = (('Alanine', 'Ala', 'A'), ('Arginine', 'Arg', 'R'),
 
 
 # ===================================== Set Options ======================================
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', 1000)
-pd.set_option('display.float_format', '{:,.5f}'.format)
-
 # Colors: Console
 greyDark = '\033[38;2;144;144;144m'
 white = '\033[38;2;255;255;255m'
@@ -345,6 +341,10 @@ class NGS:
             if not os.path.exists(self.pathSaveFigs):
                 os.makedirs(self.pathSaveFigs, exist_ok=True)
 
+        # Set options
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        pd.options.display.float_format = '{:,.4f}'.format
 
 
     @staticmethod
@@ -3247,6 +3247,8 @@ class NGS:
                         yTicks = np.arange(yMin, yMax + val, val)
                         break
             yMax += 0.1
+        elif yMax > 0 and yMax < 1:
+            ticks = [0, 0.2, 0.4, 0.6, 0.8, 1]
         else:
             step = abs((yMax - yMin) / 10)
             yTicks = np.arange(yMin, yMax + step, step)
@@ -6043,7 +6045,7 @@ class NGS:
             print('============================ Dirichlet Distribution '
                   '=============================')
         else:
-            print('Dirichlet Distribution:')
+            print(f'Dirichlet Distribution: {purple}{self.datasetTag}{resetColor}')
         print(f'Relative Frequency: {purple}Final{resetColor}\n{finalRF}\n')
         print(f'Relative Frequency: {purple}Initial{resetColor}\n{initialRF}\n\n')
 
@@ -6055,7 +6057,7 @@ class NGS:
             else:
                 ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.loc[:, col]
         ratio = ratio.replace([-np.inf, np.inf], 0.0) # Remove inf values
-        print(f'RF Ratios:\n{round(ratio, self.roundVal)}\n\n')
+        print(f'RF Ratios:\n{ratio}\n\n')
 
 
         # Calculate: Ratio probability
@@ -6063,7 +6065,7 @@ class NGS:
         for col in prob.columns:
             for AA in prob.index:
                 prob.loc[AA, col] = ratio.loc[AA, col] / sum(ratio.loc[:, col])
-        print(f'Probability:\n{round(prob, self.roundVal)}\n\n')
+        print(f'Probability:\n{prob}\n\n')
 
         return prob
 
@@ -6081,96 +6083,149 @@ class NGS:
         # Get prediction matrix
         matrix = self.dirichletDist(finalRF=finalRF, initialRF=initialRF, pHeader=False)
 
-        # Calculate: Activity
-        activityPred = {} ##
-        sublen = len(next(iter(activityExp)))
-        for substrate in activityExp.keys():
-            score = 0
-            for index in range(sublen):
-                # Evaluate substrate
-                AA = substrate[index]
-                pos = matrix.columns[index]
-                value = matrix.loc[AA, pos]
-                if score == 0:
-                    score = value
-                else:
-                    score *= value
-            activityPred[substrate] = score
-        maxActivity = max(activityPred.values())
-        dec = self.roundVal - 1
-        print(f'Predicted Activity: '
-              f'(Max Score: {red}{maxActivity:.{dec}e}{resetColor})')
-        for index, (substrate, activity) in enumerate(activityPred.items(), start=1):
-            print(f'    {pink}{substrate}{resetColor}, '
-                  f'Score: {red}{activity:.{dec}e}{resetColor}')
-            if index == self.printNumber:
-                break
-        print()
+        def evalSubs(values, tag):
+            # Calculate: Activity
+            activityPred = {} ##
+            sublen = len(next(iter(activityExp)))
+            for substrate in activityExp.keys():
+                score = 0
+                for index in range(sublen):
+                    # Evaluate substrate
+                    AA = substrate[index]
+                    pos = values.columns[index]
+                    value = values.loc[AA, pos]
+                    if score == 0:
+                        score = value
+                    else:
+                        score *= value
+                activityPred[substrate] = score
+            maxActivity = max(activityPred.values())
+            dec = self.roundVal - 1
+            print(f'Matrix Type: {purple}{tag}{resetColor}\n'
+                  f'Predicted Activity: '
+                  f'(Max Score: {red}{maxActivity:.{dec}e}{resetColor})')
+            for index, (substrate, activity) in enumerate(activityPred.items(), start=1):
+                print(f'    {pink}{substrate}{resetColor}, '
+                      f'Score: {red}{activity:.{dec}e}{resetColor}')
+                if index == self.printNumber:
+                    break
+            print()
 
-        # Normalize values
-        maxExpActivity = max(activityExp.values())
-        for substrate, activity in activityPred.items():
-            activityPred[substrate] = activity / maxActivity
-            activityExp[substrate] = activityExp[substrate] / maxExpActivity
-        print(f'Predicted Normalized Activity:')
-        for index, (substrate, activity) in enumerate(activityPred.items(), start=1):
-            print(f'    {pink}{substrate}{resetColor}, '
-                  f'Score: {red}{activity:,.{self.roundVal}f}{resetColor}')
-            if index == self.printNumber:
-                break
-        print('')
+            # Normalize values
+            maxExpActivity = max(activityExp.values())
+            for substrate, activity in activityPred.items():
+                activityPred[substrate] = activity / maxActivity
+                activityExp[substrate] = activityExp[substrate] / maxExpActivity
+            print(f'Predicted Normalized Activity:')
+            for index, (substrate, activity) in enumerate(activityPred.items(), start=1):
+                print(f'    {pink}{substrate}{resetColor}, '
+                      f'Score: {red}{activity:,.{self.roundVal}f}{resetColor}')
+                if index == self.printNumber:
+                    break
+            print('')
 
-        # Rank activity scores
-        rankedActivity = dict(sorted(activityPred.items(),
-                                   key=lambda x: x[1], reverse=True))
-        print(f'Ranked Predicted Activity:')
-        for index, (substrate, activity) in enumerate(rankedActivity.items(), start=1):
-            print(f'    {pink}{substrate}{resetColor}, '
-                  f'Score: {red}{activity:,.{self.roundVal}f}{resetColor}')
-            if index == self.printNumber:
-                break
-        print('')
+            # Rank activity scores
+            rankedActivity = dict(sorted(activityPred.items(),
+                                       key=lambda x: x[1], reverse=True))
+            print(f'Ranked Predicted Activity:')
+            for index, (substrate, activity) in enumerate(rankedActivity.items(), start=1):
+                print(f'    {pink}{substrate}{resetColor}, '
+                      f'Score: {red}{activity:,.{self.roundVal}f}{resetColor}')
+                if index == self.printNumber:
+                    break
+            print('')
 
-        # Compair predictions
-        print(f'Predicted Vs Experimental Activity:')
-        for index, (substrate, activity) in enumerate(activityPred.items(), start=1):
-            print(f'    {pink}{substrate}{resetColor}, '
-                  f'Pred: {red}{activity:,.{self.roundVal}f}{resetColor}\n'
-                  f'{" " * len(substrate)}       Exp: '
-                  f'{red}{activityExp[substrate]:,.{self.roundVal}f}{resetColor}')
-            if index == self.printNumber:
-                break
-        print('')
+            # Compair predictions
+            print(f'Predicted Vs Experimental Activity:')
+            for index, (substrate, activity) in enumerate(activityPred.items(), start=1):
+                print(f'    {pink}{substrate}{resetColor}, '
+                      f'Pred: {red}{activity:,.{self.roundVal}f}{resetColor}\n'
+                      f'{" " * len(substrate)}       Exp: '
+                      f'{red}{activityExp[substrate]:,.{self.roundVal}f}{resetColor}')
+                if index == self.printNumber:
+                    break
+            print('')
 
+            if plotBars:
+                # Plot bar graph
+                labels = list(activityPred.keys())
+                predVals = [activityPred[k] for k in labels]
+                expVals = [activityExp[k] for k in labels]
+                xTicks = np.arange(len(labels))
 
-        if plotBars:
-            # Plot bar graph
-            labels = list(activityPred.keys())
-            predVals = [activityPred[k] for k in labels]
-            expVals = [activityExp[k] for k in labels]
-            xTicks = np.arange(len(labels))
+                # Set title
+                # title = f'{self.enzymeName} Activity\n{self.datasetTag}'
+                title = f'{self.enzymeName}\n{self.datasetTag}\n{tag}'
+                if combinedMotifs and len(self.motifIndexExtracted) > 1:
+                    title = title.replace(self.datasetTag,
+                                          f'Combined {self.datasetTag}')
+
+                fig, ax = plt.subplots(figsize=self.figSize)
+                ax.bar(xTicks - barWidth / 2, predVals, barWidth, label='Predicted',
+                       color='#F8971F', edgecolor='black', linewidth=self.lineThickness)
+                ax.bar(xTicks + barWidth / 2, expVals, barWidth, label='Experimental',
+                       color='#BF5700', edgecolor='black', linewidth=self.lineThickness)
+                plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
+                ax.set_ylabel('Normalized Activity', fontsize=self.labelSizeAxis)
+                ax.legend(edgecolor='black', fontsize=self.labelSizeTicks)
+
+                # Set xticks
+                ax.set_xticks(xTicks)
+                ax.set_xticklabels(labels, rotation=0)
+
+                #Set tick parameters
+                ax.tick_params(axis='both', which='major', length=self.tickLength,
+                               labelsize=self.labelSizeTicks)
+
+                fig.canvas.mpl_connect('key_press_event', pressKey)
+                plt.tight_layout()
+                plt.show()
+
+                # Save the Figure
+                if self.saveFigures:
+                    # Define: Save location
+                    figLabel = (f'{self.enzymeName} - Pred Activity - {tag} - '
+                                f'Bar Graph - {predLabel} - {predModel} - {sublen} AA - '
+                                f'Plot {N} - MinCounts {self.minSubCount}.png')
+                    if len(self.motifIndexExtracted) > 1:
+                        figLabel = figLabel.replace('Reading Frame',
+                                                    'Combined Reading Frame')
+                    saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+
+                    # Save figure
+                    if os.path.exists(saveLocation):
+                        print(f'{yellow}The figure was not saved\n\n'
+                              f'File was already found at path:\n'
+                              f'     {saveLocation}{resetColor}\n\n')
+                    else:
+                        print(f'Saving figure at path:\n'
+                              f'     {greenDark}{saveLocation}{resetColor}\n\n')
+                        fig.savefig(saveLocation, dpi=self.figureResolution)
 
             # Set title
-            # title = f'{self.enzymeName} Activity\n{self.datasetTag}'
-            title = f'{self.enzymeName}\n{self.datasetTag}'
+            #title = f'{self.enzymeName} Activity\n{self.datasetTag}'
+            title = f'{self.enzymeName}\n{self.datasetTag}\n{tag}'
             if combinedMotifs and len(self.motifIndexExtracted) > 1:
                 title = title.replace(self.datasetTag,
                                       f'Combined {self.datasetTag}')
 
+            # Plot normalized activity scores as a scatter plot
+            x = list(activityExp.values())
+            y = list(activityPred.values())
+            ticks = [0, 0.2, 0.4, 0.6, 0.8, 1]
+
             fig, ax = plt.subplots(figsize=self.figSize)
-            ax.bar(xTicks - barWidth / 2, predVals, barWidth, label='Predicted',
-                   color='#F8971F', edgecolor='black', linewidth=self.lineThickness)
-            ax.bar(xTicks + barWidth / 2, expVals, barWidth, label='Experimental',
-                   color='#BF5700', edgecolor='black', linewidth=self.lineThickness)
+            plt.scatter(x, y, color='#BF5700', edgecolor='black')
+            plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
+            plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
             plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-            ax.set_ylabel('Normalized Activity', fontsize=self.labelSizeAxis)
-            ax.legend(edgecolor='black', fontsize=self.labelSizeTicks)
+            plt.grid(True, linestyle='-', color='black')
+            plt.xlim(-0.03, 1.03)
+            plt.xticks(ticks)
+            plt.ylim(-0.03, 1.03)
+            plt.yticks(ticks)
 
-            # Set xticks
-            ax.set_xticks(xTicks)
-            ax.set_xticklabels(labels, rotation=0)
-
-            #Set tick parameters
+            # Set tick parameters
             ax.tick_params(axis='both', which='major', length=self.tickLength,
                            labelsize=self.labelSizeTicks)
 
@@ -6181,9 +6236,9 @@ class NGS:
             # Save the Figure
             if self.saveFigures:
                 # Define: Save location
-                figLabel = (f'{self.enzymeName} - Pred Activity - Bar Graph - '
-                            f'{predLabel} - {predModel} - {sublen} AA - Plot {N} - '
-                            f'MinCounts {self.minSubCount}.png')
+                figLabel = (f'{self.enzymeName} - Pred Activity - {tag} - '
+                            f'Scatter Plot - {predLabel} - {predModel} - {sublen} AA - '
+                            f'Plot {N} - MinCounts {self.minSubCount}.png')
                 if len(self.motifIndexExtracted) > 1:
                     figLabel = figLabel.replace('Reading Frame',
                                                 'Combined Reading Frame')
@@ -6198,58 +6253,8 @@ class NGS:
                     print(f'Saving figure at path:\n'
                           f'     {greenDark}{saveLocation}{resetColor}\n\n')
                     fig.savefig(saveLocation, dpi=self.figureResolution)
-
-        # Set title
-        #title = f'{self.enzymeName} Activity\n{self.datasetTag}'
-        title = f'{self.enzymeName}\n{self.datasetTag}'
-        if combinedMotifs and len(self.motifIndexExtracted) > 1:
-            title = title.replace(self.datasetTag,
-                                  f'Combined {self.datasetTag}')
-
-        # Plot normalized activity scores as a scatter plot
-        x = list(activityExp.values())
-        y = list(activityPred.values())
-        ticks = [0, 0.2, 0.4, 0.6, 0.8, 1]
-
-        fig, ax = plt.subplots(figsize=self.figSize)
-        plt.scatter(x, y, color='#BF5700', edgecolor='black')
-        plt.xlabel('Experimental Activity', fontsize=self.labelSizeAxis)
-        plt.ylabel('Predicted Activity', fontsize=self.labelSizeAxis)
-        plt.title(title, fontsize=self.labelSizeTitle, fontweight='bold')
-        plt.grid(True, linestyle='-', color='black')
-        plt.xlim(-0.03, 1.03)
-        plt.xticks(ticks)
-        plt.ylim(-0.03, 1.03)
-        plt.yticks(ticks)
-
-        # Set tick parameters
-        ax.tick_params(axis='both', which='major', length=self.tickLength,
-                       labelsize=self.labelSizeTicks)
-
-        fig.canvas.mpl_connect('key_press_event', pressKey)
-        plt.tight_layout()
-        plt.show()
-
-        # Save the Figure
-        if self.saveFigures:
-            # Define: Save location
-            figLabel = (f'{self.enzymeName} - Pred Activity - Scatter Plot - '
-                        f'{predLabel} - {predModel} - {sublen} AA - Plot {N} - '
-                        f'MinCounts {self.minSubCount}.png')
-            if len(self.motifIndexExtracted) > 1:
-                figLabel = figLabel.replace('Reading Frame',
-                                            'Combined Reading Frame')
-            saveLocation = os.path.join(self.pathSaveFigs, figLabel)
-
-            # Save figure
-            if os.path.exists(saveLocation):
-                print(f'{yellow}The figure was not saved\n\n'
-                      f'File was already found at path:\n'
-                      f'     {saveLocation}{resetColor}\n\n')
-            else:
-                print(f'Saving figure at path:\n'
-                      f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                fig.savefig(saveLocation, dpi=self.figureResolution)
+        evalSubs(values=finalRF, tag='Relative Frequency')
+        evalSubs(values=matrix, tag='Dirichlet Distribution')
 
 
 
@@ -6267,7 +6272,7 @@ class NGS:
             eMap = self.eMapReleased
         else:
             eMap = self.eMap
-        # eMap = RF # ====================================================================
+        eMap = RF # ====================================================================
         if scaleEMap:
             print(f'Scaling Prediction matrix\nEntropy:\n{self.entropy}\n\n')
             for column in eMap.columns:
@@ -6292,61 +6297,21 @@ class NGS:
         for substrate in predSubstrates:
             print(f'Sub: {pink}{substrate}{resetColor}')
             score = 0
-            x = 0
             temp = 'VILQSG'
-            if x == 1:
-                for index in range(sublen):
-                    AA = substrate[index]
-                    pos = eMap.columns[index]
-                    ES = eMap.loc[AA, pos]
-                    values = eMap.loc[:, pos]
-                    z = self.zScore(values, AA=AA)
-                    if temp[index] != AA:
-                        print(f'* Z ({blue}{AA}{resetColor}): '
-                              f'{blue}{z:.{self.roundVal}}{resetColor}, '
-                              f'ES: {blue}{ES:.{self.roundVal}}{resetColor}')
-                    else:
-                        print(f'* Z ({AA}): {z:.{self.roundVal}}, ES: {ES:.{self.roundVal}}')
-                    v = z * ES
-                    print(f'    Scaled: {v:.{self.roundVal}}')
-                    score += z * ES
-            else:
-                for index in range(sublen):
-                    AA = substrate[index]
-                    pos = eMap.columns[index]
-                    ES = eMap.loc[AA, pos] # * self.entropy.iloc[index, 0]
-                    rf = RF.loc[AA, pos]
-                    # print(f'AA ({index}): {AA}\n'
-                    #       f'  ES: {ES}')
-                    # if abs(ES) >= 0.5:
-                    if 1 == 2: # Scale ES
-                        print(f'ES ({AA}): {red}{ES}{resetColor}')
-                        ES -= abs(ES) if ES < 0 else ES
-                        # ES -= 2 ** abs(ES) if ES < 0 else 0
-                        print(f'* ES ({AA}): {red}{ES}{resetColor}\n')
-                    if temp[index] != AA:
-                        print(f'* RF ({blue}{AA}{resetColor}): '
-                              f'{blue}{rf:.{self.roundVal}}{resetColor}, '
-                              f'ES: {blue}{ES:.{self.roundVal}}{resetColor}')
-                    else:
-                        print(f'* RF ({AA}): {rf:.{self.roundVal}}, '
-                              f'ES: {ES:.{self.roundVal}}')
-                    addES += 1
-
-                    # Scale
-                    if 1 == 2:
-                    #if ES < 0:
-                        values = RF.loc[:, pos]
-                        inv = self.zScore(values, AA=AA)
-                        inv = abs(inv)
-                        inv = np.log2(1 / rf)
-                        #inv = 1 / rf
-                        scale = ES * inv
-                        print(f'     Inv: {red}{inv:.3}{resetColor}\n'
-                              f'  Scaled: {red}{scale:.3}{resetColor}')
-                        score += scale
-                    else:
-                        score += ES
+            for index in range(sublen):
+                AA = substrate[index]
+                pos = eMap.columns[index]
+                v = eMap.loc[AA, pos] # * self.entropy.iloc[index, 0]
+                if temp[index] != AA:
+                    print(f'* AA: {blue}{AA}{resetColor}, '
+                          f'Value: {blue}{v:.{self.roundVal}}{resetColor}')
+                else:
+                    print(f'* AA: {AA}, Value: {v:.{self.roundVal}}')
+                addES += 1
+                if score == 0:
+                    score = v
+                else:
+                    score *= v
             activityScores[substrate] = score # + 2.6
             print(f'Score: {red}{score:.{self.roundVal}}{resetColor}\n')
 
@@ -6364,7 +6329,7 @@ class NGS:
 
         # Calculate: Activity levels
         for substrate, score in activityScores.items():
-            x = 2
+            x = 0
             if x == 1:
                 activityScores[substrate] = 10 ** (score / maxActivity)
             elif x > 1:
