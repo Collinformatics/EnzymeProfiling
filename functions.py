@@ -6040,12 +6040,12 @@ class NGS:
 
 
 
-    def dirichletDist(self, finalRF, initialRF, pHeader=True):
+    def normalizeProbRatios(self, finalRF, initialRF, pHeader=True):
         if pHeader:
-            print('============================ Dirichlet Distribution '
-                  '=============================')
+            print('========================= Normalize Probability Ratios '
+                  '==========================')
         else:
-            print(f'Dirichlet Distribution: {purple}{self.datasetTag}{resetColor}')
+            print(f'Normalize Probability Ratios: {purple}{self.datasetTag}{resetColor}')
         print(f'Relative Frequency: {purple}Final{resetColor}\n{finalRF}\n')
         print(f'Relative Frequency: {purple}Initial{resetColor}\n{initialRF}\n\n')
 
@@ -6081,24 +6081,63 @@ class NGS:
               f'N Substrate Sequences: {red}{N:,}{resetColor}\n')
 
         # Get prediction matrix
-        matrix = self.dirichletDist(finalRF=finalRF, initialRF=initialRF, pHeader=False)
+        matrix = self.normalizeProbRatios(finalRF=finalRF,
+                                          initialRF=initialRF,
+                                          pHeader=False)
 
         def evalSubs(values, tag):
-            # Calculate: Activity
-            activityPred = {} ##
-            sublen = len(next(iter(activityExp)))
-            for substrate in activityExp.keys():
-                score = 0
-                for index in range(sublen):
-                    # Evaluate substrate
-                    AA = substrate[index]
-                    pos = values.columns[index]
-                    value = values.loc[AA, pos]
-                    if score == 0:
-                        score = value
+            if tag == 'Scipy Dirichlet Distribution':
+                from scipy.stats import dirichlet
+
+                # Calculate: RF ratios
+                ratio = pd.DataFrame(0.0, index=finalRF.index, columns=finalRF.columns)
+                for col in finalRF.columns:
+                    if len(initialRF.columns) == 1:
+                        ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.iloc[:, 0]
                     else:
-                        score *= value
-                activityPred[substrate] = score
+                        ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.loc[:, col]
+                ratio = ratio.replace([-np.inf, np.inf], 0.0)  # Remove inf values
+                print(f'RF:\n{ratio}\n\n')
+
+                # Calculate: Activity
+                activityPred = {}  ##
+                sublen = len(next(iter(activityExp)))
+                for substrate in activityExp.keys():
+                    alpha = []
+                    quantiles = []
+                    for index in range(sublen):
+                        # Evaluate substrate
+                        AA = substrate[index]
+                        pos = values.columns[index]
+                        alpha.append(ratio.loc[AA, pos])
+                        quantiles.append(finalRF.loc[AA, pos])
+
+                    alpha = np.array(alpha, dtype=float)
+                    quantiles = np.array(quantiles, dtype=float)
+                    quantiles /= quantiles.sum()  # enforce simplex
+                    print(f'Dirichlet Params:\n'
+                          f'  Alpha: {cyan}{np.round(alpha, self.roundVal)}{resetColor}\n'
+                          f'  Quantiles: {cyan}{np.round(quantiles, self.roundVal+1)}{resetColor}')
+                    prob = dirichlet.pdf(x=quantiles, alpha=alpha)
+                    print(f'{pink}{substrate}{resetColor}, '
+                          f'Probability: {red}{round(prob, self.roundVal)}{resetColor}\n\n')
+                    activityPred[substrate] = prob
+            else:
+                # Calculate: Activity
+                activityPred = {} ##
+                sublen = len(next(iter(activityExp)))
+                for substrate in activityExp.keys():
+                    score = 0
+                    for index in range(sublen):
+                        # Evaluate substrate
+                        AA = substrate[index]
+                        pos = values.columns[index]
+                        value = values.loc[AA, pos]
+                        if score == 0:
+                            score = value
+                        else:
+                            score *= value
+                    activityPred[substrate] = score
             maxActivity = max(activityPred.values())
             dec = self.roundVal - 1
             print(f'Matrix Type: {purple}{tag}{resetColor}\n'
@@ -6146,6 +6185,12 @@ class NGS:
                     break
             print('')
 
+            # Set title
+            title = f'{self.enzymeName}\n{self.datasetTag}\n{tag}'
+            if combinedMotifs and len(self.motifIndexExtracted) > 1:
+                title = title.replace(self.datasetTag,
+                                      f'Combined {self.datasetTag}')
+
             if plotBars:
                 # Plot bar graph
                 labels = list(activityPred.keys())
@@ -6153,12 +6198,7 @@ class NGS:
                 expVals = [activityExp[k] for k in labels]
                 xTicks = np.arange(len(labels))
 
-                # Set title
-                # title = f'{self.enzymeName} Activity\n{self.datasetTag}'
-                title = f'{self.enzymeName}\n{self.datasetTag}\n{tag}'
-                if combinedMotifs and len(self.motifIndexExtracted) > 1:
-                    title = title.replace(self.datasetTag,
-                                          f'Combined {self.datasetTag}')
+
 
                 fig, ax = plt.subplots(figsize=self.figSize)
                 ax.bar(xTicks - barWidth / 2, predVals, barWidth, label='Predicted',
@@ -6202,12 +6242,6 @@ class NGS:
                               f'     {greenDark}{saveLocation}{resetColor}\n\n')
                         fig.savefig(saveLocation, dpi=self.figureResolution)
 
-            # Set title
-            #title = f'{self.enzymeName} Activity\n{self.datasetTag}'
-            title = f'{self.enzymeName}\n{self.datasetTag}\n{tag}'
-            if combinedMotifs and len(self.motifIndexExtracted) > 1:
-                title = title.replace(self.datasetTag,
-                                      f'Combined {self.datasetTag}')
 
             # Plot normalized activity scores as a scatter plot
             x = list(activityExp.values())
@@ -6253,8 +6287,8 @@ class NGS:
                     print(f'Saving figure at path:\n'
                           f'     {greenDark}{saveLocation}{resetColor}\n\n')
                     fig.savefig(saveLocation, dpi=self.figureResolution)
+        evalSubs(values=matrix, tag='Probability Ratios')
         evalSubs(values=finalRF, tag='Relative Frequency')
-        evalSubs(values=matrix, tag='Dirichlet Distribution')
 
 
 
