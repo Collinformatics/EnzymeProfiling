@@ -1556,7 +1556,20 @@ class NGS:
 
 
 
-    def saveFigure(self, fig, figType, seqLen, combinedMotifs=False, releasedCounts=False):
+    def saveFig(self, fig, path):
+        if os.path.exists(path):
+            print(f'{yellow}The figure was not saved\n\n'
+                  f'File was already found at path:\n'
+                  f'     {path}{resetColor}\n\n')
+        else:
+            print(f'Saving figure at path:\n'
+                  f'     {greenDark}{path}{resetColor}\n\n')
+            fig.savefig(path, dpi=self.figureResolution)
+
+
+
+    def saveFigure(self, fig, figType, seqLen, N=False,
+                   combinedMotifs=False, releasedCounts=False):
         # Define: Save location
         figLabel = ''
         if self.motifFilter and not releasedCounts:
@@ -1584,6 +1597,8 @@ class NGS:
             figLabel = figLabel.replace('Combined ', '')
         if '/' in figLabel:
             figLabel = figLabel.replace('/', '_')
+        if N:
+            figLabel = figLabel.replace(f'N {self.nSubsFinal}', f'N {N}')
 
         saveLocation = os.path.join(self.pathSaveFigs, figLabel)
 
@@ -6072,7 +6087,8 @@ class NGS:
 
 
     def predictActivity(self, activityExp, finalRF, initialRF, predModel, predLabel,
-                        combinedMotifs=False, plotBars=True, barWidth=0.35):
+                        combinedMotifs=False, releasedCounts=False, plotBars=True,
+                        barWidth=0.35):
         print('============================ Predict Substrate Activity '
               '=============================')
         N = len(activityExp.keys())
@@ -6086,58 +6102,21 @@ class NGS:
                                           pHeader=False)
 
         def evalSubs(values, tag):
-            if tag == 'Scipy Dirichlet Distribution':
-                from scipy.stats import dirichlet
-
-                # Calculate: RF ratios
-                ratio = pd.DataFrame(0.0, index=finalRF.index, columns=finalRF.columns)
-                for col in finalRF.columns:
-                    if len(initialRF.columns) == 1:
-                        ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.iloc[:, 0]
+            # Calculate: Activity
+            activityPred = {} ##
+            subLen = len(next(iter(activityExp)))
+            for substrate in activityExp.keys():
+                score = 0
+                for index in range(subLen):
+                    # Evaluate substrate
+                    AA = substrate[index]
+                    pos = values.columns[index]
+                    value = values.loc[AA, pos]
+                    if score == 0:
+                        score = value
                     else:
-                        ratio.loc[:, col] = finalRF.loc[:, col] / initialRF.loc[:, col]
-                ratio = ratio.replace([-np.inf, np.inf], 0.0)  # Remove inf values
-                print(f'RF:\n{ratio}\n\n')
-
-                # Calculate: Activity
-                activityPred = {}  ##
-                sublen = len(next(iter(activityExp)))
-                for substrate in activityExp.keys():
-                    alpha = []
-                    quantiles = []
-                    for index in range(sublen):
-                        # Evaluate substrate
-                        AA = substrate[index]
-                        pos = values.columns[index]
-                        alpha.append(ratio.loc[AA, pos])
-                        quantiles.append(finalRF.loc[AA, pos])
-
-                    alpha = np.array(alpha, dtype=float)
-                    quantiles = np.array(quantiles, dtype=float)
-                    quantiles /= quantiles.sum()  # enforce simplex
-                    print(f'Dirichlet Params:\n'
-                          f'  Alpha: {cyan}{np.round(alpha, self.roundVal)}{resetColor}\n'
-                          f'  Quantiles: {cyan}{np.round(quantiles, self.roundVal+1)}{resetColor}')
-                    prob = dirichlet.pdf(x=quantiles, alpha=alpha)
-                    print(f'{pink}{substrate}{resetColor}, '
-                          f'Probability: {red}{round(prob, self.roundVal)}{resetColor}\n\n')
-                    activityPred[substrate] = prob
-            else:
-                # Calculate: Activity
-                activityPred = {} ##
-                sublen = len(next(iter(activityExp)))
-                for substrate in activityExp.keys():
-                    score = 0
-                    for index in range(sublen):
-                        # Evaluate substrate
-                        AA = substrate[index]
-                        pos = values.columns[index]
-                        value = values.loc[AA, pos]
-                        if score == 0:
-                            score = value
-                        else:
-                            score *= value
-                    activityPred[substrate] = score
+                        score *= value
+                activityPred[substrate] = score
             maxActivity = max(activityPred.values())
             dec = self.roundVal - 1
             print(f'Matrix Type: {purple}{tag}{resetColor}\n'
@@ -6224,23 +6203,13 @@ class NGS:
                 # Save the Figure
                 if self.saveFigures:
                     # Define: Save location
-                    figLabel = (f'{self.enzymeName} - Pred Activity - {tag} - '
-                                f'Bar Graph - {predLabel} - {predModel} - {sublen} AA - '
-                                f'Plot {N} - MinCounts {self.minSubCount}.png')
-                    if len(self.motifIndexExtracted) > 1:
-                        figLabel = figLabel.replace('Reading Frame',
-                                                    'Combined Reading Frame')
-                    saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+                    figTag = (f'Pred Activity - {tag} - '
+                              f'Bar Graph - {predLabel} - {predModel}')
 
                     # Save figure
-                    if os.path.exists(saveLocation):
-                        print(f'{yellow}The figure was not saved\n\n'
-                              f'File was already found at path:\n'
-                              f'     {saveLocation}{resetColor}\n\n')
-                    else:
-                        print(f'Saving figure at path:\n'
-                              f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                        fig.savefig(saveLocation, dpi=self.figureResolution)
+                    self.saveFigure(fig=fig, figType=figTag, seqLen=subLen, N=N,
+                                    combinedMotifs=combinedMotifs,
+                                    releasedCounts=releasedCounts)
 
 
             # Plot normalized activity scores as a scatter plot
@@ -6270,25 +6239,15 @@ class NGS:
             # Save the Figure
             if self.saveFigures:
                 # Define: Save location
-                figLabel = (f'{self.enzymeName} - Pred Activity - {tag} - '
-                            f'Scatter Plot - {predLabel} - {predModel} - {sublen} AA - '
-                            f'Plot {N} - MinCounts {self.minSubCount}.png')
-                if len(self.motifIndexExtracted) > 1:
-                    figLabel = figLabel.replace('Reading Frame',
-                                                'Combined Reading Frame')
-                saveLocation = os.path.join(self.pathSaveFigs, figLabel)
+                figTag = (f'Pred Activity - {tag} - '
+                          f'Scatter Plot - {predLabel} - {predModel}')
 
                 # Save figure
-                if os.path.exists(saveLocation):
-                    print(f'{yellow}The figure was not saved\n\n'
-                          f'File was already found at path:\n'
-                          f'     {saveLocation}{resetColor}\n\n')
-                else:
-                    print(f'Saving figure at path:\n'
-                          f'     {greenDark}{saveLocation}{resetColor}\n\n')
-                    fig.savefig(saveLocation, dpi=self.figureResolution)
+                self.saveFigure(fig=fig, figType=figTag, seqLen=subLen, N=N,
+                                combinedMotifs=combinedMotifs,
+                                releasedCounts=releasedCounts)
         evalSubs(values=matrix, tag='Probability Ratios')
-        evalSubs(values=finalRF, tag='Relative Frequency')
+        # evalSubs(values=finalRF, tag='Relative Frequency')
 
 
 

@@ -20,7 +20,7 @@ inSetFigureTimer = False
 # Input 2: Experimental Parameters
 inMotifPositions = ['P4','P3','P2','P1','P1\'','P2\''] #
 # inMotifPositions = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
-# inMotifPositions = ['Pos 1', 'Pos 2', 'Pos 3', 'Pos 4', 'Pos 5', 'Pos 6', 'Pos 7']
+# inMotifPositions = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
 inIndexNTerminus = 0 # Define the index if the first AA in the binned substrate
 
 # Input 3: Computational Parameters
@@ -97,27 +97,40 @@ inPlotEntropyPCAPopulations = False
 
 # Input 11: Predict Activity
 inPredictActivity = True
-inPredictionTag = 'pp1a/b Substrates'
-inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
-                       'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
-                       'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
-inPredictionTag = 'Heatmap Substrates'
-inPredictSubstrates = ['AVLQSG', 'VILQSG', 'VILQTG', 'VILQSP',
-                       'VILHSG', 'VIMQSG', 'VPLQSG', 'NILQSG']
-inSubstrateActivity = {
-    'AVLQSG': 67.1,# 60,
-    'VILQSG': 79.9,# 70,
-    'VILQTG': 20.2,# 6,
-    'VILQSP': 0,# 0,
-    'VILHSG': 20.9,# 15,
-    'VIMQSG': 63.6,# 50,
-    'VPLQSG': 0,# 0,
-    'NILQSG': 15.4,# 6,
-}
+inUseNaturalSubs = False
+if inUseNaturalSubs:
+    inPredictionTag = 'pp1a/b Substrates'
+    inPredictSubstrates = ['AVLQSGFR', 'VTFQSAVK', 'ATVQSKMS', 'ATLQAIAS',
+                           'VKLQNNEL', 'VRLQAGNA', 'PMLQSADA', 'TVLQAVGA',
+                           'ATLQAENV', 'TRLQSLEN', 'PKLQSSQA']
+    inSubstrateActivity = {
+        'AVLQSGFR': 0.0,
+        'VTFQSAVK': 0.0,
+        'ATVQSKMS': 0.0,
+        'ATLQAIAS': 0.0,
+        'VKLQNNEL': 0.0,
+        'VRLQAGNA': 0.0,
+        'PMLQSADA': 0.0,
+        'TVLQAVGA': 0.0,
+        'ATLQAENV': 0.0,
+        'TRLQSLEN': 0.0,
+        'PKLQSSQA': 0.0
+    }
+else:
+    inPredictionTag = 'EM Substrates'
+    inSubstrateActivity = {
+        'AVLQSG': 67.1,# 60,
+        'VILQSG': 79.9,# 70,
+        'VILQTG': 20.2,# 6,
+        'VILQSP': 0,# 0,
+        'VILHSG': 20.9,# 15,
+        'VIMQSG': 63.6,# 50,
+        'VPLQSG': 0,# 0,
+        'NILQSG': 15.4,# 6,
+    }
 inEMapStartIndex = 0 # Sub: ACDEFGHI, if idx = 0 start at A
 inRankScores = False
 inScalePredMatrix = False # Scale EM by ΔS
-
 
 # Input 12: Codon Enrichment
 inPredictCodonsEnrichment = False
@@ -905,12 +918,6 @@ if inPredictActivity:
                         finalRF=rfCombinedReleasedMotif, initialRF=rfInitial,
                         predModel=ngs.datasetTag, predLabel=inPredictionTag,
                         combinedMotifs=combinedMotifs)
-
-    if not inPredictActivity:
-        ngs.predictActivity(activityExp=motifs,
-                            finalRF=rfCombinedReleasedMotif, initialRF=rfInitial,
-                            predModel=ngs.datasetTag, predLabel='Experimental Motifs',
-                            combinedMotifs=combinedMotifs, plotBars=False)
 
     if not inPredictActivity:
         ngs.predictActivityHeatmap(predSubstrates=inPredictSubstrates,
